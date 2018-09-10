@@ -1,0 +1,55 @@
+
+needs a way to manually set which bots can claim a row
+
+race condition: row movement
+	if we try to write to row N, but an insert or delete means the actual data we intended to write
+	has moved in the interim, we can't easily solve this. But we can easily detect it.
+	Every row has a unique id that we write.
+	After writing, we re-read and check id field.
+	If it's the same, successful write. Note it's still last-write-wins per field.
+	If it's not, rows were moved! We can't work out what's wrong,
+	so flag the row for human fixup.
+
+race condition: claiming videos
+	In the normal non-hole case, keep it simple.
+	If you're eligible and current uploader is ineligible or blank,
+		you write your id to the uploader field.
+	While processing, you poll the uploader field to check it's still yours.
+	If you become ineligible, or someone else takes it due to a race,
+		immediately cancel the work and move on.
+	Things get trickier if there are holes.
+	If you are otherwise eligible but have holes,
+	append a record (row id, your id, missing time) to special sheet, then check if all current bots
+	have such a record for that row. If not, move on and revisit next poll.
+		On subsequent checks, no need to re-append a new record.
+	If all current bots have a record, and yours is the least missing, then either claim it or
+	flag it depending on setting.
+	So note that:
+	- you continue to do meaningful work while you wait for all bots to get back
+	- if any bot has no holes, it claims as normal and the whole process is abandoned since
+	  the slot is no longer under consideration
+
+knowing which bots exist:
+	Entries in a seperate sheet, with a row per bot id, and a ping time.
+	Ping time should be updated every interval, any bot with a ping time > TTL is dead.
+
+addressing columns:
+	you should have an in-code mapping from col name -> position,
+	positions shouldn't change but just in case.
+
+thrimbletrimmer sends video trim data directly to wubloader
+	how?
+	this is the trigger to go from Awaiting Edits to Processing Edits
+
+chunk sheet special cases:
+	no draft step, go straight from queued to processing video at full res to uploading
+	upload unlisted
+
+dealing with holes
+	if only some bots (or none) have holes:
+		bots without holes should take it
+	if all bots have holes:
+		if it's chunk sheet:
+			upload from one with least holes
+		if it's main sheet:
+			flag for human intervention, allow for force override
