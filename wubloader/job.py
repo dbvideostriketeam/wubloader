@@ -66,8 +66,8 @@ class Job(object):
 	def cancel(self):
 		"""Cancel job that is currently being processed, setting it back to its starting state."""
 		if not self.worker.ready():
-			# By setting uploader to blank, the watchdog will stop the in-progress job.
-			self.row.update(state=states.FLOWS[self.job_type][0], uploader="")
+			self.worker.kill(block=False)
+			self.row.update(state=states.FLOWS[self.job_type][0])
 
 	def process(self):
 		"""Call this to perform the job."""
