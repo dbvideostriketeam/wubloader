@@ -75,6 +75,9 @@ class Job(object):
 		self.worker = self.wubloader.group.spawn(self._process)
 		# While that does the real work, we poll the uploader field to check no-one else has stolen it.
 		while not self.worker.ready():
+			# Sleep until either worker is done or interval has passed
+			self.worker.join(self.OWNERSHIP_CHECK_INTERVAL)
+			# Check if we're still valid
 			row = self.row.refresh()
 			if row is None or row.uploader != self.row.uploader:
 				# Our row's been stolen, cancelled, or just plain lost.
@@ -85,13 +88,28 @@ class Job(object):
 					else "claimed by {}".format(row.uploader)
 				))
 				self.worker.kill(block=True)
-				return
-			# Sleep until either worker is done or interval has passed
-			self.worker.join(self.OWNERSHIP_CHECK_INTERVAL)
+				break
+		# This will re-raise exception if _process() failed
+		self.worker.get()
 
 	def _process(self):
-		"""Does the actual cutting work. You should call process() instead."""
+		"""Does the actual cut and upload. You should call process() instead."""
+		in_progress = states.FLOWS[self.job_type][1]
+		self.row.update(state=in_progress)
+		self._cut_video()
+		if self.job_type == "draft":
+			done = states.FLOWS[self.job_type][-1]
+			self.row.update(state=done)
+			return
+		# Set the upload going before returning
+		self.wubloader.group.spawn(self._upload)
+
+	def _cut_video(self):
 		# TODO
+
+	def _upload(self):
+		# TODO
+		# NOTE that if upload fails it should flag for humans
 
 
 def parse_bustime(base, value):
