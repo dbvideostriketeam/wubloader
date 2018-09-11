@@ -1,8 +1,13 @@
-
-
 """The classes in the file wrap the gspread API to present a simpler interface,
 which transparently handles re-connecting, sheets schemas and tracking rows by id.
 """
+
+
+import gevent.lock
+
+from oauth2client.client import SignedJwtAssertionCredentials
+import gspread
+
 
 # schemas maps sheet name to schema.
 # each schema contains a map from column names to column indexes (1-based)
@@ -12,10 +17,32 @@ SCHEMAS = {
 		"heartbeat": 2,
 	},
 	"chunks": {
-		# TODO
+		"start": 1,
+		"end": 2,
+		"description": 4,
+		"link": 5,
+		"state": 6,
+		"uploader": 7,
+		"notes": 8,
+		"id": 9,
+		"cut_time": 10,
+		"upload_time": 11,
+		"duration": 12,
 	},
 	"main": {
-		# TODO
+		"start": 1,
+		"end": 2,
+		"description": 4,
+		"link": 7,
+		"state": 8,
+		"location": 9,
+		"uploader": 10,
+		"notes": 12,
+		"id": 14,
+		"draft_time": 15,
+		"cut_time": 16,
+		"upload_time": 17,
+		"duration": 18,
 	},
 }
 
@@ -90,7 +117,7 @@ class Sheet(object):
 	def __iter__(self):
 		with self.manager.lock:
 			self.manager.refresh()
-			return [Row(self, schema, i+1, r) for i, r in enumerate(self.worksheet.get_all_values())]
+			return [Row(self, self.schema, i+1, r) for i, r in enumerate(self.worksheet.get_all_values())]
 
 	def find_row(self, id):
 		for row in self:
@@ -101,7 +128,7 @@ class Sheet(object):
 	def by_index(self, index):
 		with self.manager.lock:
 			self.manager.refresh()
-			return Row(self, schema, index, self.worksheet.row_values(index))
+			return Row(self, self.schema, index, self.worksheet.row_values(index))
 
 	def append(self, id, **values):
 		"""Create new row with given initial values, and return it."""
@@ -152,6 +179,7 @@ class Row(object):
 			#  Checking our position again afterwards. If it's changed, we probably mis-wrote.
 			if self.id:
 				before = self.refresh()
+				# TODO handle before = None
 			else:
 				before = self
 			for name, value in values.items():
