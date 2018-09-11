@@ -2,11 +2,15 @@
 which transparently handles re-connecting, sheets schemas and tracking rows by id.
 """
 
+import random
+import string
 
 import gevent.lock
 
 from oauth2client.client import SignedJwtAssertionCredentials
 import gspread
+
+from . import states
 
 
 # schemas maps sheet name to schema.
@@ -148,8 +152,7 @@ class Sheet(object):
 class Row(object):
 	"""Represents a row in a sheet. Values can be looked up by attribute.
 	Values can be updated with update(attr=value), which returns the updated row.
-	Note that a row must have an id to be updatable. Updating is permitted if no id is set
-	only if id is one of the values being written.
+	If a row without an id is updated, an id will be randomly assigned.
 	You can also refresh the row (if it has an id) by calling row.refresh(),
 	which returns the newly read row, or None if it can no longer be found.
 	"""
@@ -171,24 +174,38 @@ class Row(object):
 			return self.values[col]
 		return ""
 
+	def _raw_update(self, name, value):
+		col = self.schema[name]
+		self.sheet.worksheet.update_cell(self.index, col, value)
+
 	def update(self, **values):
 		with self.manager.lock:
 			self.manager.refresh()
-			# We attempt to detect races by:
-			#  Always refreshing our position before we begin (if we can)
-			#  Checking our position again afterwards. If it's changed, we probably mis-wrote.
-			if self.id:
-				before = self.refresh()
-				# TODO handle before = None
-			else:
-				before = self
-			for name, value in values.items():
-				col = self.schema[name]
-				self.sheet.worksheet.update_cell(before.index, col, value)
-			after = self.sheet.by_index(before.index)
-			new_id = values['id'] if 'id' in values else self.id
-			if after.id != new_id:
-				raise Exception("Likely bad write: Row {} may have had row {} data partially written: {}".format(after, before, values))
+			while True:
+				# We attempt to detect races by:
+				#  Always refreshing our position before we begin (if we can)
+				#  Checking our position again afterwards. If it's changed, we probably mis-wrote.
+				if self.id:
+					before = self.refresh()
+					if before is None:
+						raise Exception("Cannot update row {}: Row is gone".format(self))
+				else:
+					before = self
+					if 'id' not in values:
+						# auto-create id
+						values['id'] = ''.join(random.choice(string.letters + string.digits) for _ in range(12))
+				for name, value in values.items():
+					before._raw_update(name, value)
+				after = self.sheet.by_index(before.index)
+				new_id = values['id'] if 'id' in values else self.id
+				if after.id != new_id:
+					logging.error("Likely bad write: Row {} may have had row {} data partially written: {}".format(after, before, values))
+					if hasattr(after, 'state'):
+						after._raw_update('state', states.ERROR)
+					if hasattr(after, 'notes'):
+						after._raw_update('notes', "This row may have had following data from row with id {} written to it: {}".format(new_id, values))
+					continue # retry
+				return
 
 	def refresh(self):
 		return self.sheet[self.id]
