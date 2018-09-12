@@ -2,6 +2,7 @@
 which transparently handles re-connecting, sheets schemas and tracking rows by id.
 """
 
+import logging
 import random
 import string
 

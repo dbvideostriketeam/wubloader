@@ -113,10 +113,10 @@ class Job(object):
 		self.wubloader.group.spawn(self._upload)
 
 	def _cut_video(self):
-		# TODO
+		pass # TODO
 
 	def _upload(self):
-		# TODO
+		pass # TODO
 		# NOTE that if upload fails it should flag for humans
 
 
