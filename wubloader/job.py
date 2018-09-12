@@ -74,6 +74,8 @@ class Job(object):
 		if not self.worker.ready():
 			self.worker.kill(block=False)
 			self.row.update(state=states.FLOWS[self.job_type][0])
+			if self.job_type != 'publish':
+				self.row.update(uploader="")
 
 	def process(self):
 		"""Call this to perform the job."""

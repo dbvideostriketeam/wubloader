@@ -64,7 +64,7 @@ class Wubloader(object):
 			while not self.stopping:
 				for job in self.find_jobs():
 
-					# If it's already claimed, ignore it.
+					# If it's already claimed (except by us), ignore it.
 					# Note this check considers a claim by a dead bot to be invalid (except for publishes).
 					if job.uploader and job.uploader != self.name:
 						continue
@@ -111,12 +111,13 @@ class Wubloader(object):
 		self.stopped.set()
 
 	def cleanup_existing(self):
-		"""Scan for any existing rows claimed by us, and cancel them."""
-		for sheet in self.sheets['main'] + self.sheets['chunks']:
-			for row in sheet:
-				if row.uploader == self.name and row.state != states.rollback(row.state):
-					logging.warning("Found existing in progress job for us, clearing")
-					row.update(state=states.rollback(row.state))
+		"""Scan for any existing non-publish rows claimed by us, and cancel them."""
+		for job in self.find_jobs():
+			if job.row.uploader == self.name and job.row.state != states.rollback(job.row.state):
+				logging.warning("Found existing in progress job for us, clearing")
+				job.row.update(state=states.rollback(job.row.state))
+				if job.job_type != 'publish':
+					job.row.update(uploader="")
 
 	def find_jobs(self):
 		"""Return potential jobs (based only on state), in priority order."""
