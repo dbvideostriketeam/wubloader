@@ -35,8 +35,14 @@ class Job(object):
 
 	@property
 	def uploader(self):
-		"""A processed uploader check that ignores dead bots"""
-		return self.row.uploader if self.row.uploader in self.wubloader.heartbeat.alive else ""
+		"""A processed uploader check that ignores dead bots (except for publish)"""
+		# Note we can't safely ignore a claimed publish because the drafter needs to be the same
+		# as the publisher.
+		return (
+			self.row.uploader
+			if self.job_type == 'publish' or self.row.uploader in self.wubloader.heartbeat.alive
+			else ""
+		)
 
 	@property
 	def excluded(self):

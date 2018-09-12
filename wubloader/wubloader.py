@@ -65,7 +65,7 @@ class Wubloader(object):
 				for job in self.find_jobs():
 
 					# If it's already claimed, ignore it.
-					# Note this check considers a claim by a dead bot to be invalid.
+					# Note this check considers a claim by a dead bot to be invalid (except for publishes).
 					if job.uploader and job.uploader != self.name:
 						continue
 
