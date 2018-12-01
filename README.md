@@ -14,5 +14,14 @@ but a brief overview of the components:
 * Cutter interacts with a database to perform cutting jobs
 * Sheet Sync syncs specifc database columns to a google doc which is the primary operator interface.
 
+### Usage
+
 All components are built as docker images.
 Components which access the disk expect a shared directory mounted at `/mnt`.
+
+#### Configuration
+
+Configuration is built into the docker images, and set during build by specifying a
+YAML file `config.yaml` in the repository root directory.
+
+See the provided example file for documentation of options.
