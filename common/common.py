@@ -12,7 +12,11 @@ class Config(object):
 	def load(self,
 		run_start_time,
 	):
-		self.run_start_time = dateutil.parser.parse(run_start_time)
+		# PyYAML tries to...ugh...be clever, and parse timestamps if it can work out how.
+		# So we should only try to parse if it's not datetime already.
+		if not isinstance(run_start_time, datetime.datetime):
+			run_start_time = dateutil.parser.parse(run_start_time)
+		self.run_start_time = run_start_time
 
 
 CONF = Config()
@@ -35,31 +39,33 @@ def bustime_to_dt(bustime):
 
 
 def format_bustime(bustime, round="millisecond"):
-	"""Convert bustime to a human-readable string (-)H:MM:SS.fff, with the
+	"""Convert bustime to a human-readable string (-)HH:MM:SS.fff, with the
 	ending cut off depending on the value of round:
 		"millisecond": (default) Round to the nearest millisecond.
 		"second": Round down to the current second.
 		"minute": Round down to the current minute.
 	Examples:
-		0:00:00.000
-		1:23:00
+		00:00:00.000
+		01:23:00
 		110:50
 		159:59:59.999
 		-10:30:01.100
 	Note that a negative value only indicates the number of hours after the start
 	is negative, the number of minutes/seconds is simply time past the hour.
-	eg. the bustime "-1:20:00" indicates the run begins in 40 minutes, not 80 minutes.
+	eg. the bustime "-01:20:00" indicates the run begins in 40 minutes, not 80 minutes.
 	"""
-	whole_secs, fractional = divmod(bustime, 1)
-	total_mins, secs = divmod(whole_secs, 60)
+	total_mins, secs = divmod(bustime, 60)
 	hours, mins = divmod(total_mins, 60)
-	parts = "{}:{:02d}:{:02d}:{:.3f}".format(hours, mins, secs, fractional).split(":")
-	if round == "millisecond":
+	parts = [
+		"{:02d}".format(int(hours)),
+		"{:02d}".format(int(mins)),
+	]
+	if round == "minute":
 		pass
 	elif round == "second":
-		parts = parts[:-1]
-	elif round == "minute":
-		parts = parts[:-2]
+		parts.append("{:02d}".format(int(secs)))
+	elif round == "millisecond":
+		parts.append("{:06.3f}".format(secs))
 	else:
 		raise ValueError("Bad rounding value: {!r}".format(round))
 	return ":".join(parts)
