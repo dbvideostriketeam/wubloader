@@ -1,0 +1,30 @@
+#!/bin/bash
+
+set -eu
+
+# Builds the docker images.
+# Usage: ./build {COMPONENTS}, or just ./build to build all.
+# The resulting images are named wubloader-COMPONENT.
+
+# The different images we can build
+COMPONENTS=(downloader)
+
+# The docker image tag, derived from the git commit + whether working tree is clean
+TAG=$(git rev-parse --short HEAD)
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+	TAG="$TAG-wip"
+fi
+
+if [ "$#" -gt 0 ]; then
+	COMPONENTS=("$@")
+fi
+
+for component in "${COMPONENTS[@]}"; do
+	echo "Building image for $component"
+	docker build \
+		-f "$component/Dockerfile" \
+		-t "wubloader-$component:latest" \
+		-t "wubloader-$component:$TAG" \
+		.
+	echo "Built image wubloader-$component:$TAG"
+done
