@@ -72,7 +72,7 @@ def get_media_playlist_uris(master_playlist, target_qualities):
 		raise ValueError("Master playlist has no variants")
 
 	for variant in master_playlist.playlists:
-		if any(media.uri for media in variant.medias):
+		if any(media.uri for media in variant.media):
 			logging.warning("Variant has a rendition with its own URI: {}".format(variant))
 
 	by_name = {variant_name(variant): variant for variant in master_playlist.playlists}

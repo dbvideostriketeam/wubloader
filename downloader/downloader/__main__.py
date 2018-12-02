@@ -1,6 +1,8 @@
 import logging
 
+import argh
+
 from downloader.main import main
 
 logging.basicConfig(level=logging.INFO)
-main()
+argh.dispatch_command(main)
