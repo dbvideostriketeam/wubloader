@@ -5,6 +5,10 @@ setup(
 	version = "0.0.0",
 	packages = find_packages(),
 	install_requires = [
+		"argh",
+		"dateutil",
+		"gevent",
+		"monotonic",
 		"requests",
 		"wubloader-common",
 	],
