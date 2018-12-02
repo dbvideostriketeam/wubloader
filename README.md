@@ -4,7 +4,7 @@ twitch (or probably other HLS, but some twitch specifics are assumed) stream.
 It was designed to serve the needs of the [Video Strike Team](https://vst.ninja)
 as part of [Desert Bus For Hope](https://desertbus.org).
 
-A full design doc can be read at [initial-design-doc.pdf](../blob/master/initial-design-doc.pdf),
+A full design doc can be read at [initial-design-doc.pdf](./initial-design-doc.pdf),
 but a brief overview of the components:
 
 * Downloader grabs segments from twitch and saves them to disk
