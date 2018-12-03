@@ -8,5 +8,7 @@ import argh
 
 from downloader.main import main
 
-logging.basicConfig(level=logging.INFO)
+LOG_FORMAT = "[%(asctime)s] %(levelname)8s %(name)s(%(module)s:%(lineno)d): %(message)s"
+
+logging.basicConfig(level=logging.INFO, format=LOG_FORMAT)
 argh.dispatch_command(main)
