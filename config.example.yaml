@@ -1,6 +1,0 @@
-
-# The timestamp of the beginning of the run.
-# This defines 00:00 bustime.
-# Should be in format YYYY-MM-DD hh:mm:ss.
-# Example: 2018-11-09 18:00:00
-run_start_time: 1970-01-01 00:00:00

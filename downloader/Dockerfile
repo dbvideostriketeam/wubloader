@@ -9,7 +9,4 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY downloader /tmp/downloader
 RUN pip install /tmp/downloader && rm -r /tmp/downloader
 
-# Add config file last as it changes most
-COPY config.yaml /etc/wubloader.yaml
-
-CMD python2 -m downloader
+ENTRYPOINT python2 -m downloader --base-dir /mnt
