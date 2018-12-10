@@ -37,6 +37,22 @@ def listdir(path, error=True):
 		return []
 
 
+@app.route('/files/<stream>/<variant>')
+def list_hours(stream, variant):
+	"""Returns a JSON list of hours for the given stream and variant for which
+	there may be segments available. Returns empty list on non-existent streams, etc.
+	"""
+	# Check no-one's being sneaky with path traversal or hidden folders
+	if any(arg.startswith('.') for arg in (stream, variant)):
+		return "Parts may not start with period", 403
+	path = os.path.join(
+		app.static_folder,
+		stream,
+		variant,
+	)
+	return json.dumps(listdir(path, error=False))
+
+
 @app.route('/files/<stream>/<variant>/<hour>')
 def list_segments(stream, variant, hour):
 	"""Returns a JSON list of segment files for a given stream, variant and hour.
