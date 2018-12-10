@@ -94,11 +94,3 @@ def get_media_playlist(uri):
 	resp = requests.get(uri)
 	resp.raise_for_status()
 	return hls_playlist.load(resp.text, base_uri=resp.url)
-
-
-def get_segment(uri):
-	# Future work: Make this stream directly to a file + hash it as we go,
-	# to avoid keeping it all in memory at once.
-	resp = requests.get(uri)
-	resp.raise_for_status()
-	return resp.content
