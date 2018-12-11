@@ -50,6 +50,9 @@ def format_bustime(bustime, round="millisecond"):
 		110:50
 		159:59:59.999
 		-10:30:01.100
+	Negative times are formatted as time-until-start, preceeded by a minus
+	sign.
+	eg. "-1:20:00" indicates the run begins in 80 minutes.
 	"""
 	sign = ''
 	if bustime < 0:
