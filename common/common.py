@@ -50,10 +50,14 @@ def format_bustime(bustime, round="millisecond"):
 		110:50
 		159:59:59.999
 		-10:30:01.100
-	Note that a negative value only indicates the number of hours after the start
-	is negative, the number of minutes/seconds is simply time past the hour.
-	eg. the bustime "-01:20:00" indicates the run begins in 40 minutes, not 80 minutes.
+	Negative times are formatted as time-until-start, preceeded by a minus
+	sign.
+	eg. "-1:20:00" indicates the run begins in 80 minutes.
 	"""
+	sign = ''
+	if bustime < 0:
+		sign = '-'
+		bustime = -bustime
 	total_mins, secs = divmod(bustime, 60)
 	hours, mins = divmod(total_mins, 60)
 	parts = [
@@ -68,4 +72,4 @@ def format_bustime(bustime, round="millisecond"):
 		parts.append("{:06.3f}".format(secs))
 	else:
 		raise ValueError("Bad rounding value: {!r}".format(round))
-	return ":".join(parts)
+	return sign + ":".join(parts)
