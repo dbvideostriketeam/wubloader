@@ -6,6 +6,10 @@ import os
 from flask import Flask, url_for, request, abort
 from gevent.pywsgi import WSGIServer
 
+import dateutil.parser
+
+from common import get_best_segments
+
 import generate_hls
 
 
@@ -90,8 +94,19 @@ def generate_master_playlist(stream):
 
 @app.route('/playlist/<stream>/<variant>.m3u8')
 def generate_media_playlist(stream, variant):
-	# TODO
-	return "Not Implemented", 501
+	# path traversal / hidden folders
+	if stream.startswith('.'):
+		return "Stream may not start with period", 403
+	if variant.startswith('.'):
+		return "Variant may not start with period", 403
+	#TODO handle no start/end
+	#TODO error handling of args
+	# TODO lots of other stuff
+	start = dateutil.parser.parse(request.args['start'])
+	end = dateutil.parser.parse(request.args['end'])
+	hours_path = os.path.join(app.static_folder, stream, variant)
+	segments = get_best_segments(hours_path, start, end)
+	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.'):
