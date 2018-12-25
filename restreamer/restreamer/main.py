@@ -1,12 +1,12 @@
 
 import errno
+import functools
 import json
 import os
 
+import dateutil.parser
 from flask import Flask, url_for, request, abort
 from gevent.pywsgi import WSGIServer
-
-import dateutil.parser
 
 from common import get_best_segments
 
@@ -41,14 +41,27 @@ def listdir(path, error=True):
 		return []
 
 
+def has_path_args(fn):
+	"""Decorator to wrap routes which take args which are to be used as parts of a filepath.
+	Disallows hidden folders and path traversal, and converts unicode to bytes.
+	"""
+	@functools.wraps(fn)
+	def _has_path_args(**kwargs):
+		kwargs = {key: value.encode('utf-8') for key, value in kwargs.items()}
+		for key, value in kwargs.items():
+			# Disallowing a leading . prevents both hidden files and path traversal ("..")
+			if value.startswith('.'):
+				return "Bad {}: May not start with a period".format(key), 403
+		return fn(**kwargs)
+	return _has_path_args
+
+
 @app.route('/files/<stream>/<variant>')
+@has_path_args
 def list_hours(stream, variant):
 	"""Returns a JSON list of hours for the given stream and variant for which
 	there may be segments available. Returns empty list on non-existent streams, etc.
 	"""
-	# Check no-one's being sneaky with path traversal or hidden folders
-	if any(arg.startswith('.') for arg in (stream, variant)):
-		return "Parts may not start with period", 403
 	path = os.path.join(
 		app.static_folder,
 		stream,
@@ -58,13 +71,11 @@ def list_hours(stream, variant):
 
 
 @app.route('/files/<stream>/<variant>/<hour>')
+@has_path_args
 def list_segments(stream, variant, hour):
 	"""Returns a JSON list of segment files for a given stream, variant and hour.
 	Returns empty list on non-existant streams, etc.
 	"""
-	# Check no-one's being sneaky with path traversal or hidden folders
-	if any(arg.startswith('.') for arg in (stream, variant, hour)):
-		return "Parts may not start with period", 403
 	path = os.path.join(
 		app.static_folder,
 		stream,
@@ -75,15 +86,13 @@ def list_segments(stream, variant, hour):
 
 
 @app.route('/playlist/<stream>.m3u8')
+@has_path_args
 def generate_master_playlist(stream):
 	"""Returns a HLS master playlist for the given stream.
 	Takes optional params:
 		start, end: The time to begin and end the stream at.
 			See generate_media_playlist for details.
 	"""
-	# path traversal / hidden folders
-	if stream.startswith('.'):
-		return "Stream may not start with period", 403
 	variants = listdir(os.path.join(app.static_folder, stream))
 	playlists = {
 		variant: url_for('generate_media_playlist', stream=stream, variant=variant, **request.args)
@@ -93,12 +102,8 @@ def generate_master_playlist(stream):
 
 
 @app.route('/playlist/<stream>/<variant>.m3u8')
+@has_path_args
 def generate_media_playlist(stream, variant):
-	# path traversal / hidden folders
-	if stream.startswith('.'):
-		return "Stream may not start with period", 403
-	if variant.startswith('.'):
-		return "Variant may not start with period", 403
 	#TODO handle no start/end
 	#TODO error handling of args
 	# TODO lots of other stuff
