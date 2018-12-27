@@ -73,7 +73,8 @@ class SegmentInfo(
 		'path', 'stream', 'variant', 'start', 'duration', 'is_partial', 'hash'
 	])
 ):
-	"""Info parsed from a segment path, including original path."""
+	"""Info parsed from a segment path, including original path.
+	Note that start time is a datetime and duration is a timedelta, and hash is a decoded binary string."""
 	@property
 	def end(self):
 		return self.start + self.duration
@@ -116,6 +117,7 @@ def parse_segment_path(path):
 def get_best_segments(hours_path, start, end):
 	"""Return a list of the best sequence of non-overlapping segments
 	we have for a given time range. Hours path should be the directory containing hour directories.
+	Time args start and end should be given as datetime objects.
 	The first segment may start before the time range, and the last may end after it.
 	The returned list contains items that are either:
 		SegmentInfo: a segment
