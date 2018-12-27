@@ -1,5 +1,7 @@
+import datetime
 import os
 import urllib
+from collections import Counter
 
 
 def generate_master(playlists):
@@ -22,9 +24,19 @@ def generate_media(segments, base_url):
 	"""Generate a media playlist from a list of segments as returned by common.get_best_segments().
 	Segments are specified as hour/name.ts relative to base_url.
 	"""
+	# We have to pick a "target duration". in most circumstances almost all segments
+	# will be of that duration, so we get the most common duration out of all the segments
+	# and use that.
+	# If we have no segments, default to 6 seconds.
+	non_none_segments = [segment for segment in segments if segment is not None]
+	if non_none_segments:
+		# Note most_common returns [(value, count)] so we unpack.
+		((target_duration, _),) = Counter(segment.duration for segment in non_none_segments).most_common(1)
+	else:
+		target_duration = datetime.timedelta(seconds=6)
 	lines = [
 		"#EXTM3U",
-		"#EXT-X-TARGETDURATION:6",
+		"#EXT-X-TARGETDURATION:{:.3f}".format(target_duration.total_seconds()),
 	]
 	for segment in segments:
 		# TODO handle missing bits, stream endings, other stuff
