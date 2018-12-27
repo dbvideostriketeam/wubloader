@@ -129,13 +129,37 @@ def generate_master_playlist(stream):
 @app.route('/playlist/<stream>/<variant>.m3u8')
 @has_path_args
 def generate_media_playlist(stream, variant):
-	#TODO handle no start/end
-	#TODO error handling of args
-	# TODO lots of other stuff
-	start = dateutil.parser.parse(request.args['start'])
-	end = dateutil.parser.parse(request.args['end'])
+	"""Returns a HLS media playlist for the given stream and variant.
+	Takes optional params:
+		start, end: The time to begin and end the stream at.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS).
+			If not given, effectively means "infinity", ie. no start means
+			any time ago, no end means any time in the future.
+	"""
+
 	hours_path = os.path.join(app.static_folder, stream, variant)
-	segments = get_best_segments(hours_path, start, end)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	start = dateutil.parser.parse(request.args['start']) if 'start' in request.args else None
+	end = dateutil.parser.parse(request.args['end']) if 'end' in request.args else None
+	if start is None or end is None:
+		# If start or end are not given, use the earliest/latest time available
+		first, last = time_range_for_variant(stream, variant)
+		if start is None:
+			start = first
+		if end is None:
+			end = last
+
+	# get_best_segments requires start be before end, special case that as no segments
+	# (not an error because someone might ask for a specific start, no end, but we ended up with
+	# end before start because that's the latest time we have)
+	if start < end:
+		segments = get_best_segments(hours_path, start, end)
+	else:
+		# Note the None to indicate there was a "hole" at both start and end
+		segments = [None]
+
 	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
 
 
