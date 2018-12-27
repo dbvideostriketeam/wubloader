@@ -240,8 +240,12 @@ def best_segments_by_start(hour):
 				logging.warning("Multiple versions of full segment at start_time {}: {}".format(
 					start_time, ", ".join(map(str, segments))
 				))
-				# we have to pick one, so might as well make it consistent by sorting by path
-				full_segments.sort(key=lambda segment: segment.path)
+				# We've observed some cases where the same segment (with the same hash) will be reported
+				# with different durations (generally at stream end). Prefer the longer duration,
+				# as this will ensure that if hashes are different we get the most data, and if they
+				# are the same it should keep holes to a minimum.
+				# If same duration, we have to pick one, so pick highest-sorting hash just so we're consistent.
+				full_segments = [max(full_segments, key=lambda segment: (segment.duration, segment.hash))]
 			yield full_segments[0]
 			continue
 		# no full segments, fall back to measuring partials.
