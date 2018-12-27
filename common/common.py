@@ -73,7 +73,8 @@ class SegmentInfo(
 		'path', 'stream', 'variant', 'start', 'duration', 'is_partial', 'hash'
 	])
 ):
-	"""Info parsed from a segment path, including original path."""
+	"""Info parsed from a segment path, including original path.
+	Note that start time is a datetime and duration is a timedelta, and hash is a decoded binary string."""
 	@property
 	def end(self):
 		return self.start + self.duration
@@ -116,6 +117,7 @@ def parse_segment_path(path):
 def get_best_segments(hours_path, start, end):
 	"""Return a list of the best sequence of non-overlapping segments
 	we have for a given time range. Hours path should be the directory containing hour directories.
+	Time args start and end should be given as datetime objects.
 	The first segment may start before the time range, and the last may end after it.
 	The returned list contains items that are either:
 		SegmentInfo: a segment
@@ -240,8 +242,12 @@ def best_segments_by_start(hour):
 				logging.warning("Multiple versions of full segment at start_time {}: {}".format(
 					start_time, ", ".join(map(str, segments))
 				))
-				# we have to pick one, so might as well make it consistent by sorting by path
-				full_segments.sort(key=lambda segment: segment.path)
+				# We've observed some cases where the same segment (with the same hash) will be reported
+				# with different durations (generally at stream end). Prefer the longer duration,
+				# as this will ensure that if hashes are different we get the most data, and if they
+				# are the same it should keep holes to a minimum.
+				# If same duration, we have to pick one, so pick highest-sorting hash just so we're consistent.
+				full_segments = [max(full_segments, key=lambda segment: (segment.duration, segment.hash))]
 			yield full_segments[0]
 			continue
 		# no full segments, fall back to measuring partials.
