@@ -204,10 +204,10 @@ class StreamsManager(object):
 		self.trigger_refresh() # on first round, always go immediately
 		while not self.stopping.is_set():
 			# clamp time to max age to non-negative, and default to 0 if no workers exist
-			times_to_max_age = max(0, min([
+			time_to_next_max_age = max(0, min([
 				self.MAX_WORKER_AGE - workers[-1].age()
 				for workers in self.stream_workers.values() if workers
-			] + [0])
+			] or [0]))
 			# wait until refresh triggered or next max age reached
 			logging.info("Next master playlist refresh in at most {} sec".format(time_to_next_max_age))
 			self.refresh_needed.wait(time_to_next_max_age)
