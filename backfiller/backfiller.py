@@ -7,20 +7,18 @@
 # more frequently, backfill the last couple hours
 # (last three hour directories so always at least two hours).
 
-import glob
 import requests
 import os
 
 hour_fmt = '%Y-%m-%dT%H'
 
-def is_localhost(node):
-
-	return None	
 
 def get_nodes():
 
 	# either read a config file or query the database to get the addresses
-	#  of the other nodes
+	# of the other nodes
+	# figure out some way that the local machine isn't in the list of returned
+	# nodes so that 
 
 	# as a prototype can just hardcode some addresses.
 
@@ -31,7 +29,9 @@ def get_nodes():
 def list_local_segments(base_dir, stream, variant, hour):
 
 	path = os.path.join(base_dir, stream, variant, hour)
-	return [name for name in os.listdir(path) if not name.startswith('.')]
+	local_segments = [name for name in os.listdir(path) if not
+						name.startswith('.')]
+	return local_segments
 
 def get_hours(node, stream, variant):
 
@@ -51,16 +51,22 @@ def list_remote_segments(node, stream, variant, hour):
 #based on _get_segment in downloader/main
 def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment):
 
-	resp = requests.get('https://{}/segments/{}/{}/{}/{}'.format(node, stream, variant,
-							hour, missing_segment), stream=True)
+	resp = requests.get('https://{}/segments/{}/{}/{}/{}'.format(node, stream,
+						variant, hour, missing_segment), stream=True)
 
-	with open('temp_backfill', 'w') as f:
+	if resp.status_code != 200:
+		return False
+
+	temp_name = 'temp_backfill'
+
+	with open(temp_name, 'w') as f:
 		for chunk in resp.iter_content(8192):
 			f.write(chunk)
 
 	path = os.path.join(base_dir, stream, variant, hour, missing_segment)
-	os.rename(temp, segment)
+	os.rename(temp_name, segment)
 
+	return True
 
 
 def back_fill(static_folder, stream, variants, hours=None, nodes=None,
