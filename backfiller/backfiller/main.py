@@ -72,7 +72,7 @@ def list_remote_segments(node, stream, variant, hour, timeout=TIMEOUT):
 def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 			timeout=TIMEOUT):
 
-
+	file_created = False
 	path = os.path.join(base_dir, stream, variant, hour, missing_segment)
 	if os.path.exists(path):
 		return
@@ -81,12 +81,23 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 	temp_path = '-'.join(substrs[:-1] + [str(uuid.uuid4()) + '.st'])
 	common.ensure_directory(temp_path)
 
-	uri = '{}/segments/{}/{}/{}/{}'.format(node, stream, variant, hour, missing_segment)
-	resp = requests.get(uri, stream=True, timeout=timeout)
+	try:
+		uri = '{}/segments/{}/{}/{}/{}'.format(node, stream, variant, hour, missing_segment)
+		resp = requests.get(uri, stream=True, timeout=timeout)
 
-	with open(temp_path, 'w') as f:
-		for chunk in resp.iter_content(8192):
-			f.write(chunk)
+		with open(temp_path, 'w') as f:
+			file_created = True
+			for chunk in resp.iter_content(8192):
+				f.write(chunk)
+
+	except Exception:
+		ex_type, ex, tb = sys.exc_info()
+		if file_created:
+			os.remove(temp_path)
+
+		raise ex_type, ex, tb
+		
+		
 
 	common.rename(temp_path, path)
 
