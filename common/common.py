@@ -266,6 +266,7 @@ def rename(old, new):
 			raise
 		os.remove(old)
 
+
 def ensure_directory(path):
 	"""Create directory that contains path, as well as any parent directories,
 	if they don't already exist."""
@@ -279,6 +280,7 @@ def ensure_directory(path):
 		# Ignore if EEXISTS. This is needed to avoid a race if two getters run at once.
 		if e.errno != errno.EEXIST:
 			raise
+
 
 def jitter(interval):
 	"""Apply some 'jitter' to an interval. This is a random +/- 10% change in order to

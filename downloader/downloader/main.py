@@ -453,7 +453,7 @@ class SegmentGetter(object):
 					logging.warning("Got 403 Forbidden for segment, giving up: {}".format(self.segment))
 					return
 				resp.raise_for_status()
-				ensure_directory(temp_path)
+				common.ensure_directory(temp_path)
 				with open(temp_path, 'w') as f:
 					file_created = True
 					# We read chunk-wise in 8KiB chunks. Note that if the connection cuts halfway,
