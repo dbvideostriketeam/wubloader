@@ -29,7 +29,7 @@ def get_nodes():
 	# nodes so that 
 
 	# as a prototype can just hardcode some addresses.
-	# each element in nodes  is a 'protocol://host:port/' string
+	# each element in nodes is a 'protocol://host:port/' string
 
 	nodes = []
 
@@ -77,10 +77,9 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 	if os.path.exists(path):
 		return
 
-	common.ensure_directory(path)
-
 	substrs = path.split('-')
 	temp_path = '-'.join(substrs[:-1] + [str(uuid.uuid4()) + '.st'])
+	common.ensure_directory(temp_path)
 
 	uri = '{}/segments/{}/{}/{}/{}'.format(node, stream, variant, hour, missing_segment)
 	resp = requests.get(uri, stream=True, timeout=timeout)
@@ -95,14 +94,11 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 
 def backfill(base_dir, stream, variants, hours=None, nodes=None):
 	
-	# loop over nodes asking for a list of segments then downloads any 
-	# segments it doesn't have
+	# loop over nodes backfilling from each
 
 	if nodes is None:
 		nodes = get_nodes()
 
-
-		
 	#ideally do this in parallel
 	for node in nodes:
 		
@@ -114,7 +110,7 @@ def backfill(base_dir, stream, variants, hours=None, nodes=None):
 			print node, e
 
 
-def backfill_node(base_dir, node, stream, variants, hours, recent_cutoff=60):
+def backfill_node(base_dir, node, stream, variants, hours=None, recent_cutoff=60):
 
 
 	# if hours is int, backfill last hours hourdirs

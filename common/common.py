@@ -252,3 +252,36 @@ def best_segments_by_start(hour):
 			continue
 		# no full segments, fall back to measuring partials.
 		yield max(segments, key=lambda segment: os.stat(segment.path).st_size)
+
+
+def rename(old, new):
+	"""Atomic rename that succeeds if the target already exists, since we're naming everything
+	by hash anyway, so if the filepath already exists the file itself is already there.
+	In this case, we delete the source file.
+	"""
+	try:
+		os.rename(old, new)
+	except OSError as e:
+		if e.errno != errno.EEXIST:
+			raise
+		os.remove(old)
+
+def ensure_directory(path):
+	"""Create directory that contains path, as well as any parent directories,
+	if they don't already exist."""
+	dir_path = os.path.dirname(path)
+	if os.path.exists(dir_path):
+		return
+	ensure_directory(dir_path)
+	try:
+		os.mkdir(dir_path)
+	except OSError as e:
+		# Ignore if EEXISTS. This is needed to avoid a race if two getters run at once.
+		if e.errno != errno.EEXIST:
+			raise
+
+def jitter(interval):
+	"""Apply some 'jitter' to an interval. This is a random +/- 10% change in order to
+	smooth out patterns and prevent everything from retrying at the same time.
+	"""
+	return interval * (0.9 + 0.2 * random.random())
