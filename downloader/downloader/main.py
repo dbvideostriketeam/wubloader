@@ -437,6 +437,7 @@ class SegmentGetter(object):
 		dir_path = os.path.dirname(path)
 		if os.path.exists(dir_path):
 			return
+		# call recursively to check entire path exists
 		self.ensure_directory(dir_path)
 		try:
 			os.mkdir(dir_path)
