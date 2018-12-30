@@ -5,7 +5,9 @@ setup(
 	version = "0.0.0",
 	packages = find_packages(),
 	install_requires = [
-		"requests",
+		"argh",
+		"flask",
+		"gevent",
 		"wubloader-common",
 	],
 )

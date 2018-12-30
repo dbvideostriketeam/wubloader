@@ -7,7 +7,7 @@ set -eu
 # The resulting images are named wubloader-COMPONENT.
 
 # The different images we can build
-COMPONENTS=(downloader)
+COMPONENTS=(downloader restreamer)
 
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(git rev-parse --short HEAD)
