@@ -5,11 +5,13 @@ import functools
 import json
 import logging
 import os
+import shutil
 import signal
 
 import dateutil.parser
 import gevent
-from flask import Flask, url_for, request, abort
+from flask import Flask, url_for, request, abort, Response
+from gevent import subprocess
 from gevent.pywsgi import WSGIServer
 
 from common import get_best_segments
@@ -155,6 +157,8 @@ def generate_media_playlist(stream, variant):
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS).
 			If not given, effectively means "infinity", ie. no start means
 			any time ago, no end means any time in the future.
+	Note that because it returns segments _covering_ that range, the playlist
+	may start slightly before and end slightly after the given times.
 	"""
 
 	hours_path = os.path.join(app.static_folder, stream, variant)
@@ -181,6 +185,96 @@ def generate_media_playlist(stream, variant):
 		segments = [None]
 
 	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
+
+
+@app.route('/cut/<stream>/<variant>.ts')
+@has_path_args
+def cut(stream, variant):
+	"""Return a MPEGTS video file covering the exact timestamp range.
+	Params:
+		start, end: Required. The start and end times, down to the millisecond.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS).
+		allow_holes: Optional, default false. If false, errors out with a 406 Not Acceptable
+			if any holes are detected, rather than producing a video with missing parts.
+			Set to true by passing "true" (case insensitive).
+			Even if holes are allowed, a 406 may result if the resulting video would be empty.
+	"""
+	start = dateutil.parser.parse(request.args['start'])
+	end = dateutil.parser.parse(request.args['end'])
+	if end <= start:
+		return "End must be after start", 400
+
+	allow_holes = request.args.get('allow_holes', 'false').lower()
+	if allow_holes not in ["true", "false"]:
+		return "allow_holes must be one of: true, false", 400
+	allow_holes = (allow_holes == "true")
+
+	hours_path = os.path.join(app.static_folder, stream, variant)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	segments = get_best_segments(hours_path, start, end)
+	if not allow_holes and None in segments:
+		return "Requested time range contains holes or is incomplete.", 406
+
+	segments = [segment for segment in segments if segment is not None]
+
+	if not segments:
+		return "We have no content available within the requested time range.", 406
+
+	# how far into the first segment to begin
+	cut_start = max(0, (segments[0].start - start).total_seconds())
+	# calculate full uncut duration of content, ie. without holes.
+	full_duration = sum(segment.duration.total_seconds() for segment in segments)
+	# calculate how much of final segment should be cut off
+	cut_end = max(0, (end - segments[-1].end).total_seconds())
+	# finally, calculate actual output duration, which is what ffmpeg will use
+	duration = full_duration - cut_start - cut_end
+
+	def feed_input(pipe):
+		# pass each segment into ffmpeg's stdin in order, while outputing everything on stdout.
+		for segment in segments:
+			with open(segment.path) as f:
+				shutil.copyfileobj(f, pipe)
+		pipe.close()
+
+	def _cut():
+		ffmpeg = None
+		input_feeder = None
+		try:
+			ffmpeg = subprocess.Popen([
+				"ffmpeg",
+				"-i", "-", # read from stdin
+				"-ss", str(cut_start), # seconds to cut from start
+				"-t", str(duration), # total duration, which says when to cut at end
+				"-f", "mpegts", # output as MPEG-TS format
+				"-", # output to stdout
+			], stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+			input_feeder = gevent.spawn(feed_input, ffmpeg.stdin)
+			# stream the output until it is closed
+			while True:
+				chunk = ffmpeg.stdout.read(16*1024)
+				if not chunk:
+					break
+				yield chunk
+			# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+			# raising an error mid-streaming-response will get flask to abort the response
+			# uncleanly, which tells the client that something went wrong.
+			if ffmpeg.wait() != 0:
+				raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
+			input_feeder.get() # re-raise any errors from feed_input()
+		finally:
+			# if something goes wrong, try to clean up ignoring errors
+			if input_feeder is not None:
+				input_feeder.kill()
+			if ffmpeg is not None and ffmpeg.poll() is None:
+				for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+					try:
+						action()
+					except (OSError, IOError):
+						pass
+
+	return Response(_cut(), mimetype='video/MP2T')
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.'):
