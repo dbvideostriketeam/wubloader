@@ -3,9 +3,12 @@ import datetime
 import errno
 import functools
 import json
+import logging
 import os
+import signal
 
 import dateutil.parser
+import gevent
 from flask import Flask, url_for, request, abort
 from gevent.pywsgi import WSGIServer
 
@@ -166,4 +169,12 @@ def generate_media_playlist(stream, variant):
 def main(host='0.0.0.0', port=8000, base_dir='.'):
 	app.static_folder = base_dir
 	server = WSGIServer((host, port), app)
+
+	def stop():
+		logging.info("Shutting down")
+		server.stop()
+	gevent.signal(signal.SIGTERM, stop)
+
+	logging.info("Starting up")
 	server.serve_forever()
+	logging.info("Gracefully shut down")
