@@ -166,6 +166,10 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 
 			for missing_segment in missing_segments:
 
+				#ignore temporary files
+				if 'temp' in missing_segment:
+					continue
+
 				#to avoid getting in the downloader's way ignore segments less than recent_cutoff old
 				time_str = '{}:{}'.format(hour, missing_segment.split('-')[0])
 				segment_time = datetime.datetime.strptime(time_str, HOUR_FMT + ':%M:%S.%f')
