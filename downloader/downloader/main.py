@@ -318,7 +318,7 @@ class StreamWorker(object):
 				if segment.uri not in self.getters:
 					if date is None:
 						raise ValueError("Cannot determine date of segment")
-					self.getters[segment.uri] = SegmentGetter(self.manager.base_dir, self.stream, segment, date)
+					self.getters[segment.uri] = SegmentGetter(self.manager.base_dir, self.manager.channel, self.stream, segment, date)
 					gevent.spawn(self.getters[segment.uri].run)
 				if date is not None:
 					date += datetime.timedelta(seconds=segment.duration)
@@ -362,8 +362,9 @@ class SegmentGetter(object):
 	FETCH_HEADERS_TIMEOUTS = 5, 30
 	FETCH_FULL_TIMEOUTS = 15, 240
 
-	def __init__(self, base_dir, stream, segment, date):
+	def __init__(self, base_dir, channel, stream, segment, date):
 		self.base_dir = base_dir
+		self.channel = channel
 		self.stream = stream
 		self.segment = segment
 		self.date = date
@@ -400,6 +401,7 @@ class SegmentGetter(object):
 		"""Generate leading part of filepath which doesn't change with the hash."""
 		return os.path.join(
 			self.base_dir,
+			self.channel,
 			self.stream,
 			self.date.strftime("%Y-%m-%dT%H"),
 			"{date}-{duration}".format(
