@@ -5,9 +5,16 @@ set -eu
 # Builds the docker images.
 # Usage: ./build {COMPONENTS}, or just ./build to build all.
 # The resulting images are named wubloader-COMPONENT.
+# Pass PUSH=true to also push the resulting images, or PUSH=latest to push them as :latest tag
 
 # The different images we can build
 COMPONENTS=(downloader restreamer)
+
+# Define push if not already defined
+PUSH=${PUSH:-}
+
+# Base is the repository namespace information, not including the wubloader-component part.
+BASE="quay.io/ekimekim"
 
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(git rev-parse --short HEAD)
@@ -21,10 +28,20 @@ fi
 
 for component in "${COMPONENTS[@]}"; do
 	echo "Building image for $component"
+	latest="$BASE/wubloader-$component:latest"
+	specific="$BASE/wubloader-$component:$TAG"
 	docker build \
 		-f "$component/Dockerfile" \
-		-t "wubloader-$component:latest" \
-		-t "wubloader-$component:$TAG" \
+		-t "$latest" \
+		-t "$specific" \
 		.
 	echo "Built image wubloader-$component:$TAG"
+	if [ -n "$PUSH" ]; then
+		echo "Pushing tag $specific"
+		docker push "$specific"
+	fi
+	if [ "$PUSH" == "latest" ]; then
+		echo "Pushing tag $latest"
+		docker push "$latest"
+	fi
 done
