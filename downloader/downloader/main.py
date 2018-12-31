@@ -427,8 +427,6 @@ class SegmentGetter(object):
 		full_prefix = "{}-full".format(self.prefix)
 		return any(candidate.startswith(full_prefix) for candidate in candidates)
 
-
-
 	def get_segment(self):
 		# save current value of self.retry so we can't set any later instance
 		# after a retry for this round has already occurred.
