@@ -60,6 +60,23 @@ def has_path_args(fn):
 	return _has_path_args
 
 
+def cors(app):
+	"""WSGI middleware that sets CORS headers"""
+	HEADERS = [
+		("Access-Control-Allow-Credentials", "false"),
+		("Access-Control-Allow-Headers", "*"),
+		("Access-Control-Allow-Methods", "GET,POST,HEAD"),
+		("Access-Control-Allow-Origin", "*"),
+		("Access-Control-Max-Age", "86400"),
+	]
+	def handle(environ, start_response):
+		def _start_response(status, headers, exc_info=None):
+			headers += HEADERS
+			return start_response(status, headers, exc_info)
+		return app(environ, _start_response)
+	return handle
+
+
 @app.route('/files/<stream>/<variant>')
 @has_path_args
 def list_hours(stream, variant):
@@ -168,7 +185,7 @@ def generate_media_playlist(stream, variant):
 
 def main(host='0.0.0.0', port=8000, base_dir='.'):
 	app.static_folder = base_dir
-	server = WSGIServer((host, port), app)
+	server = WSGIServer((host, port), cors(app))
 
 	def stop():
 		logging.info("Shutting down")
