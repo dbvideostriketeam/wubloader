@@ -28,6 +28,8 @@ def get_nodes():
 	# nodes so that 
 	# as a prototype can just hardcode some addresses.
 
+	logging.info('Fetching list of other nodes')
+
 	nodes = []
 	return nodes
 
@@ -52,6 +54,7 @@ def list_local_segments(base_dir, stream, variant, hour):
 def list_remote_hours(node, stream, variant, timeout=TIMEOUT):
 	"""Wrapper around a call to restreamer.list_hours."""
 	uri = '{}/files/{}/{}'.format(node, stream, variant)
+	logging.debug('Getting list of hours from {}'.format(uri))
 	resp = requests.get(uri, timeout=timeout)
 	return resp.json()
 
@@ -59,6 +62,7 @@ def list_remote_hours(node, stream, variant, timeout=TIMEOUT):
 def list_remote_segments(node, stream, variant, hour, timeout=TIMEOUT):
 	"""Wrapper around a call to restreamer.list_segments."""
 	uri = '{}/files/{}/{}/{}'.format(node, stream, variant, hour)
+	logging.debug('Getting list of segments from {}'.format(uri))
 	resp = requests.get(uri, timeout=timeout)
 	return resp.json()
 
@@ -70,6 +74,7 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 	Fetches stream/variant/hour/missing_segment from node and puts it in base_dir/stream/variant/hour/missing_segment. If the segment already exists locally, this does not attempt to fetch it."""
 
 	path = os.path.join(base_dir, stream, variant, hour, missing_segment)
+	logging.debug('Getting segment {}'.format(path))
 	# check to see if file was created since we listed the local segments to
 	# avoid unnecessarily copying
 	if os.path.exists(path):
@@ -145,6 +150,7 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 		order. Otherwise, do not change the order of hours (default).
 	recent_cutoff -- Skip backfilling segments younger than this number of
 		seconds to prioritise letting the downloader grab these segments."""
+	logging.info('Starting backfilling from {}'.format(node))
 
 	if hours is None:
 		# gather all available hours from all variants and take the union
@@ -191,7 +197,8 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 				# test to see if file is a segment and get the segments start time
 				try:
 					segment = common.parse_segment_path(path)
-				except ValueError:
+				except ValueError as e:
+					logging.warning('File {} invaid: {}'.format(path, e.value))
 					continue
 						
 				#to avoid getting in the downloader's way ignore segments less than recent_cutoff old
@@ -199,6 +206,8 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 					continue
 
 				get_remote_segment(base_dir, node, stream, variant, hour, missing_segment)
+
+	logging.info('Finished backfilling from {}'.format(node))
 
 							
 def main(base_dir, stream, variants, fill_wait=5, full_fill_wait=180, sleep_time=1):
