@@ -6,14 +6,12 @@ services:
 - docker
 
 # what to actually run
-script: |
-  set -eu
-  export PUSH=true # always push
-  # if this is a push to master build, also push latest
-  if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; then
-    export PUSH=latest
-  fi
-  # log into quay.io so we can push
-  echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USER" --password-stdin
-  # build and push all components
-  ./build
+script:
+# always push
+- export PUSH=true
+# if this is a push to master build, also push latest
+- if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; then export PUSH=latest; fi
+# log into quay.io so we can push
+- echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USER" --password-stdin
+# build and push all components
+- ./build
