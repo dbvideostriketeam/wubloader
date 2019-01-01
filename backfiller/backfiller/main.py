@@ -147,15 +147,19 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 		seconds to prioritise letting the downloader grab these segments."""
 
 	if hours is None:
-		hours = list_remote_hours(node, stream, variant)
+		# gather all available hours from all variants and take the union
+		hours = set().union(*[
+			list_remote_hours(node, stream, variant)
+			for variant in variants
+		])
 	elif is_iterable(hours):
-		pass # hours already in desired format
+		hours = list(hours) # coerce to list so it can be sorted
 	else:
 		n_hours = hours
 		if n_hours < 1:
 			raise ValueError('Number of hours has to be 1 or greater')
 		now = datetime.datetime.utcnow()
-		hours = [(now - i * timedelta(hours=1)).strftime(HOUR_FMT) for i in range(n_hours)]
+		hours = [(now - i * datetime.timedelta(hours=1)).strftime(HOUR_FMT) for i in range(n_hours)]
 
 	if start is not None:
 		hours = [hour for hour in hours if hour >= start]
@@ -168,9 +172,9 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 	if order == 'random':
 		random.shuffle(hours)
 	elif order == 'forward':
-		sort(hours)
+		hours.sort()
 	elif order == 'reverse':
-		sort(hours, reverse=True)
+		hours.sort(reverse=True)
 
 	for variant in variants:
 
