@@ -8,6 +8,7 @@ import errno
 import itertools
 import logging
 import os
+import random
 import sys
 from collections import namedtuple
 
