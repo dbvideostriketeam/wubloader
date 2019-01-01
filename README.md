@@ -18,3 +18,7 @@ but a brief overview of the components:
 
 All components are built as docker images.
 Components which access the disk expect a shared directory mounted at `/mnt`.
+
+A docker-compose file is provided to run all components. See `docker-compose.jsonnet`
+to set configuration options, then generate the compose file with `./generate-docker-compose`.
+Then run `docker-compose up`.
