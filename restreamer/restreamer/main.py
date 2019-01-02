@@ -226,11 +226,11 @@ def cut(stream, variant):
 		return "We have no content available within the requested time range.", 406
 
 	# how far into the first segment to begin
-	cut_start = max(0, (segments[0].start - start).total_seconds())
+	cut_start = max(0, (start - segments[0].start).total_seconds())
 	# calculate full uncut duration of content, ie. without holes.
 	full_duration = sum(segment.duration.total_seconds() for segment in segments)
 	# calculate how much of final segment should be cut off
-	cut_end = max(0, (end - segments[-1].end).total_seconds())
+	cut_end = max(0, (segments[-1].end - end).total_seconds())
 	# finally, calculate actual output duration, which is what ffmpeg will use
 	duration = full_duration - cut_start - cut_end
 
@@ -243,7 +243,12 @@ def cut(stream, variant):
 		# pass each segment into ffmpeg's stdin in order, while outputing everything on stdout.
 		for segment in segments:
 			with open(segment.path) as f:
-				shutil.copyfileobj(f, pipe)
+				try:
+					shutil.copyfileobj(f, pipe)
+				except OSError as e:
+					# ignore EPIPE, as this just means the end cut meant we didn't need all input
+					if e.errno != errno.EPIPE:
+						raise
 		pipe.close()
 
 	def _cut():
