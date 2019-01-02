@@ -7,7 +7,7 @@ COPY common /tmp/common
 RUN pip install /tmp/common && rm -r /tmp/common
 
 # Install actual application
-COPY downloader /tmp/backfiller
+COPY backfiller /tmp/backfiller
 RUN pip install /tmp/backfiller && rm -r /tmp/backfiller
 
 ENTRYPOINT ["python2", "-m", "backfiller", "--base-dir", "/mnt"]
