@@ -230,7 +230,7 @@ def backfill_node(base_dir, node, stream, variants, hours=None, start=None,
 	logging.info('Finished backfilling from {}'.format(node))
 
 							
-def main(base_dir, stream, variants, fill_wait=5, full_fill_wait=180, sleep_time=1):
+def main(base_dir='/mnt', stream='desertbus', variants=['source'], fill_wait=5, full_fill_wait=180, sleep_time=1):
 	"""Prototype backfiller service.
 
 	Do a backfill of the last 3 hours from stream/variants from all nodes initially before doing a full backfill from all nodes. Then every sleep_time minutes check to see if more than fill_wait minutes have passed since the last backfill. If so do a backfill of the last 3 hours. Also check whether it has been more than full_fill_wait minutes since the last full backfill; if so, do a full backfill."""
