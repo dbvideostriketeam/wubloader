@@ -1,6 +1,6 @@
 FROM alpine:3.7
 # dependencies needed for compiling c extensions
-RUN apk --update add py2-pip
+RUN apk --update add py2-pip gcc python-dev musl-dev
 
 # Install common lib first as it changes less
 COPY common /tmp/common
