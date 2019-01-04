@@ -8,6 +8,7 @@ setup(
 		"argh",
 		"flask",
 		"gevent",
+		"prometheus-client",
 		"wubloader-common",
 	],
 )
