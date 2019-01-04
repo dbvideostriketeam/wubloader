@@ -11,6 +11,7 @@ from contextlib import closing
 
 import dateutil.parser
 import gevent
+import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent import subprocess
 from gevent.pywsgi import WSGIServer
@@ -18,9 +19,11 @@ from gevent.pywsgi import WSGIServer
 from common import get_best_segments
 
 import generate_hls
+from stats import stats, after_request
 
 
 app = Flask('restreamer', static_url_path='/segments')
+app.after_request(after_request)
 
 
 """
@@ -80,6 +83,13 @@ def cors(app):
 	return handle
 
 
+@app.route('/metrics')
+@stats
+def metrics():
+	"""Return current metrics in prometheus metrics format"""
+	return prom.generate_latest()
+
+
 @app.route('/files/<stream>/<variant>')
 @has_path_args
 def list_hours(stream, variant):
@@ -95,6 +105,7 @@ def list_hours(stream, variant):
 
 
 @app.route('/files/<stream>/<variant>/<hour>')
+@stats
 @has_path_args
 def list_segments(stream, variant, hour):
 	"""Returns a JSON list of segment files for a given stream, variant and hour.
@@ -121,6 +132,7 @@ def time_range_for_variant(stream, variant):
 
 
 @app.route('/playlist/<stream>.m3u8')
+@stats
 @has_path_args
 def generate_master_playlist(stream):
 	"""Returns a HLS master playlist for the given stream.
@@ -150,6 +162,7 @@ def generate_master_playlist(stream):
 
 
 @app.route('/playlist/<stream>/<variant>.m3u8')
+@stats
 @has_path_args
 def generate_media_playlist(stream, variant):
 	"""Returns a HLS media playlist for the given stream and variant.
@@ -189,6 +202,7 @@ def generate_media_playlist(stream, variant):
 
 
 @app.route('/cut/<stream>/<variant>.ts')
+@stats
 @has_path_args
 def cut(stream, variant):
 	"""Return a MPEGTS video file covering the exact timestamp range.
