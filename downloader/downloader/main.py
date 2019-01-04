@@ -25,7 +25,7 @@ class TimedOutError(Exception):
 
 
 @contextmanager
-def soft_hard_timeout(description, (soft_timeout, hard_timeout), on_soft_timeout):
+def soft_hard_timeout(logger, description, (soft_timeout, hard_timeout), on_soft_timeout):
 	"""Context manager that wraps a piece of code in a pair of timeouts,
 	a "soft" timeout and a "hard" one. If the block does not complete before
 	the soft timeout, the given on_soft_timeout() function is called in a new greenlet.
@@ -47,7 +47,7 @@ def soft_hard_timeout(description, (soft_timeout, hard_timeout), on_soft_timeout
 		if finished:
 			# We finished before soft timeout was hit
 			return
-		logging.warning("Hit soft timeout {}s while {}".format(soft_timeout, description))
+		logger.warning("Hit soft timeout {}s while {}".format(soft_timeout, description))
 		on_soft_timeout()
 	gevent.spawn_later(soft_timeout, dispatch_soft_timeout)
 	error = TimedOutError("Timed out after {}s while {}".format(hard_timeout, description))
@@ -174,7 +174,7 @@ class StreamsManager(object):
 			# Fetch playlist. On soft timeout, retry.
 			self.logger.info("Fetching master playlist")
 			fetch_time = monotonic()
-			with soft_hard_timeout("fetching master playlist", self.FETCH_TIMEOUTS, self.trigger_refresh):
+			with soft_hard_timeout(self.logger, "fetching master playlist", self.FETCH_TIMEOUTS, self.trigger_refresh):
 				master_playlist = twitch.get_master_playlist(self.channel)
 			new_urls = twitch.get_media_playlist_uris(master_playlist, self.stream_workers.keys())
 			self.update_urls(fetch_time, new_urls)
@@ -297,7 +297,7 @@ class StreamWorker(object):
 
 			self.logger.debug("Getting media playlist {}".format(self.url))
 			try:
-				with soft_hard_timeout("getting media playlist", self.FETCH_TIMEOUTS, self.trigger_new_worker):
+				with soft_hard_timeout(self.logger, "getting media playlist", self.FETCH_TIMEOUTS, self.trigger_new_worker):
 					playlist = twitch.get_media_playlist(self.url)
 			except Exception as e:
 				self.logger.warning("Failed to fetch media playlist {}".format(self.url), exc_info=True)
@@ -459,8 +459,8 @@ class SegmentGetter(object):
 		file_created = False
 		try:
 			logging.debug("Downloading segment {} to {}".format(self.segment, temp_path))
-			with soft_hard_timeout("getting and writing segment", self.FETCH_FULL_TIMEOUTS, retry.set):
-				with soft_hard_timeout("getting segment headers", self.FETCH_HEADERS_TIMEOUTS, retry.set):
+			with soft_hard_timeout(self.logger, "getting and writing segment", self.FETCH_FULL_TIMEOUTS, retry.set):
+				with soft_hard_timeout(self.logger, "getting segment headers", self.FETCH_HEADERS_TIMEOUTS, retry.set):
 					resp = requests.get(self.segment.uri, stream=True)
 				if resp.status_code == 403:
 					logging.warning("Got 403 Forbidden for segment, giving up: {}".format(self.segment))
