@@ -7,6 +7,9 @@ import requests
 import hls_playlist
 
 
+logger = logging.getLogger(__name__)
+
+
 def get_master_playlist(channel):
 	"""Get the master playlist for given channel from twitch"""
 	resp = requests.get(
@@ -62,10 +65,10 @@ def get_media_playlist_uris(master_playlist, target_qualities):
 	def variant_name(variant):
 		names = set(media.name for media in variant.media if media.type == "VIDEO" and media.name)
 		if not names:
-			logging.warning("Variant {} has no named video renditions, can't determine name".format(variant))
+			logger.warning("Variant {} has no named video renditions, can't determine name".format(variant))
 			return None
 		if len(names) > 1:
-			logging.warning("Variant {} has multiple possible names, picking one arbitrarily".format(variant))
+			logger.warning("Variant {} has multiple possible names, picking one arbitrarily".format(variant))
 		return list(names)[0]
 
 	if not master_playlist.playlists:
@@ -73,7 +76,7 @@ def get_media_playlist_uris(master_playlist, target_qualities):
 
 	for variant in master_playlist.playlists:
 		if any(media.uri for media in variant.media):
-			logging.warning("Variant has a rendition with its own URI: {}".format(variant))
+			logger.warning("Variant has a rendition with its own URI: {}".format(variant))
 
 	by_name = {variant_name(variant): variant for variant in master_playlist.playlists}
 
