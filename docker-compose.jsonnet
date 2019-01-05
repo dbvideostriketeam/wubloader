@@ -18,6 +18,7 @@
   qualities:: ["480p"],
 
   // Local path to save segments to. Full path must already exist. Cannot contain ':'.
+  // On OSX you need to change this to /private/var/lib/wubloader
   segments_path:: "/var/lib/wubloader/",
 
   // The host's port to expose the restreamer on.
@@ -55,6 +56,21 @@
       ports: ["%s:8000" % $.restreamer_port],
     },
 
+    backfiller: {
+      image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
+      // Args for the backfiller: set channel and qualities
+      command: [
+        "--stream", $.channel,
+        "-v", std.join(",", $.qualities),
+      ],
+      // Mount the segments directory at /mnt
+      volumes: ["%s:/mnt" % $.segments_path],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+    },
+
+
   },
 
 }
+
