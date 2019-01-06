@@ -10,6 +10,7 @@ import time
 import uuid
 
 import requests
+import prometheus_client as prom
 
 import common
 
@@ -219,7 +220,7 @@ def backfill_node(base_dir, node, stream, variants, hours=None, segment_order='r
 	logging.info('Finished backfilling from {}'.format(node))
 
 							
-def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, sleep_time=1):
+def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, sleep_time=1, metrics_port=8002):
 	"""Prototype backfiller service.
 
 	Do a backfill of the last 3 hours from stream/variants from all nodes
@@ -235,6 +236,7 @@ def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, 
 	variants = variants.split(',') if variants else []
 
 	common.PromLogCountsHandler.install()
+	prom.start_http_server(metrics_port)
 
 	logging.info('Starting backfilling {} with {} as variants to {}'.format(stream, ', '.join(variants), base_dir))
 
