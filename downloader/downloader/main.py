@@ -100,7 +100,7 @@ class StreamsManager(object):
 		self.channel = channel
 		self.logger = logging.getLogger("StreamsManager({})".format(channel))
 		self.base_dir = base_dir
-		self.stream_workers = {name: [] for name in qualities + ["source"]} # {stream name: [workers]}
+		self.stream_workers = {name: [] for name in qualities} # {stream name: [workers]}
 		self.latest_urls = {} # {stream name: (fetch time, url)}
 		self.latest_urls_changed = gevent.event.Event() # set when latest_urls changes
 		self.refresh_needed = gevent.event.Event() # set to tell main loop to refresh now
@@ -500,7 +500,7 @@ class SegmentGetter(object):
 			segments_downloaded.labels(partial="False", stream=self.channel, variant=self.stream).inc()
 
 
-def main(channel, base_dir=".", qualities="", metrics_port=8001):
+def main(channel, base_dir=".", qualities="source", metrics_port=8001):
 	qualities = qualities.split(",") if qualities else []
 	manager = StreamsManager(channel, base_dir, qualities)
 	gevent.signal(signal.SIGTERM, manager.stop) # shut down on sigterm
