@@ -21,6 +21,13 @@ import twitch
 import common
 
 
+segments_downloaded = prom.Counter(
+	"segments_downloaded",
+	"Number of segments either partially or fully downloaded",
+	["partial", "stream", "variant"],
+)
+
+
 class TimedOutError(Exception):
 	pass
 
@@ -484,11 +491,13 @@ class SegmentGetter(object):
 				partial_path = self.make_path("partial", hash)
 				self.logger.warning("Saving partial segment {} as {}".format(temp_path, partial_path))
 				common.rename(temp_path, partial_path)
+				segments_downloaded.labels(partial="True", stream=self.channel, variant=self.stream).inc()
 			raise ex_type, ex, tb
 		else:
 			full_path = self.make_path("full", hash)
 			self.logger.debug("Saving completed segment {} as {}".format(temp_path, full_path))
 			common.rename(temp_path, full_path)
+			segments_downloaded.labels(partial="False", stream=self.channel, variant=self.stream).inc()
 
 
 def main(channel, base_dir=".", qualities="", metrics_port=8001):
