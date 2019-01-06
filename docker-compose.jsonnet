@@ -21,8 +21,13 @@
   // On OSX you need to change this to /private/var/lib/wubloader
   segments_path:: "/var/lib/wubloader/",
 
-  // The host's port to expose the restreamer on.
-  restreamer_port:: 8080,
+  // The host's port to expose each service on.
+  // Only the restreamer needs to be externally accessible - the others are just for monitoring.
+  ports:: {
+    restreamer: 8080,
+    downloader: 8001,
+    backfiller: 8002,
+  },
 
 
   // Now for the actual docker-compose config
@@ -43,6 +48,9 @@
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
       restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for downloader, which is 8001.
+      ports: ["%s:8001" % $.ports.downloader]
     },
 
     restreamer: {
@@ -53,7 +61,7 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for restreamer, which is 8000.
-      ports: ["%s:8000" % $.restreamer_port],
+      ports: ["%s:8000" % $.ports.restreamer],
     },
 
     backfiller: {
@@ -67,6 +75,9 @@
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
       restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for backfiller, which is 8002.
+      ports: ["%s:8002" % $.ports.backfiller]
     },
 
 
