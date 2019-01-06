@@ -13,6 +13,7 @@ from contextlib import contextmanager
 import dateutil.parser
 import gevent
 import gevent.event
+import prometheus_client as prom
 import requests
 from monotonic import monotonic
 
@@ -490,11 +491,12 @@ class SegmentGetter(object):
 			common.rename(temp_path, full_path)
 
 
-def main(channel, base_dir=".", qualities=""):
+def main(channel, base_dir=".", qualities="", metrics_port=8001):
 	qualities = qualities.split(",") if qualities else []
 	manager = StreamsManager(channel, base_dir, qualities)
 	gevent.signal(signal.SIGTERM, manager.stop) # shut down on sigterm
 	common.PromLogCountsHandler.install()
+	prom.start_http_server(metrics_port)
 	logging.info("Starting up")
 	manager.run()
 	logging.info("Gracefully stopped")
