@@ -5,6 +5,7 @@ setup(
 	version = "0.0.0",
 	py_modules = ["common"],
 	install_requires = [
+		"monotonic",
 		"prometheus-client",
 		"python-dateutil",
 	],
