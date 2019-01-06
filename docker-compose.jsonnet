@@ -29,6 +29,10 @@
     backfiller: 8002,
   },
 
+  // Other nodes to backfill from. You should not include the local node.
+  peers:: [
+    "http://wubloader.codegunner.com/"
+  ],  
 
   // Now for the actual docker-compose config
 
@@ -70,6 +74,7 @@
       command: [
         "--stream", $.channel,
         "-v", std.join(",", $.qualities),
+        "--nodes", std.join(",", $.peers),
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
