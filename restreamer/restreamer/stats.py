@@ -62,7 +62,7 @@ def after_request(response):
 	normalize the handler result into a Response object.
 	"""
 	if 'metrics' not in request_store:
-		return # untracked handler
+		return response # untracked handler
 
 	end_time = monotonic()
 	metrics = request_store.metrics
