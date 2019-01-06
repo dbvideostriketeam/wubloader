@@ -5,7 +5,7 @@ setup(
 	version = "0.0.0",
 	py_modules = ["common"],
 	install_requires = [
+		"prometheus-client",
 		"python-dateutil",
-		"PyYAML<4.0.0",
 	],
 )

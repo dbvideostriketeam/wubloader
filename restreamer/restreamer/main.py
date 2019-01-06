@@ -16,7 +16,7 @@ from flask import Flask, url_for, request, abort, Response
 from gevent import subprocess
 from gevent.pywsgi import WSGIServer
 
-from common import get_best_segments
+from common import get_best_segments, PromLogCountsHandler
 
 import generate_hls
 from stats import stats, after_request
@@ -396,6 +396,8 @@ def main(host='0.0.0.0', port=8000, base_dir='.'):
 		logging.info("Shutting down")
 		server.stop()
 	gevent.signal(signal.SIGTERM, stop)
+
+	PromLogCountsHandler.install()
 
 	logging.info("Starting up")
 	server.serve_forever()

@@ -13,6 +13,7 @@ import sys
 from collections import namedtuple
 
 import dateutil.parser
+import prometheus_client as prom
 
 
 def dt_to_bustime(start, dt):
@@ -299,3 +300,16 @@ def encode_strings(o):
 	if isinstance(o, unicode):
 		return o.encode('utf-8')
 	return o
+
+
+log_count = prom.Counter("log_count", "Count of messages logged", ["level", "module", "function"])
+
+class PromLogCountsHandler(logging.Handler):
+	"""A logging handler that records a count of logs by level, module and function."""
+	def emit(self, record):
+		log_count.labels(record.levelname, record.module, record.funcName).inc()
+
+	@classmethod
+	def install(cls):
+		root_logger = logging.getLogger()
+		root_logger.addHandler(cls())

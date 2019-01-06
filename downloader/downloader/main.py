@@ -494,6 +494,7 @@ def main(channel, base_dir=".", qualities=""):
 	qualities = qualities.split(",") if qualities else []
 	manager = StreamsManager(channel, base_dir, qualities)
 	gevent.signal(signal.SIGTERM, manager.stop) # shut down on sigterm
+	common.PromLogCountsHandler.install()
 	logging.info("Starting up")
 	manager.run()
 	logging.info("Gracefully stopped")
