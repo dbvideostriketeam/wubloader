@@ -15,6 +15,13 @@ import prometheus_client as prom
 import common
 
 
+segments_backfilled = prom.Counter(
+	'segments_backfilled',
+	"Number of segments successfully backfilled",
+	["remote", "stream", "variant", "hour"],
+)
+
+
 HOUR_FMT = '%Y-%m-%dT%H'
 TIMEOUT = 5 #default timeout for remote requests 
 
@@ -118,6 +125,7 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 		raise
 	logging.debug('Saving completed segment {} as {}'.format(temp_path, path))
 	common.rename(temp_path, path)
+	segments_backfilled.labels(remote=node, stream=stream, variant=variant, hour=hour).inc()
 
 
 def backfill(base_dir, stream, variants, hours=None, nodes=None):
