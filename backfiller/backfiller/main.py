@@ -234,6 +234,8 @@ def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, 
 
 	variants = variants.split(',') if variants else []
 
+	common.PromLogCountsHandler.install()
+
 	logging.info('Starting backfilling {} with {} as variants to {}'.format(stream, ', '.join(variants), base_dir))
 
 	fill_start = datetime.datetime.now()
