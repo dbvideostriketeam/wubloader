@@ -14,8 +14,8 @@
   // Twitch channel to capture
   channel:: "desertbus",
 
-  // Stream qualities to capture in addition to source.
-  qualities:: ["480p"],
+  // Stream qualities to capture
+  qualities:: ["source", "480p"],
 
   // Local path to save segments to. Full path must already exist. Cannot contain ':'.
   // On OSX you need to change this to /private/var/lib/wubloader
