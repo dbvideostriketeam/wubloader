@@ -91,6 +91,7 @@ def metrics():
 
 
 @app.route('/files/<stream>/<variant>')
+@stats
 @has_path_args
 def list_hours(stream, variant):
 	"""Returns a JSON list of hours for the given stream and variant for which
