@@ -1,0 +1,45 @@
+#!/bin/bash
+
+set -eu
+
+USAGE="USAGE: $0 PROM_URL SERVICE DURATION [TIME [LABELS]] > flamegraph.svg
+Generate a flamegraph for the given service using data from the given prometheus server.
+Uses DURATION amount of data (in prometheus timespec format, eg '15m'), ending at TIME,
+which may be unix time or RFC3339, defaults to now.
+Labels is optional extra prometheus labels to match on, in promql format,
+eg. 'foo=\"bar\",baz=\"123\"'
+Note that in the resulting flamegraph, the 'samples' value is actually showing milliseconds
+of cpu time over the given duration."
+
+if [ "$#" -lt 3 ]; then
+	echo "$USAGE" >&2
+	exit 1
+fi
+
+PROM=$1
+SERVICE=$2
+DURATION=$3
+TIME=${4:-now}
+LABELS=${5:-}
+
+if [ "$TIME" == "now" ]; then
+	TIME=$(date +%s)
+fi
+
+if [ -n "$LABELS" ]; then
+	LABELS="job=\"$SERVICE\""
+else
+	LABELS="job=\"$SERVICE\",$LABELS"
+fi
+
+docker build -t wubloader-flamegraph:latest . -f - 1>&2 <<EOF
+FROM alpine:3.7
+RUN apk --update add curl jq perl
+RUN curl https://raw.githubusercontent.com/brendangregg/FlameGraph/master/flamegraph.pl -o /flamegraph.pl
+EOF
+
+docker run -i --rm -e PROM= wubloader-flamegraph:latest /bin/sh -c "
+curl -G '$PROM/api/v1/query' --data-urlencode 'time=$TIME' --data-urlencode 'query=sum(increase(flamegraph_total{$LABELS}[$DURATION])) by (stack) * 1000 > 0' |
+jq -r '.data.result[]|\"\\(.metric.stack) \\(.value[1])\"' |
+perl /flamegraph.pl
+"
