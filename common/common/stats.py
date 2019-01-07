@@ -6,6 +6,8 @@ import os
 import signal
 import sys
 
+import gevent.lock
+
 import prometheus_client as prom
 from monotonic import monotonic
 
@@ -173,12 +175,6 @@ class PromLogCountsHandler(logging.Handler):
 		root_logger.addHandler(cls())
 
 
-flamegraph = prom.Counter(
-	"flamegraph",
-	"Approx time consumed by each unique stack trace seen by sampling the stack",
-	["stack"]
-)
-
 def install_stacksampler(interval=0.005):
 	"""Samples the stack every INTERVAL seconds of user time.
 	We could use user+sys time but that leads to interrupting syscalls,
@@ -190,6 +186,23 @@ def install_stacksampler(interval=0.005):
 	#    as this could lead to a deadlock due to locking inside prometheus_client.
 	# 2. Avoid biasing the results by effectively not including the time taken to do the actual
 	#    stack sampling.
+
+	flamegraph = prom.Counter(
+		"flamegraph",
+		"Approx time consumed by each unique stack trace seen by sampling the stack",
+		["stack"]
+	)
+	# HACK: It's possible to deadlock if we handle a signal during a prometheus collect
+	# operation that locks our flamegraph metric. We then try to take the lock when recording the
+	# metric, but can't.
+	# As a hacky work around, we replace the lock with a dummy lock that doesn't actually lock anything.
+	# This is reasonably safe. We know that only one copy of sample() will ever run at once,
+	# and nothing else but sample() and collect() will touch the metric, leaving two possibilities:
+	# 1. Multiple collects happen at once: Safe. They only do read operations.
+	# 2. A sample during a collect: Safe. The collect only does a copy inside the locked part,
+	#    so it just means it'll either get a copy with the new label set, or without it.
+	# This presumes the implementation doesn't change to make that different, however.
+	flamegraph._lock = gevent.lock.DummySemaphore()
 
 	def sample(signum, frame):
 		stack = []
