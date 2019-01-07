@@ -29,6 +29,10 @@
     backfiller: 8002,
   },
 
+  // The local port within each container to bind the backdoor server on.
+  // You can exec into the container and telnet to this port to get a python shell.
+  backdoor_port:: 1234,
+
   // Other nodes to backfill from. You should not include the local node.
   peers:: [
     "http://wubloader.codegunner.com/"
@@ -47,6 +51,7 @@
       command: [
         $.channel,
         "--qualities", std.join(",", $.qualities),
+        "--backdoor-port", std.toString($.backdoor_port),
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
@@ -66,6 +71,9 @@
       // Expose on the configured host port by mapping that port to the default
       // port for restreamer, which is 8000.
       ports: ["%s:8000" % $.ports.restreamer],
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+      ],
     },
 
     backfiller: {
@@ -75,6 +83,7 @@
         "--stream", $.channel,
         "-v", std.join(",", $.qualities),
         "--nodes", std.join(",", $.peers),
+        "--backdoor-port", std.toString($.backdoor_port),
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
