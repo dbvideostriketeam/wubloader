@@ -1,10 +1,9 @@
 
-"""A place for common utilities between wubloader components"""
-
-
+import atexit
 import functools
 import logging
 import os
+import signal
 import sys
 
 import prometheus_client as prom
@@ -172,3 +171,45 @@ class PromLogCountsHandler(logging.Handler):
 	def install(cls):
 		root_logger = logging.getLogger()
 		root_logger.addHandler(cls())
+
+
+flamegraph = prom.Counter(
+	"flamegraph",
+	"Approx time consumed by each unique stack trace seen by sampling the stack",
+	["stack"]
+)
+
+def install_stacksampler(interval=0.005):
+	"""Samples the stack every INTERVAL seconds of user time.
+	We could use user+sys time but that leads to interrupting syscalls,
+	which may affect performance, and we care mostly about user time anyway.
+	"""
+	# Note we only start each next timer once the previous timer signal has been processed.
+	# There are two reasons for this:
+	# 1. Avoid handling a signal while already handling a signal, however unlikely,
+	#    as this could lead to a deadlock due to locking inside prometheus_client.
+	# 2. Avoid biasing the results by effectively not including the time taken to do the actual
+	#    stack sampling.
+
+	def sample(signum, frame):
+		stack = []
+		while frame is not None:
+			stack.append(frame)
+			frame = frame.f_back
+		# format each frame as FUNCTION(MODULE)
+		stack = ";".join(
+			"{}({})".format(frame.f_code.co_name, frame.f_globals.get('__name__'))
+			for frame in stack[::-1]
+		)
+		# increase counter by interval, so final units are in seconds
+		flamegraph.labels(stack).inc(interval)
+		# schedule the next signal
+		signal.setitimer(signal.ITIMER_VIRTUAL, interval)
+
+	def cancel():
+		signal.setitimer(signal.ITIMER_VIRTUAL, 0)
+	atexit.register(cancel)
+
+	signal.signal(signal.SIGVTALRM, sample)
+	# deliver the first signal in INTERVAL seconds
+	signal.setitimer(signal.ITIMER_VIRTUAL, interval)
