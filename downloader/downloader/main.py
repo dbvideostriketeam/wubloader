@@ -242,12 +242,12 @@ class StreamWorker(object):
 
 	If the url had been working (ie. that wasn't the first fetch), it will also stay alive and
 	attempt to use the old url until a new worker tells it to stand down,
-	or a 403 Forbidden is received (as this indicates the url is expired).
+	or a 403 or 404 is received (as this indicates the url is expired).
 
 	Since segment urls returned for a particular media playlist url are stable, we have an easier
 	time of managing downloading those:
 	* Every time a new URL is seen, a new SegmentGetter is created
-	* SegmentGetters will retry the same URL until they succeed, or get a 403 Forbidden indicating
+	* SegmentGetters will retry the same URL until they succeed, or get a 403 or 404 indicating
 	  the url has expired.
 	"""
 
@@ -313,8 +313,8 @@ class StreamWorker(object):
 				if first:
 					self.logger.warning("Failed on first fetch, stopping")
 					self.stop()
-				elif isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code == 403:
-					self.logger.warning("Failed with 403 Forbidden, stopping")
+				elif isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code in (403, 404):
+					self.logger.warning("Failed with {}, stopping".format(e.response.status_code))
 					self.stop()
 				self.wait(self.FETCH_RETRY_INTERVAL)
 				continue
@@ -359,7 +359,7 @@ class StreamWorker(object):
 
 class SegmentGetter(object):
 	"""Fetches a segment and writes it to disk.
-	Retries until it succeeds, or gets a 403 Forbidden indicating
+	Retries until it succeeds, or gets a 403 or 404 indicating
 	the url has expired.
 
 	Due to retries and multiple workers further up the stack, SegmentGetter needs to
@@ -448,12 +448,11 @@ class SegmentGetter(object):
 		full_prefix = "{}-full".format(self.prefix)
 		return any(candidate.startswith(full_prefix) for candidate in candidates)
 
-
 	def get_segment(self):
 		try:
 			self._get_segment()
 		except Exception:
-			logging.exception("Failed to get segment {}".format(self.segment))
+			self.logger.exception("Failed to get segment {}".format(self.segment))
 			return False
 		else:
 			return True
@@ -466,12 +465,14 @@ class SegmentGetter(object):
 		hash = hashlib.sha256()
 		file_created = False
 		try:
-			logging.debug("Downloading segment {} to {}".format(self.segment, temp_path))
+			self.logger.debug("Downloading segment {} to {}".format(self.segment, temp_path))
 			with soft_hard_timeout(self.logger, "getting and writing segment", self.FETCH_FULL_TIMEOUTS, retry.set):
 				with soft_hard_timeout(self.logger, "getting segment headers", self.FETCH_HEADERS_TIMEOUTS, retry.set):
 					resp = requests.get(self.segment.uri, stream=True)
-				if resp.status_code == 403:
-					logging.warning("Got 403 Forbidden for segment, giving up: {}".format(self.segment))
+				# twitch returns 403 for expired segment urls, and 404 for very old urls where the original segment is gone.
+				# the latter can happen if we have a network issue that cuts us off from twitch for some time.
+				if resp.status_code in (403, 404):
+					self.logger.warning("Got {} for segment, giving up: {}".format(resp.status_code, self.segment))
 					return
 				resp.raise_for_status()
 				common.ensure_directory(temp_path)
