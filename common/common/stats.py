@@ -203,6 +203,16 @@ def install_stacksampler(interval=0.005):
 	#    so it just means it'll either get a copy with the new label set, or without it.
 	# This presumes the implementation doesn't change to make that different, however.
 	flamegraph._lock = gevent.lock.DummySemaphore()
+	# There is also a lock we need to bypass on the actual counter values themselves.
+	# Since they get created dynamically, this means we need to replace the lock function
+	# that is used to create them.
+	# This unfortunately means we go without locking for all metrics, not just this one,
+	# however this is safe because we are using gevent, not threading. The lock is only
+	# used to make incrementing/decrementing the counter thread-safe, which is not a concern
+	# under gevent since there are no switch points under the lock.
+	import prometheus_client.values
+	prometheus_client.values.Lock = gevent.lock.DummySemaphore
+
 
 	def sample(signum, frame):
 		stack = []
