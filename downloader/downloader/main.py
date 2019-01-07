@@ -321,6 +321,7 @@ class StreamWorker(object):
 
 			# We successfully got the playlist at least once
 			first = False
+			self.manager.mark_working(self)
 
 			# Start any new segment getters
 			date = None # tracks date in case some segment doesn't include it
