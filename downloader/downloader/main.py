@@ -12,6 +12,7 @@ from contextlib import contextmanager
 
 import dateutil.parser
 import gevent
+import gevent.backdoor
 import gevent.event
 import prometheus_client as prom
 import requests
@@ -500,12 +501,14 @@ class SegmentGetter(object):
 			segments_downloaded.labels(partial="False", stream=self.channel, variant=self.stream).inc()
 
 
-def main(channel, base_dir=".", qualities="source", metrics_port=8001):
+def main(channel, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0):
 	qualities = qualities.split(",") if qualities else []
 	manager = StreamsManager(channel, base_dir, qualities)
 	gevent.signal(signal.SIGTERM, manager.stop) # shut down on sigterm
 	common.PromLogCountsHandler.install()
 	prom.start_http_server(metrics_port)
+	if backdoor_port:
+		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 	logging.info("Starting up")
 	manager.run()
 	logging.info("Gracefully stopped")

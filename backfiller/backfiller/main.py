@@ -9,8 +9,9 @@ import random
 import time
 import uuid
 
-import requests
+import gevent.backdoor
 import prometheus_client as prom
+import requests
 
 import common
 
@@ -228,7 +229,7 @@ def backfill_node(base_dir, node, stream, variants, hours=None, segment_order='r
 	logging.info('Finished backfilling from {}'.format(node))
 
 							
-def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, sleep_time=1, metrics_port=8002, nodes=None):
+def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, sleep_time=1, metrics_port=8002, nodes=None, backdoor_port=0):
 	"""Prototype backfiller service.
 
 	Do a backfill of the last 3 hours from stream/variants from all nodes
@@ -247,6 +248,9 @@ def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, 
 
 	common.PromLogCountsHandler.install()
 	prom.start_http_server(metrics_port)
+
+	if backdoor_port:
+		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
 	logging.info('Starting backfilling {} with {} as variants to {}'.format(stream, ', '.join(variants), base_dir))
 
