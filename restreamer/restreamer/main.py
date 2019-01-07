@@ -17,7 +17,7 @@ from flask import Flask, url_for, request, abort, Response
 from gevent import subprocess
 from gevent.pywsgi import WSGIServer
 
-from common import get_best_segments, PromLogCountsHandler
+from common import get_best_segments, PromLogCountsHandler, install_stacksampler
 
 import generate_hls
 from stats import stats, after_request
@@ -421,6 +421,7 @@ def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
 	gevent.signal(signal.SIGTERM, stop)
 
 	PromLogCountsHandler.install()
+	install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
