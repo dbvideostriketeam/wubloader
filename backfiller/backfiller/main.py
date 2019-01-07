@@ -247,6 +247,7 @@ def main(base_dir='.', stream='', variants='', fill_wait=5, full_fill_wait=180, 
 		nodes = nodes.split(',') if nodes else []
 
 	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
 
 	if backdoor_port:

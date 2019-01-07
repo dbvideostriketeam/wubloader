@@ -527,6 +527,7 @@ def main(channel, base_dir=".", qualities="source", metrics_port=8001, backdoor_
 	manager = StreamsManager(channel, base_dir, qualities)
 	gevent.signal(signal.SIGTERM, manager.stop) # shut down on sigterm
 	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
