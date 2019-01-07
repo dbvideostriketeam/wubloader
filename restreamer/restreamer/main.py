@@ -11,6 +11,7 @@ from contextlib import closing
 
 import dateutil.parser
 import gevent
+import gevent.backdoor
 import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent import subprocess
@@ -388,7 +389,7 @@ def cut_experimental(segments, cut_start, cut_end):
 
 
 
-def main(host='0.0.0.0', port=8000, base_dir='.'):
+def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
 	app.static_folder = base_dir
 	server = WSGIServer((host, port), cors(app))
 
@@ -398,6 +399,9 @@ def main(host='0.0.0.0', port=8000, base_dir='.'):
 	gevent.signal(signal.SIGTERM, stop)
 
 	PromLogCountsHandler.install()
+
+	if backdoor_port:
+		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
 	logging.info("Starting up")
 	server.serve_forever()
