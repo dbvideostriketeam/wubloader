@@ -1,9 +1,9 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
 	name = "wubloader-common",
 	version = "0.0.0",
-	py_modules = ["common"],
+	packages = find_packages(),
 	install_requires = [
 		"monotonic",
 		"prometheus-client",
