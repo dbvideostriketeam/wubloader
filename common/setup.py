@@ -8,6 +8,5 @@ setup(
 		"gevent",
 		"monotonic",
 		"prometheus-client",
-		"python-dateutil",
 	],
 )

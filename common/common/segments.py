@@ -11,8 +11,6 @@ import os
 import sys
 from collections import namedtuple
 
-import dateutil.parser
-
 from .stats import timed
 
 
@@ -58,7 +56,7 @@ def parse_segment_path(path):
 			path = path,
 			stream = stream,
 			variant = variant,
-			start = dateutil.parser.parse("{}:{}".format(hour, time)),
+			start = datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f"),
 			duration = datetime.timedelta(seconds=float(duration)),
 			is_partial = type == "partial",
 			hash = unpadded_b64_decode(hash),
