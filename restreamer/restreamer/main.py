@@ -92,7 +92,6 @@ def metrics():
 
 @app.route('/files')
 @stats
-@has_path_args
 def list_streams():
 	"""Returns a JSON list of streams for which there may be segments available.
 	Returns empty list if no streams are available.
