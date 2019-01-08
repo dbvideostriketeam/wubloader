@@ -11,6 +11,8 @@ import os
 import sys
 from collections import namedtuple
 
+import gevent
+
 from .stats import timed
 
 
@@ -109,6 +111,11 @@ def get_best_segments(hours_path, start, end):
 	result = []
 
 	for hour in hour_paths_for_range(hours_path, start, end):
+		# Especially when processing multiple hours, this routine can take a signifigant amount
+		# of time with no blocking. To ensure other stuff is still completed in a timely fashion,
+		# we yield to let other things run.
+		gevent.idle()
+
 		# best_segments_by_start will give us the best available segment for each unique start time
 		for segment in best_segments_by_start(hour):
 
