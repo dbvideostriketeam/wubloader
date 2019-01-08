@@ -90,6 +90,28 @@ def metrics():
 	"""Return current metrics in prometheus metrics format"""
 	return prom.generate_latest()
 
+@app.route('/files')
+@stats
+def list_streams():
+	"""Returns a JSON list of streams for which there may be segments available.
+	Returns empty list if no streams are available.
+	"""
+	path = app.static_folder
+	return json.dumps(listdir(path, error=False))
+
+
+@app.route('/files/<stream>')
+@stats
+@has_path_args
+def list_variants(stream):
+	"""Returns a JSON list of variants for the given stream for which there may
+	be segments available. Returns empty list on non-existent streams, etc.
+	"""
+	path = os.path.join(
+		app.static_folder,
+		stream,
+	)
+	return json.dumps(listdir(path, error=False))
 
 @app.route('/files/<stream>/<variant>')
 @stats
