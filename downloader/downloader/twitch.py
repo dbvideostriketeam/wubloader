@@ -10,9 +10,9 @@ import hls_playlist
 logger = logging.getLogger(__name__)
 
 
-def get_master_playlist(channel):
+def get_master_playlist(channel, session=requests):
 	"""Get the master playlist for given channel from twitch"""
-	resp = requests.get(
+	resp = session.get(
 		"https://api.twitch.tv/api/channels/{}/access_token.json".format(channel),
 		params={'as3': 't'},
 		headers={
@@ -22,7 +22,7 @@ def get_master_playlist(channel):
 	)
 	resp.raise_for_status() # getting access token
 	token = resp.json()
-	resp = requests.get(
+	resp = session.get(
 		"https://usher.ttvnw.net/api/channel/hls/{}.m3u8".format(channel),
 		params={
 			# Taken from streamlink. Unsure what's needed and what changing things can do.
@@ -93,7 +93,7 @@ def get_media_playlist_uris(master_playlist, target_qualities):
 	return {name: variant.uri for name, variant in variants.items()}
 
 
-def get_media_playlist(uri):
-	resp = requests.get(uri)
+def get_media_playlist(uri, session=requests):
+	resp = session.get(uri)
 	resp.raise_for_status()
 	return hls_playlist.load(resp.text, base_uri=resp.url)
