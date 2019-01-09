@@ -6,7 +6,7 @@ setup(
 	packages = find_packages(),
 	install_requires = [
 		"argh",
-		"dateutil",
+		"python-dateutil",
 		"flask",
 		"gevent",
 		"monotonic",
