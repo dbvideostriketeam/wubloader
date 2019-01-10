@@ -387,7 +387,7 @@ class SegmentGetter(object):
 	FETCH_RETRY = 2
 	# Headers timeout is timeout before getting the start of a response,
 	# full timeout is for the entire download and stream to disk.
-	FETCH_HEADERS_TIMEOUTS = 5, 30
+	FETCH_HEADERS_TIMEOUTS = 5, 60
 	FETCH_FULL_TIMEOUTS = 15, 240
 
 	def __init__(self, parent_logger, session, base_dir, channel, stream, segment, date):
