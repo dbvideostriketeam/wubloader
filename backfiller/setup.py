@@ -7,6 +7,7 @@ setup(
 	install_requires = [
 		"argh",
 		"gevent",
+		"python-dateutil",
 		"requests",
 		"wubloader-common",
 	],
