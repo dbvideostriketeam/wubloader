@@ -40,8 +40,15 @@ finalizing the upload to make it official. If a cutter dies and leaves an event 
 it is indeterminate whether the upload actually occurred - in this unlikely scenario, an operator
 should manually inspect things and decide on further action.
 
-* `UPLOADED`: An event which has been succesfully uploaded. If further re-edits need to be applied,
+* `TRANSCODING`: An event which has been succesfully uploaded, but is not yet ready for public consumption.
+The upload is no longer cancellable. If further re-edits need to be applied,
 an operator should manually delete or unlist the video then set the state back to `UNEDITED`.
+In youtube terms, this covers the period after upload while transcoding is happening and the video
+is not yet able to be played (or only at reduced resolution).
+
+* `DONE`: An event whose video is ready for public consumption. As with `TRANSCODING`, if changes need
+to be made, an operator should manually delete or unlist the video then set the state back
+to `UNEDITED`.
 
 The following transitions are possible:
 
@@ -69,7 +76,14 @@ we are certain the upload didn't actually go through, and the cut can be immedia
 * `FINALIZING -> UNEDITED`: When the finalization failed with an unknown error,
 we are certain the upload didn't actually go through, and operator intervention is required.
 
-* `FINALIZING -> UPLOADED`: When the cutter has successfully finalized the upload.
+* `FINALIZING -> TRANSCODING`: When the cutter has successfully finalized the upload,
+but the upload location requires further processing before the video is done.
+
+* `FINALIZING -> DONE`: When the cutter has successfully finalized the upload,
+and the upload location requires no further processing.
+
+* `TRANSCODING -> DONE`: When any cutter detects that the upload location is finished
+transcoding the video, and it is ready for public consumption.
 
 This is summarised in the below graph:
 
@@ -80,15 +94,15 @@ This is summarised in the below graph:
                        cancel      │                                               │
             ┌──────────────────────┼───────────────────┐                           │
             ∨                      ∨                   │                           │
-          ┌──────────┐  edit     ┌────────┐  claim   ┌─────────┐  pre-finalize   ┌────────────┐  post-finalize   ┌──────────┐
-          │          │ ────────> │        │ ───────> │         │ ──────────────> │ FINALIZING │ ───────────────> │ UPLOADED │
-          │          │           │        │          │         │                 └────────────┘                  └──────────┘
-          │          │  cancel   │        │  retry   │         │                   │
-          │ UNEDITED │ <──────── │ EDITED │ <─────── │ CLAIMED │                   │
-          │          │           │        │          │         │                   │
-          │          │           │        │          │         │                   │
-  ┌─────> │          │           │        │  ┌────── │         │                   │
-  │       └──────────┘           └────────┘  │       └─────────┘                   │
+          ┌──────────┐  edit     ┌────────┐  claim   ┌─────────┐  pre-finalize   ┌────────────┐  post-finalize   ┌─────────────┐  when ready   ┌──────┐
+          │          │ ────────> │        │ ───────> │         │ ──────────────> │            │ ───────────────> │ TRANSCODING │ ────────────> │ DONE │
+          │          │           │        │          │         │                 │            │                  └─────────────┘               └──────┘
+          │          │  cancel   │        │  retry   │         │                 │            │                   post-finalize                  ∧
+          │ UNEDITED │ <──────── │ EDITED │ <─────── │ CLAIMED │                 │ FINALIZING │ ─────────────────────────────────────────────────┘
+          │          │           │        │          │         │                 │            │
+          │          │           │        │          │         │                 │            │
+  ┌─────> │          │           │        │  ┌────── │         │                 │            │
+  │       └──────────┘           └────────┘  │       └─────────┘                 └────────────┘
   │         ∧          error                 │                                     │
   │ error   └────────────────────────────────┘                                     │
   │                                                                                │
@@ -114,6 +128,8 @@ columns                    | type                               | role        | 
 `start`, `end`             | `TIMESTAMP`                        | sheet input | Start and end time of the event. Parsed from the sheet into timestamps or NULL. Used to set the editor time span, and displayed on the public sheet. The start time also determines what "day" the event lies on, for video tagging and other purposes.
 `category`                 | `TEXT NOT NULL DEFAULT ''`         | sheet input | The kind of event. By convention selected from a small list of categories, but stored as an arbitrary string because there's little to no benefit to using an enum here, it just makes our job harder when adding a new category. Used to tag videos, and for display on the public sheet.
 `description`              | `TEXT NOT NULL DEFAULT ''`         | sheet input | Event description. Provides the default title and description for editors, and displayed on the public sheet.
+`submitter_winner`         | `TEXT NOT NULL DEFAULT ''`         | sheet input | A column detailing challenge submitter, auction winner, or other "associated person" data. This shouldn't be relied on in any processing but should be displayed on the public sheet.
+`poster_moment`            | `BOOLEAN NOT NULL DEFAULT FALSE`   | sheet input | Whether or not the event was featured on the poster. Used for building the postermap and also displayed on the public sheet.
 `notes`                    | `TEXT NOT NULL DEFAULT ''`         | sheet input | Private notes on this event, used eg. to leave messages or special instructions. Displayed to the editor during editing, but otherwise unused.
 `allow_holes`              | `BOOLEAN NOT NULL DEFAULT FALSE`   | sheet input | If false, any missing segments encountered while cutting will cause the cut to fail. Setting this to true should be done by an operator to indicate that holes are expected in this range. It is also the operator's responsibility to ensure that all allowed cutters have all segments that they can get, since there is no guarentee that only the cutter with the least missing segments will get the cut job.
 `uploader_whitelist`       | `TEXT[]`                           | sheet input | List of uploaders which are allowed to cut this entry, or NULL to indicate no restriction. This is useful if you are allowing holes and the amount of missing data differs between nodes (this shouldn't happen - this would mean replication is also failing), or if an operator is investigating a problem with a specific node.
