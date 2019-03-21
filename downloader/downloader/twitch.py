@@ -38,6 +38,9 @@ def get_master_playlist(channel, session=requests):
 			# Also observed in the wild but not used in streamlink:
 			# "playlist_include_framerate": "true"
 			# "reassignments_supported": "true"
+			# It's reported that setting this may affect whether you get ads, but this is
+			# in flux. Better to just blend in with the crowd for now.
+			# "platform": "_"
 		},
 	)
 	resp.raise_for_status() # getting master playlist

@@ -79,8 +79,11 @@ class StreamsManager(object):
 	one, but during switchover there may be 2 - one old one continuing to (try to) operate while
 	the second one confirms it's working. While trying to get a url working, it won't retry, it'll
 	just ask the manager immediately to create yet another new worker then quit.
-	When one successfully fetches a playlist for the first time, it marks all older
-	workers as able to shut down by calling manager.mark_working().
+	When one successfully fetches a playlist for the first time, and confirms it has a non-ad
+	segment, it marks all older workers as able to shut down by calling manager.mark_working().
+	We wait for a non-ad segment because on first connect, a preroll ad may play.
+	We don't want to give up on the old connection (which may contain segments covering
+	the time the preroll ad is playing) until the ad is over.
 
 	Creation of a new stream worker may be triggered by:
 	* An existing worker failing to refresh its playlist
@@ -328,11 +331,17 @@ class StreamWorker(object):
 
 			# We successfully got the playlist at least once
 			first = False
-			self.manager.mark_working(self)
 
 			# Start any new segment getters
 			date = None # tracks date in case some segment doesn't include it
 			for segment in playlist.segments:
+				if segment.scte35:
+					self.logger.debug("Ignoring ad segment for {}".format(segment.scte35))
+					continue
+
+				# We've got our first non-ad segment, so we're good to take it from here.
+				self.manager.mark_working(self)
+
 				if segment.date:
 					date = dateutil.parser.parse(segment.date)
 				if segment.uri not in self.getters:

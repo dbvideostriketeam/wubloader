@@ -62,7 +62,7 @@ IFrameStreamInfo = namedtuple("IFrameStreamInfo", "bandwidth program_id "
 Playlist = namedtuple("Playlist", "uri stream_info media is_iframe")
 Resolution = namedtuple("Resolution", "width height")
 Segment = namedtuple("Segment", "uri duration title key discontinuity "
-                                "byterange date map")
+                                "byterange date map scte35")
 
 
 class M3U8(object):
@@ -184,11 +184,12 @@ class M3U8Parser(object):
                 date = self.state.pop("date", None)
                 map_ = self.state.get("map")
                 key = self.state.get("key")
+                scte35 = self.state.get("scte35")
 
                 segment = Segment(self.uri(line), extinf[0],
                                   extinf[1], key,
                                   self.state.pop("discontinuity", False),
-                                  byterange, date, map_)
+                                  byterange, date, map_, scte35)
                 self.m3u8.segments.append(segment)
             elif self.state.pop("expect_playlist", None):
                 streaminf = self.state.pop("streaminf", {})
@@ -259,6 +260,13 @@ class M3U8Parser(object):
             start = Start(attr.get("TIME-OFFSET"),
                           self.parse_bool(attr.get("PRECISE", "NO")))
             self.m3u8.start = start
+        elif line.startswith("#EXT-X-SCTE35-OUT"):
+            # marks start of ad, with optional URL
+            attr = self.parse_tag(line, self.parse_attributes)
+            self.state["scte35"] = attr.get('URL') or "unknown"
+        elif line.startswith("#EXT-X-SCTE35-IN"):
+            # marks end of ad
+            self.state["scte35"] = None
 
     def parse(self, data):
         self.state = {}
