@@ -197,13 +197,6 @@ class BackfillerManager(object):
 		"""Stop the worker for given node."""
 		self.workers.pop(node).stop()
 
-	def restart_worker(self, node):
-		"""Restart the worker for given node."""
-		self.stop_worker(node)
-		self.stopping.wait(common.jitter(self.RESTART_INTERVAL))
-		self.start_worker(node)
-		
-
 	def run(self):
 		while not self.stopping.is_set():
 			new_nodes = set(get_nodes() + self.static_nodes)
@@ -268,8 +261,6 @@ class BackfillerWorker(object):
 		Keyword arguments:
 		recent_cutoff -- Skip backfilling segments younger than this number of
 			seconds to prioritise letting the downloader grab these segments."""
-	
-		#logging.info('Starting backfilling from {}'.format(node))
 	
 		for variant in self.variants:
 	
