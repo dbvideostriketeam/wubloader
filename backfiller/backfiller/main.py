@@ -129,12 +129,6 @@ def get_remote_segment(base_dir, node, stream, variant, hour, missing_segment,
 	segments_backfilled.labels(remote=node, stream=stream, variant=variant, hour=hour).inc()
 
 
-def last_hours(n_hours=3):
-	"""Return of a list of the last n_hours in descending order."""
-	now = datetime.datetime.utcnow()
-	return [(now - i * datetime.timedelta(hours=1)).strftime(HOUR_FMT) for i in range(n_hours)]
-
-
 def list_hours(node, stream, variants, start=None):
 	"""Return a list of all available hours from a node.
 
@@ -169,7 +163,7 @@ class BackfillerManager(object):
 
 	NODE_INTERVAL = 300 #seconds between updating list of nodes
 
-	def __init__(self, base_dir, stream, variants, static_nodes=[], start, run_once=False):
+	def __init__(self, base_dir, stream, variants, static_nodes=[], start=None, run_once=False):
 		"""Constructor for BackfillerManager.
 		Creates a manager for a given stream with specified variants. If
 		static_nodes is None, manager"""
