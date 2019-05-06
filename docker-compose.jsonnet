@@ -82,7 +82,7 @@
       command: [
         "--stream", $.channel,
         "-v", std.join(",", $.qualities),
-        "--nodes", std.join(",", $.peers),
+        "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
       ],
       // Mount the segments directory at /mnt
