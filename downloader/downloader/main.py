@@ -563,12 +563,13 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
 
-	if backdoor_port:
-		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
-
 	logging.info("Starting up")
 
 	workers = [gevent.spawn(manager.run) for manager in managers]
+
+	if backdoor_port:
+		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
+
 	# Wait for any to die
 	gevent.wait(workers, count=1)
 	# If one has stopped, either:
