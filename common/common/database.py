@@ -5,6 +5,8 @@ Note that this code requires psycopg2 and psycogreen, but the common module
 as a whole does not to avoid needing to install them for components that don't need it.
 """
 
+from contextlib import contextmanager
+
 import psycopg2
 import psycopg2.extensions
 import psycopg2.extras
@@ -70,16 +72,15 @@ class DBManager(object):
 	the initial conn used to apply the schema, and you should use a real conn pool for
 	any non-trivial use.
 
-	Returned conns are set to seralizable isolation level, and use NamedTupleCursor cursors.
+	Returned conns are set to seralizable isolation level, autocommit, and use NamedTupleCursor cursors.
 	"""
 	def __init__(self, **connect_kwargs):
 		patch_psycopg()
 		self.conns = []
 		self.connect_kwargs = connect_kwargs
 		conn = self.get_conn()
-		with conn:
-			with conn.cursor() as cur:
-				cur.execute(SCHEMA)
+		with transaction(conn):
+			query(conn, SCHEMA)
 		self.put_conn(conn)
 
 	def put_conn(self, conn):
@@ -93,24 +94,23 @@ class DBManager(object):
 		# we don't care about the performance concerns and everything we do is easily retryable.
 		# This shouldn't matter in practice anyway since everything we're doing is either read-only
 		# searches or targetted single-row updates.
-		conn.set_session(psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE)
+		conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
+		conn.autocommit = True
 		return conn
 
 
-def retry_on_conflict(conn, func, *args, **kwargs):
-	"""Run func(conn, *args, **kwargs) in a transaction up to max_tries (given as kwarg) times
-	(at least once, default 5), retrying if it raises an error indicating a transaction conflict.
-	After max_tries, raises TransactionRollbackError.
-	"""
-	max_tries = kwargs.pop('max_tries', 5)
-	for _ in range(max_tries - 1):
-		try:
-			with conn:
-				return func(conn)
-		except psycopg2.extensions.TransactionRollbackError:
-			pass
-	with conn:
-		return func(conn)
+@contextmanager
+def transaction(conn):
+	"""Helper context manager that runs the code block as a single database transaction
+	instead of in autocommit mode. The only difference between this and "with conn" is
+	that we explicitly disable then re-enable autocommit."""
+	old_autocommit = conn.autocommit
+	conn.autocommit = False
+	try:
+		with conn:
+			yield
+	finally:
+		conn.autocommit = old_autocommit
 
 
 def query(conn, query, *args, **kwargs):
