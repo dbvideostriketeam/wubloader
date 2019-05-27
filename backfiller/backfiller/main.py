@@ -342,11 +342,37 @@ class BackfillerWorker(object):
 def main(base_dir='.', streams='', variants='', metrics_port=8002,
 	static_nodes='', backdoor_port=0, start=None, run_once=False,
 	node_file=None, node_database=None, localhost=None):
-	"""Backfiller service."""
+	"""Backfiller service.
 
-	streams = streams.split(',') if variants else []
+	Keyword arguments:
+	base_dir -- Directory to which segments will be backfilled. Default current
+		working directory.
+	streams -- Streams to backfill. Comma seperated if multiple.
+	variants -- Variants of each stream to backfill. Comma seperated if
+		multiple.
+	metrics_port -- Port for Prometheus stats. Default 8002.
+	static_nodes -- Nodes to always backfill from. Comma seperated if multiple.
+		By default empty.
+	backdoor_port -- Port for gevent.backdoor access. By default disabled.
+	start -- If a datetime only backfill hours after that datetime. If a number,
+		bacfill hours more recent than that number of hours ago. If None
+		(default), all hours are backfilled.
+	run_once -- If True, backfill only once. By default False.
+	node_file -- Name of file listing nodes to backfill from. One node per line
+		with whitespace only lines or lines starting with '#' ignored. If None
+		(default) do not get nodes from a file.
+	node_database -- Address of database node to fetch a list of nodes from. If
+		None (default) do not get nodes from database.
+	localhost -- Address of local machine. Used to prevent backfilling from
+		itself. Only works if this address matches the address for this node in
+		static_nodes or the node_file or the node_database."""
+
+	streams = streams.split(',') if streams else []
+	streams = [stream.strip() for stream in streams] # get rid of any whitespace
 	variants = variants.split(',') if variants else []
+	variants = [variant.strip() for variant in variants]
 	static_nodes = static_nodes.split(',') if static_nodes else []
+	static_nodes = [static_node.strip() for static_node in static_nodes]
 
 	if start is not None:
 		try:
