@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS events (
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT,
 	error TEXT,
+	video_id TEXT,
 	video_link TEXT
 );
 

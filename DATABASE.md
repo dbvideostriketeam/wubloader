@@ -143,4 +143,5 @@ columns                    | type                               | role        | 
 `state`                    | `ENUM NOT NULL DEFAULT 'UNEDITED'` | state       | See "The state machine" above.
 `uploader`                 | `TEXT`                             | state       | The name of the cutter node performing the cut and upload. Set when transitioning from `EDITED` to `CLAIMED` and cleared on a retryable error. Left uncleared on non-retryable errors to provide information to the operator. Cleared on a re-edit if set.
 `error`                    | `TEXT`                             | state       | A human-readable error message, set if a non-retryable error occurs. Its presence indicates operator intervention is required. Cleared on a re-edit if set.
-`video_link`               | `TEXT`                             | output      | A link to the uploaded video. Only set when state is `UPLOADED`.
+`video_id`                 | `TEXT`                             | state       | An id that can be used to refer to the video to check if transcoding is complete. Often the video_link can be generated from this, but not nessecarily.
+`video_link`               | `TEXT`                             | output      | A link to the uploaded video. Only set when state is `TRANSCODING` or `DONE`.
