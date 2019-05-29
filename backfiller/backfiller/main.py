@@ -7,6 +7,7 @@ import os
 import random
 import signal
 import socket
+import urlparse
 import uuid
 
 import argh
@@ -202,9 +203,12 @@ class BackfillerManager(object):
 	def get_nodes(self):
 		"""List address of other wubloaders.
 		
-		This returns a list of the other wubloaders as URI strings"""
-		nodes = self.static_nodes + []
-	
+		This returns a list of the other wubloaders as URL strings.
+		
+		If only has a URL, infer name from the hostname of the URL"""
+
+		nodes = {urlparse.urlparse(node).hostname:node for nodes in self.static_nodes}
+		
 		if self.node_file is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(self.node_file))
 			try:
@@ -213,18 +217,18 @@ class BackfillerManager(object):
 						substrs = line.split()
 						if not len(line) or substrs[0][0] == '#':
 							continue
-						nodes.append(substrs[0])
-			except IOError:
-				self.logger.info('{} not found'.format(self.node_file))
-	
-		if self.node_database:
+						elif len(substrs) == 1:
+							nodes[urlparse.urlparse(substr[0]).hostname] = substr[0]
+						else:
+							nodes[substrs[0]] = substrs[1]
+
+		if self.node_database is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(self.node_database))
 			# query the database
 	
-		if self.localhost is not None:
-			nodes = [node for node in nodes if self.localhost not in node]
+		nodes.pop(self.localhost, None)
 
-		return nodes
+		return nodes.values()
 
 class BackfillerWorker(object):
 	"""Backfills segments from a node.
