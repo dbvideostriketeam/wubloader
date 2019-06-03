@@ -80,8 +80,8 @@
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
       command: [
-        "--stream", $.channel,
-        "-v", std.join(",", $.qualities),
+        $.channel,
+        "--variants", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
       ],
