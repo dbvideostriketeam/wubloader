@@ -231,7 +231,7 @@ def best_segments_by_start(hour):
 	Note this means this function may perform os.stat()s.
 	"""
 	try:
-		segment_paths = os.listdir(hour)
+		segment_paths = [path for path in os.listdir(hour) if path.endswith('.ts')]
 	except OSError as e:
 		if e.errno != errno.ENOENT:
 			raise
@@ -313,7 +313,8 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	args += ['-f', 'mpegts', '-']
 	# run it
 	logging.info("Running segment cut with args: {}".format(" ".join(args)))
-	return subprocess.Popen(args, stdout=subprocess.PIPE)
+	p = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+	return p
 
 
 def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
