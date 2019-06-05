@@ -194,10 +194,8 @@ class BackfillerManager(object):
 			try:
 				new_nodes = set(self.get_nodes())
 			except Exception:
-				failures += 1
-				if failures > MAX_RETRIES:
-					self.logger.exception('Maximum number of failures ({}) exceed.'.format(MAX_RETRIES))
-					break
+				if failures < MAX_RETRIES:
+					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay))
 				self.stopping.wait(delay)
@@ -222,9 +220,20 @@ class BackfillerManager(object):
 	def get_nodes(self):
 		"""List address of other wubloaders.
 		
-		This returns a list of the other wubloaders as URL strings.
-		
-		If only has a URL, infer name from the hostname of the URL"""
+		This returns a list of the other wubloaders as URL strings. Node URLs 
+		are taken from three places. First, the --static-nodes command line
+		argument can be used to provide a list of addresses that are always
+		backfilled from. Node names infered from the hostnames of the URLs.
+		Second, addresses are read from the file named in the --node-file
+		command line argument. In this file, nodes are listed one per line as
+		node name node address pairs or as just node addresses. Lines starting
+		with '#' are ignored. If only the address is provided, the node name is
+		taken from the hostname. Third, node names and addresses can be
+		requested from the database with the database address. If multiple
+		nodes address with the same name are found, only the last is retained
+		and any nodes matching the local host name (given by the --hostname)
+		argument are ignored to try to prevent this node from backfilling from
+		its self."""
 
 		nodes = {urlparse.urlparse(node).hostname:node for node in self.static_nodes}
 		
@@ -336,10 +345,8 @@ class BackfillerWorker(object):
 					self.stopping.wait(common.jitter(self.WAIT_INTERVAL))
 
 			except Exception:
-				failures += 1
-				if failures > MAX_RETRIES:
-					self.logger.exception('Maximum number of failures ({}) exceed.'.format(MAX_RETRIES))
-					break
+				if failures < MAX_RETRIES:
+					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Backfill failed. Retrying in {:.0f} s'.format(delay))
 				self.stopping.wait(delay)
