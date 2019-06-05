@@ -54,6 +54,8 @@ class NoSegments(Exception):
 
 
 def cut_to_file(filename, base_dir, stream, start, end, variant='source'):
+	if os.path.exists(filename):
+		return
 	logging.info("Cutting {}".format(filename))
 	segments = get_best_segments(
 		os.path.join(base_dir, stream, variant).lower(),
@@ -68,7 +70,7 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source'):
 			f.write(chunk)
 
 
-def main(host='condor.host', user='necrobot-read', password=None, database='season_8', base_dir='.', output_dir='.'):
+def main(host='condor.host', user='necrobot-read', password=None, database='season_8', base_dir='.', output_dir='.', find=None):
 	logging.basicConfig(level=logging.INFO)
 
 	if password is None:
@@ -76,6 +78,9 @@ def main(host='condor.host', user='necrobot-read', password=None, database='seas
 	conn = mysql.connector.connect(
 		host=host, user=user, password=password, database=database,
 	)
+
+	if find:
+		find = tuple(find.split('-'))
 
 	cur = conn.cursor()
 	cur.execute(INFO_QUERY)
@@ -89,6 +94,9 @@ def main(host='condor.host', user='necrobot-read', password=None, database='seas
 	logging.info("Got info on {} races".format(len(data)))
 
 	for racer1, racer2, cawmentator, match_id, race_number, start, duration in data:
+		if find and (racer1.lower(), racer2.lower()) != find:
+			continue
+
 		end = start + datetime.timedelta(seconds=duration/100.)
 		base_name = "-".join(map(str, [racer1, racer2, match_id, race_number]))
 
