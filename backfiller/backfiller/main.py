@@ -28,7 +28,7 @@ segments_backfilled = prom.Counter(
 
 HOUR_FMT = '%Y-%m-%dT%H'
 TIMEOUT = 5 #default timeout in seconds for remote requests or exceptions 
-MAX_RETRIES = 4 #number of times to retry before stopping worker or manager
+MAX_BACKOFF = 4 #number of times to back off
 
 
 def list_local_segments(base_dir, stream, variant, hour):
@@ -194,7 +194,7 @@ class BackfillerManager(object):
 			try:
 				new_nodes = set(self.get_nodes())
 			except Exception:
-				if failures < MAX_RETRIES:
+				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay))
@@ -345,7 +345,7 @@ class BackfillerWorker(object):
 					self.stopping.wait(common.jitter(self.WAIT_INTERVAL))
 
 			except Exception:
-				if failures < MAX_RETRIES:
+				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Backfill failed. Retrying in {:.0f} s'.format(delay))
