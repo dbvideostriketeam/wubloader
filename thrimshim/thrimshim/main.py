@@ -5,14 +5,14 @@ import logging
 import gevent
 import gevent.backdoor
 from gevent.pywsgi import WSGIServer
-from flask import Flask, url_for, request, abort, Response
+import flask
 
 
 from common import database
-from stats import stats, after_request
+#from stats import stats, after_request
 
-app = Flask('restreamer', static_url_path='/segments')
-app.after_request(after_request)
+app = flask.Flask('thrimshim')
+#app.after_request(after_request)
 
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
@@ -30,11 +30,31 @@ def cors(app):
 		return app(environ, _start_response)
 	return handle
 
-def get_row(ident):
-	result = query_database(ident)
+@app.route('/thrimshim/<uuid:key>', methods=['GET', 'POST'])
+def thrimshim(key):
+	if flask.request.method == 'POST':
+		row = flask.request.json
+		update_row(row)
+	else:
 
-	response = json(result)
-	return result
+		
+
+def date_handler(obj):
+	
+
+def get_row(ident):
+	conn = flask.g.db_manager.get_conn()
+	with database.transaction(conn):
+		result = database.query(conn, 'SELECT * FROM events WHERE id = %s;', ident
+	row = results[0]
+	assert row.id == ident
+	response = row._asdict()
+	response = {key:(response[key].isoformat() if isinstance(response[key], datetime.datetime) else response[key]) for key in response.keys()}
+	return json.dump(response)
+
+
+def update_row(ident):
+
 
 def query_database(ident):
 
@@ -68,8 +88,9 @@ def update_database(ident, to_update):
 	
 
 
-def main(host='0.0.0.0', port=8005, connect_string='', backdoor_port=False):
+def main(host='0.0.0.0', port=8005, connection_string='', backdoor_port=False):
 
+	flask.g.db_manager = database.DBManager(dsn=connection_string)
 	server = WSGIServer((host, port), cors(app))
 
 	def stop():
