@@ -8,7 +8,7 @@ set -eu
 # Pass PUSH=true to also push the resulting images, or PUSH=latest to push them as :latest tag
 
 # The different images we can build
-COMPONENTS=(downloader restreamer backfiller)
+COMPONENTS=(downloader restreamer backfiller thrimshim)
 
 # Define push if not already defined
 PUSH=${PUSH:-}
