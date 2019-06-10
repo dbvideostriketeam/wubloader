@@ -8,16 +8,19 @@ import gevent.event
 import prometheus_client as prom
 
 import common
+from common.database import DBManager, query
 
 from .youtube import Youtube
 
 
 class Cutter(object):
-	def __init__(self, youtube, stop):
+	def __init__(self, youtube, conn, stop):
 		"""youtube is an authenticated and initialized youtube api client.
+		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
 		self.youtube = youtube
+		self.conn = conn
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
@@ -28,12 +31,14 @@ class Cutter(object):
 
 
 class TranscodeChecker(object):
-	def __init__(self, youtube, stop):
+	def __init__(self, youtube, conn, stop):
 		"""
 		youtube is an authenticated and initialized youtube api client.
+		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
 		self.youtube = youtube
+		self.conn = conn
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
@@ -42,7 +47,7 @@ class TranscodeChecker(object):
 			pass
 
 
-def main(youtube_creds_file, metrics_port=8003, backdoor_port=0):
+def main(dbconnect, youtube_creds_file, metrics_port=8003, backdoor_port=0):
 	"""
 	youtube_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
 	"""
@@ -61,14 +66,15 @@ def main(youtube_creds_file, metrics_port=8003, backdoor_port=0):
 	# We have two independent jobs to do - to perform cut jobs (cutter),
 	# and to check the status of transcoding videos to see if they're done (transcode checker).
 	# We want to error if either errors, and shut down if either exits.
+	dbmanager = DBManager(dsn=dbconnect)
 	youtube_creds = json.load(open(youtube_creds_file))
 	youtube = Youtube(
 		client_id=youtube_creds['client_id'],
 		client_secret=youtube_creds['client_secret'],
 		refresh_token=youtube_creds['refresh_token'],
 	)
-	cutter = Cutter(youtube, stop)
-	transcode_checker = TranscodeChecker(youtube, stop)
+	cutter = Cutter(youtube, dbmanager.get_conn(), stop)
+	transcode_checker = TranscodeChecker(youtube, dbmanager.get_conn(), stop)
 	jobs = [
 		gevent.spawn(cutter.run),
 		gevent.spawn(transcode_checker.run),
