@@ -69,12 +69,16 @@ def parse_segment_path(path):
 		raise ValueError, ValueError("Bad path {!r}: {}".format(path, e)), tb
 
 
+class ContainsHoles(Exception):
+	"""Raised by get_best_segments() when a hole is found and allow_holes is False"""
+
+
 @timed(
-	hours_path=lambda ret, hours_path, start, end: hours_path,
-	has_holes=lambda ret, hours_path, start, end: None in ret,
-	normalize=lambda ret, hours_path, start, end: len([x for x in ret if x is not None]),
+	hours_path=lambda ret, hours_path, *args, **kwargs: hours_path,
+	has_holes=lambda ret, *args, **kwargs: None in ret,
+	normalize=lambda ret, *args, **kwargs: len([x for x in ret if x is not None]),
 )
-def get_best_segments(hours_path, start, end):
+def get_best_segments(hours_path, start, end, allow_holes=True):
 	"""Return a list of the best sequence of non-overlapping segments
 	we have for a given time range. Hours path should be the directory containing hour directories.
 	Time args start and end should be given as datetime objects.
@@ -102,6 +106,10 @@ def get_best_segments(hours_path, start, end):
 			None, as the previous segment ends 10sec before the requested end time of 60.
 	Note that any is_partial=True segment will be followed by a None, since we can't guarentee
 	it joins on to the next segment fully intact.
+
+	If allow_holes is False, then we fail fast at the first discontinuity found
+	and raise ContainsHoles. If ContainsHoles is not raised, the output is guarenteed to not contain
+	any None items.
 	"""
 	# Note: The exact equality checks in this function are not vulnerable to floating point error,
 	# but only because all input dates and durations are only precise to the millisecond, and
@@ -128,6 +136,8 @@ def get_best_segments(hours_path, start, end):
 				elif start < segment.start < end:
 					# segment is after start (but before end), so there was no segment that covers start
 					# so we begin with a None
+					if not allow_holes:
+						raise ContainsHoles
 					result.append(None)
 					result.append(segment)
 				else:
@@ -145,6 +155,8 @@ def get_best_segments(hours_path, start, end):
 					continue
 				if result[-1].is_partial or prev_end < segment.start:
 					# there's a gap between prev end and this start, so add a None
+					if not allow_holes:
+						raise ContainsHoles
 					result.append(None)
 				result.append(segment)
 
@@ -158,8 +170,11 @@ def get_best_segments(hours_path, start, end):
 			continue
 		break
 
-	# check if we need a trailing None because last segment is partial or doesn't reach end
-	if result and (result[-1].is_partial or result[-1].end < end):
+	# check if we need a trailing None because last segment is partial or doesn't reach end,
+	# or we found nothing at all
+	if not result or result[-1].is_partial or result[-1].end < end:
+		if not allow_holes:
+			raise ContainsHoles
 		result.append(None)
 
 	return result
