@@ -6,12 +6,15 @@ import base64
 import datetime
 import errno
 import itertools
+import json
 import logging
 import os
 import sys
 from collections import namedtuple
+from contextlib import closing
 
 import gevent
+from gevent import subprocess
 
 from .stats import timed
 
@@ -232,3 +235,123 @@ def best_segments_by_start(hour):
 			continue
 		# no full segments, fall back to measuring partials.
 		yield max(segments, key=lambda segment: os.stat(segment.path).st_size)
+
+
+def streams_info(segment):
+	"""Return ffprobe's info on streams as a list of dicts"""
+	output = subprocess.check_output([
+		'ffprobe',
+		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
+		'-of', 'json', '-show_streams', # get streams info as json
+		segment.path,
+	])
+	return json.loads(output)['streams']
+
+
+def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
+	"""Return a Popen object which is ffmpeg cutting the given segment"""
+	args = [
+		'ffmpeg',
+		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
+		'-i', segment.path,
+	]
+	# output from ffprobe is generally already sorted but let's be paranoid,
+	# because the order of map args matters.
+	for stream in sorted(streams_info(segment), key=lambda stream: stream['index']):
+		# map the same stream in the same position from input to output
+		args += ['-map', '0:{}'.format(stream['index'])]
+		if stream['codec_type'] in ('video', 'audio'):
+			# for non-metadata streams, make sure we use the same codec (metadata streams
+			# are a bit weirder, and ffmpeg will do the right thing anyway)
+			args += ['-codec:{}'.format(stream['index']), stream['codec_name']]
+	# now add trim args
+	if cut_start:
+		args += ['-ss', str(cut_start)]
+	if cut_end:
+		args += ['-to', str(cut_end)]
+	# output to stdout as MPEG-TS
+	args += ['-f', 'mpegts', '-']
+	# run it
+	logging.info("Running segment cut with args: {}".format(" ".join(args)))
+	return subprocess.Popen(args, stdout=subprocess.PIPE)
+
+
+def read_chunks(fileobj, chunk_size=16*1024):
+	"""Read fileobj until EOF, yielding chunk_size sized chunks of data."""
+	while True:
+		chunk = fileobj.read(chunk_size)
+		if not chunk:
+			break
+		yield chunk
+
+
+def cut_segments(segments, start, end):
+	"""Yields chunks of a MPEGTS video file covering the exact timestamp range.
+	segments should be a list of segments as returned by get_best_segments().
+	This method works by only cutting the first and last segments, and concatenating the rest.
+	This only works if the same codec settings etc are used across all segments.
+	This should almost always be true but may cause weird results if not.
+	"""
+
+	# how far into the first segment to begin (if no hole at start)
+	cut_start = None
+	if segments[0] is not None:
+		cut_start = (start - segments[0].start).total_seconds()
+		if cut_start < 0:
+			raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
+
+	# how far into the final segment to end (if no hole at end)
+	cut_end = None
+	if segments[-1] is not None:
+		cut_end = (end - segments[-1].start).total_seconds()
+		if cut_end < 0:
+			raise ValueError("Last segment ends before cut end, but no trailing hole indicated")
+
+	# Set first and last only if they actually need cutting.
+	# Note this handles both the cut_start = None (no first segment to cut)
+	# and cut_start = 0 (first segment already starts on time) cases.
+	first = segments[0] if cut_start else None
+	last = segments[-1] if cut_end else None
+
+	for segment in segments:
+		if segment is None:
+			logging.debug("Skipping discontinuity while cutting")
+			# TODO: If we want to be safe against the possibility of codecs changing,
+			# we should check the streams_info() after each discontinuity.
+			continue
+
+		# note first and last might be the same segment.
+		# note a segment will only match if cutting actually needs to be done
+		# (ie. cut_start or cut_end is not 0)
+		if segment in (first, last):
+			proc = None
+			try:
+				proc = ffmpeg_cut_segment(
+					segment,
+					cut_start if segment == first else None,
+					cut_end if segment == last else None,
+				)
+				with closing(proc.stdout):
+					for chunk in read_chunks(proc.stdout):
+						yield chunk
+				proc.wait()
+			except Exception:
+				ex, ex_type, tb = sys.exc_info()
+				# try to clean up proc, ignoring errors
+				if proc is not None:
+					try:
+						proc.kill()
+					except OSError:
+						pass
+				raise ex, ex_type, tb
+			else:
+				# check if ffmpeg had errors
+				if proc.returncode != 0:
+					raise Exception(
+						"Error while streaming cut: ffmpeg exited {}".format(proc.returncode)
+					)
+		else:
+			# no cutting needed, just serve the file
+			with open(segment.path) as f:
+				for chunk in read_chunks(f):
+					yield chunk
