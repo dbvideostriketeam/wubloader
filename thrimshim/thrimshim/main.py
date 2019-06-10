@@ -30,18 +30,28 @@ def cors(app):
 	return handle
 
 
-@app.route('/thrimshim/<uuid:key>', methods=['GET', 'POST'])
-def thrimshim(key):
+@app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+def thrimshim(ident):
 	if flask.request.method == 'POST':
 		row = flask.request.json
 	else:
-		get_row(key)
+		conn = app.db_manager.get_conn()
+		with database.transaction(conn):
+			results = database.query(conn, 'SELECT * FROM events WHERE id = %s;', str(ident))
+		row = results.fetchone()
+		if row is None:
+			flask.abort(404)
+		response = row._asdict()
+		response = {key:(response[key].isoformat() if isinstance(response[key], datetime.datetime) else response[key]) for key in response.keys()}
+		return json.dumps(response)
+
+		
 		
 
 def get_row(ident):
 	conn = app.db_manager.get_conn()
 	with database.transaction(conn):
-		results = database.query(conn, 'SELECT * FROM events WHERE id = %s;', ident)
+		results = database.query(conn, 'SELECT * FROM events WHERE id = %s;', str(ident))
 	row = results[0]
 	assert row.id == ident
 	response = row._asdict()
@@ -81,7 +91,7 @@ def get_row(ident):
 	
 
 
-def main(host='0.0.0.0', port=8005, connection_string='', backdoor_port=0):
+def main(host='0.0.0.0', port=8004, connection_string='', backdoor_port=0):
 
 	server = WSGIServer((host, port), cors(app))
 	app.db_manager = database.DBManager(dsn=connection_string)
