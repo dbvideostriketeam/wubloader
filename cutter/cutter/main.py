@@ -31,6 +31,9 @@ class Cutter(object):
 
 
 class TranscodeChecker(object):
+	NO_VIDEOS_RETRY_INTERVAL = 5
+	ERROR_RETRY_INTERVAL = 5
+
 	def __init__(self, youtube, conn, stop):
 		"""
 		youtube is an authenticated and initialized youtube api client.
@@ -42,13 +45,60 @@ class TranscodeChecker(object):
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
+	def wait(self, interval):
+		"""Wait for INTERVAL with jitter, unless we're stopping"""
+		self.stop.wait(common.jitter(interval))
+
 	def run(self):
 		while not self.stop.is_set():
-			pass
+			try:
+				ids = self.get_ids_to_check()
+				if not ids:
+					self.wait(self.NO_VIDEOS_RETRY_INTERVAL)
+					continue
+				self.logger.info("Found {} videos in TRANSCODING".format(len(ids)))
+				ids = self.check_ids(ids)
+				if not ids:
+					self.wait(self.NO_VIDEOS_RETRY_INTERVAL)
+					continue
+				self.logger.info("{} videos are done".format(len(ids)))
+				done = self.mark_done(ids)
+				self.logger.info("Marked {} videos as done".format(done))
+			except Exception:
+				self.logger.exception("Error in TranscodeChecker")
+				self.wait(self.ERROR_RETRY_INTERVAL)
+
+	def get_ids_to_check(self):
+		result = query(self.conn, """
+			SELECT id, video_id
+			FROM events
+			WHERE state = 'TRANSCODING'
+		""")
+		return {id: video_id for id, video_id in result.fetchall()}
+
+	def check_ids(self, ids):
+		# Future work: Set error in DB if video id is not present,
+		# and/or try to get more info from yt about what's wrong.
+		statuses = self.youtube.get_video_status(ids.values())
+		return {
+			id: video_id for id, video_id in ids.items()
+			if statuses.get(video_id) == 'processed'
+		}
+
+	def mark_done(self, ids):
+		result = query(self.conn, """
+			UPDATE events
+			SET state = 'DONE'
+			WHERE id = ANY (%s::uuid[]) AND state = 'TRANSCODING'
+		""", ids.keys())
+		return result.rowcount
 
 
 def main(dbconnect, youtube_creds_file, metrics_port=8003, backdoor_port=0):
-	"""
+	"""dbconnect should be a postgres connection string, which is either a space-separated
+	list of key=value pairs, or a URI like:
+		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
+
 	youtube_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
 	"""
 	common.PromLogCountsHandler.install()
