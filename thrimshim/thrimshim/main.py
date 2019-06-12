@@ -2,7 +2,9 @@ import datetime
 import json
 import logging
 import signal
+import uuid
 
+import argh
 import gevent
 import gevent.backdoor
 from gevent.pywsgi import WSGIServer
@@ -31,10 +33,15 @@ def cors(app):
 	return handle
 
 
-@app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+@app.route('/thrimshim/<ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	ident = str(ident)
+	
+	try:
+		uuid.UUID(ident, version=4)
+	except ValueError:
+		return 'Invalid formate for id', 400
+
 	if flask.request.method == 'POST':
 		row = flask.request.json
 		return update_row(ident, row)
@@ -53,7 +60,7 @@ def get_row(ident):
 			WHERE id = %s;""", ident)
 	row = results.fetchone()
 	if row is None:
-		return 'Row {} not found'.format(ident), 404
+		return 'Row id = {} not found'.format(ident), 404
 	assert row.id == ident
 	response = row._asdict()
 	response = {key:(response[key].isoformat() if isinstance(response[key], datetime.datetime) else response[key]) for key in response.keys()}
@@ -62,7 +69,7 @@ def get_row(ident):
 
 
 def update_row(ident, new_row):
-	"""Updates row of database with id == ident with the edit columns in
+	"""Updates row of database with id = ident with the edit columns in
 	new_row.
 
 	If a 'video_link' is provided in uodate, interperate this as a manual video
@@ -71,15 +78,17 @@ def update_row(ident, new_row):
 	edit_columns = ['allow_holes', 'uploader_whitelist', 'upload_location',
 				'video_start', 'video_end', 'video_title', 'video_description',
 				'video_channel', 'video_quality']
+	state_columns = ['state', 'uploader', 'error', 'video_link'] 
+	columns = edit_columns + state_columns
 
+	#check edit columns are in new_row
 	row_keys = new_row.keys()
 	for column in edit_columns + ['state']:
 		if column not in row_keys:
-			return 'Missing {} from JSON'.format(column), 400
-
-	state_columns = ['state', 'uploader', 'error', 'video_link'] 
+			return 'Missing field {} in JSON'.format(column), 400
 
 	conn = app.db_manager.get_conn()
+	#check a row with id = ident is in the database
 	with database.transaction(conn):
 		results = database.query(conn, """
 			SELECT id, state
@@ -92,20 +101,22 @@ def update_row(ident, new_row):
 	
 	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
 		return 'Video already published', 400
-
-
+	
+	# handle state columns
+	# handle non-empty video_link as manual uploads
+	# otherwise clear other state columns
 	if 'video_link' in new_row and new_row['video_link']:
 		new_row['state'] = 'DONE'
 		new_row['upload_location'] = 'manual'
 	else:
 		new_row['video_link'] = None
+		new_row['upload_location'] = None
 		if new_row['state'] not in ['EDITED']:
 			new_row['state'] = 'UNEDITED'
-
 	new_row['uploader'] = None
 	new_row['error'] = None
 
-	columns = edit_columns + state_columns
+	# actually update database
 	build_query = sql.SQL("""
 		UPDATE events
 		set {}
@@ -119,14 +130,17 @@ def update_row(ident, new_row):
 	with database.transaction(conn):
 		result = database.query(conn, build_query, **kwargs)
 	if result.rowcount != 1:
-		raise Exception('No row with id {} to update'.format(ident))
+		raise Exception('Database consistancy error for id = {}'.format(ident))
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
-	return 'Row updated'
+	return ''
 
-
+@argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
+@argh.arg('--port', help='Port server will listen on. Default is 8004.')
+@argh.arg('--connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
+@argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
 def main(host='0.0.0.0', port=8004, connection_string='', backdoor_port=0):
-
+	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 	app.db_manager = database.DBManager(dsn=connection_string)
 
