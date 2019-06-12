@@ -38,9 +38,9 @@ def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
 	
 	try:
-		uuid.UUID(ident, version=4)
+		uuid.UUID(ident)
 	except ValueError:
-		return 'Invalid formate for id', 400
+		return 'Invalid format for id', 400
 
 	if flask.request.method == 'POST':
 		row = flask.request.json
@@ -53,17 +53,22 @@ def thrimshim(ident):
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
 	conn = app.db_manager.get_conn()
-	with database.transaction(conn):
-		results = database.query(conn, """
-			SELECT *
-			FROM events
-			WHERE id = %s;""", ident)
+	results = database.query(conn, """
+		SELECT *
+		FROM events
+		WHERE id = %s""", ident)
 	row = results.fetchone()
 	if row is None:
 		return 'Row id = {} not found'.format(ident), 404
 	assert row.id == ident
 	response = row._asdict()
-	response = {key:(response[key].isoformat() if isinstance(response[key], datetime.datetime) else response[key]) for key in response.keys()}
+
+	response = {
+		key: (
+			value.isoformat() if isinstance(value, datetime.datetime)
+			else value
+		) for key, value in response.items()
+	}
 	return json.dumps(response)
 
 
@@ -72,26 +77,32 @@ def update_row(ident, new_row):
 	"""Updates row of database with id = ident with the edit columns in
 	new_row.
 
-	If a 'video_link' is provided in uodate, interperate this as a manual video
+	If a 'video_link' is provided in update, interperet this as a manual video
 	upload and set state to 'DONE'"""
 
 	edit_columns = ['allow_holes', 'uploader_whitelist', 'upload_location',
 				'video_start', 'video_end', 'video_title', 'video_description',
 				'video_channel', 'video_quality']
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
-	columns = edit_columns + state_columns
+	#these have to be set before a video can be set as 'EDITED'
+	non_null_columns = ['upload_location', 'video_start', 'video_end',
+		'video_channel', 'video_quality']
 
-	#check edit columns are in new_row
-	row_keys = new_row.keys()
-	for column in edit_columns + ['state']:
-		if column not in row_keys:
-			return 'Missing field {} in JSON'.format(column), 400
+	#check vital edit columns are in new_row
+	wanted = set(non_null_columns + ['state'])
+	missing = wanted - set(new_row)
+	if missing:
+		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
+	#get rid of irrelevant columns
+	extras = set(new_row) - set(edit_columns + state_columns)
+	for extra in extras:
+		del new_row[extra]
 
 	conn = app.db_manager.get_conn()
 	#check a row with id = ident is in the database
 	with database.transaction(conn):
 		results = database.query(conn, """
-			SELECT id, state
+			SELECT id, state 
 			FROM events
 			WHERE id = %s;""", ident)
 	old_row = results.fetchone()
@@ -100,7 +111,7 @@ def update_row(ident, new_row):
 	assert old_row.id == ident
 	
 	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
-		return 'Video already published', 400
+		return 'Video already published', 403
 	
 	# handle state columns
 	# handle non-empty video_link as manual uploads
@@ -109,27 +120,42 @@ def update_row(ident, new_row):
 		new_row['state'] = 'DONE'
 		new_row['upload_location'] = 'manual'
 	else:
-		new_row['video_link'] = None
-		new_row['upload_location'] = None
-		if new_row['state'] not in ['EDITED']:
-			new_row['state'] = 'UNEDITED'
+		if new_row['state'] == 'EDITED':
+			missing = []
+			for column in non_null_columns:
+				if not new_row[column] or new_row[column] is None:
+					missing.append(column)
+			if missing:
+				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+		elif new_row['state'] != 'UNEDITED':
+			return 'Invalid state {}'.format(new_row['state']), 400
+		
 	new_row['uploader'] = None
 	new_row['error'] = None
 
 	# actually update database
 	build_query = sql.SQL("""
 		UPDATE events
-		set {}
-		WHERE id = %(id)s""").format(sql.SQL(", ").join(
+		SET {}
+		WHERE id = %(id)s
+		AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
+		).format(sql.SQL(", ").join(
 			sql.SQL("{} = {}").format(
 				sql.Identifier(column), sql.Placeholder(column),
-			) for column in columns
+			) for column in new_row.keys()
 		))
-	kwargs = {column:new_row[column] for column in columns}
-	kwargs['id'] = ident
 	with database.transaction(conn):
-		result = database.query(conn, build_query, **kwargs)
+		result = database.query(conn, build_query, id=ident, **new_row)
 	if result.rowcount != 1:
+		if result.rowcount == 0.:
+			with database.transaction(conn):
+				check_result = database.query(conn, """
+					SELECT id, state
+					FROM events
+					WHERE id = %s;""", ident)
+			current_row = check_result.fetchone()
+			if current_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
+				return 'Video already published', 403	
 		raise Exception('Database consistancy error for id = {}'.format(ident))
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
