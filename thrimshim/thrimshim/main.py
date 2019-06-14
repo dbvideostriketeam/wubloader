@@ -87,13 +87,11 @@ def update_row(ident, new_row):
 	If a 'video_link' is provided in update, interperet this as a manual video
 	upload and set state to 'DONE'"""
 
-	edit_columns = ['allow_holes', 'uploader_whitelist', 'upload_location',
-				'video_start', 'video_end', 'video_title', 'video_description',
-				'video_channel', 'video_quality']
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	#these have to be set before a video can be set as 'EDITED'
 	non_null_columns = ['upload_location', 'video_start', 'video_end',
-		'video_channel', 'video_quality']
+		'video_channel', 'video_quality', 'video_title', 'video_description']
+	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
 
 	#check vital edit columns are in new_row
 	wanted = set(non_null_columns + ['state'])
