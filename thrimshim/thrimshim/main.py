@@ -5,10 +5,11 @@ import signal
 import uuid
 
 import argh
+import flask
 import gevent
 import gevent.backdoor
 from gevent.pywsgi import WSGIServer
-import flask
+import prometheus_client
 from psycopg2 import sql
 
 import common
@@ -31,6 +32,12 @@ def cors(app):
 			return start_response(status, headers, exc_info)
 		return app(environ, _start_response)
 	return handle
+
+
+@app.route('/metrics')
+def metrics():
+	"""Expose Prometheus metrics."""
+	return prometheus_client.generate_latest()
 
 
 @app.route('/thrimshim/<ident>', methods=['GET', 'POST'])
@@ -100,11 +107,10 @@ def update_row(ident, new_row):
 
 	conn = app.db_manager.get_conn()
 	#check a row with id = ident is in the database
-	with database.transaction(conn):
-		results = database.query(conn, """
-			SELECT id, state 
-			FROM events
-			WHERE id = %s;""", ident)
+	results = database.query(conn, """
+		SELECT id, state 
+		FROM events
+		WHERE id = %s""", ident)
 	old_row = results.fetchone()
 	if old_row is None:
 		return 'Row {} not found'.format(ident), 404
@@ -144,19 +150,9 @@ def update_row(ident, new_row):
 				sql.Identifier(column), sql.Placeholder(column),
 			) for column in new_row.keys()
 		))
-	with database.transaction(conn):
-		result = database.query(conn, build_query, id=ident, **new_row)
+	result = database.query(conn, build_query, id=ident, **new_row)
 	if result.rowcount != 1:
-		if result.rowcount == 0.:
-			with database.transaction(conn):
-				check_result = database.query(conn, """
-					SELECT id, state
-					FROM events
-					WHERE id = %s;""", ident)
-			current_row = check_result.fetchone()
-			if current_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
-				return 'Video already published', 403	
-		raise Exception('Database consistancy error for id = {}'.format(ident))
+		return 'Video likely already published', 403	
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
