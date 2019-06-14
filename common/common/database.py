@@ -42,18 +42,18 @@ CREATE TABLE IF NOT EXISTS events (
 	notes TEXT NOT NULL DEFAULT '',
 	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
 	uploader_whitelist TEXT[],
-	upload_location TEXT NOT NULL DEFAULT '',
-	video_start TIMESTAMP,
-	video_end TIMESTAMP,
-	video_title TEXT,
-	video_description TEXT,
-	video_channel TEXT,
+	upload_location TEXT CHECK (state = 'UNEDITED' OR upload_location IS NOT NULL),
+	video_start TIMESTAMP CHECK (state = 'UNEDITED' OR video_start IS NOT NULL),
+	video_end TIMESTAMP CHECK (state = 'UNEDITED' OR video_end IS NOT NULL),
+	video_title TEXT CHECK (state = 'UNEDITED' OR video_title IS NOT NULL),
+	video_description TEXT CHECK (state = 'UNEDITED' OR video_description IS NOT NULL),
+	video_channel TEXT CHECK (state = 'UNEDITED' OR video_channel IS NOT NULL),
 	video_quality TEXT NOT NULL DEFAULT 'source',
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT,
 	error TEXT,
 	video_id TEXT,
-	video_link TEXT
+	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL)
 );
 
 -- Index on state, since that's almost always what we're querying on besides id
