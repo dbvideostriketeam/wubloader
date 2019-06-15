@@ -11,7 +11,6 @@ from base64 import b64encode
 from contextlib import contextmanager
 
 import argh
-import dateutil.parser
 import gevent
 import gevent.backdoor
 import gevent.event
@@ -21,6 +20,7 @@ from monotonic import monotonic
 
 import twitch
 import common
+import common.dateutil
 
 
 segments_downloaded = prom.Counter(
@@ -344,7 +344,7 @@ class StreamWorker(object):
 				self.manager.mark_working(self)
 
 				if segment.date:
-					date = dateutil.parser.parse(segment.date)
+					date = common.dateutil.parse(segment.date)
 				if segment.uri not in self.getters:
 					if date is None:
 						raise ValueError("Cannot determine date of segment")
