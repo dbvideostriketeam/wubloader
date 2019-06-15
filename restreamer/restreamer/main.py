@@ -202,8 +202,8 @@ def generate_media_playlist(stream, variant):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	start = common.dateutil.parse_as_utc(request.args['start']) if 'start' in request.args else None
-	end = common.dateutil.parse_as_utc(request.args['end']) if 'end' in request.args else None
+	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available
 		first, last = time_range_for_variant(stream, variant)
@@ -237,8 +237,8 @@ def cut(stream, variant):
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
 	"""
-	start = common.dateutil.parse_as_utc(request.args['start'])
-	end = common.dateutil.parse_as_utc(request.args['end'])
+	start = common.dateutil.parse_utc_only(request.args['start'])
+	end = common.dateutil.parse_utc_only(request.args['end'])
 	if end <= start:
 		return "End must be after start", 400
 
