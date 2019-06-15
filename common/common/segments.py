@@ -55,16 +55,17 @@ def parse_segment_path(path):
 		if len(parts) != 4:
 			raise ValueError("Not enough dashes in filename")
 		time, duration, type, hash = parts
-		if type not in ('full', 'partial'):
+		if type not in ('full', 'partial', 'temp'):
 			raise ValueError("Unknown type {!r}".format(type))
+		hash = None if type == 'temp' else unpadded_b64_decode(hash)
 		return SegmentInfo(
 			path = path,
 			stream = stream,
 			variant = variant,
 			start = datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f"),
 			duration = datetime.timedelta(seconds=float(duration)),
-			is_partial = type == "partial",
-			hash = unpadded_b64_decode(hash),
+			is_partial = type != "full",
+			hash = hash,
 		)
 	except ValueError as e:
 		# wrap error but preserve original traceback
