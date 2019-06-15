@@ -2,7 +2,6 @@ import datetime
 import json
 import logging
 import signal
-import uuid
 
 import argh
 import flask
@@ -40,13 +39,10 @@ def metrics():
 	return prometheus_client.generate_latest()
 
 
-@app.route('/thrimshim/<ident>', methods=['GET', 'POST'])
+@app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	try:
-		uuid.UUID(ident)
-	except ValueError:
-		return 'Invalid format for id', 400
+	ident = str(ident)
 	if flask.request.method == 'POST':
 		row = flask.request.json
 		return update_row(ident, row)
@@ -78,11 +74,7 @@ def get_row(ident):
 
 def update_row(ident, new_row):
 	"""Updates row of database with id = ident with the edit columns in
-	new_row.
-
-	If a 'video_link' is provided in update, interpret this as a manual video
-	upload and set state to 'DONE'. If state currently is 'DONE', and a empty
-	'video_link' is present, reset state to 'UNEDITED'."""
+	new_row."""
 
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	#these have to be set before a video can be set as 'EDITED'
@@ -112,42 +104,33 @@ def update_row(ident, new_row):
 	assert old_row.id == ident
 	
 
-	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED'] and not ('video_link' in new_row and new_row['video_link']):
+	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
 		return 'Video already published', 403
 	
 	# handle state columns
-	# interpret non-empty video_link as manual uploads
-	# interpret state == 'DONE' and an empty video link as instructions to reset
-	# state to 'UNEDITED' and clear video link
-	# otherwise clear other state columns
-	if 'video_link' in new_row and new_row['video_link']:
-		new_row['state'] = 'DONE'
-		new_row['upload_location'] = 'manual'
-	else:
-		if new_row['state'] == 'EDITED':
-			missing = []
-			for column in non_null_columns:
-				if not new_row[column]:
-					missing.append(column)
-			if missing:
-				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
-		elif new_row['state'] != 'UNEDITED':
-			return 'Invalid state {}'.format(new_row['state']), 400
-		
+	if new_row['state'] == 'EDITED':
+		missing = []
+		for column in non_null_columns:
+			if not new_row[column]:
+				missing.append(column)
+		if missing:
+			return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+	elif new_row['state'] != 'UNEDITED':
+		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
 	new_row['error'] = None
 
 	# actually update database
-	query_str = """
+	build_query = sql.SQL("""
 		UPDATE events
-		SET {{}}
+		SET {}
 		WHERE id = %(id)s
-		{}""".format("AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')" if not ('video_link' in new_row and new_row['video_link']) else "")
-	build_query = sql.SQL(query_str).format(sql.SQL(", ").join(
-		sql.SQL("{} = {}").format(
-			sql.Identifier(column), sql.Placeholder(column),
-		) for column in new_row.keys()
-		))
+		AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
+		).format(sql.SQL(", ").join(
+			sql.SQL("{} = {}").format(
+				sql.Identifier(column), sql.Placeholder(column),
+			) for column in new_row.keys()
+	))
 	result = database.query(conn, build_query, id=ident, **new_row)
 	if result.rowcount != 1:
 		return 'Video likely already published', 403	
@@ -155,19 +138,32 @@ def update_row(ident, new_row):
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
 
-@app.route('/thrimshim/reset/<ident>')
-def reset_row(ident):
-	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
-	try:
-		uuid.UUID(ident)
-	except ValueError:
-		return 'Invalid format for id', 400
+
+@app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
+def manual_link(ident):
+	"""Manually set a video_link"""
+	link = flask.request.json
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
 		UPDATE events 
-		SET STATE='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
-		uploader = NULL
-		WHERE id = %s""", ident)
+		SET state='DONE', upload_location = 'Manual', video_link = %s
+		WHERE id = %s""", link, str(ident))
+	if results.rowcount != 1:
+		return 'Row id = {} not found'.format(ident), 404
+	logging.info("Row {} video_link set to {}".format(ident, link))
+	return ''	
+	
+
+
+@app.route('/thrimshim/reset/<uuid:ident>')
+def reset_row(ident):
+	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
+	conn = app.db_manager.get_conn()
+	results = database.query(conn, """
+		UPDATE events 
+		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
+			uploader = NULL
+		WHERE id = %s""", str(ident))
 	if results.rowcount != 1:
 		return 'Row id = {} not found'.format(ident), 404
 	logging.info("Row {} reset to 'UNEDITED'".format(ident))
