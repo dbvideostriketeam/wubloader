@@ -7,13 +7,13 @@ import logging
 import os
 import signal
 
-import dateutil.parser
 import gevent
 import gevent.backdoor
 import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
+import common.dateutil
 from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler
 
 import generate_hls
@@ -149,7 +149,9 @@ def time_range_for_variant(stream, variant):
 		abort(404)
 	first, last = min(hours), max(hours)
 	# note last hour parses to _start_ of that hour, so we add 1h to go to end of that hour
-	return dateutil.parser.parse(first), dateutil.parser.parse(last) + datetime.timedelta(hours=1)
+	def parse_hour(s):
+		return datetime.datetime.strptime(s, "%Y-%m-%dT%H")
+	return parse_hour(first), parse_hour(last) + datetime.timedelta(hours=1)
 
 
 @app.route('/playlist/<stream>.m3u8')
@@ -161,8 +163,8 @@ def generate_master_playlist(stream):
 		start, end: The time to begin and end the stream at.
 			See generate_media_playlist for details.
 	"""
-	start = dateutil.parser.parse(request.args['start']) if 'start' in request.args else None
-	end = dateutil.parser.parse(request.args['end']) if 'end' in request.args else None
+	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	variants = listdir(os.path.join(app.static_folder, stream))
 
 	playlists = {}
@@ -189,7 +191,7 @@ def generate_media_playlist(stream, variant):
 	"""Returns a HLS media playlist for the given stream and variant.
 	Takes optional params:
 		start, end: The time to begin and end the stream at.
-			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS).
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 			If not given, effectively means "infinity", ie. no start means
 			any time ago, no end means any time in the future.
 	Note that because it returns segments _covering_ that range, the playlist
@@ -200,8 +202,8 @@ def generate_media_playlist(stream, variant):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	start = dateutil.parser.parse(request.args['start']) if 'start' in request.args else None
-	end = dateutil.parser.parse(request.args['end']) if 'end' in request.args else None
+	start = common.dateutil.parse_as_utc(request.args['start']) if 'start' in request.args else None
+	end = common.dateutil.parse_as_utc(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available
 		first, last = time_range_for_variant(stream, variant)
@@ -229,14 +231,14 @@ def cut(stream, variant):
 	"""Return a MPEGTS video file covering the exact timestamp range.
 	Params:
 		start, end: Required. The start and end times, down to the millisecond.
-			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS).
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 		allow_holes: Optional, default false. If false, errors out with a 406 Not Acceptable
 			if any holes are detected, rather than producing a video with missing parts.
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
 	"""
-	start = dateutil.parser.parse(request.args['start'])
-	end = dateutil.parser.parse(request.args['end'])
+	start = common.dateutil.parse_as_utc(request.args['start'])
+	end = common.dateutil.parse_as_utc(request.args['end'])
 	if end <= start:
 		return "End must be after start", 400
 

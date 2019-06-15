@@ -11,12 +11,12 @@ import urlparse
 import uuid
 
 import argh
-import dateutil.parser
 import gevent.backdoor
 import prometheus_client as prom
 import requests
 
 import common
+import common.dateutil
 
 
 segments_backfilled = prom.Counter(
@@ -385,7 +385,7 @@ def main(streams, base_dir='.', variants='source', metrics_port=8002,
 			start = float(start)
 			logging.info('Backfilling last {} hours'.format(start))
 		except ValueError:
-			start = dateutil.parser.parse(start)
+			start = common.dateutil.parse(start)
 			logging.info('Backfilling since {}'.format(start)) 
 
 	common.PromLogCountsHandler.install()
