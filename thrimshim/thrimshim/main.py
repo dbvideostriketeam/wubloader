@@ -43,16 +43,13 @@ def metrics():
 @app.route('/thrimshim/<ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	
 	try:
 		uuid.UUID(ident)
 	except ValueError:
 		return 'Invalid format for id', 400
-
 	if flask.request.method == 'POST':
 		row = flask.request.json
 		return update_row(ident, row)
-
 	else:
 		return get_row(ident)
 		
@@ -77,7 +74,6 @@ def get_row(ident):
 		) for key, value in response.items()
 	}
 	return json.dumps(response)
-
 
 
 def update_row(ident, new_row):
@@ -116,7 +112,7 @@ def update_row(ident, new_row):
 	assert old_row.id == ident
 	
 
-	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED'] and 'video_link' not in new_row:
+	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED'] and not ('video_link' in new_row and new_row['video_link']):
 		return 'Video already published', 403
 	
 	# handle state columns
@@ -124,14 +120,9 @@ def update_row(ident, new_row):
 	# interpret state == 'DONE' and an empty video link as instructions to reset
 	# state to 'UNEDITED' and clear video link
 	# otherwise clear other state columns
-	if 'video_link' in new_row:  
-		if new_row['video_link']:
-			new_row['state'] = 'DONE'
-			new_row['upload_location'] = 'manual'
-		elif old_row.state == 'DONE':
-			new_row['state'] = 'UNEDITED'
-			new_row['upload_location'] = None
-			new_row['video_link'] = None
+	if 'video_link' in new_row and new_row['video_link']:
+		new_row['state'] = 'DONE'
+		new_row['upload_location'] = 'manual'
 	else:
 		if new_row['state'] == 'EDITED':
 			missing = []
@@ -151,7 +142,7 @@ def update_row(ident, new_row):
 		UPDATE events
 		SET {{}}
 		WHERE id = %(id)s
-		{}""".format("AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')" if 'video_link' not in new_row else "")
+		{}""".format("AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')" if not ('video_link' in new_row and new_row['video_link']) else "")
 	build_query = sql.SQL(query_str).format(sql.SQL(", ").join(
 		sql.SQL("{} = {}").format(
 			sql.Identifier(column), sql.Placeholder(column),
@@ -163,6 +154,25 @@ def update_row(ident, new_row):
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
+
+@app.route('/thrimshim/reset/<ident>')
+def reset_row(ident):
+	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
+	try:
+		uuid.UUID(ident)
+	except ValueError:
+		return 'Invalid format for id', 400
+	conn = app.db_manager.get_conn()
+	results = database.query(conn, """
+		UPDATE events 
+		SET STATE='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
+		uploader = NULL
+		WHERE id = %s""", ident)
+	if results.rowcount != 1:
+		return 'Row id = {} not found'.format(ident), 404
+	logging.info("Row {} reset to 'UNEDITED'".format(ident))
+	return ''	
+		
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
