@@ -7,14 +7,13 @@ import logging
 import os
 import signal
 
-import dateutil.parser
 import gevent
 import gevent.backdoor
 import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler
+from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler, parse_timestamp
 
 import generate_hls
 from stats import stats, after_request
@@ -149,7 +148,7 @@ def time_range_for_variant(stream, variant):
 		abort(404)
 	first, last = min(hours), max(hours)
 	# note last hour parses to _start_ of that hour, so we add 1h to go to end of that hour
-	return dateutil.parser.parse(first), dateutil.parser.parse(last) + datetime.timedelta(hours=1)
+	return parse_timestamp(first), parse_timestamp(last) + datetime.timedelta(hours=1)
 
 
 @app.route('/playlist/<stream>.m3u8')
@@ -161,8 +160,8 @@ def generate_master_playlist(stream):
 		start, end: The time to begin and end the stream at.
 			See generate_media_playlist for details.
 	"""
-	start = dateutil.parser.parse(request.args['start']) if 'start' in request.args else None
-	end = dateutil.parser.parse(request.args['end']) if 'end' in request.args else None
+	start = parse_timestamp(request.args['start']) if 'start' in request.args else None
+	end = parse_timestamp(request.args['end']) if 'end' in request.args else None
 	variants = listdir(os.path.join(app.static_folder, stream))
 
 	playlists = {}
@@ -200,8 +199,8 @@ def generate_media_playlist(stream, variant):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	start = dateutil.parser.parse(request.args['start']) if 'start' in request.args else None
-	end = dateutil.parser.parse(request.args['end']) if 'end' in request.args else None
+	start = parse_timestamp(request.args['start']) if 'start' in request.args else None
+	end = parse_timestamp(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available
 		first, last = time_range_for_variant(stream, variant)
@@ -235,8 +234,8 @@ def cut(stream, variant):
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
 	"""
-	start = dateutil.parser.parse(request.args['start'])
-	end = dateutil.parser.parse(request.args['end'])
+	start = parse_timestamp(request.args['start'])
+	end = parse_timestamp(request.args['end'])
 	if end <= start:
 		return "End must be after start", 400
 

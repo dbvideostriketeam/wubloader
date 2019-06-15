@@ -11,7 +11,6 @@ import urlparse
 import uuid
 
 import argh
-import dateutil.parser
 import gevent.backdoor
 import prometheus_client as prom
 import requests
@@ -365,7 +364,7 @@ class BackfillerWorker(object):
 @argh.arg('--metrics-port', help='Port for Prometheus stats. Default is 8002.')
 @argh.arg('--static-nodes', help='Nodes to always backfill from. Comma seperated if multiple. By default empty.')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
-@argh.arg('--start', help='If a datetime only backfill hours after that datetime. If a number, bacfill hours more recent than that number of hours ago. If None (default), all hours are backfilled.')
+@argh.arg('--start', help='If a datetime only backfill hours after that datetime. If a number, bacfill hours more recent than that number of hours ago. If None (default), all hours are backfilled. Datetime must be given in ISO format and as UTC.')
 @argh.arg('--run-once', help='If True, backfill only once. By default False.')
 @argh.arg('--node-file', help="Name of file listing nodes to backfill from. One node per line in the form NAME URI with whitespace only lines or lines starting with '#' ignored. If None (default) do not get nodes from a file.")
 @argh.arg('--node-database', help='Address of database node to fetch a list of nodes from. If None (default) do not get nodes from database.')
@@ -385,7 +384,7 @@ def main(streams, base_dir='.', variants='source', metrics_port=8002,
 			start = float(start)
 			logging.info('Backfilling last {} hours'.format(start))
 		except ValueError:
-			start = dateutil.parser.parse(start)
+			start = common.parse_timestamp(start)
 			logging.info('Backfilling since {}'.format(start)) 
 
 	common.PromLogCountsHandler.install()
