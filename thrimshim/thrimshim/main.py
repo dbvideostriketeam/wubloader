@@ -84,8 +84,9 @@ def update_row(ident, new_row):
 	"""Updates row of database with id = ident with the edit columns in
 	new_row.
 
-	If a 'video_link' is provided in update, interperet this as a manual video
-	upload and set state to 'DONE'"""
+	If a 'video_link' is provided in update, interpret this as a manual video
+	upload and set state to 'DONE'. If state currently is 'DONE', and a empty
+	'video_link' is present, reset state to 'UNEDITED'."""
 
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	#these have to be set before a video can be set as 'EDITED'
@@ -114,20 +115,28 @@ def update_row(ident, new_row):
 		return 'Row {} not found'.format(ident), 404
 	assert old_row.id == ident
 	
-	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
+
+	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED'] and 'video_link' not in new_row:
 		return 'Video already published', 403
 	
 	# handle state columns
-	# handle non-empty video_link as manual uploads
+	# interpret non-empty video_link as manual uploads
+	# interpret state == 'DONE' and an empty video link as instructions to reset
+	# state to 'UNEDITED' and clear video link
 	# otherwise clear other state columns
-	if 'video_link' in new_row and new_row['video_link']:
-		new_row['state'] = 'DONE'
-		new_row['upload_location'] = 'manual'
+	if 'video_link' in new_row:  
+		if new_row['video_link']:
+			new_row['state'] = 'DONE'
+			new_row['upload_location'] = 'manual'
+		elif old_row.state == 'DONE':
+			new_row['state'] = 'UNEDITED'
+			new_row['upload_location'] = None
+			new_row['video_link'] = None
 	else:
 		if new_row['state'] == 'EDITED':
 			missing = []
 			for column in non_null_columns:
-				if not new_row[column] or new_row[column] is None:
+				if not new_row[column]:
 					missing.append(column)
 			if missing:
 				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
@@ -138,15 +147,15 @@ def update_row(ident, new_row):
 	new_row['error'] = None
 
 	# actually update database
-	build_query = sql.SQL("""
+	query_str = """
 		UPDATE events
-		SET {}
+		SET {{}}
 		WHERE id = %(id)s
-		AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
-		).format(sql.SQL(", ").join(
-			sql.SQL("{} = {}").format(
-				sql.Identifier(column), sql.Placeholder(column),
-			) for column in new_row.keys()
+		{}""".format("AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')" if 'video_link' not in new_row else "")
+	build_query = sql.SQL(query_str).format(sql.SQL(", ").join(
+		sql.SQL("{} = {}").format(
+			sql.Identifier(column), sql.Placeholder(column),
+		) for column in new_row.keys()
 		))
 	result = database.query(conn, build_query, id=ident, **new_row)
 	if result.rowcount != 1:
