@@ -9,11 +9,13 @@ import gevent
 import gevent.backdoor
 from gevent.pywsgi import WSGIServer
 import prometheus_client
+import psycopg2
 from psycopg2 import sql
 
 import common
 from common import database
 
+psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
 
 def cors(app):
@@ -42,7 +44,6 @@ def metrics():
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	ident = str(ident)
 	if flask.request.method == 'POST':
 		row = flask.request.json
 		return update_row(ident, row)
@@ -63,6 +64,7 @@ def get_row(ident):
 	assert row.id == ident
 	response = row._asdict()
 
+	response['id'] = str(response['id'])	
 	response = {
 		key: (
 			value.isoformat() if isinstance(value, datetime.datetime)
@@ -141,21 +143,30 @@ def update_row(ident, new_row):
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 def manual_link(ident):
-	"""Manually set a video_link"""
+	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
+	upload_location is 'manual'."""
 	link = flask.request.json
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
+		SELECT id, state, upload_location 
+		FROM events
+		WHERE id = %s""", ident)
+	old_row = results.fetchone()
+	if old_row is None:
+		return 'Row {} not found'.format(ident), 404
+	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
+		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
+
+	results = database.query(conn, """
 		UPDATE events 
-		SET state='DONE', upload_location = 'Manual', video_link = %s
-		WHERE id = %s""", link, str(ident))
-	if results.rowcount != 1:
-		return 'Row id = {} not found'.format(ident), 404
+		SET state='DONE', upload_location = 'manual', video_link = %s
+		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
+			upload_location = 'manual'))""", link, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
 	return ''	
 	
 
-
-@app.route('/thrimshim/reset/<uuid:ident>')
+@app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
 def reset_row(ident):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()
@@ -163,7 +174,7 @@ def reset_row(ident):
 		UPDATE events 
 		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
 			uploader = NULL
-		WHERE id = %s""", str(ident))
+		WHERE id = %s""", ident)
 	if results.rowcount != 1:
 		return 'Row id = {} not found'.format(ident), 404
 	logging.info("Row {} reset to 'UNEDITED'".format(ident))
