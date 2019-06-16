@@ -157,9 +157,9 @@ def update_row(ident, new_row):
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
-@argh.arg('--connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
+@argh.arg('connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
-def main(host='0.0.0.0', port=8004, connection_string='', backdoor_port=0):
+def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 	app.db_manager = database.DBManager(dsn=connection_string)
