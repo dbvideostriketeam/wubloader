@@ -25,8 +25,10 @@
   // Only the restreamer needs to be externally accessible - the others are just for monitoring.
   ports:: {
     restreamer: 8080,
+    thrimshim: 8081,
     downloader: 8001,
     backfiller: 8002,
+    cutter: 8003,
   },
 
   // The local port within each container to bind the backdoor server on.
@@ -36,9 +38,28 @@
   // Other nodes to backfill from. You should not include the local node.
   peers:: [
     "http://wubloader.codegunner.com/"
-  ],  
+  ],
+
+  // Connection args for the database
+  db_args:: {
+    user: "postgres",
+    password: "postgres",
+    host: "localhost",
+    port: 5432,
+    dbname: "wubloader",
+  },
+
+  // Path to a JSON file containing youtube credentials as keys
+  // 'client_id', 'client_secret' and 'refresh_token'.
+  youtube_creds:: "./youtube_creds.json",
 
   // Now for the actual docker-compose config
+
+  // The connection string for the database. Constructed from db_args.
+  db_connect:: std.join(" ", [
+    "%s=%s" % [key, $.db_args[key]]
+    for key in std.objectFields($.db_args)
+  ]),
 
   // docker-compose version
   version: "3",
@@ -50,6 +71,7 @@
       // Args for the downloader: set channel and qualities
       command: [
         $.channel,
+        "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
       ],
@@ -72,6 +94,7 @@
       // port for restreamer, which is 8000.
       ports: ["%s:8000" % $.ports.restreamer],
       command: [
+        "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
       ],
     },
@@ -81,6 +104,7 @@
       // Args for the backfiller: set channel and qualities
       command: [
         $.channel,
+        "--base-dir", "/mnt",
         "--variants", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
@@ -94,8 +118,44 @@
       ports: ["%s:8002" % $.ports.backfiller]
     },
 
+    cutter: {
+      image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
+      // Args for the cutter: DB and youtube creds
+      command: [
+        "--base-dir", "/mnt",
+        "--backdoor-port", std.toString($.backdoor_port),
+        $.db_connect,
+        "/etc/wubloader-youtube-creds.json",
+      ],
+      volumes: [
+        // Mount the segments directory at /mnt
+        "%s:/mnt" % $.segments_path,
+        // Mount the creds file into /etc
+        "%s:/etc/wubloader-youtube-creds.json" % $.youtube_creds,
+      ],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for cutter, which is 8003.
+      ports: ["%s:8003" % $.ports.cutter]
+    },
+
+    thrimshim: {
+      image: "quay.io/ekimekim/wubloader-thrimshim:%s" % $.image_tag,
+      // Args for the thrimshim: set channel and qualities
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+        $.db_connect,
+      ],
+      // Mount the segments directory at /mnt
+      volumes: ["%s:/mnt" % $.segments_path],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for thrimshim, which is 8004.
+      ports: ["%s:8004" % $.ports.thrimshim]
+    },
 
   },
 
 }
-
