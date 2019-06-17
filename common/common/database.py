@@ -59,6 +59,12 @@ CREATE TABLE IF NOT EXISTS events (
 -- Index on state, since that's almost always what we're querying on besides id
 CREATE INDEX IF NOT EXISTS event_state ON events (state);
 
+CREATE TABLE IF NOT EXISTS nodes (
+	name TEXT PRIMARY KEY,
+	url TEXT NOT NULL,
+	backfill_from BOOLEAN NOT NULL DEFAULT TRUE
+);
+
 """
 
 
