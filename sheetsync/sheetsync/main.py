@@ -11,6 +11,7 @@ import prometheus_client as prom
 import common
 from common.database import DBManager
 
+from .sheets import Sheets
 
 @argh.arg('worksheet-names', nargs='+', help="The names of the individual worksheets within the sheet to operate on.")
 def main(dbconnect, sheets_creds_file, sheet_id, worksheet_names, metrics_port=8004, backdoor_port=0):
@@ -34,6 +35,12 @@ def main(dbconnect, sheets_creds_file, sheet_id, worksheet_names, metrics_port=8
 
 	dbmanager = DBManager(dsn=dbconnect)
 	sheets_creds = json.load(open(sheets_creds_file))
+
+	sheets = Sheets(
+        client_id=sheets_creds['client_id'],
+        client_secret=sheets_creds['client_secret'],
+        refresh_token=sheets_creds['refresh_token'],
+	)
 
 	# TODO the thing
 
