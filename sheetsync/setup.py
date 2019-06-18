@@ -10,6 +10,7 @@ setup(
 		"prometheus-client",
 		"psycogreen",
 		"psycopg2",
+		"python-dateutil",
 		"wubloader-common",
 	],
 )

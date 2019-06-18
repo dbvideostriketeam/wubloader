@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS events (
 	description TEXT NOT NULL DEFAULT '',
 	submitter_winner TEXT NOT NULL DEFAULT '',
 	poster_moment BOOLEAN NOT NULL DEFAULT FALSE,
+	image_links TEXT[] NOT NULL DEFAULT '{}', -- default empty array
 	notes TEXT NOT NULL DEFAULT '',
 	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
 	uploader_whitelist TEXT[],
