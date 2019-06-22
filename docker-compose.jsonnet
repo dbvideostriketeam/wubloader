@@ -29,6 +29,7 @@
     downloader: 8001,
     backfiller: 8002,
     cutter: 8003,
+    sheetsync: 8005,
   },
 
   // The local port within each container to bind the backdoor server on.
@@ -49,9 +50,19 @@
     dbname: "wubloader",
   },
 
-  // Path to a JSON file containing youtube credentials as keys
+  // Path to a JSON file containing google credentials as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
-  youtube_creds:: "./youtube_creds.json",
+  google_creds:: "./google_creds.json",
+
+  // The URL to write to the sheet for edit links, with {} being replaced by the id
+  edit_url:: "http://thrimbletrimmer.codegunner.com/{}",
+
+  // The timestamp corresponding to 00:00 in bustime
+  bustime_start:: "1970-01-01T00:00:00Z",
+
+  // The spreadsheet id and worksheet names for sheet sync to act on
+  sheet_id:: "your_id_here",
+  worksheets:: ["Day %d" % n for n in std.range(1, 7)],
 
   // Now for the actual docker-compose config
 
@@ -120,18 +131,18 @@
 
     cutter: {
       image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
-      // Args for the cutter: DB and youtube creds
+      // Args for the cutter: DB and google creds
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
-        "/etc/wubloader-youtube-creds.json",
+        "/etc/wubloader-google-creds.json",
       ],
       volumes: [
         // Mount the segments directory at /mnt
         "%s:/mnt" % $.segments_path,
         // Mount the creds file into /etc
-        "%s:/etc/wubloader-youtube-creds.json" % $.youtube_creds,
+        "%s:/etc/wubloader-google-creds.json" % $.google_creds,
       ],
       // If the application crashes, restart it.
       restart: "on-failure",
@@ -154,6 +165,28 @@
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
       ports: ["%s:8004" % $.ports.thrimshim]
+    },
+
+    sheetsync: {
+      image: "quay.io/ekimekim/wubloader-sheetsync:%s" % $.image_tag,
+      // Args for the sheetsync
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+        $.db_connect,
+        "/etc/wubloader-google-creds.json",
+        $.edit_url,
+        $.bustime_start,
+        $.sheet_id,
+      ] + $.worksheets,
+      volumes: [
+        // Mount the creds file into /etc
+        "%s:/etc/wubloader-google-creds.json" % $.google_creds,
+      ],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for sheetsync, which is 8005.
+      ports: ["%s:8005" % $.ports.sheetsync]
     },
 
   },
