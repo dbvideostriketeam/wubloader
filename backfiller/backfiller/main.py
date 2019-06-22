@@ -189,7 +189,7 @@ class BackfillerManager(object):
 		stop will exit the loop."""
 		self.logger.info('Starting')
 		if self.node_database is not None:
-			self.db_manager = database.DBManager(dsn=self.node_database)
+			self.connection = database.DBManager(dsn=self.node_database).get_conn()
 
 		failures = 0
 
@@ -254,13 +254,12 @@ class BackfillerManager(object):
 		if self.node_database is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(
 				urlparse.urlparse(self.node_database).hostname))
-			conn = self.db_manager.get_conn()
-			results = database.query(conn, """
-				SELECT name, url, backfill_from
-				FROM nodes""")
+			results = database.query(self.connection, """
+				SELECT name, url
+				FROM nodes
+				WHERE backfill_from""")
 			for row in results:
-				if row.backfill_from:
-					nodes[row.name] = row.url
+				nodes[row.name] = row.url
 
 		nodes.pop(self.localhost, None)
 		return nodes.values()
