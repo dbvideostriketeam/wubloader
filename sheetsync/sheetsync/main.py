@@ -106,18 +106,6 @@ class SheetSync(object):
 						if row_index == 0:
 							continue
 						row = self.parse_row(row)
-						if row['id'] is None:
-							if self.allocate_ids:
-								row['id'] = uuid.uuid4()
-								logging.info("Allocating id for row {!r}:{} = {}".format(worksheet, row_index, row['id']))
-								self.sheets.write_value(
-									self.sheet_id, worksheet,
-									row_index, self.column_map['id'],
-									str(row['id']),
-								)
-							else:
-								logging.warning("Row {!r}:{} has no valid id, skipping".format(worksheet, row_index))
-								continue
 						self.sync_row(worksheet, row_index, row, events.get(row['id']))
 			except Exception:
 				logging.exception("Failed to sync")
@@ -160,6 +148,22 @@ class SheetSync(object):
 			# Otherwise ignore it.
 			if not any(row[col] for col in self.input_columns):
 				return
+
+			# Only generate row when needed (unless it's already there)
+			# Originally we would allocate rows on first sync, but this led to rate limiting issues.
+			if row['id'] is None:
+				if self.allocate_ids:
+					row['id'] = uuid.uuid4()
+					logging.info("Allocating id for row {!r}:{} = {}".format(worksheet, row_index, row['id']))
+					self.sheets.write_value(
+						self.sheet_id, worksheet,
+						row_index, self.column_map['id'],
+						str(row['id']),
+					)
+				else:
+					logging.warning("Row {!r}:{} has no valid id, skipping".format(worksheet, row_index))
+					return
+
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
