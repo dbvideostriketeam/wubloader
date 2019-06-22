@@ -100,7 +100,8 @@ class SheetSync(object):
 				for worksheet in self.worksheets:
 					rows = self.sheets.get_rows(self.sheet_id, worksheet)
 					for row_index, row in enumerate(rows):
-						# Skip first row. Need to do it inside the loop and not eg. use rows[1:],
+						# Skip first row (ie. the column titles).
+						# Need to do it inside the loop and not eg. use rows[1:],
 						# because then row_index won't be correct.
 						if row_index == 0:
 							continue
@@ -219,22 +220,37 @@ class SheetSync(object):
 			)
 
 
-@argh.arg('worksheet-names', nargs='+', help="The names of the individual worksheets within the sheet to operate on.")
-def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8004, backdoor_port=0, allocate_ids=False):
-	"""dbconnect should be a postgres connection string, which is either a space-separated
-	list of key=value pairs, or a URI like:
-		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
+@argh.arg('dbconnect', help=
+	"dbconnect should be a postgres connection string, which is either a space-separated "
+	"list of key=value pairs, or a URI like:\n"
+	"\tpostgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE"
+)
+@argh.arg('sheets-cred-file', help=
+	"sheets_creds_file should be a json file containing keys "
+	"'client_id', 'client_secret' and 'refresh_token'."
+)
+@argh.arg('edit-url', help=
+	'edit_url should be a format string for edit links, with {} as a placeholder for id. '
+	'eg. "https://myeditor.example.com/edit/{}" will produce edit urls like '
+	'"https://myeditor.example.com/edit/da6cf4df-4871-4a9a-a660-0b1e1a6a9c10".'
+)
+@argh.arg('bustime_start', type=common.dateutil.parse, help=
+	"bustime_start is the timestamp which is bustime 00:00."
+)
+@argh.arg('worksheet-names', nargs='+', help=
+	"The names of the individual worksheets within the sheet to operate on."
+)
+@argh.arg('--allocate-ids', help=
+	"--allocate-ids means that it will give rows without ids an id. "
+	"Only one sheet sync should have --allocate-ids on for a given sheet at once!"
+)
+def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8005, backdoor_port=0, allocate_ids=False):
+	"""
+	Sheet sync constantly scans a Google Sheets sheet and a database, copying inputs from the sheet
+	to the DB and outputs from the DB to the sheet.
 
-	sheets_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
-
-	edit_url should be a format string for edit links, with {} as a placeholder for id.
-	eg. "https://myeditor.example.com/edit/{}" will produce edit urls like
-	"https://myeditor.example.com/edit/da6cf4df-4871-4a9a-a660-0b1e1a6a9c10".
-
-	bustime_start is the timestamp which is bustime 00:00.
-
-	--allocate-ids means that it will give rows without ids an id.
-	Only one sheet sync should have --allocate-ids on for a given sheet at once!
+	With the exception of id allocation, all operations are idempotent and multiple sheet syncs
+	may be run for redundancy.
 	"""
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
@@ -247,8 +263,6 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 
 	stop = gevent.event.Event()
 	gevent.signal(signal.SIGTERM, stop.set) # shut down on sigterm
-
-	bustime_start = common.dateutil.parse(bustime_start)
 
 	logging.info("Starting up")
 
