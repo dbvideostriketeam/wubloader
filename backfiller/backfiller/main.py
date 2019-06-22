@@ -254,7 +254,7 @@ class BackfillerManager(object):
 		if self.node_database is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(
 				urlparse.urlparse(self.node_database).hostname))
-			conn = self.db_manager.query()
+			conn = self.db_manager.get_conn()
 			results = database.query(conn, """
 				SELECT name, url, backfill_from
 				FROM nodes""")
