@@ -1,7 +1,7 @@
 FROM alpine:3.7
 # dependencies needed for compiling c extensions
 # also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras
+RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras postgresql-dev postgresql-libs
 
 # Install common lib first as it changes less
 COPY common /tmp/common

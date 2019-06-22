@@ -10,7 +10,6 @@ setup(
 		"gevent",
 		"psycogreen",
 		"psycopg2",
-		"python-dateutil",
 		"wubloader-common",
 	],
 )
