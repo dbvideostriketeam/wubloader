@@ -19,6 +19,7 @@
     cutter: false,
     sheetsync: false,
     thrimshim: false,
+    nginx: true,
   },
 
   // Twitch channel to capture
@@ -34,12 +35,13 @@
   // The host's port to expose each service on.
   // Only the restreamer needs to be externally accessible - the others are just for monitoring.
   ports:: {
-    restreamer: 8080,
-    thrimshim: 8081,
+    restreamer: 8000,
+    thrimshim: 8004,
     downloader: 8001,
     backfiller: 8002,
     cutter: 8003,
     sheetsync: 8005,
+    nginx: 80,
   },
 
   // The local port within each container to bind the backdoor server on.
@@ -197,6 +199,12 @@
       // Expose on the configured host port by mapping that port to the default
       // port for sheetsync, which is 8005.
       [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync]
+    },
+
+    [if $.enabled.nginx then "nginx"]: {
+      image: "quay.io/ekimekim/wubloader-nginx:%s" % image_tag,
+      restart: "on-failure",
+      [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
     },
 
   },
