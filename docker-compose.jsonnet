@@ -11,6 +11,16 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: "latest",
 
+  // For each service, whether to deploy that service.
+  enabled: {
+    downloader: true,
+    restreamer: true,
+    backfiller: true,
+    cutter: false,
+    sheetsync: false,
+    thrimshim: false,
+  },
+
   // Twitch channel to capture
   channel:: "desertbus",
 
@@ -77,7 +87,7 @@
 
   services: {
 
-    downloader: {
+    [if $.enabled.downloader then "downloader"]: {
       image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
       // Args for the downloader: set channel and qualities
       command: [
@@ -92,10 +102,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for downloader, which is 8001.
-      ports: ["%s:8001" % $.ports.downloader]
+      [if "downloader" in $.ports then "ports"]: ["%s:8001" % $.ports.downloader]
     },
 
-    restreamer: {
+    [if $.enabled.restreamer then "restreamer"]: {
       image: "quay.io/ekimekim/wubloader-restreamer:%s" % $.image_tag,
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
@@ -103,14 +113,14 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for restreamer, which is 8000.
-      ports: ["%s:8000" % $.ports.restreamer],
+      [if "restreamer" in $.ports then "ports"]: ["%s:8000" % $.ports.restreamer],
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
       ],
     },
 
-    backfiller: {
+    [if $.enabled.backfiller then "backfiller"]: {
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
       command: [
@@ -126,10 +136,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for backfiller, which is 8002.
-      ports: ["%s:8002" % $.ports.backfiller]
+      [if "backfiller" in $.ports then "ports"]: ["%s:8002" % $.ports.backfiller]
     },
 
-    cutter: {
+    [if $.enabled.cutter then "cutter"]: {
       image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
       // Args for the cutter: DB and google creds
       command: [
@@ -148,10 +158,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for cutter, which is 8003.
-      ports: ["%s:8003" % $.ports.cutter]
+      [if "cutter" in $.ports then "ports"]: ["%s:8003" % $.ports.cutter]
     },
 
-    thrimshim: {
+    [if $.enabled.thrimshim then "thrimshim"]: {
       image: "quay.io/ekimekim/wubloader-thrimshim:%s" % $.image_tag,
       // Args for the thrimshim: set channel and qualities
       command: [
@@ -164,10 +174,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
-      ports: ["%s:8004" % $.ports.thrimshim]
+      [if "thrimshim" in $.ports then "ports"]: ["%s:8004" % $.ports.thrimshim]
     },
 
-    sheetsync: {
+    [if $.enabled.sheetsync then "sheetsync"]: {
       image: "quay.io/ekimekim/wubloader-sheetsync:%s" % $.image_tag,
       // Args for the sheetsync
       command: [
@@ -186,7 +196,7 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for sheetsync, which is 8005.
-      ports: ["%s:8005" % $.ports.sheetsync]
+      [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync]
     },
 
   },
