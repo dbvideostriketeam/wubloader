@@ -229,7 +229,7 @@ class SheetSync(object):
 	"list of key=value pairs, or a URI like:\n"
 	"\tpostgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE"
 )
-@argh.arg('sheets-cred-file', help=
+@argh.arg('sheets-creds-file', help=
 	"sheets_creds_file should be a json file containing keys "
 	"'client_id', 'client_secret' and 'refresh_token'."
 )

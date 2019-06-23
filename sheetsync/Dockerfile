@@ -13,4 +13,4 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY sheetsync /tmp/sheetsync
 RUN pip install /tmp/sheetsync && rm -r /tmp/sheetsync
 
-ENTRYPOINT ["python2", "-m", "sheetsync", "--base-dir", "/mnt"]
+ENTRYPOINT ["python2", "-m", "sheetsync"]

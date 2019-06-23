@@ -11,6 +11,7 @@ setup(
 		"psycogreen",
 		"psycopg2",
 		"python-dateutil",
+		"requests",
 		"wubloader-common",
 	],
 )
