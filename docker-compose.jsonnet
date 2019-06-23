@@ -12,14 +12,15 @@
   image_tag:: "latest",
 
   // For each service, whether to deploy that service.
-  enabled: {
+  enabled:: {
     downloader: true,
     restreamer: true,
     backfiller: true,
-    cutter: false,
-    sheetsync: false,
-    thrimshim: false,
+    cutter: true,
+    sheetsync: true,
+    thrimshim: true,
     nginx: true,
+    postgres: true,
   },
 
   // Twitch channel to capture
@@ -32,6 +33,9 @@
   // On OSX you need to change this to /private/var/lib/wubloader
   segments_path:: "/var/lib/wubloader/",
 
+  // Local path to save database to. Full path must already exist. Cannot contain ':'.
+  database_path:: "/var/lib/wubloader_postgres/",
+
   // The host's port to expose each service on.
   // Only the restreamer needs to be externally accessible - the others are just for monitoring.
   ports:: {
@@ -42,6 +46,7 @@
     cutter: 8003,
     sheetsync: 8005,
     nginx: 80,
+    postgres: 5432,
   },
 
   // The local port within each container to bind the backdoor server on.
@@ -53,11 +58,12 @@
     "http://wubloader.codegunner.com/"
   ],
 
-  // Connection args for the database
+  // Connection args for the database.
+  // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
     user: "postgres",
     password: "postgres",
-    host: "localhost",
+    host: "postgres",
     port: 5432,
     dbname: "wubloader",
   },
@@ -202,9 +208,20 @@
     },
 
     [if $.enabled.nginx then "nginx"]: {
-      image: "quay.io/ekimekim/wubloader-nginx:%s" % image_tag,
+      image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
       [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
+    },
+
+    [if $.enabled.postgres then "postgres"]: {
+      image: "postgres:latest",
+      restart: "on-failure",
+      [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
+      environment: {
+        POSTGRES_USER: $.db_args.user,
+        POSTGRES_PASSWORD: $.db_args.password,
+        POSTGRES_DB: $.db_args.dbname,
+      },
     },
 
   },
