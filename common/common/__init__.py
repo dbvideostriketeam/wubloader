@@ -21,6 +21,28 @@ def bustime_to_dt(start, bustime):
 	return start + datetime.timedelta(seconds=bustime)
 
 
+def parse_bustime(bustime):
+	"""Convert from bus time human-readable string [-]HH:MM[:SS[.fff]]
+	to float seconds since bustime 00:00. Inverse of format_bustime(),
+	see it for detail."""
+	if bustime.startswith('-'):
+		# parse without the -, then negate it
+		return -parse_bustime(bustime[:1])
+
+	parts = bustime.strip().split(':')
+	if len(parts) == 2:
+		hours, mins = parts
+		secs = 0
+	elif len(parts) == 3:
+		hours, mins, secs = parts
+	else:
+		raise ValueError("Invalid bustime: must be HH:MM[:SS]")
+	hours = int(hours)
+	mins = int(mins)
+	secs = float(secs)
+	return 3600 * hours + 60 * mins + secs
+
+
 def format_bustime(bustime, round="millisecond"):
 	"""Convert bustime to a human-readable string (-)HH:MM:SS.fff, with the
 	ending cut off depending on the value of round:
