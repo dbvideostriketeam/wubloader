@@ -197,6 +197,9 @@ class BackfillerManager(object):
 			try:
 				new_nodes = set(self.get_nodes())
 			except Exception:
+				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+				# This is heavy-handed but simple and effective.
+				self.connection = database.DBManager(dsn=self.node_database).get_conn()
 				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
