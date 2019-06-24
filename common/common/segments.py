@@ -28,7 +28,7 @@ def unpadded_b64_decode(s):
 
 class SegmentInfo(
 	namedtuple('SegmentInfoBase', [
-		'path', 'stream', 'variant', 'start', 'duration', 'is_partial', 'hash'
+		'path', 'stream', 'variant', 'start', 'duration', 'type', 'hash'
 	])
 ):
 	"""Info parsed from a segment path, including original path.
@@ -36,6 +36,9 @@ class SegmentInfo(
 	@property
 	def end(self):
 		return self.start + self.duration
+	@property
+	def is_partial(self):
+		return self.type != "full"
 
 
 def parse_segment_path(path):
@@ -64,7 +67,7 @@ def parse_segment_path(path):
 			variant = variant,
 			start = datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f"),
 			duration = datetime.timedelta(seconds=float(duration)),
-			is_partial = type != "full",
+			type = type,
 			hash = hash,
 		)
 	except ValueError as e:
@@ -219,7 +222,9 @@ def best_segments_by_start(hour):
 	# but is easy enough to do, so we might as well.
 	parsed = (parse_segment_path(os.path.join(hour, name)) for name in segment_paths)
 	for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
-		segments = list(segments)
+		# ignore temp segments as they might go away by the time we want to use them
+		segments = [segment for segment in segments if segment.type != "temp"]
+
 		full_segments = [segment for segment in segments if not segment.is_partial]
 		if full_segments:
 			if len(full_segments) != 1:

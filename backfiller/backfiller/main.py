@@ -330,6 +330,11 @@ class BackfillerWorker(object):
 					except ValueError as e:
 						self.logger.warning('File {} invaid: {}'.format(path, e))
 						continue
+
+					# Ignore temp segments as they may go away by the time we fetch them.
+					if segment.type == "temp":
+						self.logger.debug('Skipping {} as it is a temp segment'.format(path))
+						continue
 	
 					# to avoid getting in the downloader's way ignore segments
 					# less than recent_cutoff old
