@@ -154,6 +154,8 @@ class BackfillerManager(object):
 		self.run_once = run_once
 		self.node_file = node_file
 		self.node_database = node_database
+		if self.node_database is not None:
+			self.db_manager =  database.DBManager(dsn=self.node_database)
 		self.localhost = localhost
 		self.stopping = gevent.event.Event()
 		self.logger = logging.getLogger("BackfillerManager({})".format(stream))
@@ -189,14 +191,17 @@ class BackfillerManager(object):
 		stop will exit the loop."""
 		self.logger.info('Starting')
 		if self.node_database is not None:
-			self.connection = database.DBManager(dsn=self.node_database).get_conn()
-
+			self.connection = self.db_manager.get_conn()
 		failures = 0
 
 		while not self.stopping.is_set():
 			try:
 				new_nodes = set(self.get_nodes())
 			except Exception:
+				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+				# This is heavy-handed but simple and effective.
+				if self.node_database is not None:
+					self.connection = self.db_manager.get_conn()
 				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
