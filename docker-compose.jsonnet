@@ -11,6 +11,18 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: "latest",
 
+  // For each service, whether to deploy that service.
+  enabled:: {
+    downloader: true,
+    restreamer: true,
+    backfiller: true,
+    cutter: true,
+    sheetsync: true,
+    thrimshim: true,
+    nginx: true,
+    postgres: true,
+  },
+
   // Twitch channel to capture
   channel:: "desertbus",
 
@@ -21,15 +33,20 @@
   // On OSX you need to change this to /private/var/lib/wubloader
   segments_path:: "/var/lib/wubloader/",
 
+  // Local path to save database to. Full path must already exist. Cannot contain ':'.
+  database_path:: "/var/lib/wubloader_postgres/",
+
   // The host's port to expose each service on.
   // Only the restreamer needs to be externally accessible - the others are just for monitoring.
   ports:: {
-    restreamer: 8080,
-    thrimshim: 8081,
+    restreamer: 8000,
+    thrimshim: 8004,
     downloader: 8001,
     backfiller: 8002,
     cutter: 8003,
     sheetsync: 8005,
+    nginx: 80,
+    postgres: 5432,
   },
 
   // The local port within each container to bind the backdoor server on.
@@ -41,11 +58,12 @@
     "http://wubloader.codegunner.com/"
   ],
 
-  // Connection args for the database
+  // Connection args for the database.
+  // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
     user: "postgres",
     password: "postgres",
-    host: "localhost",
+    host: "postgres",
     port: 5432,
     dbname: "wubloader",
   },
@@ -77,7 +95,7 @@
 
   services: {
 
-    downloader: {
+    [if $.enabled.downloader then "downloader"]: {
       image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
       // Args for the downloader: set channel and qualities
       command: [
@@ -92,10 +110,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for downloader, which is 8001.
-      ports: ["%s:8001" % $.ports.downloader]
+      [if "downloader" in $.ports then "ports"]: ["%s:8001" % $.ports.downloader]
     },
 
-    restreamer: {
+    [if $.enabled.restreamer then "restreamer"]: {
       image: "quay.io/ekimekim/wubloader-restreamer:%s" % $.image_tag,
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
@@ -103,14 +121,14 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for restreamer, which is 8000.
-      ports: ["%s:8000" % $.ports.restreamer],
+      [if "restreamer" in $.ports then "ports"]: ["%s:8000" % $.ports.restreamer],
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
       ],
     },
 
-    backfiller: {
+    [if $.enabled.backfiller then "backfiller"]: {
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
       command: [
@@ -126,10 +144,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for backfiller, which is 8002.
-      ports: ["%s:8002" % $.ports.backfiller]
+      [if "backfiller" in $.ports then "ports"]: ["%s:8002" % $.ports.backfiller]
     },
 
-    cutter: {
+    [if $.enabled.cutter then "cutter"]: {
       image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
       // Args for the cutter: DB and google creds
       command: [
@@ -148,10 +166,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for cutter, which is 8003.
-      ports: ["%s:8003" % $.ports.cutter]
+      [if "cutter" in $.ports then "ports"]: ["%s:8003" % $.ports.cutter]
     },
 
-    thrimshim: {
+    [if $.enabled.thrimshim then "thrimshim"]: {
       image: "quay.io/ekimekim/wubloader-thrimshim:%s" % $.image_tag,
       // Args for the thrimshim: set channel and qualities
       command: [
@@ -164,10 +182,10 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
-      ports: ["%s:8004" % $.ports.thrimshim]
+      [if "thrimshim" in $.ports then "ports"]: ["%s:8004" % $.ports.thrimshim]
     },
 
-    sheetsync: {
+    [if $.enabled.sheetsync then "sheetsync"]: {
       image: "quay.io/ekimekim/wubloader-sheetsync:%s" % $.image_tag,
       // Args for the sheetsync
       command: [
@@ -186,7 +204,24 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for sheetsync, which is 8005.
-      ports: ["%s:8005" % $.ports.sheetsync]
+      [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync]
+    },
+
+    [if $.enabled.nginx then "nginx"]: {
+      image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
+      restart: "on-failure",
+      [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
+    },
+
+    [if $.enabled.postgres then "postgres"]: {
+      image: "postgres:latest",
+      restart: "on-failure",
+      [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
+      environment: {
+        POSTGRES_USER: $.db_args.user,
+        POSTGRES_PASSWORD: $.db_args.password,
+        POSTGRES_DB: $.db_args.dbname,
+      },
     },
 
   },
