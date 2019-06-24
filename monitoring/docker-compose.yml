@@ -1,7 +1,7 @@
 version: "3"
 services:
   prometheus:
-    image: "prometheus:latest"
+    image: "wubloader_prometheus:latest"
     command:
     - "--storage.tsdb.retention=30d"
     restart: "on-failure"

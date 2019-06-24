@@ -1,6 +1,6 @@
 
 
-all: .prometheus.uptodate .nginx.uptodate
+all: .prometheus.uptodate
 .PHONY: all
 
 .prometheus.uptodate: Dockerfile.prometheus prometheus.yml
