@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# This script expects a mapping of services and ports in the SERVICES env var,
+# with one line per service containing "NAME PORT".
+
+generate_location() {
+	# generate_location PATH URL
+	echo -e "\t\tlocation $1 { proxy_pass $2; }"
+}
+
+LOCATIONS=$(
+	echo "$SERVICES" | while read name port; do
+		# restreamer is the catch-all
+		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
+		# thrimshim takes any calls to thrimshim/
+		[ "$name" == "thrimshim" ] && generate_location /thrimshim "http://thrimshim:$port"
+		# all services have metrics under /metrics/SERVICE
+		generate_location "/metrics/$name" "http://$name:$port/metrics"
+	done
+)
+
+cat > /etc/nginx/nginx.conf <<EOF
+worker_processes 1;
+
+events {
+	worker_connections 1024;
+}
+
+http {
+	server {
+		listen 80;
+$LOCATIONS
+	}
+}
+EOF
