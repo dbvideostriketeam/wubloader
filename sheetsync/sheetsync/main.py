@@ -27,7 +27,7 @@ class SheetSync(object):
 
 	def __init__(self, stop, dbmanager, sheets, sheet_id, worksheets, edit_url, bustime_start, allocate_ids=False):
 		self.stop = stop
-		self.conn = dbmanager.get_conn()
+		self.dbmanager = dbmanager
 		self.sheets = sheets
 		self.sheet_id = sheet_id
 		self.worksheets = worksheets
@@ -90,6 +90,8 @@ class SheetSync(object):
 		self.stop.wait(common.jitter(interval))
 
 	def run(self):
+		self.conn = self.dbmanager.get_conn()
+
 		while not self.stop.is_set():
 			
 			try:
@@ -109,6 +111,9 @@ class SheetSync(object):
 						self.sync_row(worksheet, row_index, row, events.get(row['id']))
 			except Exception:
 				logging.exception("Failed to sync")
+				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+				# This is heavy-handed but simple and effective.
+				self.conn = self.dbmanager.get_conn()
 				self.wait(self.ERROR_RETRY_INTERVAL)
 			else:
 				logging.info("Successful sync")

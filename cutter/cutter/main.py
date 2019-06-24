@@ -389,14 +389,14 @@ class TranscodeChecker(object):
 	NO_VIDEOS_RETRY_INTERVAL = 5
 	ERROR_RETRY_INTERVAL = 5
 
-	def __init__(self, youtube, conn, stop):
+	def __init__(self, youtube, dbmanager, stop):
 		"""
 		youtube is an authenticated and initialized youtube api client.
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
 		self.youtube = youtube
-		self.conn = conn
+		self.dbmanager = dbmanager
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
@@ -405,6 +405,7 @@ class TranscodeChecker(object):
 		self.stop.wait(common.jitter(interval))
 
 	def run(self):
+		self.conn = self.dbmanager.get_conn()
 		while not self.stop.is_set():
 			try:
 				ids = self.get_ids_to_check()
@@ -421,6 +422,9 @@ class TranscodeChecker(object):
 				self.logger.info("Marked {} videos as done".format(done))
 			except Exception:
 				self.logger.exception("Error in TranscodeChecker")
+				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+				# This is heavy-handed but simple and effective.
+				self.conn = self.dbmanager.get_conn()
 				self.wait(self.ERROR_RETRY_INTERVAL)
 
 	def get_ids_to_check(self):
