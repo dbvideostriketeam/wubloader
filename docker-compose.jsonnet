@@ -208,9 +208,25 @@
     },
 
     [if $.enabled.nginx then "nginx"]: {
+      # mapping of services to internal ports for nginx to forward
+      local forward_ports = {
+        restreamer: 8000,
+        downloader: 8001,
+        backfiller: 8002,
+        cutter: 8003,
+        thrimshim: 8004,
+        sheetsync: 8005,
+      },
       image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
       [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
+      environment: {
+        SERVICES: std.join("\n", [
+          "%s %s" % [service, forward_ports[service]]
+          for service in std.objectFields(forward_ports)
+          if service in $.enabled && $.enabled[service]
+        ]),
+      },
     },
 
     [if $.enabled.postgres then "postgres"]: {
