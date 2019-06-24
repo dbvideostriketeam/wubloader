@@ -26,7 +26,6 @@ class Youtube(object):
 			}
 		resp = self.client.request('POST',
 			'https://www.googleapis.com/upload/youtube/v3/videos',
-			headers=self.auth_headers(),
 			params={
 				'part': 'snippet,status' if hidden else 'snippet',
 				'uploadType': 'resumable',
@@ -35,7 +34,7 @@ class Youtube(object):
 		)
 		resp.raise_for_status()
 		upload_url = resp.headers['Location']
-		resp = self.client.request('POST', upload_url, headers=self.auth_headers(), data=data)
+		resp = self.client.request('POST', upload_url, data=data)
 		resp.raise_for_status()
 		return resp.json()['id']
 
@@ -51,7 +50,6 @@ class Youtube(object):
 			group = ids[i:i+10]
 			resp = self.client.request('GET',
 				'https://www.googleapis.com/youtube/v3/videos',
-				headers=self.auth_headers(),
 				params={
 					'part': 'id,status',
 					'id': ','.join(group),
