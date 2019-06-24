@@ -1,0 +1,8 @@
+#!/bin/bash
+
+set -eu
+
+# We generate first, and capture the output, to avoid overwriting the file on error.
+# To avoid jsonnet needing to exist locally, we run it in a container.
+output=$(docker run --rm -i sparkprime/jsonnet - < prometheus.jsonnet)
+echo "$output" > prometheus.yml

@@ -1,0 +1,18 @@
+version: "3"
+services:
+  prometheus:
+    image: "prometheus:latest"
+    command:
+    - "--storage.tsdb.retention=30d"
+    restart: "on-failure"
+    volumes:
+    - "/storage/wubloader-metrics/prometheus:/prometheus"
+    ports:
+    - "9090:9090"
+  grafana:
+    image: "grafana/grafana"
+    restart: "on-failure"
+    volumes:
+    - "/storage/wubloader-metrics/grafana:/var/lib/grafana"
+    ports:
+    - "1338:3000"
