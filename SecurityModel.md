@@ -8,28 +8,22 @@ profile information).
 
 The email address is then used to look up the user in the database to check their permissions.
 
+### Wubloader Authorization
+
 The current plan is to only authenticate/authorize users on datebase updates coming from Thrimbletrimmer; and since most use cases will 
 only have a single update event every few minutes, we can authenticate only as need - rather than authenticating on page load and storing session IDs.
 
-### Wubloader Authorization
+Currently the only exposed actions that require authentication are Editor-based ones, so we aren't assigning roles or having granular permissions.
 
-Current tasks via Thrimshim are:
+Actions available via Thrimshim are:
 * `get_row`: Return a single row from the database by ID. Unauthenticated.
-* `update_row`: Updates row in the Events table. Authenticated and limited to Editors and Admins (who can update different sets of rows).
-* `manual_link`: Override the `video_link` field in the Events Table, in case of a manual upload. Authenticated and limited to Editors and Admins.
-* `reset_row`: Clear `state` and `video_link` columns and reset `state` to 'UNEDITED' in Events table. Authenticated and limited to Admins?
-
-Proposed actions:
 * `get_all_rows`: Return the entire events table (or specific subsets of it), for building dashboards. Unauthenticated
-* `submit_edits`: Rather than have have Thrimbletrimmer submit video edits to a generic update action/endpoint, have it go via a dedicated action that can only update the necessary actions. Authenticated to Editors and Admins.
-* `admin_update_row`: An "update row" action that can update all non-sheet-input fields as an "admin override".
+* `update_row`: Updates row in the Events table. Authenticated and limited to Editors and Admins (who can update different sets of rows). Authenticated.
+* `manual_link`: Override the `video_link` field in the Events Table, in case of a manual upload. Authenticated.
+* `reset_row`: Clear `state` and `video_link` columns and reset `state` to 'UNEDITED' in Events table. Authenticated.
 
-The planned roles are:
-* `Admin`: Like editors, but with the ability to modify additional fields the "state" column in case of errors, and will have access to a special dashboard page for doing those edits.
-* `Editor`: Normal users, able to submit edits for Wubloader to cut via Thrimbletrimmer.
-* `Viewer`: For potential users such as Giffers, who will have their own viewer page in Thrimbletrimmer, and cannot make any updates to the system. Since we aren't currently doing any authentication on Read actions, this won't be used for now.
-
-Each user can only have one role.
+### Admin Access
+Node admins will connect directly to the database via third party tools (such as pgAdmin) for tasks such as adding members or manually overwriting the Events table.
 
 ### Database Schema
 
@@ -37,6 +31,4 @@ Each user can only have one role.
 
 columns                    | type                               | description
 -------------------------- | ---------------------------------- | -----------
-`id`                       | `IDENTITY PRIMARY KEY`             | Unique account ID.
 `user_email`               | `TEXT NOT NULL`                    | The email account used for the member's Google sign in.
-`role`                     | `TEXT NOT NULL`                    | Name of the role to be used
