@@ -1,1 +1,3 @@
-docker-compose.yml
+/docker-compose.yml
+/monitoring/prometheus.yml
+.*.uptodate
