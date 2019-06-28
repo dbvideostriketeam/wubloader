@@ -29,6 +29,12 @@ segments_downloaded = prom.Counter(
 	["partial", "stream", "variant"],
 )
 
+latest_segment = prom.Gauge(
+	"latest_segment",
+	"Timestamp of the time of the newest segment fully downloaded",
+	["stream", "variant"],
+)
+
 
 class TimedOutError(Exception):
 	pass
@@ -542,6 +548,11 @@ class SegmentGetter(object):
 			self.logger.debug("Saving completed segment {} as {}".format(temp_path, full_path))
 			common.rename(temp_path, full_path)
 			segments_downloaded.labels(partial="False", stream=self.channel, variant=self.stream).inc()
+			# Prom doesn't provide a way to compare value to gauge's existing value,
+			# we need to reach into internals
+			stat = latest_segment.labels(stream=self.channel, variant=self.stream)
+			timestamp = (self.date - datetime.datetime(1970, 1, 1)).total_seconds()
+			stat.set(max(stat._value.get(), timestamp)) # NOTE: not thread-safe but is gevent-safe
 
 
 @argh.arg('channels', nargs="+", help="Twitch channels to watch")
