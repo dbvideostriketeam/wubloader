@@ -8,6 +8,7 @@ import argh
 import gevent.backdoor
 import gevent.event
 import prometheus_client as prom
+from requests import HTTPError
 from psycopg2 import sql
 from psycopg2.extras import register_uuid
 
@@ -109,8 +110,12 @@ class SheetSync(object):
 							continue
 						row = self.parse_row(row)
 						self.sync_row(worksheet, row_index, row, events.get(row['id']))
-			except Exception:
-				logging.exception("Failed to sync")
+			except Exception as e:
+				# for HTTPErrors, http response body includes the more detailed error
+				detail = ''
+				if isinstance(e, HTTPError):
+					detail = ": {}".format(e.response.content)
+				logging.exception("Failed to sync{}".format(detail))
 				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
 				# This is heavy-handed but simple and effective.
 				self.conn = self.dbmanager.get_conn()
