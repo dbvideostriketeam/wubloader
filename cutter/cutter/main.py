@@ -348,7 +348,7 @@ class Cutter(object):
 			# error before finalizing, assume it's a network issue / retryable.
 			# set back to EDITED but still set error
 			self.logger.exception("Retryable error when uploading job {}".format(format_job(job)))
-			if not set_row(state='EDITED', error="Retryable error while uploading: {}".format(ex), uploader=None):
+			if not set_row(state='UNEDITED', error="Retryable error while uploading: {}".format(ex), uploader=None):
 				raise JobConsistencyError(
 					"No job with id {} and uploader {} when setting error while rolling back for retryable error"
 					.format(job.id, self.name)
