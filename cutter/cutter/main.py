@@ -400,8 +400,9 @@ class Cutter(object):
 
 
 class TranscodeChecker(object):
-	NO_VIDEOS_RETRY_INTERVAL = 5
-	ERROR_RETRY_INTERVAL = 5
+	NO_VIDEOS_RETRY_INTERVAL = 5 # can be fast because it's just a DB lookup
+	FOUND_VIDEOS_RETRY_INTERVAL = 20
+	ERROR_RETRY_INTERVAL = 20
 
 	def __init__(self, youtube, dbmanager, stop):
 		"""
@@ -428,12 +429,11 @@ class TranscodeChecker(object):
 					continue
 				self.logger.info("Found {} videos in TRANSCODING".format(len(ids)))
 				ids = self.check_ids(ids)
-				if not ids:
-					self.wait(self.NO_VIDEOS_RETRY_INTERVAL)
-					continue
-				self.logger.info("{} videos are done".format(len(ids)))
-				done = self.mark_done(ids)
-				self.logger.info("Marked {} videos as done".format(done))
+				if ids:
+					self.logger.info("{} videos are done".format(len(ids)))
+					done = self.mark_done(ids)
+					self.logger.info("Marked {} videos as done".format(done))
+				self.wait(self.FOUND_VIDEOS_RETRY_INTERVAL)
 			except Exception:
 				self.logger.exception("Error in TranscodeChecker")
 				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
