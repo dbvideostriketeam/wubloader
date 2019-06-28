@@ -3,7 +3,7 @@ FROM alpine:3.7
 # also busybox-extras for telnet for easier use of backdoor
 # and postgresql-dev as a dependency of psycopg2.
 # Add postgresql-client for easier debugging of DB issues.
-RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras postgresql-dev postgresql-client
+RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras postgresql-dev postgresql-client ffmpeg
 
 # Install common lib first as it changes less
 COPY common /tmp/common
