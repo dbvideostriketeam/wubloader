@@ -9,6 +9,7 @@ setup(
 		"python-dateutil",
 		"gevent",
 		"monotonic",
+		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"requests",
 		"wubloader-common",
 	],
