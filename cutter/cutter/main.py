@@ -85,6 +85,9 @@ class Cutter(object):
 		# any unhandled errors will cause the process to restart and clean up as per rollback_all_owned().
 		while not self.stop.is_set():
 			job = self.find_candidate()
+			if not job:
+				# find_candidate() returning None means we're stopping
+				continue
 			try:
 				self.claim_job(job)
 			except CandidateGone:
@@ -99,7 +102,7 @@ class Cutter(object):
 	def find_candidate(self):
 		"""List EDITED events and find one at random which we have all segments for
 		(or for which allow_holes is true), returning a CutJob.
-		Polls until one is available.
+		Polls until one is available, or we are stopping (in which case it returns None)
 		"""
 		while not self.stop.is_set():
 			try:
