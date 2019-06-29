@@ -22,8 +22,8 @@ from common import database
 
 segments_backfilled = prom.Counter(
 	'segments_backfilled',
-	"Number of segments successfully backfilled",
-	["remote", "stream", "variant", "hour"],
+	'Number of segments successfully backfilled',
+	['remote', 'channel', 'quality', 'hour'],
 )
 
 
