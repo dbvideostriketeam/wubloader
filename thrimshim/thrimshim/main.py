@@ -40,6 +40,9 @@ def metrics():
 	"""Expose Prometheus metrics."""
 	return prometheus_client.generate_latest()
 
+@app.route('/thrimshim')
+def thrimshim_all_rows():
+	return get_all_rows()
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
@@ -48,10 +51,7 @@ def thrimshim(ident):
 		row = flask.request.json
 		return update_row(ident, row)
 	else:
-		if ident:
-			return get_row(ident)
-		else:
-			return get_all_rows()
+		return get_row(ident)
 		
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
