@@ -29,6 +29,13 @@ segments_downloaded = prom.Counter(
 	["partial", "channel", "quality"],
 )
 
+segment_duration_downloaded = prom.Counter(
+	"segment_duration_downloaded",
+	"Total duration of all segments partially or fully downloaded. "
+	"Note partial segments still count the full duration.",
+	["partial", "stream", "variant"],
+)
+
 latest_segment = prom.Gauge(
 	"latest_segment",
 	"Timestamp of the time of the newest segment fully downloaded",
@@ -72,8 +79,6 @@ def soft_hard_timeout(logger, description, (soft_timeout, hard_timeout), on_soft
 			yield
 	finally:
 		finished = True
-
-
 
 
 class StreamsManager(object):
@@ -542,12 +547,14 @@ class SegmentGetter(object):
 				self.logger.warning("Saving partial segment {} as {}".format(temp_path, partial_path))
 				common.rename(temp_path, partial_path)
 				segments_downloaded.labels(partial="True", channel=self.channel, quality=self.quality).inc()
+				segment_duration_downloaded.labels(partial="True", channel=self.channel, quality=self.quality).inc(self.segment.duration)
 			raise ex_type, ex, tb
 		else:
 			full_path = self.make_path("full", hash)
 			self.logger.debug("Saving completed segment {} as {}".format(temp_path, full_path))
 			common.rename(temp_path, full_path)
 			segments_downloaded.labels(partial="False", channel=self.channel, quality=self.quality).inc()
+			segment_duration_downloaded.labels(partial="False", channel=self.channel, quality=self.quality).inc(self.segment.duration)
 			# Prom doesn't provide a way to compare value to gauge's existing value,
 			# we need to reach into internals
 			stat = latest_segment.labels(channel=self.channel, quality=self.quality)
