@@ -143,6 +143,43 @@ grafana.dashboard({
       ],
     },
 
+    {
+      name: "Downloader",
+      panels: [
+        {
+          name: "Segments downloaded by node",
+          axis: {min: 0, label: "segments / sec"},
+          expressions: {
+            "{{instance}} {{stream}}({{variant}})":
+              'sum(rate(segments_downloaded_total[2m])) by (instance, stream, variant)',
+          },
+        },
+        {
+          name: "Downloader stream delay by node",
+          tooltip: "Time between the latest downloaded segment's timestamp and current time",
+          axis: {min: 0, format: grafana.formats.time},
+          expressions: {
+            "{{instance}} {{stream}}({{variant}})":
+              'time() - max(latest_segment) by (instance, stream, variant)',
+          },
+        },
+      ],
+    },
+
+    {
+      name: "Backfiller",
+      panels: [
+        {
+          name: "Backfill by node pair",
+          axis: {min: 0, label: "segments / sec"},
+          expressions: {
+            "{{remote}} -> {{instance}}":
+              'sum(rate(segments_backfilled_total[2m])) by (remote, instance)',
+          },
+        },
+      ],
+    },
+
   ],
 
 })
