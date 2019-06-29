@@ -134,7 +134,7 @@
       command: [
         $.channel,
         "--base-dir", "/mnt",
-        "--variants", std.join(",", $.qualities),
+        "--qualities", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
       ],
