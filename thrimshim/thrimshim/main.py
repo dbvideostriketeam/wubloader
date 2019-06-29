@@ -40,6 +40,25 @@ def metrics():
 	"""Expose Prometheus metrics."""
 	return prometheus_client.generate_latest()
 
+@app.route('/thrimshim')
+def get_all_rows():
+	"""Gets all rows from the events table from the database"""
+	conn = app.db_manager.get_conn()
+	results = database.query(conn, """
+		SELECT *
+		FROM events""")
+	rows = []
+	for row in results:
+		row = row._asdict()
+		row['id'] = str(row['id'])
+		row = {
+			key: (
+				value.isoformat() if isinstance(value, datetime.datetime)
+				else value
+			) for key, value in row.items()
+		}
+		rows.append(row)
+	return json.dumps(rows)
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
@@ -49,7 +68,6 @@ def thrimshim(ident):
 		return update_row(ident, row)
 	else:
 		return get_row(ident)
-		
 		
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
@@ -73,7 +91,6 @@ def get_row(ident):
 	}
 	return json.dumps(response)
 
-
 def update_row(ident, new_row):
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
@@ -93,6 +110,13 @@ def update_row(ident, new_row):
 	extras = set(new_row) - set(edit_columns + state_columns)
 	for extra in extras:
 		del new_row[extra]
+
+	#validate title length - YouTube titles are limited to 100 characters.
+	if len(new_row['video_title']) > 100:
+		return 'Title must be 100 characters or less', 400
+	#validate start time is less than end time
+	if new_row['video_start'] > new_row['video_end']:
+		return 'Video Start must be less than Video End.', 400
 
 	conn = app.db_manager.get_conn()
 	#check a row with id = ident is in the database
@@ -139,7 +163,6 @@ def update_row(ident, new_row):
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
-
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 def manual_link(ident):
