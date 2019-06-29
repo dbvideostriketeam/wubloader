@@ -41,8 +41,24 @@ def metrics():
 	return prometheus_client.generate_latest()
 
 @app.route('/thrimshim')
-def thrimshim_all_rows():
-	return get_all_rows()
+def get_all_rows():
+	"""Gets all rows from the events table from the database"""
+	conn = app.db_manager.get_conn()
+	results = database.query(conn, """
+		SELECT *
+		FROM events""")
+	rows = []
+	for row in results:
+		row = row._asdict()
+		row['id'] = str(row['id'])
+		row = {
+			key: (
+				value.isoformat() if isinstance(value, datetime.datetime)
+				else value
+			) for key, value in row.items()
+		}
+		rows.append(row)
+	return json.dumps(rows)
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 def thrimshim(ident):
@@ -75,39 +91,9 @@ def get_row(ident):
 	}
 	return json.dumps(response)
 
-def get_all_rows():
-	"""Gets all rows from the events table from the database"""
-	conn = app.db_manager.get_conn()
-	results = database.query(conn, """
-		SELECT *
-		FROM events""")
-	
-	rows = []
-	row = results.fetchone()
-	while row:
-		row = row._asdict()
-		row['id'] = str(row['id'])
-		row = {
-			key: (
-				value.isoformat() if isinstance(value, datetime.datetime)
-				else value
-			) for key, value in row.items()
-		}
-		rows.append(row)
-		row = results.fetchone()
-	if not rows:
-		return 'No rows found', 404
-	
-	response = rows
-	return json.dumps(response)
-
-
 def update_row(ident, new_row):
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
-
-	if not authenticate_user(new_row['Auth_Token']):
-		return 'User not authenticated.', 403
 
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	#these have to be set before a video can be set as 'EDITED'
@@ -125,11 +111,11 @@ def update_row(ident, new_row):
 	for extra in extras:
 		del new_row[extra]
 
-	#validate title length - YouTube titles are limited to 100 characters, 9 reserved for "DBXXXX - ".
-	if(len(new_row['video_title']) > 91):
-		return 'Title must be 91 characters or less', 400
+	#validate title length - YouTube titles are limited to 100 characters.
+	if len(new_row['video_title']) > 100:
+		return 'Title must be 100 characters or less', 400
 	#validate start time is less than end time
-	if(new_row['video_start'] > new_row['video_end']):
+	if new_row['video_start'] > new_row['video_end']:
 		return 'Video Start must be less than Video End.', 400
 
 	conn = app.db_manager.get_conn()
@@ -177,9 +163,6 @@ def update_row(ident, new_row):
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
-
-def authenticate_user(authToken):
-	return True
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 def manual_link(ident):
