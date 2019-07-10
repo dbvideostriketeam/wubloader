@@ -1,0 +1,3 @@
+The files in this directory use a library for generating grafana dashboards
+that at time of writing I'm not at liberty to share. Unfortunately, I don't have a better option.
+So feel free to make changes, but I'll need to be the one to regenerate them.
