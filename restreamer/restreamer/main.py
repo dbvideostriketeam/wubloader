@@ -29,8 +29,8 @@ The restreamer is a simple http api for listing available segments and generatin
 HLS playlists for them.
 
 The segments themselves are ideally to be served by some external webserver
-under "/segments/<stream>/<variant>/<hour>/<filename>" (ie. with BASE_DIR under "/segments"),
-though this server will also serve them if requested.
+under "/segments/<channel>/<quality>/<hour>/<filename>" (ie. with BASE_DIR
+under "/segments"), though this server will also serve them if requested.
 """
 
 
@@ -89,62 +89,62 @@ def metrics():
 
 @app.route('/files')
 @stats
-def list_streams():
-	"""Returns a JSON list of streams for which there may be segments available.
-	Returns empty list if no streams are available.
+def list_channels():
+	"""Returns a JSON list of channels for which there may be segments available.
+	Returns empty list if no channels are available.
 	"""
 	path = app.static_folder
 	return json.dumps(listdir(path, error=False))
 
 
-@app.route('/files/<stream>')
+@app.route('/files/<channel>')
 @stats
 @has_path_args
-def list_variants(stream):
-	"""Returns a JSON list of variants for the given stream for which there may
-	be segments available. Returns empty list on non-existent streams, etc.
-	"""
+def list_qualities(channel):
+	"""Returns a JSON list of qualities for the given channel for which there
+	may be segments available. Returns empty list on non-existent channels, etc."""
 	path = os.path.join(
 		app.static_folder,
-		stream,
+		channel,
 	)
 	return json.dumps(listdir(path, error=False))
 
-@app.route('/files/<stream>/<variant>')
+@app.route('/files/<channel>/<quality>')
 @stats
 @has_path_args
-def list_hours(stream, variant):
-	"""Returns a JSON list of hours for the given stream and variant for which
-	there may be segments available. Returns empty list on non-existent streams, etc.
+def list_hours(channel, quality):
+	"""Returns a JSON list of hours for the given channel and quality for which
+	there may be segments available. Returns empty list on non-existent
+	channels, etc.
 	"""
 	path = os.path.join(
 		app.static_folder,
-		stream,
-		variant,
+		channel,
+		quality,
 	)
 	return json.dumps(listdir(path, error=False))
 
 
-@app.route('/files/<stream>/<variant>/<hour>')
+@app.route('/files/<channel>/<quality>/<hour>')
 @stats
 @has_path_args
-def list_segments(stream, variant, hour):
-	"""Returns a JSON list of segment files for a given stream, variant and hour.
-	Returns empty list on non-existant streams, etc.
+def list_segments(channel, quality, hour):
+	"""Returns a JSON list of segment files for a given channel, quality and
+	hour. Returns empty list on non-existant channels, etc.
 	"""
 	path = os.path.join(
 		app.static_folder,
-		stream,
-		variant,
+		channel,
+		quality,
 		hour,
 	)
 	return json.dumps(listdir(path, error=False))
 
 
-def time_range_for_variant(stream, variant):
-	"""Returns earliest and latest times that the given variant has segments for
+def time_range_for_quality(channel, quality):
+	"""Returns earliest and latest times that the given quality has segments for
 	(up to hour resolution), or 404 if it doesn't exist / is empty."""
-	hours = listdir(os.path.join(app.static_folder, stream, variant))
+	hours = listdir(os.path.join(app.static_folder, channel, quality))
 	if not hours:
 		abort(404)
 	first, last = min(hours), max(hours)
@@ -154,43 +154,43 @@ def time_range_for_variant(stream, variant):
 	return parse_hour(first), parse_hour(last) + datetime.timedelta(hours=1)
 
 
-@app.route('/playlist/<stream>.m3u8')
+@app.route('/playlist/<channel>.m3u8')
 @stats
 @has_path_args
-def generate_master_playlist(stream):
-	"""Returns a HLS master playlist for the given stream.
+def generate_master_playlist(channel):
+	"""Returns a HLS master playlist for the given channel.
 	Takes optional params:
-		start, end: The time to begin and end the stream at.
+		start, end: The time to begin and end the channel at.
 			See generate_media_playlist for details.
 	"""
 	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
 	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
-	variants = listdir(os.path.join(app.static_folder, stream))
+	qualities = listdir(os.path.join(app.static_folder, channel))
 
 	playlists = {}
-	for variant in variants:
-		# If start or end are given, try to restrict offered variants to ones which exist for that
+	for quality in qualities:
+		# If start or end are given, try to restrict offered qualities to ones which exist for that
 		# time range.
 		if start is not None or end is not None:
-			first, last = time_range_for_variant(stream, variant)
+			first, last = time_range_for_quality(channel, quality)
 			if start is not None and last < start:
-				continue # last time for variant is before our start time, don't offer variant
+				continue # last time for quality is before our start time, don't offer quality
 			if end is not None and end < first:
-				continue # our end time is before first time for variant, don't offer variant
-		playlists[variant] = url_for(
-			'generate_media_playlist', stream=stream, variant=variant, **request.args
+				continue # our end time is before first time for quality, don't offer quality
+		playlists[quality] = url_for(
+			'generate_media_playlist', channel=channel, quality=quality, **request.args
 		)
 
 	return generate_hls.generate_master(playlists)
 
 
-@app.route('/playlist/<stream>/<variant>.m3u8')
+@app.route('/playlist/<channel>/<quality>.m3u8')
 @stats
 @has_path_args
-def generate_media_playlist(stream, variant):
-	"""Returns a HLS media playlist for the given stream and variant.
+def generate_media_playlist(channel, quality):
+	"""Returns a HLS media playlist for the given channel and quality.
 	Takes optional params:
-		start, end: The time to begin and end the stream at.
+		start, end: The time to begin and end the channel at.
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 			If not given, effectively means "infinity", ie. no start means
 			any time ago, no end means any time in the future.
@@ -198,7 +198,7 @@ def generate_media_playlist(stream, variant):
 	may start slightly before and end slightly after the given times.
 	"""
 
-	hours_path = os.path.join(app.static_folder, stream, variant)
+	hours_path = os.path.join(app.static_folder, channel, quality)
 	if not os.path.isdir(hours_path):
 		abort(404)
 
@@ -206,7 +206,7 @@ def generate_media_playlist(stream, variant):
 	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available
-		first, last = time_range_for_variant(stream, variant)
+		first, last = time_range_for_quality(channel, quality)
 		if start is None:
 			start = first
 		if end is None:
@@ -221,13 +221,13 @@ def generate_media_playlist(stream, variant):
 		# Note the None to indicate there was a "hole" at both start and end
 		segments = [None]
 
-	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
+	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality))
 
 
-@app.route('/cut/<stream>/<variant>.ts')
+@app.route('/cut/<channel>/<quality>.ts')
 @stats
 @has_path_args
-def cut(stream, variant):
+def cut(channel, quality):
 	"""Return a MPEGTS video file covering the exact timestamp range.
 	Params:
 		start, end: Required. The start and end times, down to the millisecond.
@@ -247,7 +247,7 @@ def cut(stream, variant):
 		return "allow_holes must be one of: true, false", 400
 	allow_holes = (allow_holes == "true")
 
-	hours_path = os.path.join(app.static_folder, stream, variant)
+	hours_path = os.path.join(app.static_folder, channel, quality)
 	if not os.path.isdir(hours_path):
 		abort(404)
 

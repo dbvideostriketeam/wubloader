@@ -28,7 +28,7 @@ def unpadded_b64_decode(s):
 
 class SegmentInfo(
 	namedtuple('SegmentInfoBase', [
-		'path', 'stream', 'variant', 'start', 'duration', 'type', 'hash'
+		'path', 'channel', 'quality', 'start', 'duration', 'type', 'hash'
 	])
 ):
 	"""Info parsed from a segment path, including original path.
@@ -48,7 +48,7 @@ def parse_segment_path(path):
 	# left-pad parts with None up to 4 parts
 	parts = [None] * (4 - len(parts)) + parts
 	# pull info out of path parts
-	stream, variant, hour, filename = parts[-4:]
+	channel, quality, hour, filename = parts[-4:]
 	# split filename, which should be TIME-DURATION-TYPE-HASH.ts
 	try:
 		if not filename.endswith('.ts'):
@@ -63,8 +63,8 @@ def parse_segment_path(path):
 		hash = None if type == 'temp' else unpadded_b64_decode(hash)
 		return SegmentInfo(
 			path = path,
-			stream = stream,
-			variant = variant,
+			channel = channel,
+			quality = quality,
 			start = datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f"),
 			duration = datetime.timedelta(seconds=float(duration)),
 			type = type,
