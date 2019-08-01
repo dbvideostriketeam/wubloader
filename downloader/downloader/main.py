@@ -26,13 +26,13 @@ import common.dateutil
 segments_downloaded = prom.Counter(
 	"segments_downloaded",
 	"Number of segments either partially or fully downloaded",
-	["partial", "stream", "variant"],
+	["partial", "channel", "quality"],
 )
 
 latest_segment = prom.Gauge(
 	"latest_segment",
 	"Timestamp of the time of the newest segment fully downloaded",
-	["stream", "variant"],
+	["channel", "quality"],
 )
 
 
@@ -541,16 +541,16 @@ class SegmentGetter(object):
 				partial_path = self.make_path("partial", hash)
 				self.logger.warning("Saving partial segment {} as {}".format(temp_path, partial_path))
 				common.rename(temp_path, partial_path)
-				segments_downloaded.labels(partial="True", stream=self.channel, variant=self.stream).inc()
+				segments_downloaded.labels(partial="True", channel=self.channel, quality=self.stream).inc()
 			raise ex_type, ex, tb
 		else:
 			full_path = self.make_path("full", hash)
 			self.logger.debug("Saving completed segment {} as {}".format(temp_path, full_path))
 			common.rename(temp_path, full_path)
-			segments_downloaded.labels(partial="False", stream=self.channel, variant=self.stream).inc()
+			segments_downloaded.labels(partial="False", channel=self.channel, quality=self.stream).inc()
 			# Prom doesn't provide a way to compare value to gauge's existing value,
 			# we need to reach into internals
-			stat = latest_segment.labels(stream=self.channel, variant=self.stream)
+			stat = latest_segment.labels(channel=self.channel, quality=self.stream)
 			timestamp = (self.date - datetime.datetime(1970, 1, 1)).total_seconds()
 			stat.set(max(stat._value.get(), timestamp)) # NOTE: not thread-safe but is gevent-safe
 
