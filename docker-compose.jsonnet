@@ -171,7 +171,7 @@
 
     [if $.enabled.thrimshim then "thrimshim"]: {
       image: "quay.io/ekimekim/wubloader-thrimshim:%s" % $.image_tag,
-      // Args for the thrimshim: set channel and qualities
+      // Args for the thrimshim: database connection string 
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
