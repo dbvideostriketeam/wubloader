@@ -91,7 +91,7 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 	try:
 		logging.debug('Fetching segment {} from {}'.format(path, node))
 		uri = '{}/segments/{}/{}/{}/{}'.format(node, channel, quality, hour, missing_segment)
-		resp = requests.get(uri, channel=True, timeout=timeout)
+		resp = requests.get(uri, stream=True, timeout=timeout)
 
 		resp.raise_for_status()
 
