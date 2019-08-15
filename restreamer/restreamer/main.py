@@ -160,7 +160,7 @@ def time_range_for_quality(channel, quality):
 def generate_master_playlist(channel):
 	"""Returns a HLS master playlist for the given channel.
 	Takes optional params:
-		start, end: The time to begin and end the channel at.
+		start, end: The time to begin and end the stream at.
 			See generate_media_playlist for details.
 	"""
 	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
@@ -190,7 +190,7 @@ def generate_master_playlist(channel):
 def generate_media_playlist(channel, quality):
 	"""Returns a HLS media playlist for the given channel and quality.
 	Takes optional params:
-		start, end: The time to begin and end the channel at.
+		start, end: The time to begin and end the stream at.
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 			If not given, effectively means "infinity", ie. no start means
 			any time ago, no end means any time in the future.
