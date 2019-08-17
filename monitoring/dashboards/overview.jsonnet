@@ -119,10 +119,10 @@ grafana.dashboard({
             name: "Segments downloaded",
             axis: {min: 0, label: "segments / sec"},
             expressions: {
-              "{{stream}}({{variant}}) live capture":
-                'sum(rate(segments_downloaded_total[2m])) by (stream, variant)',
-              "{{stream}}({{variant}}) backfilled":
-                'sum(rate(segments_backfilled_total[2m])) by (stream, variant)',
+              "{{channel}}({{quality}}) live capture":
+                'sum(rate(segments_downloaded_total[2m])) by (channel, quality)',
+              "{{channel}}({{quality}}) backfilled":
+                'sum(rate(segments_backfilled_total[2m])) by (channel, quality)',
             },
           },
           {
@@ -150,8 +150,8 @@ grafana.dashboard({
           name: "Segments downloaded by node",
           axis: {min: 0, label: "segments / sec"},
           expressions: {
-            "{{instance}} {{stream}}({{variant}})":
-              'sum(rate(segments_downloaded_total[2m])) by (instance, stream, variant)',
+            "{{instance}} {{channel}}({{quality}})":
+              'sum(rate(segments_downloaded_total[2m])) by (instance, channel, quality)',
           },
         },
         {
@@ -159,8 +159,8 @@ grafana.dashboard({
           tooltip: "Time between the latest downloaded segment's timestamp and current time",
           axis: {min: 0, format: grafana.formats.time},
           expressions: {
-            "{{instance}} {{stream}}({{variant}})":
-              'time() - max(latest_segment) by (instance, stream, variant)',
+            "{{instance}} {{channel}}({{quality}})":
+              'time() - max(latest_segment) by (instance, channel, quality)',
           },
         },
       ],
