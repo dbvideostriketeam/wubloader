@@ -283,7 +283,7 @@ class StreamWorker(object):
 		self.session = requests.Session()
 
 	def __repr__(self):
-		return "<{} at 0x{:x} for stream {!r}>".format(type(self).__name__, id(self), self.stream)
+		return "<{} at 0x{:x} for stream {!r}>".format(type(self).__name__, id(self), self.quality)
 	__str__ = __repr__
 
 	def age(self):
@@ -307,7 +307,7 @@ class StreamWorker(object):
 			for getter in self.getters.values():
 				getter.done.wait()
 			self.done.set()
-			self.manager.stream_workers[self.stream].remove(self)
+			self.manager.stream_workers[self.quality].remove(self)
 
 	def trigger_new_worker(self):
 		self.manager.trigger_new_worker(self)
