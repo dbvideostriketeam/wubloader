@@ -6,6 +6,7 @@ setup(
 	packages = find_packages(),
 	install_requires = [
 		"gevent",
+		"flask",
 		"monotonic",
 		"prometheus-client",
 	],
