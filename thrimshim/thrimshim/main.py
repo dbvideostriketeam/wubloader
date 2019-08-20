@@ -89,6 +89,7 @@ def get_row(ident):
 			else value
 		) for key, value in response.items()
 	}
+	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
 def update_row(ident, new_row):
