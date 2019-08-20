@@ -14,10 +14,9 @@ from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
 import common.dateutil
-from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler
+from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler, request_stats, after_request
 
 import generate_hls
-from stats import stats, after_request
 
 
 app = Flask('restreamer', static_url_path='/segments')
@@ -82,13 +81,13 @@ def cors(app):
 
 
 @app.route('/metrics')
-@stats
+@request_stats
 def metrics():
 	"""Return current metrics in prometheus metrics format"""
 	return prom.generate_latest()
 
 @app.route('/files')
-@stats
+@request_stats
 def list_channels():
 	"""Returns a JSON list of channels for which there may be segments available.
 	Returns empty list if no channels are available.
@@ -98,7 +97,7 @@ def list_channels():
 
 
 @app.route('/files/<channel>')
-@stats
+@request_stats
 @has_path_args
 def list_qualities(channel):
 	"""Returns a JSON list of qualities for the given channel for which there
@@ -110,7 +109,7 @@ def list_qualities(channel):
 	return json.dumps(listdir(path, error=False))
 
 @app.route('/files/<channel>/<quality>')
-@stats
+@request_stats
 @has_path_args
 def list_hours(channel, quality):
 	"""Returns a JSON list of hours for the given channel and quality for which
@@ -126,7 +125,7 @@ def list_hours(channel, quality):
 
 
 @app.route('/files/<channel>/<quality>/<hour>')
-@stats
+@request_stats
 @has_path_args
 def list_segments(channel, quality, hour):
 	"""Returns a JSON list of segment files for a given channel, quality and
@@ -155,7 +154,7 @@ def time_range_for_quality(channel, quality):
 
 
 @app.route('/playlist/<channel>.m3u8')
-@stats
+@request_stats
 @has_path_args
 def generate_master_playlist(channel):
 	"""Returns a HLS master playlist for the given channel.
@@ -185,7 +184,7 @@ def generate_master_playlist(channel):
 
 
 @app.route('/playlist/<channel>/<quality>.m3u8')
-@stats
+@request_stats
 @has_path_args
 def generate_media_playlist(channel, quality):
 	"""Returns a HLS media playlist for the given channel and quality.
@@ -225,7 +224,7 @@ def generate_media_playlist(channel, quality):
 
 
 @app.route('/cut/<channel>/<quality>.ts')
-@stats
+@request_stats
 @has_path_args
 def cut(channel, quality):
 	"""Return a MPEGTS video file covering the exact timestamp range.
