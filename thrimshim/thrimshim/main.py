@@ -12,11 +12,11 @@ import prometheus_client
 import psycopg2
 from psycopg2 import sql
 
-import common
-from common import database
+from common import database, PromLogCountsHandler, install_stacksampler, request_stats, after_request
 
 psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
+app.after_request(after_request)
 
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
@@ -36,11 +36,13 @@ def cors(app):
 
 
 @app.route('/metrics')
+@request_stats
 def metrics():
 	"""Expose Prometheus metrics."""
 	return prometheus_client.generate_latest()
 
 @app.route('/thrimshim')
+@request_stats
 def get_all_rows():
 	"""Gets all rows from the events table from the database"""
 	conn = app.db_manager.get_conn()
@@ -58,9 +60,11 @@ def get_all_rows():
 			) for key, value in row.items()
 		}
 		rows.append(row)
+	logging.info('All rows fetched')
 	return json.dumps(rows)
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+@request_stats
 def thrimshim(ident):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
 	if flask.request.method == 'POST':
@@ -166,6 +170,7 @@ def update_row(ident, new_row):
 	return ''
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
+@request_stats
 def manual_link(ident):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
@@ -191,6 +196,7 @@ def manual_link(ident):
 	
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
+@request_stats
 def reset_row(ident):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()
@@ -219,8 +225,8 @@ def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
 		server.stop()
 	gevent.signal(signal.SIGTERM, stop)
 
-	common.PromLogCountsHandler.install()
-	common.install_stacksampler()
+	PromLogCountsHandler.install()
+	install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
