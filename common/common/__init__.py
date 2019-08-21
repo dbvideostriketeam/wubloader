@@ -8,7 +8,7 @@ import os
 import random
 
 from .segments import get_best_segments, cut_segments, parse_segment_path, SegmentInfo
-from .stats import timed, PromLogCountsHandler, install_stacksampler, request_stats, after_request
+from .stats import timed, PromLogCountsHandler, install_stacksampler
 
 
 def dt_to_bustime(start, dt):
