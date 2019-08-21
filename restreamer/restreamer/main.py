@@ -13,8 +13,8 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-import common.dateutil
-from common import get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler, request_stats, after_request
+from common import dateutil, get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler
+from common.flask_stats import request_stats, after_request
 
 import generate_hls
 
@@ -162,8 +162,8 @@ def generate_master_playlist(channel):
 		start, end: The time to begin and end the stream at.
 			See generate_media_playlist for details.
 	"""
-	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
-	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
+	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	qualities = listdir(os.path.join(app.static_folder, channel))
 
 	playlists = {}
@@ -201,8 +201,8 @@ def generate_media_playlist(channel, quality):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	start = common.dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
-	end = common.dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
+	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available
 		first, last = time_range_for_quality(channel, quality)
@@ -236,8 +236,8 @@ def cut(channel, quality):
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
 	"""
-	start = common.dateutil.parse_utc_only(request.args['start'])
-	end = common.dateutil.parse_utc_only(request.args['end'])
+	start = dateutil.parse_utc_only(request.args['start'])
+	end = dateutil.parse_utc_only(request.args['end'])
 	if end <= start:
 		return "End must be after start", 400
 

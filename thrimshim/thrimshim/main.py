@@ -12,7 +12,8 @@ import prometheus_client
 import psycopg2
 from psycopg2 import sql
 
-from common import database, PromLogCountsHandler, install_stacksampler, request_stats, after_request
+from common import database, PromLogCountsHandler, install_stacksampler
+from common.flask_stats import request_stats, after_request
 
 psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
