@@ -17,10 +17,10 @@
     restreamer: true,
     backfiller: true,
     cutter: true,
-    sheetsync: true,
+    sheetsync: false,
     thrimshim: true,
     nginx: true,
-    postgres: true,
+    postgres: false,
   },
 
   // Twitch channel to capture
@@ -137,6 +137,7 @@
         "--qualities", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
+		"--node-database", $.db_connect,
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
