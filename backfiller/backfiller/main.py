@@ -157,7 +157,7 @@ class BackfillerManager(object):
 		self.node_file = node_file
 		self.node_database = node_database
 		if self.node_database is not None:
-			self.db_manager =  database.DBManager(dsn=self.node_database)
+			self.db_manager = database.DBManager(dsn=self.node_database)
 		self.localhost = localhost
 		self.download_concurrency = download_concurrency
 		self.recent_cutoff = recent_cutoff
@@ -262,7 +262,7 @@ class BackfillerManager(object):
 
 		if self.node_database is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(
-				urlparse.urlparse(self.node_database).hostname))
+				self.connection.dsn))
 			results = database.query(self.connection, """
 				SELECT name, url
 				FROM nodes
