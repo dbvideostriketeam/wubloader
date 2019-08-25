@@ -235,7 +235,7 @@ class BackfillerManager(object):
 		This returns a list of the other wubloaders as URL strings. Node URLs
 		are taken from three places. First, the --static-nodes command line
 		argument can be used to provide a list of URLs that are always
-		backfilled from. Node names infered from the hostnames of the URLs.
+		backfilled from. Node names are infered from the hostnames of the URLs.
 		Second, nodes are read from the file named in the --node-file command
 		line argument. In this file, nodes are listed one per line as name-URL
 		pairs or as just node URLs. Lines starting with '#' are ignored. If
@@ -244,7 +244,7 @@ class BackfillerManager(object):
 		--node-database. If multiple nodes URLs with the same name are found,
 		only the last is retained and any nodes matching the local hostname
 		(given by the --hostname argument) are ignored to try to prevent this
-		node from backfilling from its self."""
+		node from backfilling from itself."""
 
 		nodes = {urlparse.urlparse(node).hostname:node for node in self.static_nodes}
 		
