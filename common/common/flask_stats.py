@@ -1,3 +1,9 @@
+"""
+Code shared between components to gather stats from flask methods.
+Note that this code requires flask, but the common module as a whole does not
+to avoid needing to install them for components that don't need it.
+"""
+
 import functools
 
 from flask import request
