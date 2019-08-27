@@ -35,7 +35,7 @@ You can edit the `docker-compose.jsonnet` file to set the configuration options.
 * `channel`, the Twitch channel to capture from
 * `segments_path`, the local path to save segments to
 * `db_args`, the arguments for connecting to the wubloader database
-* `ports`, the ports to expose each service on. Only the `nginx` port (default on port 80) needs to be externally accessible for a non-database node as all the other services are routed thought `nginx`.
+* `ports`, the ports to expose each service on. Only the `nginx` port (default on port 80) needs to be externally accessible for a non-database node as all the other services are routed through `nginx`.
 
 To generate the `docker-compose.yml` file used by `docker-compose`, run `generate-docker-compose`
 
