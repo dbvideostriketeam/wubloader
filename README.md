@@ -7,12 +7,17 @@ as part of [Desert Bus For Hope](https://desertbus.org).
 A full design doc can be read at [initial-design-doc.pdf](./initial-design-doc.pdf),
 but a brief overview of the components:
 
-* Downloader grabs segments from twitch and saves them to disk
-* Restreamer serves segments from disk as well as playlist files allowing them to be streamed
-* Backfiller queries restreamers of other servers in order to pick up segments this server doesn't have already,
+* `downloader` grabs segments from twitch and saves them to disk
+* `restreamer` serves segments from disk as well as playlist files allowing them to be streamed
+* `backfiller` queries restreamers of other servers in order to pick up segments this server doesn't have already,
   ie. it replicates missing segments.
-* Cutter interacts with a database to perform cutting jobs
-* Sheet Sync syncs specifc database columns to a google doc which is the primary operator interface.
+* `cutter` interacts with a database to perform cutting jobs
+* `sheetsync` syncs specifc database columns to a google doc which is the primary operator interface.
+* `thrimshim` acts as an interface between the editor (assumed to be the [Thrimbletrimmer](https://github.com/MasterGunner/Thrimbletrimmer-IV)) and the database.
+* `database` hosts a Postgres database to store events to be edited.
+* `nginx` provides a webserver through which the other components are exposed to the outside world.
+* `common` provides code shared between the other components.
+* `monitoring` provides dashboards to allow the wubloader to be monitored.
 
 ### Usage
 
@@ -22,3 +27,5 @@ Components which access the disk expect a shared directory mounted at `/mnt`.
 A docker-compose file is provided to run all components. See `docker-compose.jsonnet`
 to set configuration options, then generate the compose file with `./generate-docker-compose`.
 Then run `docker-compose up`.
+
+Further details of installing and configuring the backfiller are provided in [INSTALL.md](./INSTALL.md).
