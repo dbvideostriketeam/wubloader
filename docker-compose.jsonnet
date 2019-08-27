@@ -37,7 +37,7 @@
   database_path:: "/var/lib/wubloader_postgres/",
 
   // The host's port to expose each service on.
-  // Only the nginx needs to be externally accessible - the other non-database ports are routed through nginx.
+  // Only nginx (and postgres if that is being deployed) needs to be externally accessible - the other non-database ports are routed through nginx.
   ports:: {
     restreamer: 8000,
     thrimshim: 8004,
