@@ -261,8 +261,8 @@ class BackfillerManager(object):
 						nodes[substrs[0]] = substrs[1]
 
 		if self.node_database is not None:
-			self.logger.info('Fetching list of nodes from {}'.format(
-				self.connection.dsn))
+			host = [s.split('=')[-1] for s in self.connection.dsn.split() if 'host' in s][0]
+			self.logger.info('Fetching list of nodes from {}'.format(host))
 			results = database.query(self.connection, """
 				SELECT name, url
 				FROM nodes
