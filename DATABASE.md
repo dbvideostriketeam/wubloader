@@ -145,3 +145,6 @@ columns                    | type                               | role        | 
 `error`                    | `TEXT`                             | state       | A human-readable error message, set if a non-retryable error occurs. Its presence indicates operator intervention is required. Cleared on a re-edit if set.
 `video_id`                 | `TEXT`                             | state       | An id that can be used to refer to the video to check if transcoding is complete. Often the video_link can be generated from this, but not nessecarily.
 `video_link`               | `TEXT`                             | output      | A link to the uploaded video. Only set when state is `TRANSCODING` or `DONE`.
+`editor`                   | `TEXT`                             | state       | Email address of the last editor; corresponds to an entry in the `editors` table. Only set when state is not `UNEDITED`.
+`edit_time`                | `TIMESTAMP`                        | state       | Time of the last edit. Only set when state is not `UNEDITED`.
+`upload_time`              | `TIMESTAMP`                        | state       | Time when video state is set to `DONE`. Only set when state is `DONE`.

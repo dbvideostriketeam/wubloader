@@ -54,7 +54,11 @@ CREATE TABLE IF NOT EXISTS events (
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
 	error TEXT,
 	video_id TEXT,
-	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL)
+	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL),
+	editor TEXT CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
+	edit_time TIMESTAMP CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
+	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL),
+
 );
 
 -- Index on state, since that's almost always what we're querying on besides id
@@ -64,6 +68,11 @@ CREATE TABLE IF NOT EXISTS nodes (
 	name TEXT PRIMARY KEY,
 	url TEXT NOT NULL,
 	backfill_from BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS editors (
+	email TEXT PRIMARY KEY,
+	name TEXT NOT NULL
 );
 
 """
