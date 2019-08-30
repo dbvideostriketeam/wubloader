@@ -151,6 +151,9 @@ def update_row(ident, new_row):
 		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
 	new_row['error'] = None
+	editor = '' # TODO replace with email form authentication
+	new_row['editor'] = editor
+	new_row['edit_time'] = datetime.datetime.utcnow()
 
 	# actually update database
 	build_query = sql.SQL("""
@@ -186,12 +189,14 @@ def manual_link(ident):
 		return 'Row {} not found'.format(ident), 404
 	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
-
+	editor = '' # TODO replace with email form authentication
+	now = datetime.datetime.utcnow()
 	results = database.query(conn, """
 		UPDATE events 
-		SET state='DONE', upload_location = 'manual', video_link = %s
+		SET state='DONE', upload_location = 'manual', video_link = %s,
+		editor = %s, edit_time = %s, upload_time = %s
 		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
-			upload_location = 'manual'))""", link, ident)
+			upload_location = 'manual'))""", link, editor, now, now, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
 	return ''	
 	
@@ -204,7 +209,7 @@ def reset_row(ident):
 	results = database.query(conn, """
 		UPDATE events 
 		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
-			uploader = NULL
+			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL
 		WHERE id = %s""", ident)
 	if results.rowcount != 1:
 		return 'Row id = {} not found'.format(ident), 404
