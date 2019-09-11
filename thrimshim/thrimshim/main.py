@@ -42,15 +42,17 @@ def cors(app):
 @request_stats
 def auth_test():
 	if flask.request.method == 'POST':
-		userToken = flask.request.json.token
+		userToken = flask.request.json['token']
 		try:
 			# Alternate method, query this endpoint: https://oauth2.googleapis.com/tokeninfo?id_token=XYZ123
 			idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
 			
 			# ID token is valid. Get the user's Google Account ID from the decoded token.
-    		userid = idinfo['sub']
+    		# userid = idinfo['sub']
 			
-			return json.dumps(idinfo)
+			userEmail = idinfo['email']
+
+			return json.dumps(userEmail)
 		except ValueError:
 			# Invalid token
 			pass
