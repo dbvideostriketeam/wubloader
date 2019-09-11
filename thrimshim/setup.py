@@ -10,7 +10,9 @@ setup(
 		"gevent",
 		"psycogreen",
 		"psycopg2",
-		"google-auth"
+		"requests",
+		"six",
+		"google-auth",
 		"wubloader-common",
 	],
 )
