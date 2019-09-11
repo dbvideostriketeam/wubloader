@@ -43,13 +43,16 @@ def cors(app):
 def auth_test():
 	if flask.request.method == 'POST':
 		userToken = flask.request.json['token']
+		# Reference: https://developers.google.com/identity/sign-in/web/backend-auth
 		try:
 			# Alternate method, query this endpoint: https://oauth2.googleapis.com/tokeninfo?id_token=XYZ123
 			idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
 			
+			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+				raise ValueError('Wrong issuer.')
+
 			# ID token is valid. Get the user's Google Account ID from the decoded token.
     		# userid = idinfo['sub']
-			
 			userEmail = idinfo['email']
 
 			return json.dumps(userEmail)
