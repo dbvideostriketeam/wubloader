@@ -151,7 +151,7 @@ def update_row(ident, new_row):
 		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
 	new_row['error'] = None
-	editor = '' # TODO replace with email form authentication
+	editor = 'PLACEHOLDER' # TODO replace with email form authentication
 	new_row['editor'] = editor
 	new_row['edit_time'] = datetime.datetime.utcnow()
 
@@ -189,7 +189,7 @@ def manual_link(ident):
 		return 'Row {} not found'.format(ident), 404
 	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
-	editor = '' # TODO replace with email form authentication
+	editor = 'PLACEHOLDER' # TODO replace with email form authentication
 	now = datetime.datetime.utcnow()
 	results = database.query(conn, """
 		UPDATE events 
