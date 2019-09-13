@@ -47,18 +47,15 @@ def auth_test():
 		try:
 			# Alternate method, query this endpoint: https://oauth2.googleapis.com/tokeninfo?id_token=XYZ123
 			idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
-			
 			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
 				raise ValueError('Wrong issuer.')
-
 			# ID token is valid. Get the user's Google Account ID from the decoded token.
     		# userid = idinfo['sub']
 			userEmail = idinfo['email']
-
 			return json.dumps(userEmail)
 		except ValueError:
 			# Invalid token
-			pass
+			return 'Invalid token. Access denied.', 403
 	else:
 		return "Hello World!"
 
