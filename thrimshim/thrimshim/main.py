@@ -15,6 +15,9 @@ from psycopg2 import sql
 from common import database, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
 app.after_request(after_request)
@@ -35,6 +38,24 @@ def cors(app):
 		return app(environ, _start_response)
 	return handle
 
+@app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
+@request_stats
+def auth_test():
+	if flask.request.method == 'POST':
+		userToken = flask.request.json.token
+		try:
+			# Alternate method, query this endpoint: https://oauth2.googleapis.com/tokeninfo?id_token=XYZ123
+			idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
+			
+			# ID token is valid. Get the user's Google Account ID from the decoded token.
+    		userid = idinfo['sub']
+			
+			return json.dumps(idinfo)
+		except ValueError:
+			# Invalid token
+			pass
+	else:
+		return "Hello World!"
 
 @app.route('/metrics')
 @request_stats
