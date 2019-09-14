@@ -1,4 +1,5 @@
 import datetime
+from functools import wraps
 import json
 import logging
 import signal
@@ -37,6 +38,42 @@ def cors(app):
 			return start_response(status, headers, exc_info)
 		return app(environ, _start_response)
 	return handle
+
+
+
+def authenticate(f):
+	"""Authenticate a token against the database.
+
+	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
+	@wraps(f)
+	def decorated_function(*args):
+		if flask.request.method == 'POST':
+			userToken = flask.request.json['token']
+			# check whether token is valid
+			try:
+				idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
+				if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+					raise ValueError('Wrong issuer.')
+			except ValueError:
+				return 'Invalid token. Access denied.', 403 
+			email = idinfo['email']
+			# check whether user is in the database
+			conn = app.db_manager.get_conn()
+			results = database.query(conn, """
+				SELECT email
+				FROM editors
+				WHERE email = %s""", email)
+			row = results.fetchone()
+			if row is None:
+				return	'Unknown user. Access denied.', 403
+		
+			return f(*args, editor=email)
+		
+		else:
+			return f(*args)
+
+	return decorated_function
+
 
 @app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
 @request_stats
@@ -89,11 +126,11 @@ def get_all_rows():
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
 @request_stats
-def thrimshim(ident):
+def thrimshim(ident, editor=None):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
 	if flask.request.method == 'POST':
 		row = flask.request.json
-		return update_row(ident, row)
+		return update_row(ident, row, editor)
 	else:
 		return get_row(ident)
 		
@@ -120,7 +157,7 @@ def get_row(ident):
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
-def update_row(ident, new_row):
+def update_row(ident, new_row, editor):
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
 
@@ -174,7 +211,6 @@ def update_row(ident, new_row):
 		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
 	new_row['error'] = None
-	editor = 'PLACEHOLDER' # TODO replace with email form authentication
 	new_row['editor'] = editor
 	new_row['edit_time'] = datetime.datetime.utcnow()
 
@@ -198,7 +234,7 @@ def update_row(ident, new_row):
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 @request_stats
-def manual_link(ident):
+def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
 	link = flask.request.json
@@ -212,7 +248,6 @@ def manual_link(ident):
 		return 'Row {} not found'.format(ident), 404
 	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
-	editor = 'PLACEHOLDER' # TODO replace with email form authentication
 	now = datetime.datetime.utcnow()
 	results = database.query(conn, """
 		UPDATE events 
@@ -226,7 +261,7 @@ def manual_link(ident):
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
 @request_stats
-def reset_row(ident):
+def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
