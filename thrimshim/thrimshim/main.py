@@ -46,7 +46,7 @@ def authenticate(f):
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
 	@wraps(f)
-	def decorated_function(*args):
+	def decorated_function(*args, **kwargs):
 		if flask.request.method == 'POST':
 			userToken = flask.request.json['token']
 			# check whether token is valid
@@ -65,14 +65,23 @@ def authenticate(f):
 				WHERE email = %s""", email)
 			row = results.fetchone()
 			if row is None:
-				return	'Unknown user. Access denied.', 403
+				return 'Unknown user. Access denied.', 403
 		
-			return f(*args, editor=email)
+			return f(*args, editor=email, **kwargs)
 		
 		else:
-			return f(*args)
+			return f(*args, **kwargs)
 
 	return decorated_function
+
+@app.route('/thrimshim/test', methods=['GET', 'POST'])
+@request_stats
+@authenticate
+def test(editor=None):
+	if flask.request.method == 'POST':
+		return json.dumps(editor)
+	else:
+		return "Hello World!"
 
 
 @app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
@@ -125,6 +134,7 @@ def get_all_rows():
 	return json.dumps(rows)
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+@authenticate
 @request_stats
 def thrimshim(ident, editor=None):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
@@ -233,6 +243,7 @@ def update_row(ident, new_row, editor):
 	return ''
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
+@authenticate
 @request_stats
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
@@ -260,6 +271,7 @@ def manual_link(ident, editor=None):
 	
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
+@authenticate
 @request_stats
 def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
