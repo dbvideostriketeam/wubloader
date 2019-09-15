@@ -13,18 +13,19 @@
 
   // For each service, whether to deploy that service.
   enabled:: {
-    downloader: true,
+    downloader: false,
     restreamer: true,
-    backfiller: true,
-    cutter: true,
+    backfiller: false,
+    cutter: false,
     sheetsync: false,
     thrimshim: true,
     nginx: true,
-    postgres: false,
+    postgres: true,
+    thrimbletrimmer: true,
   },
 
   // Twitch channel to capture
-  channel:: "desertbus",
+  channel:: "rpglimitbreak",
 
   // Stream qualities to capture
   qualities:: ["source", "480p"],
@@ -212,6 +213,7 @@
     [if $.enabled.nginx then "nginx"]: {
       # mapping of services to internal ports for nginx to forward
       local forward_ports = {
+        thrimbletrimmer: 80,
         restreamer: 8000,
         downloader: 8001,
         backfiller: 8002,
