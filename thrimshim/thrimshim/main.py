@@ -48,6 +48,9 @@ def authenticate(f):
 	@wraps(f)
 	def decorated_function(*args, **kwargs):
 		if flask.request.method == 'POST':
+			if app.no_authentication:
+				return f(*args, editor='NOT_AUTH', **kwargs)
+
 			userToken = flask.request.json['token']
 			# check whether token is valid
 			try:
@@ -56,8 +59,9 @@ def authenticate(f):
 					raise ValueError('Wrong issuer.')
 			except ValueError:
 				return 'Invalid token. Access denied.', 403 
-			email = idinfo['email']
+
 			# check whether user is in the database
+			email = idinfo['email']
 			conn = app.db_manager.get_conn()
 			results = database.query(conn, """
 				SELECT email
@@ -74,34 +78,12 @@ def authenticate(f):
 
 	return decorated_function
 
-@app.route('/thrimshim/test', methods=['GET', 'POST'])
+@app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
 @request_stats
 @authenticate
 def test(editor=None):
 	if flask.request.method == 'POST':
 		return json.dumps(editor)
-	else:
-		return "Hello World!"
-
-
-@app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
-@request_stats
-def auth_test():
-	if flask.request.method == 'POST':
-		userToken = flask.request.json['token']
-		# Reference: https://developers.google.com/identity/sign-in/web/backend-auth
-		try:
-			# Alternate method, query this endpoint: https://oauth2.googleapis.com/tokeninfo?id_token=XYZ123
-			idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
-			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-				raise ValueError('Wrong issuer.')
-			# ID token is valid. Get the user's Google Account ID from the decoded token.
-    		# userid = idinfo['sub']
-			userEmail = idinfo['email']
-			return json.dumps(userEmail)
-		except ValueError:
-			# Invalid token
-			return 'Invalid token. Access denied.', 403
 	else:
 		return "Hello World!"
 
@@ -134,8 +116,8 @@ def get_all_rows():
 	return json.dumps(rows)
 
 @app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
-@authenticate
 @request_stats
+@authenticate
 def thrimshim(ident, editor=None):
 	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
 	if flask.request.method == 'POST':
@@ -243,8 +225,8 @@ def update_row(ident, new_row, editor):
 	return ''
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
-@authenticate
 @request_stats
+@authenticate
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
@@ -271,8 +253,8 @@ def manual_link(ident, editor=None):
 	
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
-@authenticate
 @request_stats
+@authenticate
 def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()
@@ -291,13 +273,16 @@ def reset_row(ident, editor=None):
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
 @argh.arg('connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
-def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
+@argh.arg('--no-authentication', help='Do not authenticate')
+def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0,
+	no_authentication=False):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 	app.db_manager = database.DBManager(dsn=connection_string)
+	app.no_authentication = no_authentication
 
 	def stop():
-		logging.info("Shutting down")
+		logging.info('Shutting down')
 		server.stop()
 	gevent.signal(signal.SIGTERM, stop)
 
@@ -307,6 +292,8 @@ def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
-	logging.info("Starting up")
+	logging.info('Starting up')
+	if app.no_authentication:
+		logging.warning('Not authenticating POST requests')
 	server.serve_forever()
 	logging.info("Gracefully shut down")
