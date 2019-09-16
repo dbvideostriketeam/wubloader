@@ -16,8 +16,8 @@ from psycopg2 import sql
 from common import database, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 
-from google.oauth2 import id_token
-from google.auth.transport import requests
+import google.oauth2.id_token
+import google.auth.transport.requests
 
 psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
@@ -41,51 +41,48 @@ def cors(app):
 
 
 
-def authenticate(f):
+def auth_wrapper(f):
 	"""Authenticate a token against the database.
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
 	@wraps(f)
 	def decorated_function(*args, **kwargs):
-		if flask.request.method == 'POST':
-			if app.no_authentication:
-				return f(*args, editor='NOT_AUTH', **kwargs)
+		if app.no_authentication:
+			return f(*args, editor='NOT_AUTH', **kwargs)
 
+		try:
 			userToken = flask.request.json['token']
-			# check whether token is valid
-			try:
-				idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
-				if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-					raise ValueError('Wrong issuer.')
-			except ValueError:
-				return 'Invalid token. Access denied.', 403 
+		except (KeyError, TypeError):
+			return 'User token required', 401
+		# check whether token is valid
+		try:
+			idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
+			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+				raise ValueError('Wrong issuer.')
+		except ValueError:
+			return 'Invalid token. Access denied.', 403 
 
-			# check whether user is in the database
-			email = idinfo['email']
-			conn = app.db_manager.get_conn()
-			results = database.query(conn, """
-				SELECT email
-				FROM editors
-				WHERE email = %s""", email)
-			row = results.fetchone()
-			if row is None:
-				return 'Unknown user. Access denied.', 403
+		# check whether user is in the database
+		email = idinfo['email'].lower()
+		conn = app.db_manager.get_conn()
+		results = database.query(conn, """
+			SELECT email
+			FROM editors
+			WHERE lower(email) = %s""", email)
+		row = results.fetchone()
+		if row is None:
+			return 'Unknown user. Access denied.', 403
+	
+		return f(*args, editor=email, **kwargs)
 		
-			return f(*args, editor=email, **kwargs)
-		
-		else:
-			return f(*args, **kwargs)
 
 	return decorated_function
 
-@app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
+@app.route('/thrimshim/auth-test', methods=['POST'])
 @request_stats
-@authenticate
+@auth_wrapper
 def test(editor=None):
-	if flask.request.method == 'POST':
-		return json.dumps(editor)
-	else:
-		return "Hello World!"
+	return json.dumps(editor)
 
 @app.route('/metrics')
 @request_stats
@@ -115,17 +112,9 @@ def get_all_rows():
 	logging.info('All rows fetched')
 	return json.dumps(rows)
 
-@app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+
+@app.route('/thrimshim/<uuid:ident>', methods=['GET'])
 @request_stats
-@authenticate
-def thrimshim(ident, editor=None):
-	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	if flask.request.method == 'POST':
-		row = flask.request.json
-		return update_row(ident, row, editor)
-	else:
-		return get_row(ident)
-		
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
 	conn = app.db_manager.get_conn()
@@ -149,7 +138,11 @@ def get_row(ident):
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
-def update_row(ident, new_row, editor):
+@app.route('/thrimshim/<uuid:ident>', methods=['POST'])
+@request_stats
+@auth_wrapper
+def update_row(ident, editor=None):
+	new_row = flask.request.json
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
 
@@ -226,11 +219,11 @@ def update_row(ident, new_row, editor):
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 @request_stats
-@authenticate
+@auth_wrapper
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
-	link = flask.request.json
+	link = flask.request.json['link']
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
 		SELECT id, state, upload_location 
@@ -245,7 +238,7 @@ def manual_link(ident, editor=None):
 	results = database.query(conn, """
 		UPDATE events 
 		SET state='DONE', upload_location = 'manual', video_link = %s,
-		editor = %s, edit_time = %s, upload_time = %s
+			editor = %s, edit_time = %s, upload_time = %s
 		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
 			upload_location = 'manual'))""", link, editor, now, now, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
@@ -254,7 +247,7 @@ def manual_link(ident, editor=None):
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
 @request_stats
-@authenticate
+@auth_wrapper
 def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()

@@ -55,7 +55,7 @@ CREATE TABLE IF NOT EXISTS events (
 	error TEXT,
 	video_id TEXT,
 	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL),
-	editor TEXT CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
+	editor TEXT,
 	edit_time TIMESTAMP CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
 	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL)
 
