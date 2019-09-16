@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Thrimbletrimmer Goes Forth</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="google-signin-client_id" content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com">
+
+    <link href="/thrimbletrimmer/plugins/video.js/dist/video-js.min.css" rel="stylesheet">
+    <link href="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.css" rel="stylesheet">
+    <link href="/thrimbletrimmer/plugins/videojs-trimming-controls/dist/videojs-trimming-controls.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- <script src="https://code.jquery.com/jquery-3.3.1.min.js"  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="  crossorigin="anonymous"></script> -->
+    <script src="/thrimbletrimmer/plugins/video.js/dist/video.min.js"></script>
+    <script src="/thrimbletrimmer/plugins/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>
+    <script src="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>
+    <script src="/thrimbletrimmer/plugins/videojs-trimming-controls/dist/videojs-trimming-controls.js"></script>
+
+    <script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+
+    <link href="/thrimbletrimmer/styles/style.css" rel="stylesheet">
+</head>
+<body>
+    <div style="max-width:1280px;margin:auto;padding-top:25px;">
+        <table id="wubloaderInputTable">
+            <tr>
+                <th>Wubloader URL</th>
+                <th>Stream</th>
+                <th>Start Time</th>
+                <th>End Time</th>
+                <th>Allow Holes</th>
+                <th>Experimental</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td><input id="WubloaderLocation" value="" disabled/></td>
+                <td><input id="StreamName" value="rpglimitbreak" /></td>
+                <td><input id="StreamStart" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeStart" class="BusTimeInput" value="0:00" /></td>
+                <td><input id="StreamEnd" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeEnd" class="BusTimeInput" value="1:00" /></td>
+                <td><input id="AllowHoles" type="checkbox" checked /></td>
+                <td><input id="IsExperimental" type="checkbox" checked /></td>
+                <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
+            </tr>
+            <tr>
+                <td><a href="javascript:alert('https://wubloader.codegunner.com');">Wubloaders</a></td>
+                <td><a href="javascript:window.open(document.getElementById('WubloaderLocation').value + '/files');">Streams</a></td>
+                <td><a href="javascript:window.open(document.getElementById('WubloaderLocation').value + '/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
+                <td>
+                    <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
+                    <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
+                </td>
+                <td></td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Advanced Options:</td>
+                <td><select id="qualityLevel"></select></td>
+                <td><select id="uploadLocation"><option value="YouTube" selected>YouTube</option></select></td>
+                <td><input id="uploaderWhitelist" title="Uploader Whitelist" /></td>
+            </tr>
+            <tr>
+                <td>ThrimShim ID:</td>
+                <td><input id="hiddenSubmissionID" value="" /></td>
+                <td><input type="button" value="Load Event" onclick="window.location.search = '?id='+document.getElementById('hiddenSubmissionID').value"/></td>
+            </tr>
+        </table>
+
+        <div id="EditorContainer">
+            <video id="my-player" class="video-js" controls preload="auto" style="display:none">
+                <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+            </video>
+        </div>
+
+        <div id="EditorDetailsPane">
+            <div>
+                Title: <br />
+                <input type="text" id="VideoTitle" value="DB2019 - " maxlength="91" />
+            </div>
+            <div>
+                Description:<br/>
+                <textarea id="VideoDescription" ></textarea>
+            </div>
+            <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit()"/>
+            <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload()"/>
+            <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a>
+            <a id="HelpButton" style="float:right;" href="JavaScript:toggleHelp();">Help</a>
+        </div>
+        <div id="HelpPane" style="display:none;">
+            <ul>
+                <li>J/K/L - Back 10 seconds, Play/Pause, Advance 10 seconds</li>
+                <li>LeftArrow/RightArrow - Back 5 seconds, Advance 5 seconds</li>
+                <li>,/. - Back 0.1 seconds, Advance 0.1 seconds</li>
+                <li>I/O - Set start of trim at playhead, set end of trim at playhead</li>
+                <li>0-9 - Jump to 0% - 90% through the video.</li>
+            </ul>
+        </div>
+    </div>
+    <iframe id="outputFile" style="display:none;"></iframe>
+
+    <script src="/thrimbletrimmer/scripts/playerSetup.js"></script>
+    <script src="/thrimbletrimmer/scripts/keyboardShortcuts.js"></script>
+    <script src="/thrimbletrimmer/scripts/IO.js"></script>
+
+    <script>pageSetup();</script>
+    <script>
+        function toggleHelp() {
+            var helpPane = document.getElementById("HelpPane");
+            helpPane.style.display = (helpPane.style.display === "none") ? "block":"none";
+        }
+        function toggleTimeInput(toggleInput) {
+            if(toggleInput == "UTC") {
+                document.getElementById("BusTimeStart").style.display = "none";
+                document.getElementById("BusTimeEnd").style.display = "none";
+                document.getElementById("StreamStart").style.display = "";
+                document.getElementById("StreamEnd").style.display = "";
+            } else {
+                document.getElementById("StreamStart").style.display = "none";
+                document.getElementById("StreamEnd").style.display = "none";
+                document.getElementById("BusTimeStart").style.display = "";
+                document.getElementById("BusTimeEnd").style.display = "";
+            }
+        }
+    </script>
+
+<div class="g-signin2" data-onsuccess="onSignIn"></div>
+<a href="#" onclick="signOut();">Sign out</a>
+<script>
+    var user;
+    function onSignIn(googleUser) {
+        user = googleUser;
+        var profile = googleUser.getBasicProfile();
+        console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+        console.log('Name: ' + profile.getName());
+        console.log('Image URL: ' + profile.getImageUrl());
+        console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+        console.log('ID Token: ' + googleUser.getAuthResponse().id_token);
+    }
+    function signOut() {
+        user = null;
+        var auth2 = gapi.auth2.getAuthInstance();
+        auth2.signOut().then(function () {
+        console.log('User signed out.');
+        });
+    }
+</script>
+</body>
+</html>

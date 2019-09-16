@@ -14,7 +14,7 @@ LOCATIONS=$(
 		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
 		# thrimshim takes any calls to thrimshim/
 		[ "$name" == "thrimshim" ] && generate_location /thrimshim "http://thrimshim:$port"
-		# thrimbletrimmer takes any calls to thrimbletrimmer/
+		# thrimbletrimmer takes any calls to thrimbletrimmer/; serves content from /etc/nginx/html/thrimbletrimmer
 		[ "$name" == "thrimbletrimmer" ] && echo -e "\t\tlocation /thrimbletrimmer { }"
 		# all services have metrics under /metrics/SERVICE, except for thrimebletrimmer
 		[ "$name" != "thrimbletrimmer" ] && generate_location "/metrics/$name" "http://$name:$port/metrics"
@@ -29,6 +29,7 @@ events {
 }
 
 http {
+	include /etc/nginx/mime.types;
 	server {
 		listen 80;
 $LOCATIONS

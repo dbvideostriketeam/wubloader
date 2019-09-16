@@ -1,0 +1,7 @@
+/**
+ * videojs-hls-quality-selector
+ * @version 0.0.8
+ * @copyright 2018 Chris Boustead (chris@forgemotion.com)
+ * @license MIT
+ */
+.video-js.vjs-hls-quality-selector{display:block}

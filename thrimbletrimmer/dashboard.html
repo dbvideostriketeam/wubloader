@@ -1,0 +1,121 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Thrimbletrimmer Goes Forth</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <style>
+        html, body {
+            height:100%;
+            margin:0px;
+            background-color:darkgrey;
+        }
+
+        .sectionContainer {
+            margin:24px auto;
+            padding:32px;
+            border-radius:4px;
+            background:white;
+            box-shadow:0 0 34px rgba(0,0,0,.26);
+            max-width:1280px;
+        }
+
+        #QueueTable {
+            width:100%; 
+            border-collapse: collapse;
+            text-align: center;
+        }
+        #QueueTable, #QueueTable th, #QueueTable td {
+            border: 1px solid #cccccc;
+        }
+        #QueueTable tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        #QueueTable tr:hover {
+            background-color:#dddddd;
+        }
+        #QueueTable th {
+            line-height:32px;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <!-- <div class="sectionContainer" style="display:none;">
+            <table>
+                <tr>
+                    <th>Wubloader URL</th>
+                    <th>Stream</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Allow Holes</th>
+                    <th>Experimental</th>
+                    <th></th>
+                </tr>
+                <tr>
+                    <td><input id="WubloaderLocation" value="http://charm.wubs.stream:20088" /></td>
+                    <td><input id="StreamName" value="gamesdonequick" /></td>
+                    <td><input id="StreamStart" value="2019-01-06T16:00:00" /></td>
+                    <td><input id="StreamEnd" value="2019-01-06T17:00:00" /></td>
+                    <td><input id="AllowHoles" type="checkbox" checked /></td>
+                    <td><input id="IsExperimental" type="checkbox" checked /></td>
+                    <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
+                </tr>
+                <tr>
+                    <td><a href="javascript:alert('https://wubloader.codegunner.com');">Wubloaders</a></td>
+                    <td><a href="javascript:alert('seabats, lunarjade, gamesdonequick');">Streams</a></td>
+                    <td><a href="javascript:window.open(document.getElementById('WubloaderLocation').value + '/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                </tr>
+            </table>
+        </div> -->
+
+        <div class="sectionContainer">
+            <h1 style="color:#1976d2;font-size:34px;line-height:38px;">Wubloader Queue</h1>
+            <table id="QueueTable">
+                <tr>
+                    <th>Start Time</th>
+                    <th>End Time</th>
+                    <th>Event Type</th>
+                    <th>Description</th>
+                    <th>State</th>
+                    <th>Edit</th>
+                    <th>Manual Link</th>
+                    <th>Reset</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <script>
+        // var startOfHour = new Date(new Date().setMinutes(0,0,0));
+        // document.getElementById("StreamStart").value = new Date(startOfHour.getTime() - 1000*60*60).toISOString().substring(0,19);
+        // document.getElementById("StreamEnd").value = startOfHour.toISOString().substring(0,19);
+
+        fetch("/thrimshim").then(data => data.json()).then(function (data) {
+            data.forEach((event) => {
+                var row = document.createElement("TR");
+                row.innerHTML = `
+                    <td>${event.event_start}</td>
+                    <td>${event.event_end}</td>
+                    <td>${event.category}</td>
+                    <td>${event.description}</td>
+                    <td>${event.state}</td>
+                    <td><a href="/thrimbletrimmer?id=${event.id}">Edit</a></td>
+                    <td><a href="#">Reset</a></td>
+                    <td><a href="#">Manual Link</a></td>
+                `;
+                document.getElementById('QueueTable').appendChild(row);
+            });
+        });
+    </script>
+</body>
+</html>
