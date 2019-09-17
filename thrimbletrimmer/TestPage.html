@@ -130,6 +130,10 @@
         function testReset() {
             fetch(document.getElementById("server").value+"/thrimshim/reset/"+document.getElementById("rowId").value, {
                 method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
                 body: JSON.stringify({token: user.getAuthResponse().id_token})
             }).then(data => console.log(data));
         }
