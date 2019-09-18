@@ -13,13 +13,15 @@ pageSetup = function() {
             }
             //data = testThrimShim;
             document.getElementById("hiddenSubmissionID").value = data.id;
+            document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
             document.getElementById("StreamStart").value = data.event_start;
             document.getElementById("BusTimeStart").value = (new Date(data.event_start+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_start+"Z") - desertBusStart)/1000), 600.01);
             document.getElementById("StreamEnd").value = data.event_end;
             document.getElementById("BusTimeEnd").value = (new Date(data.event_end+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_end+"Z") - desertBusStart)/1000), 600.01);
             document.getElementById("VideoTitle").value = data.video_title;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description:data.description;
-            loadPlaylist();
+
+            loadPlaylist(data.video_start, data.video_end);
         });
     }
     else {
@@ -33,8 +35,8 @@ pageSetup = function() {
     }
 };
 
-loadPlaylist = function() {
-    var playlist = document.getElementById("WubloaderLocation").value + "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
+loadPlaylist = function(startTrim, endTrim) {
+    var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
     if(document.getElementById("BusTimeToggleBus").checked) {
         var streamStart = desertBusStart;
@@ -53,11 +55,11 @@ loadPlaylist = function() {
     var streamEnd = document.getElementById("StreamEnd").value ? "end="+document.getElementById("StreamEnd").value:null;
     var queryString = (streamStart || streamEnd) ? "?" + [streamStart, streamEnd].filter((a) => !!a).join("&"):"";
 
-    setupPlayer(playlist + queryString);
+    setupPlayer(playlist + queryString, startTrim, endTrim);
 
     //Get quality levels for advanced properties.
     document.getElementById('qualityLevel').innerHTML = "";
-    fetch(document.getElementById('WubloaderLocation').value + '/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) { // {mode: 'cors'} ???
+    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) { // {mode: 'cors'} ???
         if (!data.length) {
             console.log("Could not retrieve quality levels");
             return;
@@ -119,8 +121,7 @@ thrimbletrimmerDownload = function() {
         var downloadStart = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
         var downloadEnd = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
 
-        var targetURL = document.getElementById("WubloaderLocation").value + 
-            "/cut/" + document.getElementById("StreamName").value + 
+        var targetURL = "/cut/" + document.getElementById("StreamName").value + 
             "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
             "?start=" + downloadStart + 
             "&end=" + downloadEnd + 

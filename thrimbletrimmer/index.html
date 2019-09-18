@@ -27,7 +27,6 @@
     <div style="max-width:1280px;margin:auto;padding-top:25px;">
         <table id="wubloaderInputTable">
             <tr>
-                <th>Wubloader URL</th>
                 <th>Stream</th>
                 <th>Start Time</th>
                 <th>End Time</th>
@@ -36,7 +35,6 @@
                 <th></th>
             </tr>
             <tr>
-                <td><input id="WubloaderLocation" value="" disabled/></td>
                 <td><input id="StreamName" value="rpglimitbreak" /></td>
                 <td><input id="StreamStart" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeStart" class="BusTimeInput" value="0:00" /></td>
                 <td><input id="StreamEnd" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeEnd" class="BusTimeInput" value="1:00" /></td>
@@ -45,9 +43,8 @@
                 <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
             </tr>
             <tr>
-                <td><a href="javascript:alert('https://wubloader.codegunner.com');">Wubloaders</a></td>
-                <td><a href="javascript:window.open(document.getElementById('WubloaderLocation').value + '/files');">Streams</a></td>
-                <td><a href="javascript:window.open(document.getElementById('WubloaderLocation').value + '/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
+                <td><a href="javascript:window.open('/files');">Streams</a></td>
+                <td><a href="javascript:window.open('/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
                 <td>
                     <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
                     <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
