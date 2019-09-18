@@ -14,8 +14,8 @@ LOCATIONS=$(
 		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
 		# thrimshim takes any calls to thrimshim/
 		[ "$name" == "thrimshim" ] && generate_location /thrimshim "http://thrimshim:$port"
-		# thrimbletrimmer takes any calls to thrimbletrimmer/; serves content from /etc/nginx/html/thrimbletrimmer
-		[ "$name" == "thrimbletrimmer" ] && echo -e "\t\tlocation /thrimbletrimmer { }"
+		# thrimbletrimmer takes any calls to thrimbletrimmer/; serves content from /etc/nginx/html/thrimbletrimmer; requests to the plain URL get redirect to the dashboard page.
+		[ "$name" == "thrimbletrimmer" ] && echo -e "\t\tlocation = / { return 301 \$scheme://\$host/thrimbletrimmer/dashboard.html; }\n\t\tlocation /thrimbletrimmer { }"
 		# all services have metrics under /metrics/SERVICE, except for thrimebletrimmer
 		[ "$name" != "thrimbletrimmer" ] && generate_location "/metrics/$name" "http://$name:$port/metrics"
 	done

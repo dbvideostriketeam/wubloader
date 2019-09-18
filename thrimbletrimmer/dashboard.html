@@ -9,7 +9,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
 
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script> -->
     <style>
         html, body {
             height:100%;
@@ -42,6 +45,26 @@
         }
         #QueueTable th {
             line-height:32px;
+        }
+
+        .filterMenu {
+            display: inline-block;
+            padding: 10px;
+            background-color: rgb(221, 221, 221);
+            border-radius: 5px 5px 0px 0px;
+        }
+        .filterList {
+            display:none;
+            List-style-type:none;
+            margin:10px 0px 0px -10px;
+            padding:10px;
+            border:1px solid black;
+            position:absolute;
+            background-color:white;
+            min-width:100px;
+        }
+        .filterMenu:hover .filterList {
+            display:inline-block;
         }
     </style>
 </head>
@@ -80,11 +103,32 @@
             <h1 style="color:#1976d2;font-size:34px;line-height:38px;">Wubloader Queue</h1>
             <!-- Add in filters based on time period, category, and state -->
             <!-- Throw in JQueryUI to run the filter menus, not worth re-inventing the wheel -->
+            
+            <style>
+                .ui-menu { width: 150px; }
+            </style>
+            <div id="FiltersMenu">
+                <div class="filterMenu" style="padding-bottom:7px;">
+                    <input id="DateFilterStart" placeholder="Start Date" />
+                </div>
+                <div class="filterMenu" style="padding-bottom:7px;">
+                    <input id="DateFilterEnd" placeholder="End Date" />
+                </div>
+                <div id="CategoryFiltersMenu" class="filterMenu">
+                    <div>Category Filter</div>
+                    <ul id="CategoryFilter" class="filterList"></ul>
+                </div>
+                <div id="StateFiltersMenu" class="filterMenu">
+                    <div>State Filter</div>
+                    <ul id="StateFilter" class="filterList"></ul>
+                </div>
+                <input type="button" value="Apply Filters" onclick="applyFilters()"/>
+            </div>
             <table id="QueueTable">
                 <tr>
                     <th>Start Time</th>
                     <th>End Time</th>
-                    <th>Event Type</th>
+                    <th>Category</th>
                     <th>Description</th>
                     <th>State</th>
                     <th>Edit</th>
@@ -99,9 +143,70 @@
         // document.getElementById("StreamStart").value = new Date(startOfHour.getTime() - 1000*60*60).toISOString().substring(0,19);
         // document.getElementById("StreamEnd").value = startOfHour.toISOString().substring(0,19);
 
-        fetch("/thrimshim").then(data => data.json()).then(function (data) {
-            data.forEach((event) => {
-                var row = document.createElement("TR");
+        async function getEvents() {
+            let response = await fetch("/thrimshim");
+            let data = await response.json();
+            return data;
+        }
+
+        function populateFilters(events) {
+            var urlParams = new URLSearchParams(window.location.search);
+
+            //Set up Date filters
+            if (urlParams.has("start")) {
+                document.getElementById("DateFilterStart").value = urlParams.get("start");
+            }
+            if (urlParams.has("end")) {
+                document.getElementById("DateFilterEnd").value = urlParams.get("end");
+            }
+            
+            //Set up Category filters
+            let categoryFilters = urlParams.has("category") ? urlParams.get("category").split(","):null;
+            new Set(events.map(event => event.category)).forEach((category, index) => {
+                let row = document.createElement("TR");
+                row.innerHTML = `<li><input type="checkbox" name="categoryCheckbox-${index}" filtervalue="${category}" ${!categoryFilters || categoryFilters.indexOf(category) >=0 ? "checked":""}><label for="categoryCheckbox-${index}">${category}</label></li>`;
+                document.getElementById('CategoryFilter').appendChild(row);
+            });
+
+            //Set up State filters
+            let stateFilters = urlParams.has("state") ? urlParams.get("state").split(","):null;
+            new Set(events.map(event => event.state)).forEach((state, index) => {
+                let row = document.createElement("TR");
+                row.innerHTML = `<li><input type="checkbox" name="stateCheckbox-${index}" filtervalue="${state}" ${!stateFilters || stateFilters.indexOf(state) >=0 ? "checked":""}><label for="stateCheckbox-${index}">${state}</label></li>`;
+                document.getElementById('StateFilter').appendChild(row);
+            });
+            return events;
+        }
+
+        function filterEvents(events) {
+            if(!window.location.search) { return events; }
+
+            var urlParams = new URLSearchParams(window.location.search);
+
+            if(urlParams.has("start")) {
+                let startDate = new Date(urlParams.get("start"));
+                events = events.filter(event => new Date(event.event_start) >= startDate);
+            }
+
+            if(urlParams.has("end")) {
+                let endDate = new Date(urlParams.get("end"));
+                events = events.filter(event => new Date(event.event_start) <= endDate);
+            }
+
+            if(urlParams.has("category")) {
+                events = events.filter(event => urlParams.get("category").split(",").indexOf(event.category) >= 0);
+            }
+
+            if(urlParams.has("state")) {
+                events = events.filter(event => urlParams.get("state").split(",").indexOf(event.state) >= 0);
+            }
+
+            return events;
+        }
+
+        function populateTable (events) {
+            events.forEach(event => {
+                let row = document.createElement("TR");
                 row.innerHTML = `
                     <td>${event.event_start}</td>
                     <td>${event.event_end}</td>
@@ -114,7 +219,18 @@
                 `;
                 document.getElementById('QueueTable').appendChild(row);
             });
-        });
+        }
+
+        function applyFilters() {
+            let startDateFilter = document.getElementById("DateFilterStart").value;
+            let endDateFilter = document.getElementById("DateFilterEnd").value;
+            let categoryfilters = Array.from(document.querySelectorAll("#CategoryFilter :checked")).map(checkbox => checkbox.getAttribute("filtervalue")).join();
+            let statefilters = Array.from(document.querySelectorAll("#StateFilter :checked")).map(checkbox => checkbox.getAttribute("filtervalue")).join();
+            window.location.href = `/thrimbletrimmer/dashboard.html?${startDateFilter ? "start="+startDateFilter+"&":""}${endDateFilter ? "end="+endDateFilter+"&":""}category=${categoryfilters}&state=${statefilters}`;
+        }
+
+        //On Page Load
+        getEvents().then(populateFilters).then(filterEvents).then(populateTable);
     </script>
 </body>
 </html>
