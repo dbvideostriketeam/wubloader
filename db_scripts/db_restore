@@ -19,7 +19,7 @@ cp $1 tmp.sql
 docker cp tmp.sql "$CONTAINER:/"
 rm tmp.sql
 
-docker exec $CONTAINER dropdb wubloader -U postgres
+docker exec $CONTAINER dropdb wubloader -U postgres --if-exists
 docker exec $CONTAINER createdb wubloader -U postgres
 docker exec $CONTAINER psql -d wubloader -f dump.sql -U postgres
 docker exec $CONTAINER rm tmp.sql
