@@ -32,6 +32,8 @@ http {
 	include /etc/nginx/mime.types;
 	server {
 		listen 80;
+		gzip on;
+		gzip_comp_level 9;
 $LOCATIONS
 	}
 }

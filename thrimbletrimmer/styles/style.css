@@ -3,6 +3,9 @@ html, body {
     margin:0px;
     background-color:darkgrey;
 }
+body.ultrawide > div { max-width:100% !important; }
+body.ultrawide .my-player-dimensions { width:100% !important; }
+
 .video-js .vjs-control-bar {
     background-color:#2b333f;
 }

@@ -106,7 +106,10 @@ thrimbletrimmerSubmit = function() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(wubData)
-        }).then(data => console.log(data));
+        })
+        .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
+        .then(data => { console.log(data); setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500); })
+        .catch(error => { console.log(error); alert(error); });
     }
 };
 

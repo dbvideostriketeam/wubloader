@@ -23,7 +23,7 @@ function setupPlayer(source, startTrim, endTrim) {
     if(player) { //Destroy and recreate the player if it already exists.
         player.dispose(); 
         document.getElementById("EditorContainer").innerHTML = `
-            <video id="my-player" class="video-js" controls preload="auto">
+            <video id="my-player" class="video-js" controls disablePictureInPicture preload="auto">
                 <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
             </video>
         `;

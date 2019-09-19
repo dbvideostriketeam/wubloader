@@ -100,7 +100,8 @@ def get_all_rows():
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
 		SELECT *
-		FROM events""")
+		FROM events
+		ORDER BY event_start""")
 	rows = []
 	for row in results:
 		row = row._asdict()
