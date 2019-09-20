@@ -15,10 +15,10 @@ pageSetup = function() {
             document.getElementById("hiddenSubmissionID").value = data.id;
             document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
             document.getElementById("StreamStart").value = data.event_start;
-            document.getElementById("BusTimeStart").value = (new Date(data.event_start+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_start+"Z") - desertBusStart)/1000), 600.01);
+            document.getElementById("BusTimeStart").value = (new Date(data.event_start+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_start+"Z") - desertBusStart)/1000), 600.01).padStart(7, "0:");
             document.getElementById("StreamEnd").value = data.event_end;
-            document.getElementById("BusTimeEnd").value = (new Date(data.event_end+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_end+"Z") - desertBusStart)/1000), 600.01);
-            document.getElementById("VideoTitle").value = data.video_title;
+            document.getElementById("BusTimeEnd").value = (new Date(data.event_end+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_end+"Z") - desertBusStart)/1000), 600.01).padStart(7, "0:");
+            document.getElementById("VideoTitle").value = data.video_title ? data.video_title:document.getElementById("VideoTitle").value;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description:data.description;
 
             loadPlaylist(data.video_start, data.video_end);
