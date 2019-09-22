@@ -11,7 +11,7 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
 
 standby_mode = on
 primary_conninfo = 'host=$MASTER_NODE password=$REPLICATION_PASSWORD port=5432 user=$REPLICATION_USER'
-trigger_file = '/tmp/touch_me_to_promote_to_me_master'
+trigger_file = '/tmp/touch_to_promote_to_master'
 
 EOF
 
