@@ -52,7 +52,7 @@
                     <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
                     <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
                 </td>
-                <td><a id="AdvancedOptionsButton" href="JavaScript:toggleAdvancedOptions();">Advanced Submit Options</a></td>
+                <td><a id="AdvancedOptionsButton" href="JavaScript:toggleHiddenPane('wubloaderAdvancedInputTable');">Advanced Submit Options</a></td>
             </tr>
         </table>
         <table id="wubloaderAdvancedInputTable" style="display:none;">
@@ -89,9 +89,14 @@
             </div>
             <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit()"/>
             <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload()"/>
-            <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a>
-            <a id="HelpButton" style="float:right;" href="JavaScript:toggleHelp();">Help</a>
+            <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
+            <a id="ManualLinkButton" href="JavaScript:toggleHiddenPane('ManualLinkPane');">Manual Link</a> | 
+            <a id="ResetButton" href="JavaScript:thrimbletrimmerResetLink();">Reset Edits</a>
+            <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
             <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
+        </div>
+        <div id="ManualLinkPane" style="display:none">
+            <input id="ManualLink" /> <input type="button" onclick="thrimbletrimmerManualLink()" value="Set Link" />
         </div>
         <div id="HelpPane" style="display:none;">
             <ul>
@@ -111,13 +116,9 @@
 
     <script>pageSetup();</script>
     <script>
-        function toggleHelp() {
-            var helpPane = document.getElementById("HelpPane");
-            helpPane.style.display = (helpPane.style.display === "none") ? "block":"none";
-        }
-        function toggleAdvancedOptions() {
-            var helpPane = document.getElementById("wubloaderAdvancedInputTable");
-            helpPane.style.display = (helpPane.style.display === "none") ? "block":"none";
+        function toggleHiddenPane(paneID) {
+            var pane = document.getElementById(paneID);
+            pane.style.display = (pane.style.display === "none") ? "block":"none";
         }
         function toggleUltrawide() {
             var body = document.getElementsByTagName("Body")[0];

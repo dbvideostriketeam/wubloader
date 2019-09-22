@@ -66,6 +66,12 @@
             display:inline-block;
         }
     </style>
+    <style>
+        /* Styles based on event category */
+        #QueueTable .RDP {
+            background-color: #f4cccc;
+        }
+    </style>
 </head>
 <body>
     <div>
@@ -132,8 +138,7 @@
                     <th>Description</th>
                     <th>State</th>
                     <th>Edit</th>
-                    <th>Manual Link</th>
-                    <th>Reset</th>
+                    <th>Link</th>
                 </tr>
             </table>
         </div>
@@ -142,10 +147,20 @@
         // var startOfHour = new Date(new Date().setMinutes(0,0,0));
         // document.getElementById("StreamStart").value = new Date(startOfHour.getTime() - 1000*60*60).toISOString().substring(0,19);
         // document.getElementById("StreamEnd").value = startOfHour.toISOString().substring(0,19);
+        function sanitizeInput(input) {
+            let tempElement = document.createElement("SPAN");
+            tempElement.appendChild(document.createTextNode(input));
+            return tempElement.innerHTML;
+        }
 
         async function getEvents() {
             let response = await fetch("/thrimshim");
             let data = await response.json();
+            //Sanitize user inputs that could be used for xss
+            data.forEach(event => {
+                event.category = sanitizeInput(event.category);
+                event.description = sanitizeInput(event.description);
+            })
             return data;
         }
 
@@ -211,12 +226,11 @@
                 row.innerHTML = `
                     <td>${event.event_start}</td>
                     <td>${event.event_end}</td>
-                    <td>${event.category}</td>
+                    <td class="${event.category.replace(/ /g, "")}">${event.category}</td>
                     <td>${event.description}</td>
                     <td>${event.state}</td>
                     <td><a href="/thrimbletrimmer?id=${event.id}">Edit</a></td>
-                    <td><a href="#">Reset</a></td>
-                    <td><a href="#">Manual Link</a></td>
+                    <td>${event.video_link ? "<a href='"+event.video_link+"'>"+event.video_link+"</a>":""}</td>
                 `;
                 document.getElementById('QueueTable').appendChild(row);
             });

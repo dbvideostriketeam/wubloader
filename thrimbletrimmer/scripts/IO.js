@@ -1,12 +1,11 @@
-var desertBusStart = new Date("1970-01-01T00:00:00Z");
-//var desertBusChannel = "gamesdonequick";
-//document.getElementById("StreamName").value = desertBusChannel;
+//var desertBusStart = new Date("1970-01-01T00:00:00Z");
+var desertBusStart = new Date("2019-09-20T18:00:00");
 
 pageSetup = function() {
     //Get values from ThrimShim
     if(/id=/.test(document.location.search)) {
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-        fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) { // {mode: 'cors'} ???
+        fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) { 
             if (!data) {
                 alert("No video available for stream.");
                 return;
@@ -59,7 +58,7 @@ loadPlaylist = function(startTrim, endTrim) {
 
     //Get quality levels for advanced properties.
     document.getElementById('qualityLevel').innerHTML = "";
-    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) { // {mode: 'cors'} ???
+    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) { 
         if (!data.length) {
             console.log("Could not retrieve quality levels");
             return;
@@ -99,7 +98,7 @@ thrimbletrimmerSubmit = function() {
 
         //Submit to thrimshim
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-        fetch("/thrimshim/"+rowId, { // {mode: 'cors'} ???
+        fetch("/thrimshim/"+rowId, { 
             method: 'POST',
             headers: {
                 'Accept': 'application/json',
@@ -132,5 +131,40 @@ thrimbletrimmerDownload = function() {
             "&experimental=" + String(document.getElementById('IsExperimental').checked);
         console.log(targetURL);
         document.getElementById('outputFile').src = targetURL;
+    }
+};
+
+thrimbletrimmerManualLink = function() {
+    var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+    fetch("/thrimshim/manual-link/"+rowId, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            link: document.getElementById("ManualLink").value, 
+            token: user.getAuthResponse().id_token
+        })
+    })
+    .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
+    .then(data => { console.log(data); setTimeout(() => { alert("Manual link set"); }, 500); })
+    .catch(error => { console.log(error); alert(error); });
+};
+
+thrimbletrimmerResetLink = function() {
+    var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+    if(confirm('Are you sure you want to reset this event?')) {
+        fetch("/thrimshim/reset/"+rowId, {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({token: user.getAuthResponse().id_token})
+        })
+        .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
+        .then(data => { console.log(data); setTimeout(() => { window.location.reload() }, 500); })
+        .catch(error => { console.log(error); alert(error); });
     }
 };
