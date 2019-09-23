@@ -12,7 +12,8 @@ import prometheus_client
 import psycopg2
 from psycopg2 import sql
 
-from common import database, PromLogCountsHandler, install_stacksampler
+import common
+from common import database
 from common.flask_stats import request_stats, after_request
 
 psycopg2.extras.register_uuid()
@@ -219,15 +220,25 @@ def reset_row(ident):
 def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
-	app.db_manager = database.DBManager(dsn=connection_string)
 
+	app.no_authentication = no_authentication
+	app.db_manager = None
+	stopping = gevent.event.Event()
+	while app.db_manager is None:
+		try:
+			app.db_manager = database.DBManager(dsn=connection_string)
+		except Exception:
+			delay = common.jitter(10)
+			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			stopping.wait(delay)
+	
 	def stop():
 		logging.info("Shutting down")
 		server.stop()
 	gevent.signal(signal.SIGTERM, stop)
 
-	PromLogCountsHandler.install()
-	install_stacksampler()
+	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
