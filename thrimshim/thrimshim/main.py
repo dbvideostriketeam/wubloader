@@ -41,12 +41,12 @@ def cors(app):
 
 
 
-def auth_wrapper(f):
+def authenticate(f):
 	"""Authenticate a token against the database.
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
 	@wraps(f)
-	def decorated_function(*args, **kwargs):
+	def auth_wrapper(*args, **kwargs):
 		if app.no_authentication:
 			return f(*args, editor='NOT_AUTH', **kwargs)
 
@@ -76,11 +76,11 @@ def auth_wrapper(f):
 		return f(*args, editor=email, **kwargs)
 		
 
-	return decorated_function
+	return auth_wrapper
 
 @app.route('/thrimshim/auth-test', methods=['POST'])
 @request_stats
-@auth_wrapper
+@authenticate
 def test(editor=None):
 	return json.dumps(editor)
 
@@ -140,7 +140,7 @@ def get_row(ident):
 
 @app.route('/thrimshim/<uuid:ident>', methods=['POST'])
 @request_stats
-@auth_wrapper
+@authenticate
 def update_row(ident, editor=None):
 	new_row = flask.request.json
 	"""Updates row of database with id = ident with the edit columns in
@@ -219,7 +219,7 @@ def update_row(ident, editor=None):
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 @request_stats
-@auth_wrapper
+@authenticate
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
@@ -247,7 +247,7 @@ def manual_link(ident, editor=None):
 
 @app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
 @request_stats
-@auth_wrapper
+@authenticate
 def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
 	conn = app.db_manager.get_conn()
