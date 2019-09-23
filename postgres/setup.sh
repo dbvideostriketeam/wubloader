@@ -2,6 +2,7 @@
 
 set -e
 
+# only allow the $WUBLOADER_USER to connect remotely rather than all users
 sed -i "/host all all all/d" "$PGDATA/pg_hba.conf"
 echo "host all $WUBLOADER_USER all md5" >> "$PGDATA/pg_hba.conf"
 
@@ -15,6 +16,7 @@ EOSQL
 
 if [ -n "$REPLICATION_USER" ]; then
 	echo "Creating $REPLICATION_USER"
+	# allow the $REPLICATION user to replicate remotely
 	echo "host replication $REPLICATION_USER all md5" >> "$PGDATA/pg_hba.conf"
 	psql -v ON_ERROR_STOP=1 -U postgres <<-EOSQL
 
@@ -40,7 +42,7 @@ if [ -a /mnt/wubloader/nodes.csv ]; then
 		url TEXT NOT NULL,
 		backfill_from BOOLEAN NOT NULL DEFAULT TRUE);
 	COPY nodes FROM '/mnt/wubloader/nodes.csv' DELIMITER ',' CSV HEADER;
-	ALTER TABLE nodes OWNER TO vst;
+	ALTER TABLE nodes OWNER TO $WUBLOADER_USER;
 	EOF
 fi
 
@@ -51,7 +53,7 @@ if [ -a /mnt/wubloader/editors.csv ]; then
 		email TEXT PRIMARY KEY,
 		name TEXT NOT NULL);
 	COPY editors FROM '/mnt/wubloader/editors.csv' DELIMITER ',' CSV HEADER;
-	ALTER TABLE editors OWNER TO vst;
+	ALTER TABLE editors OWNER TO $WUBLOADER_USER;
 	EOF
 fi
 

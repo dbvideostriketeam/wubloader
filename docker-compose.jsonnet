@@ -57,6 +57,7 @@
   backdoor_port:: 1234,
 
   // Other nodes to always backfill from. You should not include the local node.
+  // If you are using the database to find peers, you should leave this empty.
   peers:: [
   ],
 
@@ -64,7 +65,7 @@
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
     user: "vst",
-    password: "dbfh2019", // don't use default in production
+    password: "dbfh2019", // don't use default in production. Must not contain ' or \ as these are not escaped.
     host: "postgres",
     port: 5432,
     dbname: "wubloader",
@@ -72,9 +73,9 @@
 
   // Other database arguments
   db_super_user:: "postgres", // only accessible from localhost
-  db_super_password:: "postgres",
+  db_super_password:: "postgres", // Must not contain ' or \ as these are not escaped.
   db_replication_user:: "replicate", // if empty, don't allow replication
-  db_replication_password:: "standby", // don't use default in production
+  db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_standby:: false, // set to true to have this database replicate another server
 
   // Path to a JSON file containing google credentials as keys

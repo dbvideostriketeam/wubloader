@@ -2,6 +2,7 @@ import datetime
 import json
 import logging
 import signal
+import sys
 
 import argh
 import flask
@@ -221,21 +222,27 @@ def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 
-	app.no_authentication = no_authentication
-	app.db_manager = None
 	stopping = gevent.event.Event()
-	while app.db_manager is None:
+	def stop():
+		logging.info("Shutting down")
+		stopping.set()
+		# handle when the server is running
+		if hasattr(server, 'socket'):
+			server.stop()
+		# and when not
+		else:
+			sys.exit()
+
+	gevent.signal(signal.SIGTERM, stop)
+
+	app.db_manager = None
+	while app.db_manager is None and not stopping.is_set():
 		try:
 			app.db_manager = database.DBManager(dsn=connection_string)
 		except Exception:
 			delay = common.jitter(10)
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stopping.wait(delay)
-	
-	def stop():
-		logging.info("Shutting down")
-		server.stop()
-	gevent.signal(signal.SIGTERM, stop)
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()

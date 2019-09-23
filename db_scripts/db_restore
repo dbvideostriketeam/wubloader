@@ -1,25 +1,31 @@
 #! /bin/bash
 
-if [ -z $1 ]
-	then
-		echo "No SQL script file"
-		exit 1
+if [ -z "$1" ]; then
+	echo "No SQL script file"
+	echo "USAGE: $0 SQL_SCRIPT"
+	exit 1
 fi
 
 NAME=${2:-postgres}
 CONTAINER=$(docker ps --format "{{.Names}}" | grep "$NAME")
-if [ -z "$CONTAINER" ]
-	then
-		echo "Container not found"
-		exit 1
+if [ -z "$CONTAINER" ]; then
+	echo "Container not found"
+	exit 1
+fi
+if [ "$(wc -l <<<"$CONTAINER")" -ne 1 ]; then
+	echo "Multiple containers found"
+	exit 1
 fi
 
 #need to do this in case db dump file has a colon in it
-cp $1 tmp.sql
+cp "$1" tmp.sql
 docker cp tmp.sql "$CONTAINER:/"
 rm tmp.sql
 
-docker exec $CONTAINER dropdb wubloader -U postgres --if-exists
-docker exec $CONTAINER createdb wubloader -U postgres
-docker exec $CONTAINER psql -d wubloader -f dump.sql -U postgres
-docker exec $CONTAINER rm tmp.sql
+# this will fail if there are active sessions by users other than 'postgres'
+# make sure all wubloader components are disconnected
+docker exec "$CONTAINER" dropdb wubloader -U postgres --if-exists
+docker exec "$CONTAINER" createdb wubloader -U postgres
+# this assumes that the vst role is in the postgres database
+docker exec "$CONTAINER" psql -d wubloader -f tmp.sql -U postgres
+docker exec "$CONTAINER" rm tmp.sql

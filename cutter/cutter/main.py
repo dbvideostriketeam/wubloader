@@ -502,7 +502,7 @@ def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=80
 		except Exception:
 			delay = common.jitter(10)
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
-			stopping.wait(delay)
+			stop.wait(delay)
 
 	youtube_creds = json.load(open(youtube_creds_file))
 	youtube = Youtube(

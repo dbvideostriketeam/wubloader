@@ -281,14 +281,13 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 	logging.info("Starting up")
 
 	dbmanager = None
-	stopping = gevent.event.Event()
 	while dbmanager is None:
 		try:
 			dbmanager = DBManager(dsn=dbconnect)
 		except Exception:
 			delay = common.jitter(10)
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
-			stopping.wait(delay)
+			stop.wait(delay)
 
 	sheets_creds = json.load(open(sheets_creds_file))
 
