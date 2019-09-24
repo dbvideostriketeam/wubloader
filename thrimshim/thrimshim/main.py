@@ -3,6 +3,7 @@ from functools import wraps
 import json
 import logging
 import signal
+import sys
 
 import argh
 import flask
@@ -13,11 +14,12 @@ import prometheus_client
 import psycopg2
 from psycopg2 import sql
 
-from common import database, PromLogCountsHandler, install_stacksampler
+import common
+from common import database
 from common.flask_stats import request_stats, after_request
 
-from google.oauth2 import id_token
-from google.auth.transport import requests
+import google.oauth2.id_token
+import google.auth.transport.requests
 
 psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
@@ -46,46 +48,43 @@ def authenticate(f):
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
 	@wraps(f)
-	def decorated_function(*args, **kwargs):
-		if flask.request.method == 'POST':
-			if app.no_authentication:
-				return f(*args, editor='NOT_AUTH', **kwargs)
+	def auth_wrapper(*args, **kwargs):
+		if app.no_authentication:
+			return f(*args, editor='NOT_AUTH', **kwargs)
 
+		try:
 			userToken = flask.request.json['token']
-			# check whether token is valid
-			try:
-				idinfo = id_token.verify_oauth2_token(userToken, requests.Request(), None)
-				if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-					raise ValueError('Wrong issuer.')
-			except ValueError:
-				return 'Invalid token. Access denied.', 403 
+		except (KeyError, TypeError):
+			return 'User token required', 401
+		# check whether token is valid
+		try:
+			idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
+			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+				raise ValueError('Wrong issuer.')
+		except ValueError:
+			return 'Invalid token. Access denied.', 403 
 
-			# check whether user is in the database
-			email = idinfo['email']
-			conn = app.db_manager.get_conn()
-			results = database.query(conn, """
-				SELECT email
-				FROM editors
-				WHERE email = %s""", email)
-			row = results.fetchone()
-			if row is None:
-				return 'Unknown user. Access denied.', 403
+		# check whether user is in the database
+		email = idinfo['email'].lower()
+		conn = app.db_manager.get_conn()
+		results = database.query(conn, """
+			SELECT email
+			FROM editors
+			WHERE lower(email) = %s""", email)
+		row = results.fetchone()
+		if row is None:
+			return 'Unknown user. Access denied.', 403
+	
+		return f(*args, editor=email, **kwargs)
 		
-			return f(*args, editor=email, **kwargs)
-		
-		else:
-			return f(*args, **kwargs)
 
-	return decorated_function
+	return auth_wrapper
 
-@app.route('/thrimshim/auth-test', methods=['GET', 'POST'])
+@app.route('/thrimshim/auth-test', methods=['POST'])
 @request_stats
 @authenticate
 def test(editor=None):
-	if flask.request.method == 'POST':
-		return json.dumps(editor)
-	else:
-		return "Hello World!"
+	return json.dumps(editor)
 
 @app.route('/metrics')
 @request_stats
@@ -116,17 +115,9 @@ def get_all_rows():
 	logging.info('All rows fetched')
 	return json.dumps(rows)
 
-@app.route('/thrimshim/<uuid:ident>', methods=['GET', 'POST'])
+
+@app.route('/thrimshim/<uuid:ident>', methods=['GET'])
 @request_stats
-@authenticate
-def thrimshim(ident, editor=None):
-	"""Comunicate between Thrimbletrimmer and the Wubloader database."""
-	if flask.request.method == 'POST':
-		row = flask.request.json
-		return update_row(ident, row, editor)
-	else:
-		return get_row(ident)
-		
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
 	conn = app.db_manager.get_conn()
@@ -150,7 +141,11 @@ def get_row(ident):
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
-def update_row(ident, new_row, editor):
+@app.route('/thrimshim/<uuid:ident>', methods=['POST'])
+@request_stats
+@authenticate
+def update_row(ident, editor=None):
+	new_row = flask.request.json
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
 
@@ -231,7 +226,7 @@ def update_row(ident, new_row, editor):
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
 	upload_location is 'manual'."""
-	link = flask.request.json
+	link = flask.request.json['link']
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
 		SELECT id, state, upload_location 
@@ -246,7 +241,7 @@ def manual_link(ident, editor=None):
 	results = database.query(conn, """
 		UPDATE events 
 		SET state='DONE', upload_location = 'manual', video_link = %s,
-		editor = %s, edit_time = %s, upload_time = %s
+			editor = %s, edit_time = %s, upload_time = %s
 		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
 			upload_location = 'manual'))""", link, editor, now, now, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
@@ -279,16 +274,32 @@ def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
-	app.db_manager = database.DBManager(dsn=connection_string)
+
 	app.no_authentication = no_authentication
 
+	stopping = gevent.event.Event()
 	def stop():
-		logging.info('Shutting down')
-		server.stop()
+		logging.info("Shutting down")
+		stopping.set()
+		# handle when the server is running
+		if hasattr(server, 'socket'):
+			server.stop()
+		# and when not
+		else:
+			sys.exit()
 	gevent.signal(signal.SIGTERM, stop)
 
-	PromLogCountsHandler.install()
-	install_stacksampler()
+	app.db_manager = None
+	while app.db_manager is None and not stopping.is_set():
+		try:
+			app.db_manager = database.DBManager(dsn=connection_string)
+		except Exception:
+			delay = common.jitter(10)
+			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			stopping.wait(delay)
+
+	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()

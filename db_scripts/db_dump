@@ -1,0 +1,16 @@
+#! /bin/bash
+NAME=${1:-postgres}
+BUCKET=${2:-wubloader-db}
+CONTAINER=$(docker ps --format "{{.Names}}" | grep "$NAME")
+if [ -z "$CONTAINER" ]; then
+	echo "Container not found"
+	exit 1
+fi
+if [ "$(wc -l <<<"$CONTAINER")" -ne 1 ]; then
+	echo "Multiple containers found"
+	exit 1
+fi
+
+FILE="wubloader-$(date +%Y-%m-%dT%H:%M:%S).sql"
+echo "Dumping $CONTAINER to $FILE"
+docker exec $CONTAINER pg_dump wubloader -U postgres | aws s3 cp - "s3://$BUCKET/$FILE"
