@@ -8,7 +8,7 @@ set -eu
 # Pass PUSH=true to also push the resulting images, or PUSH=latest to push them as :latest tag
 
 # The different images we can build
-COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx)
+COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx postgres)
 
 # Define push if not already defined
 PUSH=${PUSH:-}

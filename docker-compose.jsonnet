@@ -7,7 +7,7 @@
   // Change these to configure the services.
 
   // Image tag (application version) to use.
-  // Note: "latest" is not reccomended in production, as you can't be sure what version
+  // Note: "latest" is not recommended in production, as you can't be sure what version
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: "latest",
 
@@ -33,8 +33,11 @@
   // On OSX you need to change this to /private/var/lib/wubloader
   segments_path:: "/var/lib/wubloader/",
 
-  // Local path to save database to. Full path must already exist. Cannot contain ':'.
-  database_path:: "/var/lib/wubloader_postgres/",
+  // Local path to save database to. Full path must already exist. Cannot
+  // contain ':'. If this directory is non-empty, the database will start with
+  // the database in this directory and not run the setup scripts to create a 
+  // new database.
+  database_path:: "/private/var/lib/wubloader_postgres/",
 
   // The host's port to expose each service on.
   // Only nginx (and postgres if that is being deployed) needs to be externally accessible - the other non-database ports are routed through nginx.
@@ -53,9 +56,9 @@
   // You can exec into the container and telnet to this port to get a python shell.
   backdoor_port:: 1234,
 
-  // Other nodes to backfill from. You should not include the local node.
+  // Other nodes to always backfill from. You should not include the local node.
+  // If you are using the database to find peers, you should leave this empty.
   peers:: [
-    "http://wubloader.codegunner.com/"
   ],
 
   authentication:: true, // set to false to disable auth in thrimshim
@@ -63,12 +66,19 @@
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
-    user: "postgres",
-    password: "postgres",
+    user: "vst",
+    password: "dbfh2019", // don't use default in production. Must not contain ' or \ as these are not escaped.
     host: "postgres",
     port: 5432,
     dbname: "wubloader",
   },
+
+  // Other database arguments
+  db_super_user:: "postgres", // only accessible from localhost
+  db_super_password:: "postgres", // Must not contain ' or \ as these are not escaped.
+  db_replication_user:: "replicate", // if empty, don't allow replication
+  db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
+  db_standby:: false, // set to true to have this database replicate another server
 
   // Path to a JSON file containing google credentials as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
@@ -139,7 +149,7 @@
         "--qualities", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
-		"--node-database", $.db_connect,
+        "--node-database", $.db_connect,
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
@@ -233,14 +243,22 @@
     },
 
     [if $.enabled.postgres then "postgres"]: {
-      image: "postgres:latest",
+      image: "quay.io/ekimekim/wubloader-postgres:%s" % $.image_tag,
       restart: "on-failure",
       [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
       environment: {
-        POSTGRES_USER: $.db_args.user,
-        POSTGRES_PASSWORD: $.db_args.password,
+        POSTGRES_USER: $.db_super_user,
+        POSTGRES_PASSWORD: $.db_super_password,
         POSTGRES_DB: $.db_args.dbname,
+        PGDATA: "/mnt/database",
+        WUBLOADER_USER: $.db_args.user,
+        WUBLOADER_PASSWORD: $.db_args.password,
+        REPLICATION_USER: $.db_replication_user,
+        REPLICATION_PASSWORD: $.db_replication_password,
+        MASTER_NODE: $.db_args.host,
       },
+      volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
+      [if $.db_standby then "command"]: ["/standby_setup.sh"],
     },
 
   },

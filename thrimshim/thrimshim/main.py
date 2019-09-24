@@ -3,6 +3,7 @@ from functools import wraps
 import json
 import logging
 import signal
+import sys
 
 import argh
 import flask
@@ -13,7 +14,8 @@ import prometheus_client
 import psycopg2
 from psycopg2 import sql
 
-from common import database, PromLogCountsHandler, install_stacksampler
+import common
+from common import database
 from common.flask_stats import request_stats, after_request
 
 import google.oauth2.id_token
@@ -271,16 +273,32 @@ def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
-	app.db_manager = database.DBManager(dsn=connection_string)
+
 	app.no_authentication = no_authentication
 
+	stopping = gevent.event.Event()
 	def stop():
-		logging.info('Shutting down')
-		server.stop()
+		logging.info("Shutting down")
+		stopping.set()
+		# handle when the server is running
+		if hasattr(server, 'socket'):
+			server.stop()
+		# and when not
+		else:
+			sys.exit()
 	gevent.signal(signal.SIGTERM, stop)
 
-	PromLogCountsHandler.install()
-	install_stacksampler()
+	app.db_manager = None
+	while app.db_manager is None and not stopping.is_set():
+		try:
+			app.db_manager = database.DBManager(dsn=connection_string)
+		except Exception:
+			delay = common.jitter(10)
+			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			stopping.wait(delay)
+
+	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()

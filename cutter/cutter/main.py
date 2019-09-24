@@ -495,7 +495,16 @@ def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=80
 	# We have two independent jobs to do - to perform cut jobs (cutter),
 	# and to check the status of transcoding videos to see if they're done (transcode checker).
 	# We want to error if either errors, and shut down if either exits.
-	dbmanager = DBManager(dsn=dbconnect)
+	dbmanager = None
+	stopping = gevent.event.Event()
+	while dbmanager is None:
+		try:
+			dbmanager = DBManager(dsn=dbconnect)
+		except Exception:
+			delay = common.jitter(10)
+			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			stop.wait(delay)
+
 	youtube_creds = json.load(open(youtube_creds_file))
 	youtube = Youtube(
 		client_id=youtube_creds['client_id'],
