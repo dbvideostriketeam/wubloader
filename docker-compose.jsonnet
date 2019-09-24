@@ -64,7 +64,7 @@
 
   authentication:: true, // set to false to disable auth in thrimshim
 
-  thrimbletrimmer:: "true", // set to "" to not have nginx serve thrimbletrimmer pages.
+  thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
 
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
@@ -242,7 +242,7 @@
           for service in std.objectFields(forward_ports)
           if service in $.enabled && $.enabled[service]
         ]),
-        THRIMBLETRIMMER: $.thrimbletrimmer
+        THRIMBLETRIMMER: if $.thrimbletrimmer then "true" else "",
       },
     },
 
