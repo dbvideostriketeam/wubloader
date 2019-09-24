@@ -13,7 +13,8 @@ but a brief overview of the components:
   ie. it replicates missing segments.
 * `cutter` interacts with a database to perform cutting jobs
 * `sheetsync` syncs specifc database columns to a google doc which is the primary operator interface.
-* `thrimshim` acts as an interface between the editor (assumed to be the [Thrimbletrimmer](https://github.com/MasterGunner/Thrimbletrimmer-IV)) and the database.
+* `thrimshim` acts as an interface between the `thrimbletrimmer` editor and the database.
+* `thrimbletrimmer` is a browser based video editor.
 * `database` hosts a Postgres database to store events to be edited.
 * `nginx` provides a webserver through which the other components are exposed to the outside world.
 * `common` provides code shared between the other components.
