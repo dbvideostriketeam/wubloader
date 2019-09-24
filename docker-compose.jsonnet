@@ -13,14 +13,14 @@
 
   // For each service, whether to deploy that service.
   enabled:: {
-    downloader: false,
+    downloader: true,
     restreamer: true,
-    backfiller: false,
-    cutter: false,
+    backfiller: true,
+    cutter: true,
     sheetsync: false,
     thrimshim: true,
     nginx: true,
-    postgres: true,
+    postgres: false,
   },
 
   // Twitch channel to capture
