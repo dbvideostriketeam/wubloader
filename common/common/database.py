@@ -14,21 +14,22 @@ from psycogreen.gevent import patch_psycopg
 
 
 class DBManager(object):
-	"""Patches psycopg2 before any connections are created, and applies the schema.
-	Stores connect info for easy creation of new connections, and sets some defaults before
+	"""Patches psycopg2 before any connections are created. Stores connect info 
+	for easy creation of new connections, and sets some defaults before
 	returning them.
 
-	It has the ability to serve as a primitive connection pool, as getting a new conn will
-	return existing conns it knows about first, but this mainly just exists to re-use
-	the initial conn used to apply the schema, and you should use a real conn pool for
-	any non-trivial use.
+	It has the ability to serve as a primitive connection pool, as getting a
+	new conn will return existing conns it knows about first, but this mainly
+	just exists to re-use the initial conn used to test the connection, and you 
+	should use a real conn pool for any non-trivial use.
 
-	Returned conns are set to seralizable isolation level, autocommit, and use NamedTupleCursor cursors.
-	"""
+	Returned conns are set to seralizable isolation level, autocommit, and use
+	NamedTupleCursor cursors."""
 	def __init__(self, **connect_kwargs):
 		patch_psycopg()
 		self.conns = []
 		self.connect_kwargs = connect_kwargs
+		# get a connection to test whether connection is working. 
 		conn = self.get_conn()
 		self.put_conn(conn)
 
