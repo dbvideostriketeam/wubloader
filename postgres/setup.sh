@@ -7,7 +7,7 @@ sed -i "/host all all all/d" "$PGDATA/pg_hba.conf"
 echo "host all $WUBLOADER_USER all md5" >> "$PGDATA/pg_hba.conf"
 
 echo "Creating $WUBLOADER_USER"
-psql -v ON_ERROR_STOP=1 -U postgres <<-EOSQL
+psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER <<-EOSQL
 
 CREATE USER $WUBLOADER_USER LOGIN PASSWORD '$WUBLOADER_PASSWORD';
 
@@ -18,7 +18,7 @@ if [ -n "$REPLICATION_USER" ]; then
 	echo "Creating $REPLICATION_USER"
 	# allow the $REPLICATION user to replicate remotely
 	echo "host replication $REPLICATION_USER all md5" >> "$PGDATA/pg_hba.conf"
-	psql -v ON_ERROR_STOP=1 -U postgres <<-EOSQL
+	psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER <<-EOSQL
 
 	CREATE USER $REPLICATION_USER LOGIN REPLICATION PASSWORD '$REPLICATION_PASSWORD';
 
@@ -34,7 +34,8 @@ if [ -n "$REPLICATION_USER" ]; then
 
 fi
 
-psql -v ON_ERROR_STOP=1 -U $WUBLOADER_USER -d wubloader <<-EOSQL
+echo "Applying schema for $POSTGRES_DB"
+psql -v ON_ERROR_STOP=1 -U $WUBLOADER_USER -d $POSTGRES_DB <<-EOSQL
 -- Create type if it doesn't already exist
 DO \$\$ BEGIN
 	CREATE TYPE event_state as ENUM (
@@ -49,7 +50,7 @@ EXCEPTION WHEN duplicate_object THEN
 	NULL;
 END \$\$;
 
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE events (
 	id UUID PRIMARY KEY,
 	event_start TIMESTAMP,
 	event_end TIMESTAMP,
@@ -80,15 +81,15 @@ CREATE TABLE IF NOT EXISTS events (
 );
 
 -- Index on state, since that's almost always what we're querying on besides id
-CREATE INDEX IF NOT EXISTS event_state ON events (state);
+CREATE INDEX event_state ON events (state);
 
-CREATE TABLE IF NOT EXISTS nodes (
+CREATE TABLE nodes (
 	name TEXT PRIMARY KEY,
 	url TEXT NOT NULL,
 	backfill_from BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE IF NOT EXISTS editors (
+CREATE TABLE editors (
 	email TEXT PRIMARY KEY,
 	name TEXT NOT NULL
 );
@@ -96,14 +97,14 @@ EOSQL
 
 if [ -a /mnt/wubloader/nodes.csv ]; then
 	echo "Loading nodes from nodes.csv"
-	psql -v ON_ERROR_STOP=1 -U postgres -d ${POSTGRES_DB} <<-EOF
+	psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB <<-EOF
 	COPY nodes FROM '/mnt/wubloader/nodes.csv' DELIMITER ',' CSV HEADER;
 	EOF
 fi
 
 if [ -a /mnt/wubloader/editors.csv ]; then
 	echo "Loading editors from editors.csv"
-	psql -v ON_ERROR_STOP=1 -U postgres -d ${POSTGRES_DB} <<-EOF
+	psql -v ON_ERROR_STOP=1 -U $POSTGRES_USER -d $POSTGRES_DB <<-EOF
 	COPY editors FROM '/mnt/wubloader/editors.csv' DELIMITER ',' CSV HEADER;
 	EOF
 fi
