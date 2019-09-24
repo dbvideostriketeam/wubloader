@@ -37,7 +37,8 @@
   // contain ':'. If this directory is non-empty, the database will start with
   // the database in this directory and not run the setup scripts to create a 
   // new database.
-  database_path:: "/private/var/lib/wubloader_postgres/",
+  // On OSX you need to change this to /private/var/lib/wubloader_postgres/
+  database_path:: "/var/lib/wubloader_postgres/",
 
   // The host's port to expose each service on.
   // Only nginx (and postgres if that is being deployed) needs to be externally accessible - the other non-database ports are routed through nginx.

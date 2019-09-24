@@ -34,26 +34,77 @@ if [ -n "$REPLICATION_USER" ]; then
 
 fi
 
+psql -v ON_ERROR_STOP=1 -U $WUBLOADER_USER -d wubloader <<-EOSQL
+-- Create type if it doesn't already exist
+DO \$\$ BEGIN
+	CREATE TYPE event_state as ENUM (
+		'UNEDITED',
+		'EDITED',
+		'CLAIMED',
+		'FINALIZING',
+		'TRANSCODING',
+		'DONE'
+	);
+EXCEPTION WHEN duplicate_object THEN
+	NULL;
+END \$\$;
+
+CREATE TABLE IF NOT EXISTS events (
+	id UUID PRIMARY KEY,
+	event_start TIMESTAMP,
+	event_end TIMESTAMP,
+	category TEXT NOT NULL DEFAULT '',
+	description TEXT NOT NULL DEFAULT '',
+	submitter_winner TEXT NOT NULL DEFAULT '',
+	poster_moment BOOLEAN NOT NULL DEFAULT FALSE,
+	image_links TEXT[] NOT NULL DEFAULT '{}', -- default empty array
+	notes TEXT NOT NULL DEFAULT '',
+	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
+	uploader_whitelist TEXT[],
+	upload_location TEXT CHECK (state = 'UNEDITED' OR upload_location IS NOT NULL),
+	video_start TIMESTAMP CHECK (state IN ('UNEDITED', 'DONE') OR video_start IS NOT NULL),
+	video_end TIMESTAMP CHECK (state IN ('UNEDITED', 'DONE') OR video_end IS NOT NULL),
+	video_title TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_title IS NOT NULL),
+	video_description TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_description IS NOT NULL),
+	video_channel TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_channel IS NOT NULL),
+	video_quality TEXT NOT NULL DEFAULT 'source',
+	state event_state NOT NULL DEFAULT 'UNEDITED',
+	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
+	error TEXT,
+	video_id TEXT,
+	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL),
+	editor TEXT,
+	edit_time TIMESTAMP CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
+	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL)
+
+);
+
+-- Index on state, since that's almost always what we're querying on besides id
+CREATE INDEX IF NOT EXISTS event_state ON events (state);
+
+CREATE TABLE IF NOT EXISTS nodes (
+	name TEXT PRIMARY KEY,
+	url TEXT NOT NULL,
+	backfill_from BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+CREATE TABLE IF NOT EXISTS editors (
+	email TEXT PRIMARY KEY,
+	name TEXT NOT NULL
+);
+EOSQL
+
 if [ -a /mnt/wubloader/nodes.csv ]; then
 	echo "Loading nodes from nodes.csv"
-	psql -v -U postgres -d ${POSTGRES_DB} <<-EOF
-	CREATE TABLE IF NOT EXISTS nodes (
-		name TEXT PRIMARY KEY,
-		url TEXT NOT NULL,
-		backfill_from BOOLEAN NOT NULL DEFAULT TRUE);
+	psql -v ON_ERROR_STOP=1 -U postgres -d ${POSTGRES_DB} <<-EOF
 	COPY nodes FROM '/mnt/wubloader/nodes.csv' DELIMITER ',' CSV HEADER;
-	ALTER TABLE nodes OWNER TO $WUBLOADER_USER;
 	EOF
 fi
 
 if [ -a /mnt/wubloader/editors.csv ]; then
 	echo "Loading editors from editors.csv"
-	psql -v -U postgres -d ${POSTGRES_DB} <<-EOF
-	CREATE TABLE IF NOT EXISTS editors (
-		email TEXT PRIMARY KEY,
-		name TEXT NOT NULL);
+	psql -v ON_ERROR_STOP=1 -U postgres -d ${POSTGRES_DB} <<-EOF
 	COPY editors FROM '/mnt/wubloader/editors.csv' DELIMITER ',' CSV HEADER;
-	ALTER TABLE editors OWNER TO $WUBLOADER_USER;
 	EOF
 fi
 
