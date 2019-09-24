@@ -61,6 +61,8 @@
   peers:: [
   ],
 
+  authentication:: true, // set to false to disable auth in thrimshim
+
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
@@ -186,7 +188,7 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
-      ],
+      ] + if $.authentication then [] else ["--no-authentication"],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.

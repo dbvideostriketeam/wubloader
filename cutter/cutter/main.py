@@ -1,4 +1,5 @@
 
+import datetime
 import json
 import logging
 import os
@@ -461,9 +462,9 @@ class TranscodeChecker(object):
 	def mark_done(self, ids):
 		result = query(self.conn, """
 			UPDATE events
-			SET state = 'DONE'
+			SET state = 'DONE', upload_time = %s
 			WHERE id = ANY (%s::uuid[]) AND state = 'TRANSCODING'
-		""", ids.keys())
+		""", datetime.datetime.utcnow(), ids.keys())
 		return result.rowcount
 
 

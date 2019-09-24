@@ -8,8 +8,10 @@ setup(
 		"argh",
 		"flask",
 		"gevent",
+		"google-auth",
 		"psycogreen",
 		"psycopg2",
+		"requests",
 		"wubloader-common",
 	],
 )
