@@ -21,7 +21,6 @@
     thrimshim: true,
     nginx: true,
     postgres: true,
-    thrimbletrimmer: true,
   },
 
   // Twitch channel to capture
@@ -65,6 +64,8 @@
 
   authentication:: true, // set to false to disable auth in thrimshim
 
+  thrimbletrimmer:: "true", // set to "" to not have nginx serve thrimbletrimmer pages.
+
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
@@ -87,7 +88,7 @@
   google_creds:: "./google_creds.json",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
-  edit_url:: "http://thrimbletrimmer.codegunner.com/{}",
+  edit_url:: "http://thrimbletrimmer.codegunner.com/?id={}",
 
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
@@ -225,7 +226,6 @@
     [if $.enabled.nginx then "nginx"]: {
       # mapping of services to internal ports for nginx to forward
       local forward_ports = {
-        thrimbletrimmer: 80,
         restreamer: 8000,
         downloader: 8001,
         backfiller: 8002,
@@ -242,6 +242,7 @@
           for service in std.objectFields(forward_ports)
           if service in $.enabled && $.enabled[service]
         ]),
+        THRIMBLETRIMMER: $.thrimbletrimmer
       },
     },
 
