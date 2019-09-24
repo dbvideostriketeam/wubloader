@@ -36,19 +36,16 @@ fi
 
 echo "Applying schema for $POSTGRES_DB"
 psql -v ON_ERROR_STOP=1 -U $WUBLOADER_USER -d $POSTGRES_DB <<-EOSQL
--- Create type if it doesn't already exist
-DO \$\$ BEGIN
-	CREATE TYPE event_state as ENUM (
-		'UNEDITED',
-		'EDITED',
-		'CLAIMED',
-		'FINALIZING',
-		'TRANSCODING',
-		'DONE'
-	);
-EXCEPTION WHEN duplicate_object THEN
-	NULL;
-END \$\$;
+
+CREATE TYPE event_state as ENUM (
+	'UNEDITED',
+	'EDITED',
+	'CLAIMED',
+	'FINALIZING',
+	'TRANSCODING',
+	'DONE'
+);
+
 
 CREATE TABLE events (
 	id UUID PRIMARY KEY,
