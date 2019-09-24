@@ -84,7 +84,6 @@ thrimbletrimmerSubmit = function() {
             video_title:document.getElementById("VideoTitle").value,
             video_description:document.getElementById("VideoDescription").value,
             allow_holes:String(document.getElementById('AllowHoles').checked),
-            experimental:String(document.getElementById('IsExperimental').checked),
             upload_location:document.getElementById('uploadLocation').value,
             video_channel:document.getElementById("StreamName").value,
             video_quality:document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value,
@@ -127,8 +126,7 @@ thrimbletrimmerDownload = function() {
             "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
             "?start=" + downloadStart + 
             "&end=" + downloadEnd + 
-            "&allow_holes=" + String(document.getElementById('AllowHoles').checked) +
-            "&experimental=" + String(document.getElementById('IsExperimental').checked);
+            "&allow_holes=" + String(document.getElementById('AllowHoles').checked);
         console.log(targetURL);
         document.getElementById('outputFile').src = targetURL;
     }
