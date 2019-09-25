@@ -191,6 +191,8 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
+        $.channel,
+        $.bustime_start,
       ] + if $.authentication then [] else ["--no-authentication"],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],

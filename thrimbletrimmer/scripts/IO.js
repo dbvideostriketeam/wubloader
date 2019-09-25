@@ -1,5 +1,4 @@
-//var desertBusStart = new Date("1970-01-01T00:00:00Z");
-var desertBusStart = new Date("2019-09-20T18:00:00");
+var desertBusStart = new Date("1970-01-01T00:00:00Z");
 
 pageSetup = function() {
     //Get values from ThrimShim
@@ -11,6 +10,8 @@ pageSetup = function() {
                 return;
             }
             //data = testThrimShim;
+            desertBusStart = new Date(data.bustime_start);
+            document.getElementById("StreamName").value = data.channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
             document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
             document.getElementById("StreamStart").value = data.event_start;
