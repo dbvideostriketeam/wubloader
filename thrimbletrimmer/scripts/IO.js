@@ -11,7 +11,6 @@ pageSetup = function() {
             }
             //data = testThrimShim;
             desertBusStart = new Date(data.bustime_start);
-            document.getElementById("StreamName").value = data.channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
             document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
             document.getElementById("StreamStart").value = data.event_start;

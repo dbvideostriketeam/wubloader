@@ -138,7 +138,8 @@ def get_row(ident):
 			else value
 		) for key, value in response.items()
 	}
-	response["channel"] = app.channel
+	if response["video_channel"] is None:
+		response["video_channel"] = app.default_channel
 	response["bustime_start"] = app.bustime_start
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
@@ -270,17 +271,17 @@ def reset_row(ident, editor=None):
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
 @argh.arg('connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
-@argh.arg('channel', help='The channel this instance will serve events for')
-@argh.arg('bustime_start', help='The start time in UTC for the event, for UTC-Bustime conversion')
+@argh.arg('default-channel', help='The default channel this instance will serve events for')
+@argh.arg('bustime-start', help='The start time in UTC for the event, for UTC-Bustime conversion')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
 @argh.arg('--no-authentication', help='Do not authenticate')
-def main(connection_string, channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
+def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 
 	app.no_authentication = no_authentication
-	app.channel = channel
+	app.default_channel = default_channel
 	app.bustime_start = bustime_start
 
 	stopping = gevent.event.Event()
