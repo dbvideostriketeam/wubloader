@@ -1,0 +1,975 @@
+{
+  "style": "dark", 
+  "rows": [
+    {
+      "repeat": null, 
+      "titleSize": "h6", 
+      "repeatIteration": null, 
+      "title": "", 
+      "collapsed": false, 
+      "height": "250px", 
+      "repeatRowId": null, 
+      "panels": [
+        {
+          "sort": {
+            "col": 0, 
+            "desc": true
+          }, 
+          "styles": [
+            {
+              "mappingType": 1, 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "colorMode": null, 
+              "thresholds": [], 
+              "alias": "", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "__name__", 
+              "type": "hidden", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "colorMode": null, 
+              "thresholds": [], 
+              "alias": "", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "job", 
+              "type": "hidden", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "colorMode": null, 
+              "thresholds": [], 
+              "alias": "", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Time", 
+              "type": "hidden", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "restreamer", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #A", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "downloader", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #B", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "backfiller", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #C", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "cutter", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #D", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "thrimshim", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #E", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "sheetsync", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #F", 
+              "type": "string", 
+              "unit": "short"
+            }
+          ], 
+          "span": 8, 
+          "description": "", 
+          "links": [], 
+          "title": "Service Status by Node", 
+          "transform": "table", 
+          "showHeader": true, 
+          "targets": [
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"restreamer\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "A"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"downloader\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "B"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"backfiller\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "C"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"cutter\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "D"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"thrimshim\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "E"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"sheetsync\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "F"
+            }
+          ], 
+          "fontSize": "100%", 
+          "datasource": "$datasource", 
+          "id": 2, 
+          "pageSize": null, 
+          "type": "table", 
+          "scroll": true, 
+          "columns": []
+        }, 
+        {
+          "bars": true, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(irate(log_count_total{level!=\"INFO\"}[2m])) by (job, level, module, function) > 0\n", 
+              "refId": "A", 
+              "legendFormat": "{{job}} {{level}}({{module}}:{{function}})", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 4, 
+          "title": "Error log rate", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 3, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": false, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "logs / sec", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }, 
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(rate(segments_backfilled_total[2m])) by (channel, quality)", 
+              "refId": "A", 
+              "legendFormat": "{{channel}}({{quality}}) backfilled", 
+              "format": "time_series"
+            }, 
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(rate(segments_downloaded_total[2m])) by (channel, quality)", 
+              "refId": "B", 
+              "legendFormat": "{{channel}}({{quality}}) live capture", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 4, 
+          "title": "Segments downloaded", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 4, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "segments / sec", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }, 
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(rate(http_request_latency_all_count{status=\"200\"}[2m])) by (endpoint, method)", 
+              "refId": "A", 
+              "legendFormat": "{{method}} {{endpoint}}", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 4, 
+          "title": "Successful requests by endpoint", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 5, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "requests / sec", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }, 
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "0", 
+              "refId": "A", 
+              "legendFormat": "Not implemented", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 4, 
+          "title": "Database events by state", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 6, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "Not implemented", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "events", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }
+      ], 
+      "type": "row", 
+      "showTitle": false, 
+      "collapse": false
+    }, 
+    {
+      "repeat": null, 
+      "titleSize": "h6", 
+      "repeatIteration": null, 
+      "title": "Downloader", 
+      "collapsed": false, 
+      "height": "250px", 
+      "repeatRowId": null, 
+      "panels": [
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(rate(segments_downloaded_total[2m])) by (instance, channel, quality)", 
+              "refId": "A", 
+              "legendFormat": "{{instance}} {{channel}}({{quality}})", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 6, 
+          "title": "Segments downloaded by node", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 7, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "segments / sec", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }, 
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "time() - max(latest_segment) by (instance, channel, quality)", 
+              "refId": "A", 
+              "legendFormat": "{{instance}} {{channel}}({{quality}})", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 6, 
+          "title": "Downloader stream delay by node", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 8, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "Time between the latest downloaded segment's timestamp and current time", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "s", 
+              "max": null, 
+              "min": 0, 
+              "label": null, 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }
+      ], 
+      "type": "row", 
+      "showTitle": true, 
+      "collapse": false
+    }, 
+    {
+      "repeat": null, 
+      "titleSize": "h6", 
+      "repeatIteration": null, 
+      "title": "Backfiller", 
+      "collapsed": false, 
+      "height": "250px", 
+      "repeatRowId": null, 
+      "panels": [
+        {
+          "bars": false, 
+          "timeFrom": null, 
+          "thresholds": [], 
+          "spaceLength": 10, 
+          "nullPointMode": "null", 
+          "renderer": "flot", 
+          "stack": false, 
+          "linewidth": 1, 
+          "steppedLine": false, 
+          "targets": [
+            {
+              "intervalFactor": 1, 
+              "expr": "sum(rate(segments_backfilled_total[2m])) by (remote, instance)", 
+              "refId": "A", 
+              "legendFormat": "{{remote}} -> {{instance}}", 
+              "format": "time_series"
+            }
+          ], 
+          "fill": 0, 
+          "span": 12, 
+          "title": "Backfill by node pair", 
+          "tooltip": {
+            "sort": 0, 
+            "shared": true, 
+            "value_type": "individual"
+          }, 
+          "id": 9, 
+          "points": false, 
+          "xaxis": {
+            "buckets": null, 
+            "values": [], 
+            "mode": "time", 
+            "name": null, 
+            "show": true
+          }, 
+          "seriesOverrides": [], 
+          "percentage": false, 
+          "type": "graph", 
+          "repeat": null, 
+          "description": "", 
+          "dashLength": 10, 
+          "legend": {
+            "rightSide": false, 
+            "avg": false, 
+            "sideWidth": null, 
+            "show": false, 
+            "max": false, 
+            "min": false, 
+            "current": false, 
+            "values": false, 
+            "alignAsTable": false, 
+            "total": false, 
+            "hideZero": false
+          }, 
+          "timeShift": null, 
+          "aliasColors": {}, 
+          "lines": true, 
+          "yaxes": [
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": 0, 
+              "label": "segments / sec", 
+              "show": true
+            }, 
+            {
+              "logBase": 1, 
+              "format": "short", 
+              "max": null, 
+              "min": null, 
+              "label": null, 
+              "show": true
+            }
+          ], 
+          "datasource": "$datasource", 
+          "pointradius": 1
+        }
+      ], 
+      "type": "row", 
+      "showTitle": true, 
+      "collapse": false
+    }
+  ], 
+  "templating": {
+    "enable": false, 
+    "list": [
+      {
+        "regex": "", 
+        "sort": 0, 
+        "multi": false, 
+        "hide": 0, 
+        "name": "datasource", 
+        "auto_count": 1, 
+        "allValue": null, 
+        "auto": false, 
+        "tags": [], 
+        "tagValuesQuery": null, 
+        "refresh": 1, 
+        "label": "Datasource", 
+        "current": {
+          "text": "default", 
+          "value": "default"
+        }, 
+        "auto_min": "10s", 
+        "datasource": null, 
+        "tagsQuery": null, 
+        "query": "prometheus", 
+        "includeAll": false, 
+        "type": "datasource", 
+        "options": [], 
+        "useTags": false
+      }
+    ]
+  }, 
+  "links": [], 
+  "tags": [
+    "generated"
+  ], 
+  "graphTooltip": 1, 
+  "hideControls": true, 
+  "title": "Overview", 
+  "editable": true, 
+  "refresh": "5m", 
+  "timepicker": {
+    "time_options": [
+      "5m", 
+      "15m", 
+      "1h", 
+      "6h", 
+      "12h", 
+      "24h", 
+      "2d", 
+      "7d", 
+      "30d"
+    ], 
+    "refresh_intervals": [
+      "5s", 
+      "10s", 
+      "30s", 
+      "1m", 
+      "5m", 
+      "15m", 
+      "30m", 
+      "1h", 
+      "2h", 
+      "1d"
+    ]
+  }, 
+  "time": {
+    "to": "now", 
+    "from": "now-15m"
+  }, 
+  "timezone": "", 
+  "schemaVersion": 14, 
+  "annotations": {
+    "list": []
+  }, 
+  "uid": "rjd405mn"
+}
