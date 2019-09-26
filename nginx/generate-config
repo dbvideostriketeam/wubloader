@@ -14,9 +14,10 @@ LOCATIONS=$(
 		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
 		# thrimshim takes any calls to thrimshim/
 		[ "$name" == "thrimshim" ] && generate_location /thrimshim "http://thrimshim:$port"
-		# all services have metrics under /metrics/SERVICE
+		# all services have metrics under /metrics/SERVICE, except for thrimebletrimmer
 		generate_location "/metrics/$name" "http://$name:$port/metrics"
 	done
+	[ -n "$THRIMBLETRIMMER" ] && echo -e "\t\tlocation = / { return 301 \$scheme://\$host/thrimbletrimmer/dashboard.html; }\n\t\tlocation /thrimbletrimmer { }"
 )
 
 cat > /etc/nginx/nginx.conf <<EOF
@@ -27,8 +28,11 @@ events {
 }
 
 http {
+	include /etc/nginx/mime.types;
 	server {
 		listen 80;
+		gzip on;
+		gzip_comp_level 9;
 $LOCATIONS
 	}
 }

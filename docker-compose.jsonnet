@@ -64,6 +64,8 @@
 
   authentication:: true, // set to false to disable auth in thrimshim
 
+  thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
+
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
@@ -86,7 +88,7 @@
   google_creds:: "./google_creds.json",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
-  edit_url:: "http://thrimbletrimmer.codegunner.com/{}",
+  edit_url:: "http://thrimbletrimmer.codegunner.com/?id={}",
 
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
@@ -189,6 +191,8 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
+        $.channel,
+        $.bustime_start,
       ] + if $.authentication then [] else ["--no-authentication"],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
@@ -240,6 +244,7 @@
           for service in std.objectFields(forward_ports)
           if service in $.enabled && $.enabled[service]
         ]),
+        THRIMBLETRIMMER: if $.thrimbletrimmer then "true" else "",
       },
     },
 

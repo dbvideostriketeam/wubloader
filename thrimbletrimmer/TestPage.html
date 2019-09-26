@@ -1,0 +1,142 @@
+
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Thrimbletrimmer Goes Forth</title>
+    <meta name="description" content="">
+
+    <meta name="google-signin-client_id" content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com">
+    <script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+</head>
+<body>
+    <!-- https://developers.google.com/identity/sign-in/web/sign-in -->
+    <div class="g-signin2" data-onsuccess="onSignIn"></div>
+    <a href="#" onclick="signOut();">Sign out</a>
+
+    <script>
+        var user;
+        function onSignIn(googleUser) {
+            user = googleUser;
+            var profile = googleUser.getBasicProfile();
+            console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
+            console.log('Name: ' + profile.getName());
+            console.log('Image URL: ' + profile.getImageUrl());
+            console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
+            console.log('ID Token: ' + googleUser.getAuthResponse().id_token);
+        }
+        function signOut() {
+            user = null;
+            var auth2 = gapi.auth2.getAuthInstance();
+            auth2.signOut().then(function () {
+            console.log('User signed out.');
+            });
+        }
+    </script>
+    <div>
+        <br/>
+        <input id="server" value="" />
+        <input id="rowId" value="04860aa4-d6a5-11e9-9d36-2a2ae2dbcce4" />
+        <input type="button" onclick="getRow()" value="Get Row"/>
+        <a href="/thrimshim">All Rows</a>
+        <br/>
+        <textarea id="rowdump"></textarea>
+    </div>
+    <div>
+        <br/>
+        <input type="button" onclick="testAuth()" value="Test Auth" /><br />
+        <input type="button" onclick="testSubmit()" value="Test Submit" /><br />
+        <input type="button" onclick="testManualLink()" value="Test Manual Link" /><input id="manualLink" value="google.ca"/><br />
+        <input type="button" onclick="testReset()" value="Test Reset" /><br />
+    </div>
+    <script>
+        function getRow() {
+            fetch(document.getElementById("server").value+"/thrimshim/"+document.getElementById("rowId").value).then(function (response) {
+                response.text().then(function(data) {
+                    document.getElementById("rowdump").value=data;
+                });
+            });
+        }
+
+        function testAuth() {
+            fetch(document.getElementById("server").value+"/thrimshim/auth-test", {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    test: "123 Hello World?",
+                    token: user.getAuthResponse().id_token
+                })
+            }).then(function(response) {
+                if (response.status !== 200) {
+                    console.log('Looks like there was a problem. Status Code: ' + response.status);
+                    return;
+                }
+
+                // Examine the text in the response
+                response.json().then(function(data) {
+                    console.log(data);
+                });
+            }).catch(function(err) {
+                console.log('Fetch Error :-S', err);
+            });
+        }
+
+        function testSubmit() {
+            var wubData = {
+                allow_holes: "true",
+                experimental: "true",
+                state: "EDITED",
+                token: user.getAuthResponse().id_token,
+                upload_location: "YouTube",
+                uploader_whitelist: null,
+                video_channel: "rpglimitbreak",
+                video_description: "Test Description",
+                video_end: "2019-09-14T03:54:28.546",
+                video_quality: "source",
+                video_start: "2019-09-14T03:48:06.546",
+                video_title: "Test"
+            }
+
+            //Submit to thrimshim
+            fetch(document.getElementById("server").value+"/thrimshim/"+document.getElementById("rowId").value, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(wubData)
+            }).then(data => console.log(data));
+            
+        }
+
+        function testManualLink() {
+            fetch(document.getElementById("server").value+"/thrimshim/manual-link/"+document.getElementById("rowId").value, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    link: document.getElementById("manualLink").value, 
+                    token: user.getAuthResponse().id_token
+                })
+            }).then(data => console.log(data));
+        }
+
+        function testReset() {
+            fetch(document.getElementById("server").value+"/thrimshim/reset/"+document.getElementById("rowId").value, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({token: user.getAuthResponse().id_token})
+            }).then(data => console.log(data));
+        }
+    </script>
+</body>
+</html>
