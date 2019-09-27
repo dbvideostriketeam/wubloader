@@ -72,15 +72,15 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, youtube, dbmanager, stop, name, segments_path):
-		"""youtube is an authenticated and initialized youtube api client.
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path):
+		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		Name is this uploader's unique name.
 		Segments path is where to look for segments.
 		"""
 		self.name = name
-		self.youtube = youtube
+		self.upload_locations = upload_locations
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.segments_path = segments_path
@@ -171,15 +171,18 @@ class Cutter(object):
 
 	def list_candidates(self):
 		"""Return a list of all available candidates that we might be able to cut."""
+		# We only accept candidates if they haven't excluded us by whitelist,
+		# and we are capable of uploading to their desired upload location.
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
 			WHERE state = 'EDITED'
 			AND (uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))
+			AND upload_location = ANY (%(upload_locations)s)
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in CUT_JOB_PARAMS)
 		)
-		result = query(self.conn, built_query, name=self.name)
+		result = query(self.conn, built_query, name=self.name, upload_locations=self.upload_locations.keys())
 		return result.fetchall()
 
 	def check_candidate(self, candidate):
@@ -242,9 +245,9 @@ class Cutter(object):
 		  at which point it will re-sync with DB as best it can.
 		  This situation almost certainly requires operator intervention.
 		"""
-		# TODO handle multiple upload locations. Currently everything's hard-coded to youtube.
 
-		self.logger.info("Cutting and uploading job {}".format(format_job(job)))
+		upload_backend = self.upload_locations[job.upload_location]
+		self.logger.info("Cutting and uploading job {} to {}".format(format_job(job), upload_backend))
 		cut = cut_segments(job.segments, job.video_start, job.video_end)
 
 		# This flag tracks whether we've told requests to finalize the upload,
@@ -322,7 +325,7 @@ class Cutter(object):
 			# from requests.post() are not recoverable.
 
 		try:
-			video_id = self.youtube.upload_video(
+			video_id = upload_backend.upload_video(
 				title=job.video_title,
 				description=job.video_description,
 				tags=[], # TODO
@@ -434,7 +437,7 @@ class TranscodeChecker(object):
 
 	def __init__(self, youtube, dbmanager, stop):
 		"""
-		youtube is an authenticated and initialized youtube api client.
+		youtube is an authenticated and initialized youtube upload backend.
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
@@ -495,12 +498,13 @@ class TranscodeChecker(object):
 		return result.rowcount
 
 
-def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0):
+def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0, upload_location=""):
 	"""dbconnect should be a postgres connection string, which is either a space-separated
 	list of key=value pairs, or a URI like:
 		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
 
 	youtube_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
+	upload_location is the name of the upload location this youtube creds file gives access to.
 
 	name defaults to hostname.
 	"""
@@ -538,7 +542,7 @@ def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=80
 		client_secret=youtube_creds['client_secret'],
 		refresh_token=youtube_creds['refresh_token'],
 	)
-	cutter = Cutter(youtube, dbmanager, stop, name, base_dir)
+	cutter = Cutter({upload_location: youtube}, dbmanager, stop, name, base_dir)
 	transcode_checker = TranscodeChecker(youtube, dbmanager, stop)
 	jobs = [
 		gevent.spawn(cutter.run),
