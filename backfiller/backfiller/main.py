@@ -242,9 +242,9 @@ class BackfillerManager(object):
 		only the URL is provided, the node name is taken from the hostname.
 		Third, node names and URLs can be requested from the database given by
 		--node-database. If multiple nodes URLs with the same name are found,
-		only the last is retained and any nodes matching the local hostname
-		(given by the --hostname argument) are ignored to try to prevent this
-		node from backfilling from itself."""
+		only the last is retained and any nodes with names matching the
+		localhost name (given by the --localhost argument) are ignored to try
+		to prevent this node from backfilling from itself."""
 
 		nodes = {urlparse.urlparse(node).hostname:node for node in self.static_nodes}
 		
@@ -269,7 +269,6 @@ class BackfillerManager(object):
 				WHERE backfill_from""")
 			for row in results:
 				nodes[row.name] = row.url
-		nodes = {key:val for key, val in nodes.items() if val != self.localhost}
 		nodes.pop(self.localhost, None)
 		return nodes.values()
 
