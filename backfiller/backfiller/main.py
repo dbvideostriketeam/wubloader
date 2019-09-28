@@ -269,7 +269,7 @@ class BackfillerManager(object):
 				WHERE backfill_from""")
 			for row in results:
 				nodes[row.name] = row.url
-
+		nodes = {key:val for key, val in nodes.items() if val != self.localhost}
 		nodes.pop(self.localhost, None)
 		return nodes.values()
 
