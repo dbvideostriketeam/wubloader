@@ -62,7 +62,7 @@
   peers:: [
   ],
 
-  localhost:: "http://example.com", // the name or URL of this node as it appears in the nodes table of the database
+  localhost:: "http://example.com", // the name in the nodes table of the database
   authentication:: true, // set to false to disable auth in thrimshim
 
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.

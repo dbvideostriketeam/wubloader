@@ -36,6 +36,7 @@ You can edit the `docker-compose.jsonnet` file to set the configuration options.
 * `segments_path`, the local path to save segments to.
 * `db_args`, the arguments for connecting to the wubloader database. You will likely need to update the `user`, `password` and `host` to match the database node that you are connecting to.
 * `ports`, the ports to expose each service on. Only the `nginx` port (default on port 80) needs to be externally accessible for a non-database node as all the other services are routed through `nginx`.
+* `localhost`, the name of the local machine as it appears in the database `nodes` table. This is prevent the node from backfilling from itself.
 
 To generate the `docker-compose.yml` file used by `docker-compose`, run `generate-docker-compose`
 
