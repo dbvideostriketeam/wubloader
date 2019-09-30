@@ -2,6 +2,7 @@
 
 import datetime
 import errno
+import hashlib
 import logging
 import os
 import random
@@ -9,6 +10,7 @@ import signal
 import socket
 import urlparse
 import uuid
+from base64 import b64encode
 
 import argh
 import gevent.backdoor
@@ -88,6 +90,8 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 	temp_path = os.path.join(dir_name, "{}.ts".format(temp_name))
 	common.ensure_directory(temp_path)
 
+	hash = hashlib.sha256()
+
 	try:
 		logging.debug('Fetching segment {} from {}'.format(path, node))
 		uri = '{}/segments/{}/{}/{}/{}'.format(node, channel, quality, hour, missing_segment)
@@ -98,6 +102,10 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 		with open(temp_path, 'w') as f:
 			for chunk in resp.iter_content(8192):
 				f.write(chunk)
+				hash.update(chunk)
+
+	hash_str = b64encode(hash.digest(), "-_").rstrip("=")
+	logger.info('{} {}'.format(missing_segment, hash_str))
 
 	#try to get rid of the temp file if an exception is raised.
 	except Exception:
