@@ -18,7 +18,7 @@ import common
 from common.database import DBManager, query
 from common.segments import get_best_segments, cut_segments, ContainsHoles
 
-from .youtube import Youtube
+from .upload_locations import Youtube
 
 
 videos_uploaded  = prom.Counter(
@@ -435,13 +435,14 @@ class TranscodeChecker(object):
 	FOUND_VIDEOS_RETRY_INTERVAL = 20
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, youtube, dbmanager, stop):
+	def __init__(self, backend, dbmanager, stop):
 		"""
-		youtube is an authenticated and initialized youtube upload backend.
+		backend is an upload backend that supports transcoding
+		and defines check_status().
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
-		self.youtube = youtube
+		self.backend = backend
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
@@ -483,10 +484,10 @@ class TranscodeChecker(object):
 	def check_ids(self, ids):
 		# Future work: Set error in DB if video id is not present,
 		# and/or try to get more info from yt about what's wrong.
-		statuses = self.youtube.get_video_status(ids.values())
+		done = self.backend.check_status(ids.values())
 		return {
 			id: video_id for id, video_id in ids.items()
-			if statuses.get(video_id) == 'processed'
+			if video_id in done
 		}
 
 	def mark_done(self, ids):
