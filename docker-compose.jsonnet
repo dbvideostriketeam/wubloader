@@ -63,6 +63,7 @@
   ],
 
   localhost:: "node_name", // the name in the nodes table of the database
+  
   authentication:: true, // set to false to disable auth in thrimshim
 
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
@@ -154,7 +155,7 @@
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
         "--node-database", $.db_connect,
-        "--localhost", $.localhost
+        "--localhost", $.localhost,
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
