@@ -25,9 +25,10 @@ class DBManager(object):
 
 	Returned conns are set to seralizable isolation level, autocommit, and use
 	NamedTupleCursor cursors."""
-	def __init__(self, **connect_kwargs):
+	def __init__(self, connect_timeout=30, **connect_kwargs):
 		patch_psycopg()
 		self.conns = []
+		self.connect_timeout = connect_timeout
 		self.connect_kwargs = connect_kwargs
 		# get a connection to test whether connection is working. 
 		conn = self.get_conn()
@@ -39,7 +40,8 @@ class DBManager(object):
 	def get_conn(self):
 		if self.conns:
 			return self.conns.pop(0)
-		conn = psycopg2.connect(cursor_factory=psycopg2.extras.NamedTupleCursor, **self.connect_kwargs)
+		conn = psycopg2.connect(cursor_factory=psycopg2.extras.NamedTupleCursor,
+			connect_timeout=self.connect_timeout, **self.connect_kwargs)
 		# We use serializable because it means less issues to think about,
 		# we don't care about the performance concerns and everything we do is easily retryable.
 		# This shouldn't matter in practice anyway since everything we're doing is either read-only
