@@ -28,6 +28,17 @@ segments_backfilled = prom.Counter(
 	['remote', 'channel', 'quality', 'hour'],
 )
 
+hours_backfilled = prom.Counter(
+	'hours_backfilled',
+	'Number of hours successfully backfilled',
+	['remote', 'channel', 'quality'],
+)
+
+hash_mismatches = prom.Counter(
+	'hash_mismatches',
+	'Number of segments with hash mismatches',
+	['remote', 'channel', 'quality', 'hour'],
+)
 
 HOUR_FMT = '%Y-%m-%dT%H'
 TIMEOUT = 5 #default timeout in seconds for remote requests or exceptions 
@@ -106,6 +117,11 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 
 	hash_str = b64encode(hash.digest(), "-_").rstrip("=")
 	logger.info('{} {}'.format(missing_segment, hash_str))
+	if hash_str not in missing_segment:
+		logger.warn('Hash of segment {} does not match. Discarding segment'.format(missing_segment))
+		hash_mismatches.labels(remote=node, channel=channel, quality=quality, hour=hour).inc()
+		os.remove(temp_path)
+		return 
 
 	#try to get rid of the temp file if an exception is raised.
 	except Exception:
@@ -376,6 +392,7 @@ class BackfillerWorker(object):
 					worker.get() # re-raise error, if any
 
 				self.logger.info('{} segments in {}/{} backfilled'.format(len(workers), quality, hour))
+				hour_backfilled.labels(remote=self.node, channel=self.channel, quality=self.quality).inc()
 
 	def run(self):
 		self.logger.info('Starting')
