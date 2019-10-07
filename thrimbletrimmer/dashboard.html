@@ -135,6 +135,8 @@
                     <th>State</th>
                     <th>Edit</th>
                     <th>Link</th>
+                    <th>Edit Time</th>
+                    <th>Upload Time</th>
                 </tr>
             </table>
         </div>
@@ -218,6 +220,9 @@
 
         function populateTable (events) {
             events.forEach(event => {
+                if(!event.description) { //If a row doesn't have a description, it's probably orphaned from the spreadsheet, and does not need to be displayed.
+                    return;
+                }
                 let row = document.createElement("TR");
                 row.innerHTML = `
                     <td>${event.event_start}</td>
@@ -227,6 +232,8 @@
                     <td>${event.state}</td>
                     <td><a href="/thrimbletrimmer?id=${event.id}">Edit</a></td>
                     <td>${event.video_link ? "<a href='"+event.video_link+"'>"+event.video_link+"</a>":""}</td>
+                    <td>${event.edit_time}</td>
+                    <td>${event.upload_time}</td>
                 `;
                 document.getElementById('QueueTable').appendChild(row);
             });
