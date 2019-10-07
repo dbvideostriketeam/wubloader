@@ -86,7 +86,8 @@
                 Description:<br/>
                 <textarea id="VideoDescription" ></textarea>
             </div>
-            <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit()"/>
+            <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit('EDITED')"/>
+            <input type="button" id="DraftButton" value="Save Draft" onclick="thrimbletrimmerSubmit('UNEDITED')"/>
             <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload()"/>
             <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
             <a id="ManualLinkButton" href="JavaScript:toggleHiddenPane('ManualLinkPane');">Manual Link</a> | 

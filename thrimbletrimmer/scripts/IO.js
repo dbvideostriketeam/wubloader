@@ -70,7 +70,7 @@ loadPlaylist = function(startTrim, endTrim) {
     });
 };
 
-thrimbletrimmerSubmit = function() {
+thrimbletrimmerSubmit = function(state) {
     document.getElementById('SubmitButton').disabled = true;
     if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
         alert("End Time must be greater than Start Time");
@@ -88,7 +88,7 @@ thrimbletrimmerSubmit = function() {
             video_channel:document.getElementById("StreamName").value,
             video_quality:document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value,
             uploader_whitelist:(document.getElementById('uploaderWhitelist').value ? document.getElementById('uploaderWhitelist').value.split(','):null),
-            state:"EDITED",
+            state:state,
             token: user.getAuthResponse().id_token
         };
         // state_columns = ['state', 'uploader', 'error', 'video_link'] 
