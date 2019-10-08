@@ -20,7 +20,9 @@ from common.segments import get_best_segments, cut_segments, ContainsHoles
 
 from .youtube import Youtube
 
-
+videos_cut = prom.Counter(
+	'videos_uploaded'
+)
 # A list of all the DB column names in CutJob
 CUT_JOB_PARAMS = [
 	"category",
