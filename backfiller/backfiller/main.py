@@ -10,6 +10,7 @@ import signal
 import socket
 import urlparse
 import uuid
+from base64 import b64encode
 
 import argh
 import gevent.backdoor
@@ -125,7 +126,8 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 				f.write(chunk)
 				hash.update(chunk)
 
-		if hash != common.parse_segment_path(missing_segment).hash:
+		filename_hash = common.parse_segment_path(missing_segment).hash
+		if filename_hash != hash.digest():
 			logger.warn('Hash of segment {} does not match. Discarding segment'.format(missing_segment))
 			hash_mismatches.labels(remote=node, channel=channel, quality=quality, hour=hour).inc()
 			os.remove(temp_path)
