@@ -97,7 +97,7 @@
 
   // The spreadsheet id and worksheet names for sheet sync to act on
   sheet_id:: "your_id_here",
-  worksheets:: ["Day %d" % n for n in std.range(1, 7)],
+  worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 7)],
 
   // Now for the actual docker-compose config
 

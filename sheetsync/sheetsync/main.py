@@ -84,6 +84,8 @@ class SheetSync(object):
 
 	def parse_bustime(self, value):
 		"""Convert from HH:MM or HH:MM:SS format to datetime"""
+		if value.strip() == '--':
+			return None
 		bustime = common.parse_bustime(value)
 		return common.bustime_to_dt(self.bustime_start, bustime)
 
