@@ -61,11 +61,12 @@ def parse_segment_path(path):
 		if type not in ('full', 'partial', 'temp'):
 			raise ValueError("Unknown type {!r}".format(type))
 		hash = None if type == 'temp' else unpadded_b64_decode(hash)
+		start = None if hour is None else datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f")
 		return SegmentInfo(
 			path = path,
 			channel = channel,
 			quality = quality,
-			start = datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f"),
+			start = start,
 			duration = datetime.timedelta(seconds=float(duration)),
 			type = type,
 			hash = hash,
