@@ -27,7 +27,7 @@ def parse_bustime(bustime):
 	see it for detail."""
 	if bustime.startswith('-'):
 		# parse without the -, then negate it
-		return -parse_bustime(bustime[:1])
+		return -parse_bustime(bustime[1:])
 
 	parts = bustime.strip().split(':')
 	if len(parts) == 2:
