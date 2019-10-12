@@ -10,7 +10,6 @@ import signal
 import socket
 import urlparse
 import uuid
-from base64 import b64encode
 
 import argh
 import gevent.backdoor
