@@ -18,6 +18,15 @@ from common.database import DBManager, query
 
 from .sheets import Sheets
 
+sheets_synced = prom.Counter(
+	'sheets_synced',
+	'Number of successful sheet syncs',
+)
+
+sync_errors = prom.Counter(
+	'sync_errors',
+	'Number of errors syncing sheets',
+)
 
 class SheetSync(object):
 
@@ -118,12 +127,14 @@ class SheetSync(object):
 				if isinstance(e, HTTPError):
 					detail = ": {}".format(e.response.content)
 				logging.exception("Failed to sync{}".format(detail))
+				sync_errors.inc()
 				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
 				# This is heavy-handed but simple and effective.
 				self.conn = self.dbmanager.get_conn()
 				self.wait(self.ERROR_RETRY_INTERVAL)
 			else:
 				logging.info("Successful sync")
+				sheets_synced.inc()
 				self.wait(self.RETRY_INTERVAL)
 
 	def get_events(self):
