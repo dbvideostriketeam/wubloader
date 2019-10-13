@@ -20,22 +20,11 @@ from common.segments import get_best_segments, cut_segments, ContainsHoles
 
 from .youtube import Youtube
 
-videos_cut = prom.Counter(
-	'videos_cut',
-	'Number of videos successfully cut',
-	['video_channel', 'video_quality']
-)
 
 videos_uploaded  = prom.Counter(
 	'videos_uploaded',
 	'Number of videos successfully uploaded',
 	['video_channel', 'video_quality', 'upload_location']
-)
-
-cutting_errors = prom.Counter(
-	'cutting_errors',
-	'Number of errors cutting a video',
-	['video_channel', 'video_quality']
 )
 
 upload_errors  = prom.Counter(
@@ -306,7 +295,6 @@ class Cutter(object):
 					yield chunk
 			except Exception as ex:
 				self.logger.exception("Error occurred while trying to cut job {}".format(format_job(job)))
-				cutting_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality).inc()
 				# Assumed error is not retryable, set state back to UNEDITED and set error.
 				if not set_row(state='UNEDITED', error="Error while cutting: {}".format(ex), uploader=None):
 					self.logger.warning("Tried to roll back row {} to unedited but it was already cancelled.".format(job.id))
@@ -325,7 +313,6 @@ class Cutter(object):
 					.format(job.id, self.name)
 				)
 			finalize_begun[0] = True
-			videos_cut.labels(video_channel=job.video_channel, video_quality=job.video_quality).inc()
 
 			# Now we return from this generator, and any errors between now and returning
 			# from requests.post() are not recoverable.
@@ -340,8 +327,10 @@ class Cutter(object):
 			)
 		except JobConsistencyError:
 			raise # this ensures it's not caught in the next except block
+			upload_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
 		except ErrorHandled:
 			# we're aborting the cut, error handling has already happened
+			upload_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
 			return
 		except Exception as ex:
 			self.refresh_conn()
