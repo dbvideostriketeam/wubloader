@@ -30,7 +30,7 @@ videos_uploaded  = prom.Counter(
 upload_errors  = prom.Counter(
 	'upload_errors',
 	'Number of errors uploading a video',
-	['video_channel', 'video_quality', 'upload_location']
+	['video_channel', 'video_quality', 'upload_location', 'final_state']
 )
 
 # A list of all the DB column names in CutJob
@@ -298,6 +298,10 @@ class Cutter(object):
 				# Assumed error is not retryable, set state back to UNEDITED and set error.
 				if not set_row(state='UNEDITED', error="Error while cutting: {}".format(ex), uploader=None):
 					self.logger.warning("Tried to roll back row {} to unedited but it was already cancelled.".format(job.id))
+				upload_errors.labels(video_channel=job.video_channel,
+						video_quality=job.video_quality,
+						upload_location=job.upload_location,
+						final_state='UNEDITED').inc()
 				# Abort the cut without further error handling
 				raise ErrorHandled
 
@@ -327,14 +331,11 @@ class Cutter(object):
 			)
 		except JobConsistencyError:
 			raise # this ensures it's not caught in the next except block
-			upload_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
 		except ErrorHandled:
 			# we're aborting the cut, error handling has already happened
-			upload_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
 			return
 		except Exception as ex:
 			self.refresh_conn()
-			upload_errors.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
 
 			# for HTTPErrors, getting http response body is also useful
 			if isinstance(ex, requests.HTTPError):
@@ -353,6 +354,10 @@ class Cutter(object):
 					"to EDITED and clear uploader. "
 					"Error: {}"
 				).format(ex)
+				upload_errors.labels(video_channel=job.video_channel,
+						video_quality=job.video_quality,
+						upload_location=job.upload_location,
+						final_state='FINALIZING').inc()
 				if not set_row(error=error):
 					# Not only do we not know if it was uploaded, we also failed to set that in the database!
 					raise JobConsistencyError(
@@ -364,6 +369,10 @@ class Cutter(object):
 			# error before finalizing, assume it's a network issue / retryable.
 			# set back to EDITED but still set error
 			self.logger.exception("Retryable error when uploading job {}".format(format_job(job)))
+			upload_errors.labels(video_channel=job.video_channel,
+					video_quality=job.video_quality,
+					upload_location=job.upload_location,
+					final_state='EDITED').inc()			
 			if not set_row(state='UNEDITED', error="Retryable error while uploading: {}".format(ex), uploader=None):
 				raise JobConsistencyError(
 					"No job with id {} and uploader {} when setting error while rolling back for retryable error"
@@ -384,7 +393,9 @@ class Cutter(object):
 			)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), link))
-		videos_uploaded.labels(video_channel=job.video_channel, video_quality=job.video_quality, upload_location=job.upload_location).inc()
+		videos_uploaded.labels(video_channel=job.video_channel,
+				video_quality=job.video_quality,
+				upload_location=job.upload_location).inc()
 
 	def rollback_all_owned(self):
 		"""Roll back any in-progress jobs that claim to be owned by us,
