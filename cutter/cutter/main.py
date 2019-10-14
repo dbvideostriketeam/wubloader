@@ -373,7 +373,7 @@ class Cutter(object):
 					video_quality=job.video_quality,
 					upload_location=job.upload_location,
 					final_state='EDITED').inc()			
-			if not set_row(state='UNEDITED', error="Retryable error while uploading: {}".format(ex), uploader=None):
+			if not set_row(state='EDITED', error="Retryable error while uploading: {}".format(ex), uploader=None):
 				raise JobConsistencyError(
 					"No job with id {} and uploader {} when setting error while rolling back for retryable error"
 					.format(job.id, self.name)
