@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import signal
@@ -59,12 +60,58 @@ class CoverageChecker(object):
 						except ValueError:
 							self.logger.warning('Skipping segment {} with invalid format'.format(path))
 
-					full_segments = [segment for segment in segments if segment.type == 'full']
-					partial_segments = [segment for segment in segments if segment.type == 'partial']
+					full_segments = []
+					partial_segments = []
+					useful_segments = []
+					for segment in segments:
+						if segment.type == 'full':
+							full_segments.append(segment)
+							useful_segments.append(segment)
+						elif segment.type == 'partial':
+							partial_segments.append(segment)
+							useful_segments.append(segment)
+
 					full_segments_duration = sum([segment.duration.seconds for segment in full_segments])
 					partial_segments_duration = sum([segment.duration.seconds for segment in partial_segments])
+					useful_segments_duration = sum([segment.duration.seconds for segment in useful_segments])
 					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), full_segments_duration))
 					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, len(partial_segments), partial_segments_duration))
+					self.logger.info('{}/{}: {} useful segments totalling {} s'.format(quality, hour, len(useful_segments), useful_segments_duration))
+
+					holes = []
+					editiable_holes = []
+					overlaps = []
+					previous = full_segments[0]
+					coverage = previous.duration
+					editable_coverage = previous.duration
+					total_duration = previous.duration
+					for segment in full_segments[1:]:
+						total_duration += previous.duration
+						previous_end = previous.start + previous.duration
+						if segment.start < previous_end:
+							overlaps.append(segment)
+							coverage += segment.start - previous_end + segment.duration
+						if segment.start == previous_end:
+							coverage += segment.duration
+							editable_coverage += segment.duration
+						else:
+							holes.append((previous_end, segment.start))
+							coverage += segment.duration
+							editable_coverage += segment.duration
+						previous = segment
+
+
+					hole_duration = datetime.timedelta(hours=1) - coverage
+					overlap_duration = total_duration - coverage
+
+					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), total_duration.seconds))
+					self.logger.info('{}/{}: covering {} s, {} s editable'.format(quality, hour, coverage.seconds, editable_coverage.seconds))
+					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.seconds))
+					self.logger.info('{}/{}: {} overlapping segments, {} s overlapping'.format(quality, hour, len(overlaps), overlap_duration.seconds))
+
+
+
+
 
 			self.stopping.wait(common.jitter(self.CHECK_INTERVAL))
 
