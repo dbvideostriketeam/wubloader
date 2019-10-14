@@ -1,6 +1,6 @@
-import datatime
 import logging
 import os
+import signal
 
 import argh
 import gevent.backdoor
@@ -15,7 +15,7 @@ class CoverageChecker(object):
 
 	CHECK_INTERVAL = 60 #seconds between checking coverage
 
-	def __init__(channel, qualities, base_dir):
+	def __init__(self, channel, qualities, base_dir):
 		"""Constructor for CoverageChecker.
 
 		Creates a checker for a given channel with specified qualities."""
@@ -41,21 +41,21 @@ class CoverageChecker(object):
 			for quality in self.qualities:
 				if self.stopping.is_set():
 					break
-				path = os.path.join(self.basedir, self.channel, quality)
+				path = os.path.join(self.base_dir, self.channel, quality)
 				hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				hours.sort()
 				for hour in hours:
 					if self.stopping.is_set():
 						break
 					self.logger.info('Checking {}/{}'.format(quality, hour))
-					path = os.path.join(self.basedir, self.channel, quality, hour)
+					path = os.path.join(self.base_dir, self.channel, quality, hour)
 					segment_names = [name for name in os.listdir(path) if not name.startswith('.')]
 					segment_names.sort()
 					segments = []
 					for name in segment_names:
 						path = os.path.join(hour, name)
 						try:
-							segments.append(parse_segment_path(path))
+							segments.append(common.parse_segment_path(path))
 						except ValueError:
 							self.logger.warning('Skipping segment {} with invalid format'.format(path))
 
@@ -63,8 +63,8 @@ class CoverageChecker(object):
 					partial_segments = [segment for segment in segments if segment.type == 'partial']
 					full_segments_duration = sum([segment.duration.seconds for segment in full_segments])
 					partial_segments_duration = sum([segment.duration.seconds for segment in partial_segments])
-					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), full_segments_duration)
-					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour,len(partial_segments), partial_segments_duration)
+					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), full_segments_duration))
+					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, len(partial_segments), partial_segments_duration))
 
 			self.stopping.wait(common.jitter(self.CHECK_INTERVAL))
 
