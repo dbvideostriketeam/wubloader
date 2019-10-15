@@ -42,13 +42,13 @@ class CoverageChecker(object):
 		"""Loop over available hours for each quality, checking segment coverage."""
 		self.logger.info('Starting')
 
-		os.mkdir('/coverage_maps')
-
 		while not self.stopping.is_set():
 
 			for quality in self.qualities:
 				if self.stopping.is_set():
 					break
+
+				coverage_map_dir = os.path.join('/', 'coverage', self.channel, quality)
 				path = os.path.join(self.base_dir, self.channel, quality)
 				hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				hours.sort()
@@ -179,7 +179,6 @@ class CoverageChecker(object):
 					# if it is the first hour, instead ignore anything before the first segment
 					else:
 						start_seconds = start.minute * 60 + start.second
-						self.logger.info(start_seconds)
 						runtime_mask = runtime_mask & (start_seconds <= pixel_starts)
 
 					#handle the case when there is a hole between the last segment and the end of the hour
@@ -192,19 +191,16 @@ class CoverageChecker(object):
 					# if it is the last hour, ignore anything after the last segment
 					else:
 						end_seconds = end.minute * 60 + end.second
-						self.logger.info(end_seconds)
 						runtime_mask = runtime_mask & (end_seconds > pixel_starts)
 
 					for hole in holes:
 						hole_start = np.floor((hole[0] - hour_start).seconds)
 						hole_end = np.ceil((hole[1] - hour_start).seconds)
-						self.logger.info('hole {} {}'.format(hole_start, hole_end))
 						coverage_mask = coverage_mask & ((pixel_starts < hole_start) | (pixel_ends > hole_end))
 
 					for partial in only_partials:
 						partial_start = np.floor((partial[0] - hour_start).seconds)
 						partial_end = np.ceil((partial[1] - hour_start).seconds)
-						self.logger.info('partial {} {}'.format(partial_start, partial_end))
 						partial_mask = partial_mask | ((pixel_starts >= partial_start) & (pixel_ends <= partial_end))
 
 					runtime_mask = runtime_mask.reshape((60, 60))
@@ -221,23 +217,14 @@ class CoverageChecker(object):
 					fig.add_axes([0, 0, 1, 1])
 					plt.imshow(colours)
 					plt.axis('off')
-					plt.savefig('/coverage_maps/{}.png'.format(hour), dpi=60)
+					
+					tmp_path = os.path.join(coverage_map_dir, 'tmp.png')
+					common.ensure_directory(tmp_path)
+					final_path = os.path.join(coverage_map_dir, '{}.png'.format(hour))
+					plt.savefig(tmp_path, dpi=60)
+					os.rename(tmp_path, final_path)
+					
 
-
-#					plt.figure()
-#					plt.imshow(runtime_mask.astype('d'))
-#					plt.colorbar()
-#					plt.savefig('/coverage_maps/runtime_{}.png'.format(hour))
-#
-#					plt.figure()
-#					plt.imshow(coverage_mask.astype('d'))
-#					plt.colorbar()
-#					plt.savefig('/coverage_maps/coverage_{}.png'.format(hour))
-#
-#					plt.figure()
-#					plt.imshow(partial_mask.astype('d'))
-#					plt.colorbar()
-#					plt.savefig('/coverage_maps/partial_{}.png'.format(hour))						
 
 					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).seconds))
 					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.seconds))
@@ -249,7 +236,7 @@ class CoverageChecker(object):
 					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.seconds))
 					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.seconds))
 					self.logger.info('{}/{}: {} overlapping segments, {} s overlapping'.format(quality, hour, overlap_count, overlap_duration.seconds))
-
+					self.logger.info('Checking {}/{} complete'.format(quality, hour))
 
 					previous_hour_segments = best_segments
 
