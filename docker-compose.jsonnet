@@ -19,6 +19,7 @@
     cutter: true,
     sheetsync: false,
     thrimshim: true,
+    segment_coverage: true,
     nginx: true,
     postgres: false,
   },
@@ -44,11 +45,12 @@
   // Only nginx (and postgres if that is being deployed) needs to be externally accessible - the other non-database ports are routed through nginx.
   ports:: {
     restreamer: 8000,
-    thrimshim: 8004,
     downloader: 8001,
     backfiller: 8002,
     cutter: 8003,
+    thrimshim: 8004,
     sheetsync: 8005,
+    segment_coverage: 8006,
     nginx: 80,
     postgres: 5432,
   },
@@ -260,6 +262,23 @@
       [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync]
     },
 
+    [if $.enabled.segment_coverage then "segment_coverage"]: {
+      image: "quay.io/ekimekim/wubloader-segment_coverage:%s" % $.image_tag,
+      // Args for the segment_coverage
+      command: [
+        $.channel,
+        "--base-dir", "/mnt",
+        "--qualities", std.join(",", $.qualities),
+      ],
+      // Mount the segments directory at /mnt
+      volumes: ["%s:/mnt" % $.segments_path],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for thrimshim, which is 8004.
+      [if "segment_coverage" in $.ports then "ports"]: ["%s:8006" % $.ports.segment_coverage]
+    },
+
     [if $.enabled.nginx then "nginx"]: {
       # mapping of services to internal ports for nginx to forward
       local forward_ports = {
@@ -269,6 +288,7 @@
         cutter: 8003,
         thrimshim: 8004,
         sheetsync: 8005,
+        segment_coverage: 8006,
       },
       image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
