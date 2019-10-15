@@ -1,7 +1,12 @@
 FROM alpine:3.7
 # dependencies needed for compiling c extensions
 # also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras libpng
+# freetype-dev and libpng-dev are required for matplotlib
+RUN apk --update add py2-pip gcc python-dev musl-dev busybox-extras freetype-dev libpng-dev build-base libstdc++
+#need to install these manually 
+RUN ln -s /usr/include/locale.h /usr/include/xlocale.h \
+	&& pip install numpy \
+	&& pip install matplotlib
 
 # Install common lib first as it changes less
 COPY common /tmp/common
