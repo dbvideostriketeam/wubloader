@@ -1,10 +1,13 @@
 import datetime
+import itertools
 import logging
 import os
 import signal
 
 import argh
 import gevent.backdoor
+import matplotlib.pyplot as plt
+import numpy as np
 import prometheus_client as prom
 
 import common
@@ -15,6 +18,7 @@ class CoverageChecker(object):
 	"""Checks the segment coverage for a given channel in a a given directoy."""
 
 	CHECK_INTERVAL = 60 #seconds between checking coverage
+	CHECK_INTERVAL = 6 #seconds between checking coverage
 
 	def __init__(self, channel, qualities, base_dir):
 		"""Constructor for CoverageChecker.
@@ -45,73 +49,121 @@ class CoverageChecker(object):
 				path = os.path.join(self.base_dir, self.channel, quality)
 				hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				hours.sort()
+				previous_hour_segments = None
 				for hour in hours:
 					if self.stopping.is_set():
 						break
 					self.logger.info('Checking {}/{}'.format(quality, hour))
-					path = os.path.join(self.base_dir, self.channel, quality, hour)
-					segment_names = [name for name in os.listdir(path) if not name.startswith('.')]
+
+					# based on common.segments.best_segments_by_start
+					# but more complicated to capture more detailed metrics
+					hour_path = os.path.join(self.base_dir, self.channel, quality, hour)
+					segment_names = [name for name in os.listdir(hour_path) if not name.startswith('.')]
 					segment_names.sort()
-					segments = []
-					for name in segment_names:
-						path = os.path.join(hour, name)
-						try:
-							segments.append(common.parse_segment_path(path))
-						except ValueError:
-							self.logger.warning('Skipping segment {} with invalid format'.format(path))
+					parsed = (common.parse_segment_path(os.path.join(hour_path, name)) for name in segment_names)
 
-					full_segments = []
-					partial_segments = []
-					useful_segments = []
-					for segment in segments:
-						if segment.type == 'full':
-							full_segments.append(segment)
-							useful_segments.append(segment)
-						elif segment.type == 'partial':
-							partial_segments.append(segment)
-							useful_segments.append(segment)
+					full_segment_count = 0
+					partial_segment_count = 0
+					full_segment_duration = datetime.timedelta(0)
+					partial_segment_duration = datetime.timedelta(0)
+					full_repeats = 0
+					full_repeat_duration = datetime.timedelta(0)
+					partial_repeats = 0
+					partial_repeat_duration = datetime.timedelta(0)
 
-					full_segments_duration = sum([segment.duration.seconds for segment in full_segments])
-					partial_segments_duration = sum([segment.duration.seconds for segment in partial_segments])
-					useful_segments_duration = sum([segment.duration.seconds for segment in useful_segments])
-					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), full_segments_duration))
-					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, len(partial_segments), partial_segments_duration))
-					self.logger.info('{}/{}: {} useful segments totalling {} s'.format(quality, hour, len(useful_segments), useful_segments_duration))
-
+					best_segments = []
 					holes = []
-					editiable_holes = []
-					overlaps = []
-					previous = full_segments[0]
-					coverage = previous.duration
-					editable_coverage = previous.duration
-					total_duration = previous.duration
-					for segment in full_segments[1:]:
-						total_duration += previous.duration
-						previous_end = previous.start + previous.duration
-						if segment.start < previous_end:
-							overlaps.append(segment)
-							coverage += segment.start - previous_end + segment.duration
-						if segment.start == previous_end:
-							coverage += segment.duration
-							editable_coverage += segment.duration
+					editable_holes = []
+					overlap_count = 0
+					overlap_duration = datetime.timedelta(0)
+					previous = None
+					previous_editable = None
+					coverage = datetime.timedelta(0)
+					editable_coverage = datetime.timedelta(0)
+					only_partials = []
+
+					for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
+						full_segments = []
+						partial_segments = []
+						for segment in segments:
+							if segment.type == 'full':
+								full_segments.append(segment)
+								full_segment_count += 1
+								full_segment_duration += segment.duration
+							elif segment.type == 'partial':
+								partial_segments.append(segment)
+								partial_segment_count += 1
+								partial_segment_duration += segment.duration
+
+						if full_segments:
+							if len(full_segments) == 1:
+								best_segment = full_segments[0]
+							else:
+								full_segments.sort(key=lambda segment: (segment.duration))
+								best_segment = full_segments[-1]
+								for segment in full_segments[:-1]:
+									full_repeats += 1
+									full_repeat_duration += segment.duration
+							if partial_segments:
+								for segment in partial_segments:
+									partial_repeats += 1
+									partial_repeat_duration += segment.duration
 						else:
-							holes.append((previous_end, segment.start))
-							coverage += segment.duration
-							editable_coverage += segment.duration
-						previous = segment
+							partial_segments.sort(key=lambda segment: (segment.duration))
+							best_segment = partial_segments[-1]
+							only_partials.append((best_segment.start, best_segment.start + best_segment.duration))
+							for segment in partial_segments[:-1]:
+								partial_repeats += 1
+								partial_repeat_duration += segment.duration
+						self.logger.debug(best_segment.path.split('/')[-1])
+						best_segments.append(best_segment)
 
+						if previous is None:
+							coverage += best_segment.duration
+							editable_coverage += best_segment.duration
+							previous_editable = best_segment
 
-					hole_duration = datetime.timedelta(hours=1) - coverage
-					overlap_duration = total_duration - coverage
+						else:
+							previous_end = previous.start + previous.duration
+							if segment.start < previous_end:
+								overlap_count += 1
+								overlap_duration += previous_end - segment.start
+								coverage += segment.start - previous_end + segment.duration
+							else:
+								coverage += segment.duration
+								editable_coverage += segment.duration
 
-					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, len(full_segments), total_duration.seconds))
+								if segment.start > previous_end:
+									holes.append((previous_end, segment.start))
+
+								previous_editable_end = previous_editable.start + previous_editable.duration
+								if segment.start > previous_editable_end:
+									editable_holes.append((previous_editable_end, segment.start))
+
+								previous_editable = best_segment
+
+						previous = best_segment
+
+					start = best_segments[0].start
+					end = best_segments[-1].start + best_segments[-1].duration
+					hole_duration = end - start - coverage
+					editable_hole_duration = end - start - editable_coverage
+					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).seconds))
+					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.seconds))
+					self.logger.info('{}/{}: {} full segment repeats totalling {} s'.format(quality, hour, full_repeats, full_repeat_duration.seconds))
+					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, partial_segment_count, partial_segment_duration.seconds))
+					self.logger.info('{}/{}: {} partial segment repeats totalling {} s'.format(quality, hour, partial_repeats, partial_repeat_duration.seconds))
+
 					self.logger.info('{}/{}: covering {} s, {} s editable'.format(quality, hour, coverage.seconds, editable_coverage.seconds))
 					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.seconds))
-					self.logger.info('{}/{}: {} overlapping segments, {} s overlapping'.format(quality, hour, len(overlaps), overlap_duration.seconds))
+					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.seconds))
+					self.logger.info('{}/{}: {} overlapping segments, {} s overlapping'.format(quality, hour, overlap_count, overlap_duration.seconds))
 
 
+					self.logger.info(holes)
+					self.logger.info(only_partials)
 
-
+					previous_hour_segments = best_segments
 
 			self.stopping.wait(common.jitter(self.CHECK_INTERVAL))
 
