@@ -14,6 +14,85 @@ import prometheus_client as prom
 import common
 
 
+total_segment_count = prom.Gauge(
+		'total_segment_count',
+		'Total number of segments in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+full_segment_count = prom.Gauge(
+		'full_segment_count',
+		'Number of full segments in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+partial_segment_count = prom.Gauge(
+		'partial_segment_count',
+		'Number of partial segments in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+total_segment_duration = prom.Gauge(
+		'total_segment_count',
+		'Total segment duration in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+full_segment_duration = prom.Gauge(
+		'full_segment_count',
+		'Full segment duration in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+partial_segment_duration = prom.Gauge(
+		'partial_segment_duration',
+		'Partial segment duration in an hour',
+		['channel', 'quality', 'hour'],
+)
+
+raw_coverage = prom.Gauge(
+		'raw_coverage',
+		'Raw coverage for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+editable_coverage = prom.Gauge(
+		'editable_coverage',
+		'Editable coverage for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+raw_holes = prom.Gauge(
+		'raw_holes',
+		'Number of holes in raw coverage for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+editable_holes = prom.Gauge(
+		'editable_hole',
+		'Number of holes in editable coverage for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+full_duplicate_count = prom.Gauge(
+		'full_duplicate_count',
+		'Number of duplicate full segments for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+partial_duplicate_count = prom.Gauge(
+		'partial_duplicate_count',
+		'Number of duplicate partial segments for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+overlap_count = prom.Gauge(
+		'overlap_count',
+		'Number of overlapping segments for the hour',
+		['channel', 'quality', 'hour'],
+)
+ 
+
 HOUR_FMT = '%Y-%m-%dT%H'
 
 class CoverageChecker(object):
