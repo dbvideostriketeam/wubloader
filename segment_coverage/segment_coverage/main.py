@@ -14,81 +14,87 @@ import prometheus_client as prom
 import common
 
 
-total_segment_count = prom.Gauge(
+total_segment_count_gauge = prom.Gauge(
 		'total_segment_count',
 		'Total number of segments in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-full_segment_count = prom.Gauge(
+full_segment_count_gauge = prom.Gauge(
 		'full_segment_count',
 		'Number of full segments in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-partial_segment_count = prom.Gauge(
+partial_segment_count_gauge = prom.Gauge(
 		'partial_segment_count',
 		'Number of partial segments in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-total_segment_duration = prom.Gauge(
+total_segment_duration_gauge = prom.Gauge(
 		'total_segment_count',
 		'Total segment duration in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-full_segment_duration = prom.Gauge(
+full_segment_duration_gauge = prom.Gauge(
 		'full_segment_count',
 		'Full segment duration in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-partial_segment_duration = prom.Gauge(
+partial_segment_duration_gauge = prom.Gauge(
 		'partial_segment_duration',
 		'Partial segment duration in an hour',
 		['channel', 'quality', 'hour'],
 )
 
-raw_coverage = prom.Gauge(
+raw_coverage_gauge = prom.Gauge(
 		'raw_coverage',
 		'Raw coverage for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-editable_coverage = prom.Gauge(
+editable_coverage_gauge = prom.Gauge(
 		'editable_coverage',
 		'Editable coverage for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-raw_holes = prom.Gauge(
+raw_holes_gauge = prom.Gauge(
 		'raw_holes',
 		'Number of holes in raw coverage for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-editable_holes = prom.Gauge(
+editable_holes_gauge = prom.Gauge(
 		'editable_hole',
 		'Number of holes in editable coverage for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-full_duplicate_count = prom.Gauge(
-		'full_duplicate_count',
-		'Number of duplicate full segments for the hour',
+full_overlap_count_gauge = prom.Gauge(
+		'full_overlap_count',
+		'Number of overlap full segments for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-partial_duplicate_count = prom.Gauge(
-		'partial_duplicate_count',
-		'Number of duplicate partial segments for the hour',
+partial_overlap_count_gauge = prom.Gauge(
+		'partial_overlap_count',
+		'Number of overlap partial segments for the hour',
 		['channel', 'quality', 'hour'],
 )
 
-overlap_count = prom.Gauge(
-		'overlap_count',
-		'Number of overlapping segments for the hour',
+full_overlap_duration_gauge = prom.Gauge(
+		'full_overlap_duration',
+		'Duration of overlaping full segments for the hour',
+		['channel', 'quality', 'hour'],
+)
+
+partial_overlap_duration_gauge = prom.Gauge(
+		'partial_overlap_duration',
+		'Duration of overlaping partial segments for the hour',
 		['channel', 'quality', 'hour'],
 )
  
@@ -153,16 +159,14 @@ class CoverageChecker(object):
 					partial_segment_count = 0
 					full_segment_duration = datetime.timedelta(0)
 					partial_segment_duration = datetime.timedelta(0)
-					full_repeats = 0
-					full_repeat_duration = datetime.timedelta(0)
-					partial_repeats = 0
-					partial_repeat_duration = datetime.timedelta(0)
+					full_overlaps = 0
+					full_overlap_duration = datetime.timedelta(0)
+					partial_overlaps = 0
+					partial_overlap_duration = datetime.timedelta(0)
 
 					best_segments = []
 					holes = []
 					editable_holes = []
-					overlap_count = 0
-					overlap_duration = datetime.timedelta(0)
 					previous = None
 					previous_editable = None
 					coverage = datetime.timedelta(0)
@@ -189,19 +193,19 @@ class CoverageChecker(object):
 								full_segments.sort(key=lambda segment: (segment.duration))
 								best_segment = full_segments[-1]
 								for segment in full_segments[:-1]:
-									full_repeats += 1
-									full_repeat_duration += segment.duration
+									full_overlaps += 1
+									full_overlap_duration += segment.duration
 							if partial_segments:
 								for segment in partial_segments:
-									partial_repeats += 1
-									partial_repeat_duration += segment.duration
+									partial_overlaps += 1
+									partial_overlap_duration += segment.duration
 						else:
 							partial_segments.sort(key=lambda segment: (segment.duration))
 							best_segment = partial_segments[-1]
 							only_partials.append((best_segment.start, best_segment.start + best_segment.duration))
 							for segment in partial_segments[:-1]:
-								partial_repeats += 1
-								partial_repeat_duration += segment.duration
+								partial_overlaps += 1
+								partial_overlap_duration += segment.duration
 						self.logger.debug(best_segment.path.split('/')[-1])
 						best_segments.append(best_segment)
 
@@ -215,8 +219,12 @@ class CoverageChecker(object):
 						else:
 							previous_end = previous.start + previous.duration
 							if segment.start < previous_end:
-								overlap_count += 1
-								overlap_duration += previous_end - segment.start
+								if segment.type == 'full':
+									full_overlaps += 1
+									full_overlap_duration += previous_end - segment.start
+								else:
+									partial_overlaps += 1
+									partial_overlap_duration += previous_end - segment.start
 								coverage += segment.start - previous_end + segment.duration
 							else:
 								coverage += segment.duration
@@ -307,14 +315,12 @@ class CoverageChecker(object):
 
 					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).seconds))
 					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.seconds))
-					self.logger.info('{}/{}: {} full segment repeats totalling {} s'.format(quality, hour, full_repeats, full_repeat_duration.seconds))
+					self.logger.info('{}/{}: {} overlapping full segments totalling {} s'.format(quality, hour, full_overlaps, full_overlap_duration.seconds))
 					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, partial_segment_count, partial_segment_duration.seconds))
-					self.logger.info('{}/{}: {} partial segment repeats totalling {} s'.format(quality, hour, partial_repeats, partial_repeat_duration.seconds))
-
-					self.logger.info('{}/{}: covering {} s, {} s editable'.format(quality, hour, coverage.seconds, editable_coverage.seconds))
+					self.logger.info('{}/{}: {} overlapping partial segments totalling {} s'.format(quality, hour, partial_overlaps, partial_overlap_duration.seconds))
+					self.logger.info('{}/{}: raw coverage {} s, editable coverage {} s '.format(quality, hour, coverage.seconds, editable_coverage.seconds))
 					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.seconds))
 					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.seconds))
-					self.logger.info('{}/{}: {} overlapping segments, {} s overlapping'.format(quality, hour, overlap_count, overlap_duration.seconds))
 					self.logger.info('Checking {}/{} complete'.format(quality, hour))
 
 					previous_hour_segments = best_segments
