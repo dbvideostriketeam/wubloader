@@ -35,6 +35,7 @@ upload_errors  = prom.Counter(
 
 # A list of all the DB column names in CutJob
 CUT_JOB_PARAMS = [
+	"sheet_name",
 	"category",
 	"allow_holes",
 	"uploader_whitelist",
@@ -352,7 +353,8 @@ class Cutter(object):
 					"{}\n\n{}".format(job.video_description, self.description_footer)
 					if self.description_footer else job.video_description
 				),
-				tags=self.tags,
+				# Add category and sheet_name as tags
+				tags=self.tags + [job.category, job.sheet_name],
 				data=upload_wrapper(),
 			)
 		except JobConsistencyError:
