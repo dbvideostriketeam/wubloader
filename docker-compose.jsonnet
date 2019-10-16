@@ -92,7 +92,7 @@
   // Config for cutter upload locations. See cutter docs for full detail.
   cutter_config:: {
     desertbus: {type: "youtube"},
-    unlisted: {type: "youtube", hidden: true},
+    unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
   },
 
   // Path to a JSON file containing google credentials for sheetsync as keys

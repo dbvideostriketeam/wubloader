@@ -507,7 +507,13 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 
 	config should be a json blob mapping upload location names to a config object
 	for that location. This config object should contain the keys:
-		type: the name of the upload backend type
+		type:
+			the name of the upload backend type
+		no_transcode_check:
+			bool. If true, won't check for when videos are done transcoding.
+			This is useful when multiple upload locations actually refer to the
+			same place just with different settings, and you only want one of them
+			to actually do the check.
 	along with any additional config options defined for that backend type.
 
 	creds_file should contain any required credentials for the upload backends, as JSON.
@@ -547,19 +553,23 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 
 	config = json.loads(config)
 	upload_locations = {}
+	needs_transcode_check = []
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
+		no_transcode_check = backend_config.pop('no_transcode_check', False)
 		if type == 'youtube':
 			backend_type = Youtube
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(type))
-		upload_locations[location] = backend_type(credentials, **backend_config)
+		backend = backend_type(credentials, **backend_config)
+		upload_locations[location] = backend
+		if backend.needs_transcode and not no_transcode_check:
+			needs_transcode_check.append(backend)
 
 	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir)
 	transcode_checkers = [
 		TranscodeChecker(backend, dbmanager, stop)
-		for backend in upload_locations.values()
-		if backend.needs_transcode
+		for backend in needs_transcode_check
 	]
 	jobs = [gevent.spawn(cutter.run)] + [
 		gevent.spawn(transcode_checker.run)
