@@ -500,13 +500,17 @@ class TranscodeChecker(object):
 		return result.rowcount
 
 
-def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0, upload_location=""):
+def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0):
 	"""dbconnect should be a postgres connection string, which is either a space-separated
 	list of key=value pairs, or a URI like:
 		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
 
-	youtube_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
-	upload_location is the name of the upload location this youtube creds file gives access to.
+	config should be a json blob mapping upload location names to a config object
+	for that location. This config object should contain the keys:
+		type: the name of the upload backend type
+	along with any additional config options defined for that backend type.
+
+	creds_file should contain any required credentials for the upload backends, as JSON.
 
 	name defaults to hostname.
 	"""
@@ -538,25 +542,36 @@ def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=80
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stop.wait(delay)
 
-	youtube_creds = json.load(open(youtube_creds_file))
-	youtube = Youtube(
-		client_id=youtube_creds['client_id'],
-		client_secret=youtube_creds['client_secret'],
-		refresh_token=youtube_creds['refresh_token'],
-	)
-	cutter = Cutter({upload_location: youtube}, dbmanager, stop, name, base_dir)
-	transcode_checker = TranscodeChecker(youtube, dbmanager, stop)
-	jobs = [
-		gevent.spawn(cutter.run),
-		gevent.spawn(transcode_checker.run),
+	with open(creds_file) as f:
+		credentials = json.load(f)
+
+	config = json.loads(config)
+	upload_locations = {}
+	for location, backend_config in config.items():
+		backend_type = backend_config.pop('type')
+		if type == 'youtube':
+			backend_type = Youtube
+		else:
+			raise ValueError("Unknown upload backend type: {!r}".format(type))
+		upload_locations[location] = backend_type(credentials, **backend_config)
+
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir)
+	transcode_checkers = [
+		TranscodeChecker(backend, dbmanager, stop)
+		for backend in upload_locations.values()
+		if backend.needs_transcode
 	]
-	# Block until either exits
+	jobs = [gevent.spawn(cutter.run)] + [
+		gevent.spawn(transcode_checker.run)
+		for transcode_checker in transcode_checkers
+	]
+	# Block until any one exits
 	gevent.wait(jobs, count=1)
-	# Stop the other if it isn't stopping already
+	# Stop the others if they aren't stopping already
 	stop.set()
-	# Block until both have exited
+	# Block until all have exited
 	gevent.wait(jobs)
-	# Call get() for each to re-raise if either errored
+	# Call get() for each one to re-raise if any errored
 	for job in jobs:
 		job.get()
 

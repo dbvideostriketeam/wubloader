@@ -8,7 +8,8 @@ class UploadBackend(object):
 	"""Represents a place a video can be uploaded,
 	and maintains any state needed to perform uploads.
 
-	Config args for the backend are passed into __init__ as kwargs.
+	Config args for the backend are passed into __init__ as kwargs,
+	along with credentials as the first arg.
 
 	Should have a method upload_video(title, description, tags, data).
 	Title, description and tags may have backend-specific meaning.
@@ -41,16 +42,21 @@ class UploadBackend(object):
 
 class Youtube(UploadBackend):
 	"""Represents a youtube channel to upload to, and settings for doing so.
-	Besides credentials, config args:
-		hidden: If false or not given, video is public. If true, video is unlisted.
+	Config args besides credentials:
+		hidden:
+			If false, video is public. If true, video is unlisted. Default false.
 	"""
 
 	needs_transcode = True
 	encoding_settings = [] # TODO youtube's recommended settings
 
-	def __init__(self, client_id, client_secret, refresh_token, hidden=False):
+	def __init__(self, credentials, hidden=False):
 		self.logger = logging.getLogger(type(self).__name__)
-		self.client = GoogleAPIClient(client_id, client_secret, refresh_token)
+		self.client = GoogleAPIClient(
+			credentials['client_id'],
+			credentials['client_secret'],
+			credentials['refresh_token'],
+		)
 		self.hidden = hidden
 
 	def upload_video(self, title, description, tags, data):

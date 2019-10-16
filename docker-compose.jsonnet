@@ -89,6 +89,12 @@
   // 'client_id', 'client_secret' and 'refresh_token'.
   cutter_creds_file:: "./google_creds.json",
 
+  // Config for cutter upload locations. See cutter docs for full detail.
+  cutter_config:: {
+    desertbus: {type: "youtube"},
+    unlisted: {type: "youtube", hidden: true},
+  },
+
   // Path to a JSON file containing google credentials for sheetsync as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
   // May be the same as cutter_creds_file.
@@ -178,6 +184,7 @@
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
+        std.manifestJson($.cutter_config),
         "/etc/wubloader-creds.json",
       ],
       volumes: [
