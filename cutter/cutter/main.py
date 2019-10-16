@@ -130,19 +130,9 @@ class Cutter(object):
 			# Shuffle the list so that (most of the time) we don't try to claim the same one as other nodes
 			random.shuffle(candidates)
 			for candidate in candidates:
-				try:
-					segments = self.check_candidate(candidate)
-				except ContainsHoles:
-					# TODO metric
-					self.logger.info("Ignoring candidate {} due to holes".format(format_job(candidate)))
-					continue # bad candidate, let someone else take it or just try again later
-				except Exception as e:
-					# Unknown error. This is either a problem with us, or a problem with the candidate
-					# (or most likely a problem with us that is only triggered by this candidate).
-					# In this case we would rather stay running so other jobs can continue to work if possible.
-					# But to give at least some feedback, we set the error message on the job
-					# if it isn't already.
-					self.logger.exception("Failed to check candidate {}, setting error on row".format(format_job(candidate)))
+
+				def set_error(error):
+					"""Common code for the two paths below, for setting an error on the row for humans to see"""
 					try:
 						# Since this error message is just for humans, we don't go to too large
 						# a length to prevent it being put on the row if the row has changed.
@@ -152,7 +142,7 @@ class Cutter(object):
 							UPDATE events
 							SET error = %s
 							WHERE id = %s AND state = 'EDITED' AND error IS NULL
-						""", id=candidate.id, error='{}: Error while checking candidate: {}'.format(self.name, e))
+						""", id=candidate.id, error=error)
 					except Exception:
 						self.logger.exception("Failed to set error for candidate {}, ignoring".format(format_job(candidate)))
 						self.refresh_conn()
@@ -160,12 +150,37 @@ class Cutter(object):
 						if result.rowcount > 0:
 							assert result.rowcount == 1
 							self.logger.info("Set error for candidate {}".format(format_job(candidate)))
+
+				try:
+					segments = self.check_candidate(candidate)
+				except ContainsHoles:
+					# TODO metric
+					self.logger.info("Ignoring candidate {} due to holes".format(format_job(candidate)))
+					set_error(
+						"Node {} does not have all the video needed to cut this row. "
+						"This may just be because it's too recent and the video hasn't been downloaded yet. "
+						"However, it might also mean that there is a 'hole' of missing video, perhaps "
+						"because the stream went down or due to downloader issues. If you know why this "
+						"is happening and want to cut the video anyway, re-edit with the 'Allow Holes' option set."
+					.format(self.name))
+					continue # bad candidate, let someone else take it or just try again later
+				except Exception as e:
+					# Unknown error. This is either a problem with us, or a problem with the candidate
+					# (or most likely a problem with us that is only triggered by this candidate).
+					# In this case we would rather stay running so other jobs can continue to work if possible.
+					# But to give at least some feedback, we set the error message on the job
+					# if it isn't already.
+					self.logger.exception("Failed to check candidate {}, setting error on row".format(format_job(candidate)))
+					set_error('{}: Error while checking candidate: {}'.format(self.name, e))
 					self.wait(self.ERROR_RETRY_INTERVAL)
 					continue
+
 				if all(segment is None for segment in segments):
 					self.logger.info("Ignoring candidate {} as we have no segments".format(format_job(candidate)))
 					continue
+
 				return CutJob(segments=segments, **candidate._asdict())
+
 			# No candidates
 			self.wait(self.NO_CANDIDATES_RETRY_INTERVAL)
 
