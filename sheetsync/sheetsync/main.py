@@ -190,7 +190,7 @@ class SheetSync(object):
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
-			insert_cols = ['id'] + self.input_columns
+			insert_cols = ['id', 'sheet_name'] + self.input_columns
 			built_query = sql.SQL("""
 				INSERT INTO events ({})
 				VALUES ({})
@@ -199,7 +199,7 @@ class SheetSync(object):
 				sql.SQL(", ").join(sql.Identifier(col) for col in insert_cols),
 				sql.SQL(", ").join(sql.Placeholder(col) for col in insert_cols),
 			)
-			query(self.conn, built_query, **row)
+			query(self.conn, built_query, sheet_name=worksheet, **row)
 			return
 
 		# Update database with any changed inputs

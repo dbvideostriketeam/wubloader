@@ -49,6 +49,7 @@ CREATE TYPE event_state as ENUM (
 
 CREATE TABLE events (
 	id UUID PRIMARY KEY,
+	sheet_name TEXT NOT NULL,
 	event_start TIMESTAMP,
 	event_end TIMESTAMP,
 	category TEXT NOT NULL DEFAULT '',
