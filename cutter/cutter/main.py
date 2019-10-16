@@ -353,7 +353,7 @@ class Cutter(object):
 				).format(format_job(job)))
 				error = (
 					"An error occurred during FINALIZING, please determine if video was actually "
-					"uploaded or not and either move to TRANSCODING and populate video_id or rollback "
+					"uploaded or not and either move to TRANSCODING/DONE and populate video_id or rollback "
 					"to EDITED and clear uploader. "
 					"Error: {}"
 				).format(ex)
@@ -385,14 +385,15 @@ class Cutter(object):
 			gevent.sleep(self.RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL)
 			return
 
-		# Success! Set TRANSCODING and clear any previous error.
+		# Success! Set TRANSCODING or DONE and clear any previous error.
+		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
 		link = "https://youtu.be/{}".format(video_id)
-		if not set_row(state='TRANSCODING', video_id=video_id, video_link=link, error=None):
+		if not set_row(state=success_state, video_id=video_id, video_link=link, error=None):
 			# This will result in it being stuck in FINALIZING, and an operator will need to go
 			# confirm it was really uploaded.
 			raise JobConsistencyError(
-				"No job with id {} and uploader {} when setting to TRANSCODING"
-				.format(job.id, self.name)
+				"No job with id {} and uploader {} when setting to {}"
+				.format(job.id, self.name, success_state)
 			)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), link))
@@ -420,7 +421,7 @@ class Cutter(object):
 			WHERE state = 'FINALIZING' AND uploader = %(name)s AND error IS NULL
 		""", name=self.name, error=(
 			"Uploader died during FINALIZING, please determine if video was actually "
-			"uploaded or not and either move to TRANSCODING and populate video_id or rollback "
+			"uploaded or not and either move to TRANSCODING/DONE and populate video_id or rollback "
 			"to EDITED and clear uploader."
 		))
 		if result.rowcount > 0:
