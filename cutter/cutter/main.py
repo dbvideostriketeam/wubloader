@@ -18,7 +18,7 @@ import common
 from common.database import DBManager, query
 from common.segments import get_best_segments, cut_segments, ContainsHoles
 
-from .upload_locations import Youtube
+from .upload_backends import Youtube, Local
 
 
 videos_uploaded  = prom.Counter(
@@ -559,6 +559,8 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 		no_transcode_check = backend_config.pop('no_transcode_check', False)
 		if type == 'youtube':
 			backend_type = Youtube
+		elif type == 'local':
+			backend_type = Local
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(type))
 		backend = backend_type(credentials, **backend_config)

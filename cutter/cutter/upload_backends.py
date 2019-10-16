@@ -1,5 +1,9 @@
 
+import errno
 import logging
+import os
+import re
+import uuid
 
 from common.googleapis import GoogleAPIClient
 
@@ -103,3 +107,58 @@ class Youtube(UploadBackend):
 				if item['status']['uploadStatus'] == 'processed':
 					output.append(item['id'])
 		return output
+
+
+class Local(UploadBackend):
+	"""An "upload" backend that just saves the file to local disk.
+	Needs no credentials. Config args:
+		path:
+			Where to save the file.
+		url_prefix:
+			The leading part of the URL to return.
+			The filename will be appended to this to form the full URL.
+			So for example, if you set "http://example.com/videos/",
+			then a returned video URL might look like:
+				"http://example.com/videos/my-example-video-1ffd816b-6496-45d4-b8f5-5eb06ee532f9.ts"
+			If not given, returns a file:// url with the full path.
+	Saves files under their title, plus a random video id to avoid conflicts.
+	Ignores description and tags.
+	"""
+
+	def __init__(self, credentials, path, url_prefix=None):
+		self.path = path
+		self.url_prefix = url_prefix
+		# make path if it doesn't already exist
+		try:
+			os.makedirs(self.path)
+		except OSError as e:
+			if e.errno != errno.EEXIST:
+				raise
+			# ignore already-exists errors
+
+	def upload_video(self, title, description, tags, data):
+		video_id = uuid.uuid4()
+		# make title safe by removing offending characters, replacing with '-'
+		title = re.sub('[^A-Za-z0-9_]', '-', title)
+		filename = '{}-{}.ts'.format(title, video_id) # TODO with re-encoding, this ext must change
+		filepath = os.path.join(self.path, filename)
+		with open(filepath, 'w') as f:
+			if isinstance(data, str):
+				# string
+				f.write(data)
+			elif hasattr(data, 'read'):
+				# file-like object
+				CHUNK_SIZE = 16*1024
+				chunk = data.read(CHUNK_SIZE)
+				while chunk:
+					f.write(chunk)
+					chunk = data.read(CHUNK_SIZE)
+			else:
+				# iterable of string
+				for chunk in data:
+					f.write(chunk)
+		if self.url_prefix is not None:
+			url = self.url_prefix + filename
+		else:
+			url = 'file://{}'.format(filepath)
+		return video_id, url
