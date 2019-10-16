@@ -95,6 +95,16 @@
     unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
   },
 
+  // Fixed tags to add to all videos
+  video_tags:: ["DB13", "DB2019", "2019", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
+
+  // The header to put at the front of video titles, eg. a video with a title
+  // of "hello world" with title header "foo" becomes: "foo - hello world".
+  title_header:: "DB2019",
+
+  // The footer to put at the bottom of descriptions, in its own paragraph.
+  description_footer:: "Uploaded by the Desert Bus Video Strike Team",
+
   // Path to a JSON file containing google credentials for sheetsync as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
   // May be the same as cutter_creds_file.
@@ -183,6 +193,9 @@
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
+        "--tags", std.join(",", $.video_tags),
+        "--title-header", $.title_header,
+        "--description-footer", $.description_footer,
         $.db_connect,
         std.manifestJson($.cutter_config),
         "/etc/wubloader-creds.json",
