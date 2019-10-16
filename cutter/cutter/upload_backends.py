@@ -1,5 +1,6 @@
 
 import errno
+import json
 import logging
 import os
 import re
@@ -121,13 +122,18 @@ class Local(UploadBackend):
 			then a returned video URL might look like:
 				"http://example.com/videos/my-example-video-1ffd816b-6496-45d4-b8f5-5eb06ee532f9.ts"
 			If not given, returns a file:// url with the full path.
+		write_info:
+			If true, writes a json file alongside the video file containing
+			the video title, description and tags.
+			This is intended primarily for testing purposes.
 	Saves files under their title, plus a random video id to avoid conflicts.
 	Ignores description and tags.
 	"""
 
-	def __init__(self, credentials, path, url_prefix=None):
+	def __init__(self, credentials, path, url_prefix=None, write_info=False):
 		self.path = path
 		self.url_prefix = url_prefix
+		self.write_info = write_info
 		# make path if it doesn't already exist
 		try:
 			os.makedirs(self.path)
@@ -142,6 +148,13 @@ class Local(UploadBackend):
 		title = re.sub('[^A-Za-z0-9_]', '-', title)
 		filename = '{}-{}.ts'.format(title, video_id) # TODO with re-encoding, this ext must change
 		filepath = os.path.join(self.path, filename)
+		if self.write_info:
+			with open(os.path.join(self.path, '{}-{}.json'.format(title, video_id))) as f:
+				f.write(json.dumps({
+					'title': title,
+					'description': description,
+					'tags': tags,
+				}) + '\n')
 		with open(filepath, 'w') as f:
 			if isinstance(data, str):
 				# string
