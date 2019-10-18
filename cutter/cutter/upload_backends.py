@@ -19,7 +19,7 @@ class UploadBackend(object):
 	Should have a method upload_video(title, description, tags, data).
 	Title, description and tags may have backend-specific meaning.
 	Tags is a list of string.
-	Data may be a string, file-like object or iterator of strings.
+	Data is an iterator of strings.
 	It should return (video_id, video_link).
 
 	If the video must undergo additional processing before it's available
@@ -156,20 +156,8 @@ class Local(UploadBackend):
 					'tags': tags,
 				}) + '\n')
 		with open(filepath, 'w') as f:
-			if isinstance(data, str):
-				# string
-				f.write(data)
-			elif hasattr(data, 'read'):
-				# file-like object
-				CHUNK_SIZE = 16*1024
-				chunk = data.read(CHUNK_SIZE)
-				while chunk:
-					f.write(chunk)
-					chunk = data.read(CHUNK_SIZE)
-			else:
-				# iterable of string
-				for chunk in data:
-					f.write(chunk)
+			for chunk in data:
+				f.write(chunk)
 		if self.url_prefix is not None:
 			url = self.url_prefix + filename
 		else:
