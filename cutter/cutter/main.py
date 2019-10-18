@@ -35,6 +35,7 @@ upload_errors  = prom.Counter(
 
 # A list of all the DB column names in CutJob
 CUT_JOB_PARAMS = [
+	"sheet_name",
 	"category",
 	"allow_holes",
 	"uploader_whitelist",
@@ -72,7 +73,7 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, upload_locations, dbmanager, stop, name, segments_path):
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags, title_header, description_footer):
 		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
@@ -84,6 +85,9 @@ class Cutter(object):
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.segments_path = segments_path
+		self.tags = tags
+		self.title_header = title_header
+		self.description_footer = description_footer
 		self.logger = logging.getLogger(type(self).__name__)
 		self.refresh_conn()
 
@@ -341,11 +345,17 @@ class Cutter(object):
 
 		try:
 			video_id = upload_backend.upload_video(
-				title=job.video_title,
-				description=job.video_description,
-				tags=[], # TODO
+				title=(
+					"{} - {}".format(self.title_header, job.video_title)
+					if self.title_header else job.video_title
+				),
+				description=(
+					"{}\n\n{}".format(job.video_description, self.description_footer)
+					if self.description_footer else job.video_description
+				),
+				# Add category and sheet_name as tags
+				tags=self.tags + [job.category, job.sheet_name],
 				data=upload_wrapper(),
-				hidden=True, # TODO remove when not testing
 			)
 		except JobConsistencyError:
 			raise # this ensures it's not caught in the next except block
@@ -515,7 +525,18 @@ class TranscodeChecker(object):
 		return result.rowcount
 
 
-def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0):
+def main(
+	dbconnect,
+	config,
+	creds_file,
+	name=None,
+	base_dir=".",
+	tags='',
+	title_header="",
+	description_footer="",
+	metrics_port=8003,
+	backdoor_port=0,
+):
 	"""dbconnect should be a postgres connection string, which is either a space-separated
 	list of key=value pairs, or a URI like:
 		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
@@ -534,6 +555,19 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 	creds_file should contain any required credentials for the upload backends, as JSON.
 
 	name defaults to hostname.
+
+	tags should be a comma-seperated list of tags to attach to all videos.
+
+	title_header will be prepended to all video titles, seperated by a " - ".
+	description_footer will be added as a seperate paragraph at the end of all video descriptions.
+	For example, with --title-header foo --description-footer 'A video of foo.',
+	then a video with title 'bar' and a description 'Bar with baz' would actually have:
+		title: foo - bar
+		description:
+			Bar with baz
+
+			A video of foo.
+
 	"""
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
@@ -544,6 +578,8 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 
 	if name is None:
 		name = socket.gethostname()
+
+	tags = tags.split(',') if tags else []
 
 	stop = gevent.event.Event()
 	gevent.signal(signal.SIGTERM, stop.set) # shut down on sigterm
@@ -583,7 +619,7 @@ def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=80
 		if backend.needs_transcode and not no_transcode_check:
 			needs_transcode_check.append(backend)
 
-	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir)
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, title_header, description_footer)
 	transcode_checkers = [
 		TranscodeChecker(backend, dbmanager, stop)
 		for backend in needs_transcode_check

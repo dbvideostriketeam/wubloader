@@ -50,12 +50,18 @@ class Youtube(UploadBackend):
 	Config args besides credentials:
 		hidden:
 			If false, video is public. If true, video is unlisted. Default false.
+		category_id:
+			The numeric category id to set as the youtube category of all videos.
+			Default is 23, which is the id for "Comedy". Set to null to not set.
+		language:
+			The language code to describe all videos as.
+			Default is "en", ie. English. Set to null to not set.
 	"""
 
 	needs_transcode = True
 	encoding_settings = [] # TODO youtube's recommended settings
 
-	def __init__(self, credentials, hidden=False):
+	def __init__(self, credentials, hidden=False, category_id=23, language="en"):
 		self.logger = logging.getLogger(type(self).__name__)
 		self.client = GoogleAPIClient(
 			credentials['client_id'],
@@ -63,6 +69,8 @@ class Youtube(UploadBackend):
 			credentials['refresh_token'],
 		)
 		self.hidden = hidden
+		self.category_id = category_id
+		self.language = language
 
 	def upload_video(self, title, description, tags, data):
 		json = {
@@ -72,6 +80,11 @@ class Youtube(UploadBackend):
 				'tags': tags,
 			},
 		}
+		if self.category_id is not None:
+			json['snippet']['categoryId'] = self.category_id
+		if self.language is not None:
+			json['snippet']['defaultLanguage'] = self.language
+			json['snippet']['defaultAudioLanguage'] = self.language
 		if self.hidden:
 			json['status'] = {
 				'privacyStatus': 'unlisted',
