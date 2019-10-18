@@ -18,7 +18,7 @@ import common
 from common.database import DBManager, query
 from common.segments import get_best_segments, cut_segments, ContainsHoles
 
-from .youtube import Youtube
+from .upload_backends import Youtube, Local
 
 
 videos_uploaded  = prom.Counter(
@@ -72,15 +72,15 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, youtube, dbmanager, stop, name, segments_path):
-		"""youtube is an authenticated and initialized youtube api client.
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path):
+		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		Name is this uploader's unique name.
 		Segments path is where to look for segments.
 		"""
 		self.name = name
-		self.youtube = youtube
+		self.upload_locations = upload_locations
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.segments_path = segments_path
@@ -186,15 +186,18 @@ class Cutter(object):
 
 	def list_candidates(self):
 		"""Return a list of all available candidates that we might be able to cut."""
+		# We only accept candidates if they haven't excluded us by whitelist,
+		# and we are capable of uploading to their desired upload location.
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
 			WHERE state = 'EDITED'
 			AND (uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))
+			AND upload_location = ANY (%(upload_locations)s)
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in CUT_JOB_PARAMS)
 		)
-		result = query(self.conn, built_query, name=self.name)
+		result = query(self.conn, built_query, name=self.name, upload_locations=self.upload_locations.keys())
 		return result.fetchall()
 
 	def check_candidate(self, candidate):
@@ -257,9 +260,9 @@ class Cutter(object):
 		  at which point it will re-sync with DB as best it can.
 		  This situation almost certainly requires operator intervention.
 		"""
-		# TODO handle multiple upload locations. Currently everything's hard-coded to youtube.
 
-		self.logger.info("Cutting and uploading job {}".format(format_job(job)))
+		upload_backend = self.upload_locations[job.upload_location]
+		self.logger.info("Cutting and uploading job {} to {}".format(format_job(job), upload_backend))
 		cut = cut_segments(job.segments, job.video_start, job.video_end)
 
 		# This flag tracks whether we've told requests to finalize the upload,
@@ -337,7 +340,7 @@ class Cutter(object):
 			# from requests.post() are not recoverable.
 
 		try:
-			video_id = self.youtube.upload_video(
+			video_id = upload_backend.upload_video(
 				title=job.video_title,
 				description=job.video_description,
 				tags=[], # TODO
@@ -365,7 +368,7 @@ class Cutter(object):
 				).format(format_job(job)))
 				error = (
 					"An error occurred during FINALIZING, please determine if video was actually "
-					"uploaded or not and either move to TRANSCODING and populate video_id or rollback "
+					"uploaded or not and either move to TRANSCODING/DONE and populate video_id or rollback "
 					"to EDITED and clear uploader. "
 					"Error: {}"
 				).format(ex)
@@ -397,14 +400,15 @@ class Cutter(object):
 			gevent.sleep(self.RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL)
 			return
 
-		# Success! Set TRANSCODING and clear any previous error.
+		# Success! Set TRANSCODING or DONE and clear any previous error.
+		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
 		link = "https://youtu.be/{}".format(video_id)
-		if not set_row(state='TRANSCODING', video_id=video_id, video_link=link, error=None):
+		if not set_row(state=success_state, video_id=video_id, video_link=link, error=None):
 			# This will result in it being stuck in FINALIZING, and an operator will need to go
 			# confirm it was really uploaded.
 			raise JobConsistencyError(
-				"No job with id {} and uploader {} when setting to TRANSCODING"
-				.format(job.id, self.name)
+				"No job with id {} and uploader {} when setting to {}"
+				.format(job.id, self.name, success_state)
 			)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), link))
@@ -432,7 +436,7 @@ class Cutter(object):
 			WHERE state = 'FINALIZING' AND uploader = %(name)s AND error IS NULL
 		""", name=self.name, error=(
 			"Uploader died during FINALIZING, please determine if video was actually "
-			"uploaded or not and either move to TRANSCODING and populate video_id or rollback "
+			"uploaded or not and either move to TRANSCODING/DONE and populate video_id or rollback "
 			"to EDITED and clear uploader."
 		))
 		if result.rowcount > 0:
@@ -447,13 +451,14 @@ class TranscodeChecker(object):
 	FOUND_VIDEOS_RETRY_INTERVAL = 20
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, youtube, dbmanager, stop):
+	def __init__(self, backend, dbmanager, stop):
 		"""
-		youtube is an authenticated and initialized youtube api client.
+		backend is an upload backend that supports transcoding
+		and defines check_status().
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
-		self.youtube = youtube
+		self.backend = backend
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
@@ -495,10 +500,10 @@ class TranscodeChecker(object):
 	def check_ids(self, ids):
 		# Future work: Set error in DB if video id is not present,
 		# and/or try to get more info from yt about what's wrong.
-		statuses = self.youtube.get_video_status(ids.values())
+		done = self.backend.check_status(ids.values())
 		return {
 			id: video_id for id, video_id in ids.items()
-			if statuses.get(video_id) == 'processed'
+			if video_id in done
 		}
 
 	def mark_done(self, ids):
@@ -510,12 +515,23 @@ class TranscodeChecker(object):
 		return result.rowcount
 
 
-def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0):
+def main(dbconnect, config, creds_file, name=None, base_dir=".", metrics_port=8003, backdoor_port=0):
 	"""dbconnect should be a postgres connection string, which is either a space-separated
 	list of key=value pairs, or a URI like:
 		postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE
 
-	youtube_creds_file should be a json file containing keys 'client_id', 'client_secret' and 'refresh_token'.
+	config should be a json blob mapping upload location names to a config object
+	for that location. This config object should contain the keys:
+		type:
+			the name of the upload backend type
+		no_transcode_check:
+			bool. If true, won't check for when videos are done transcoding.
+			This is useful when multiple upload locations actually refer to the
+			same place just with different settings, and you only want one of them
+			to actually do the check.
+	along with any additional config options defined for that backend type.
+
+	creds_file should contain any required credentials for the upload backends, as JSON.
 
 	name defaults to hostname.
 	"""
@@ -547,25 +563,42 @@ def main(dbconnect, youtube_creds_file, name=None, base_dir=".", metrics_port=80
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stop.wait(delay)
 
-	youtube_creds = json.load(open(youtube_creds_file))
-	youtube = Youtube(
-		client_id=youtube_creds['client_id'],
-		client_secret=youtube_creds['client_secret'],
-		refresh_token=youtube_creds['refresh_token'],
-	)
-	cutter = Cutter(youtube, dbmanager, stop, name, base_dir)
-	transcode_checker = TranscodeChecker(youtube, dbmanager, stop)
-	jobs = [
-		gevent.spawn(cutter.run),
-		gevent.spawn(transcode_checker.run),
+	with open(creds_file) as f:
+		credentials = json.load(f)
+
+	config = json.loads(config)
+	upload_locations = {}
+	needs_transcode_check = []
+	for location, backend_config in config.items():
+		backend_type = backend_config.pop('type')
+		no_transcode_check = backend_config.pop('no_transcode_check', False)
+		if type == 'youtube':
+			backend_type = Youtube
+		elif type == 'local':
+			backend_type = Local
+		else:
+			raise ValueError("Unknown upload backend type: {!r}".format(type))
+		backend = backend_type(credentials, **backend_config)
+		upload_locations[location] = backend
+		if backend.needs_transcode and not no_transcode_check:
+			needs_transcode_check.append(backend)
+
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir)
+	transcode_checkers = [
+		TranscodeChecker(backend, dbmanager, stop)
+		for backend in needs_transcode_check
 	]
-	# Block until either exits
+	jobs = [gevent.spawn(cutter.run)] + [
+		gevent.spawn(transcode_checker.run)
+		for transcode_checker in transcode_checkers
+	]
+	# Block until any one exits
 	gevent.wait(jobs, count=1)
-	# Stop the other if it isn't stopping already
+	# Stop the others if they aren't stopping already
 	stop.set()
-	# Block until both have exited
+	# Block until all have exited
 	gevent.wait(jobs)
-	# Call get() for each to re-raise if either errored
+	# Call get() for each one to re-raise if any errored
 	for job in jobs:
 		job.get()
 

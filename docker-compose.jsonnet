@@ -85,9 +85,20 @@
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_standby:: false, // set to true to have this database replicate another server
 
-  // Path to a JSON file containing google credentials as keys
+  // Path to a JSON file containing google credentials for cutter as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
-  google_creds:: "./google_creds.json",
+  cutter_creds_file:: "./google_creds.json",
+
+  // Config for cutter upload locations. See cutter docs for full detail.
+  cutter_config:: {
+    desertbus: {type: "youtube"},
+    unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
+  },
+
+  // Path to a JSON file containing google credentials for sheetsync as keys
+  // 'client_id', 'client_secret' and 'refresh_token'.
+  // May be the same as cutter_creds_file.
+  sheetsync_creds_file:: "./google_creds.json",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
   edit_url:: "http://thrimbletrimmer.codegunner.com/?id={}",
@@ -168,18 +179,20 @@
 
     [if $.enabled.cutter then "cutter"]: {
       image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
-      // Args for the cutter: DB and google creds
+      // Args for the cutter: DB and creds
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
-        "/etc/wubloader-google-creds.json",
+        std.manifestJson($.cutter_config),
+        "/etc/wubloader-creds.json",
       ],
       volumes: [
         // Mount the segments directory at /mnt
         "%s:/mnt" % $.segments_path,
+      ] + [
         // Mount the creds file into /etc
-        "%s:/etc/wubloader-google-creds.json" % $.google_creds,
+        "%s:/etc/wubloader-creds.json" % $.cutter_creds_file,
       ],
       // If the application crashes, restart it.
       restart: "on-failure",
@@ -212,14 +225,14 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
-        "/etc/wubloader-google-creds.json",
+        "/etc/wubloader-creds.json",
         $.edit_url,
         $.bustime_start,
         $.sheet_id,
       ] + $.worksheets,
       volumes: [
         // Mount the creds file into /etc
-        "%s:/etc/wubloader-google-creds.json" % $.google_creds,
+        "%s:/etc/wubloader-creds.json" % $.sheetsync_creds_file,
       ],
       // If the application crashes, restart it.
       restart: "on-failure",
