@@ -6,19 +6,12 @@ import signal
 
 import argh
 import gevent.backdoor
-import matplotlib.pyplot as plt
-from matplotlib import colors
+import matplotlib
 import numpy as np
 import prometheus_client as prom
 
 import common
 
-
-total_segment_count_gauge = prom.Gauge(
-		'total_segment_count',
-		'Total number of segments in an hour',
-		['channel', 'quality', 'hour'],
-)
 
 full_segment_count_gauge = prom.Gauge(
 		'full_segment_count',
@@ -29,12 +22,6 @@ full_segment_count_gauge = prom.Gauge(
 partial_segment_count_gauge = prom.Gauge(
 		'partial_segment_count',
 		'Number of partial segments in an hour',
-		['channel', 'quality', 'hour'],
-)
-
-total_segment_duration_gauge = prom.Gauge(
-		'total_segment_count',
-		'Total segment duration in an hour',
 		['channel', 'quality', 'hour'],
 )
 
@@ -122,6 +109,56 @@ class CoverageChecker(object):
 		self.logger.info('Stopping')
 		self.stopping.set()
 
+	def create_coverage_map(self, quality, all_hour_holes, all_hour_partials):
+		"""Create a PNG show segment coverage for the last week."""
+
+		latest_hour = datetime.datetime.strptime(max(all_hour_holes.keys()), HOUR_FMT)
+		hours = [latest_hour - datetime.timedelta(hours=i) for i in range(167, -1, -1)]
+
+		pixel_starts = np.arange(0, 3600, 2)
+		pixel_ends = np.arange(2, 3601, 2)
+
+		coverage_mask = np.zeros(168 * 1800, dtype=np.bool_)
+		partial_mask = np.zeros(168 * 1800, dtype=np.bool_)
+		for i in range(len(hours)):
+			hour = hours[i]
+			if hour not in all_hour_holes:
+				continue	
+
+			else:
+				hour_str = hour.strftime(HOUR_FMT)
+
+				hour_coverage = np.ones(1800, dtype=np.bool_)
+				hour_partial = np.zeros(1800, dtype=np.bool_)
+
+				for hole in all_hour_holes[hour_str]:
+					hole_start = np.floor((hole[0] - hour).seconds)
+					hole_end = np.ceil((hole[1] - hour).seconds)
+					hour_coverage = hour_coverage & ((pixel_starts < hole_start) | (pixel_ends > hole_end))
+
+				for partial in all_hour_partials[hour_str]:
+					partial_start = np.floor((partial[0] - hour).seconds)
+					partial_end = np.ceil((partial[1] - hour).seconds)
+					hour_partial = hour_partial | ((pixel_starts >= partial_start) & (pixel_ends <= partial_end))
+
+				coverage_mask[i * 1800:(i + 1) * 1800] = hour_coverage
+				partial_mask[i * 1800:(i + 1) * 1800] = hour_partial
+
+		columns = 300
+		rows = coverage_mask.size / columns
+		
+		coverage_mask = coverage_mask.reshape((rows, columns)).T
+		partial_mask = partial_mask.reshape((rows, columns)).T
+		
+		colours = np.ones((columns, rows, 3))
+		colours[coverage_mask] = matplotlib.colors.to_rgb('tab:blue')
+		colours[coverage_mask & partial_mask] = matplotlib.colors.to_rgb('tab:orange')
+		
+		final_path = os.path.join(self.basedir, 'coverage-maps', '{}_{}_coverage.png'.format(self.channel, quality))
+		temp_path = final_path.replace('_coverage', '_temp')
+		common.ensure_directory(temp_path)
+		matplotlib.image.imsave(temp_path, colours)
+		os.rename(temp_path, final_path)
 
 	def run(self):
 		"""Loop over available hours for each quality, checking segment coverage."""
@@ -133,11 +170,12 @@ class CoverageChecker(object):
 				if self.stopping.is_set():
 					break
 
-				coverage_map_dir = os.path.join('/', 'coverage', self.channel, quality)
 				path = os.path.join(self.base_dir, self.channel, quality)
 				hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				hours.sort()
 				previous_hour_segments = None
+				all_hour_holes = {}
+				all_hour_partials = {}
 				for hour in hours:
 					if self.stopping.is_set():
 						break
@@ -246,13 +284,6 @@ class CoverageChecker(object):
 					hole_duration = end - start - coverage
 					editable_hole_duration = end - start - editable_coverage
 
-					pixel_starts = np.arange(3600)
-					pixel_ends = np.arange(1, 3601)
-
-					runtime_mask = np.ones(3600, dtype=np.bool_)
-					coverage_mask = np.ones(3600, dtype=np.bool_)
-					partial_mask = np.zeros(3600, dtype=np.bool_)
-
 					hour_start = datetime.datetime.strptime(hour, HOUR_FMT)
 					hour_end = hour_start + datetime.timedelta(hours=1)
 					# handle the case when there is a hole between the last segment of the previous hour and the first of this
@@ -262,56 +293,16 @@ class CoverageChecker(object):
 							holes.append((hour_start, start))
 							hole_duration += start - hour_start
 							editable_holes.append((hour_start, start))
-							editable_hole_duration += start - hour_start							
-					# if it is the first hour, instead ignore anything before the first segment
-					else:
-						start_seconds = start.minute * 60 + start.second
-						runtime_mask = runtime_mask & (start_seconds <= pixel_starts)
+							editable_hole_duration += start - hour_start
 
-					#handle the case when there is a hole between the last segment and the end of the hour
-					if hour != hours[-1]:
-						if end < hour_end:
-							holes.append((end, hour_end))
-							hole_duration += hour_end - end
-							editable_holes.append((end, hour_end))
-							editable_hole_duration += hour_end - end							
-					# if it is the last hour, ignore anything after the last segment
-					else:
-						end_seconds = end.minute * 60 + end.second
-						runtime_mask = runtime_mask & (end_seconds > pixel_starts)
+					#handle the case when there is a hole between the last segment and the end of the hour if not the last hour
+					if hour != hours[-1] and end < hour_end:
+						holes.append((end, hour_end))
+						hole_duration += hour_end - end
+						editable_holes.append((end, hour_end))
+						editable_hole_duration += hour_end - end
 
-					for hole in holes:
-						hole_start = np.floor((hole[0] - hour_start).seconds)
-						hole_end = np.ceil((hole[1] - hour_start).seconds)
-						coverage_mask = coverage_mask & ((pixel_starts < hole_start) | (pixel_ends > hole_end))
-
-					for partial in only_partials:
-						partial_start = np.floor((partial[0] - hour_start).seconds)
-						partial_end = np.ceil((partial[1] - hour_start).seconds)
-						partial_mask = partial_mask | ((pixel_starts >= partial_start) & (pixel_ends <= partial_end))
-
-					runtime_mask = runtime_mask.reshape((60, 60))
-					coverage_mask = coverage_mask.reshape((60, 60))
-					partial_mask = partial_mask.reshape((60, 60))
-
-					colours = np.ones((60, 60, 3))
-
-					colours[runtime_mask & coverage_mask] = colors.to_rgb('tab:green')
-					colours[runtime_mask & partial_mask] = colors.to_rgb('tab:orange')
-					colours[runtime_mask & ~coverage_mask] = colors.to_rgb('tab:red')
-
-					fig = plt.figure(figsize=(3, 3))
-					fig.add_axes([0, 0, 1, 1])
-					plt.imshow(colours)
-					plt.axis('off')
-					
-					tmp_path = os.path.join(coverage_map_dir, 'tmp.png')
-					common.ensure_directory(tmp_path)
-					final_path = os.path.join(coverage_map_dir, '{}.png'.format(hour))
-					plt.savefig(tmp_path, dpi=60)
-					os.rename(tmp_path, final_path)
-					
-
+					#put all of the guages here
 
 					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).seconds))
 					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.seconds))
@@ -323,7 +314,20 @@ class CoverageChecker(object):
 					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.seconds))
 					self.logger.info('Checking {}/{} complete'.format(quality, hour))
 
+					# add holes for the start and end hours for the coverage map
+					# do this after updating gauges and logging as these aren't likely real holes, just the start and end of the stream.
+					if previous_hour_segments is None:
+						holes.append((hour_start, start))
+					if hour == hours[-1]:
+						holes.append((end, hour_end))
+
+
+					all_hour_holes[hour] = holes
+					all_hour_partials[hour] = only_partials					
+
 					previous_hour_segments = best_segments
+
+				self.create_coverage_map(quality, all_hour_holes, all_hour_partials)
 
 			self.stopping.wait(common.jitter(self.CHECK_INTERVAL))
 
