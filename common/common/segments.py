@@ -286,18 +286,19 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return subprocess.Popen(args, stdout=subprocess.PIPE)
 
 
-def ffmpeg_cut_stdin(cut_start, cut_end, encode_args):
+def ffmpeg_cut_stdin(cut_start, duration, encode_args):
 	"""Return a Popen object which is ffmpeg cutting from stdin.
 	This is used when doing a full cut."""
 	args = [
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
-		'-i', '-'
+		'-i', '-',
 		'-ss', cut_start,
-		'-to', cut_end,
+		'-t', duration,
 	] + list(encode_args) + [
 		'-', # output to stdout
 	]
+	args = map(str, args)
 	logging.info("Running full cut with args: {}".format(" ".join(args)))
 	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
 
@@ -400,13 +401,13 @@ def feed_input(segments, pipe):
 def full_cut_segments(segments, start, end, encode_args):
 	# how far into the first segment to begin
 	cut_start = max(0, (start - segments[0].start).total_seconds())
-	# how much of final segment should be cut off
-	cut_end = max(0, (segments[-1].end - end).total_seconds())
+	# duration
+	duration = (end - start).total_seconds()
 
 	ffmpeg = None
 	input_feeder = None
 	try:
-		ffmpeg = ffmpeg_cut_stdin(cut_start, cut_end, encode_args)
+		ffmpeg = ffmpeg_cut_stdin(cut_start, duration, encode_args)
 		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 		# stream the output until it is closed
 		for chunk in read_chunks(ffmpeg.stdout):
