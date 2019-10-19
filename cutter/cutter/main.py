@@ -16,7 +16,7 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query
-from common.segments import get_best_segments, cut_segments, ContainsHoles
+from common.segments import get_best_segments, fast_cut_segments, ContainsHoles
 
 from .upload_backends import Youtube, Local
 
@@ -267,7 +267,7 @@ class Cutter(object):
 
 		upload_backend = self.upload_locations[job.upload_location]
 		self.logger.info("Cutting and uploading job {} to {}".format(format_job(job), upload_backend))
-		cut = cut_segments(job.segments, job.video_start, job.video_end)
+		cut = fast_cut_segments(job.segments, job.video_start, job.video_end)
 
 		# This flag tracks whether we've told requests to finalize the upload,
 		# and serves to detect whether errors from the request call are recoverable.
