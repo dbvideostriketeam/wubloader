@@ -407,7 +407,7 @@ def full_cut_segments(segments, start, end, encode_args):
 	input_feeder = None
 	try:
 		ffmpeg = ffmpeg_cut_stdin(cut_start, cut_end, encode_args)
-		input_feeder = gevent.spawn(feed_input, ffmpeg.stdin)
+		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 		# stream the output until it is closed
 		for chunk in read_chunks(ffmpeg.stdout):
 			yield chunk
