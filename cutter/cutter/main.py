@@ -618,12 +618,12 @@ def main(
 		backend_type = backend_config.pop('type')
 		no_transcode_check = backend_config.pop('no_transcode_check', False)
 		cut_type = backend_config.pop('cut_type', 'fast')
-		if type == 'youtube':
+		if backend_type == 'youtube':
 			backend_type = Youtube
-		elif type == 'local':
+		elif backend_type == 'local':
 			backend_type = Local
 		else:
-			raise ValueError("Unknown upload backend type: {!r}".format(type))
+			raise ValueError("Unknown upload backend type: {!r}".format(backend_type))
 		backend = backend_type(credentials, **backend_config)
 		if cut_type == 'fast':
 			# mark for fast cut by clearing encoding settings
