@@ -13,7 +13,7 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import dateutil, get_best_segments, cut_segments, PromLogCountsHandler, install_stacksampler
+from common import dateutil, get_best_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 
 import generate_hls
@@ -235,6 +235,9 @@ def cut(channel, quality):
 			if any holes are detected, rather than producing a video with missing parts.
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
+		type: One of "fast" or "full". Default to "fast".
+			A fast cut is much faster but minor artifacting may be present near the start and end.
+			A fast cut is encoded as MPEG-TS, a full as mp4.
 	"""
 	start = dateutil.parse_utc_only(request.args['start'])
 	end = dateutil.parse_utc_only(request.args['end'])
@@ -257,7 +260,14 @@ def cut(channel, quality):
 	if not any(segment is not None for segment in segments):
 		return "We have no content available within the requested time range.", 406
 
-	return Response(cut_segments(segments, start, end), mimetype='video/MP2T')
+	type = request.args.get('type', 'fast')
+	if type == 'fast':
+		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
+	elif type == 'full':
+		# output as mp4 with no more specific encoding args
+		return Response(full_cut_segments(segments, start, end, ['-f', 'mp4']), mimetype='video/mp4')
+	else:
+		return "Unknown type {!r}. Must be 'fast' or 'full'.".format(type), 400
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):

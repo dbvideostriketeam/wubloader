@@ -9,6 +9,7 @@ import itertools
 import json
 import logging
 import os
+import shutil
 import sys
 from collections import namedtuple
 from contextlib import closing
@@ -256,7 +257,9 @@ def streams_info(segment):
 
 
 def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
-	"""Return a Popen object which is ffmpeg cutting the given segment"""
+	"""Return a Popen object which is ffmpeg cutting the given single segment.
+	This is used when doing a fast cut.
+	"""
 	args = [
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
@@ -283,6 +286,22 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return subprocess.Popen(args, stdout=subprocess.PIPE)
 
 
+def ffmpeg_cut_stdin(cut_start, cut_end, encode_args):
+	"""Return a Popen object which is ffmpeg cutting from stdin.
+	This is used when doing a full cut."""
+	args = [
+		'ffmpeg',
+		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
+		'-i', '-'
+		'-ss', cut_start,
+		'-to', cut_end,
+	] + list(encode_args) + [
+		'-', # output to stdout
+	]
+	logging.info("Running full cut with args: {}".format(" ".join(args)))
+	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE)
+
+
 def read_chunks(fileobj, chunk_size=16*1024):
 	"""Read fileobj until EOF, yielding chunk_size sized chunks of data."""
 	while True:
@@ -292,7 +311,7 @@ def read_chunks(fileobj, chunk_size=16*1024):
 		yield chunk
 
 
-def cut_segments(segments, start, end):
+def fast_cut_segments(segments, start, end):
 	"""Yields chunks of a MPEGTS video file covering the exact timestamp range.
 	segments should be a list of segments as returned by get_best_segments().
 	This method works by only cutting the first and last segments, and concatenating the rest.
@@ -362,3 +381,47 @@ def cut_segments(segments, start, end):
 			with open(segment.path) as f:
 				for chunk in read_chunks(f):
 					yield chunk
+
+
+def feed_input(segments, pipe):
+	"""Write each segment's data into the given pipe in order.
+	This is used to provide input to ffmpeg in a full cut."""
+	for segment in segments:
+		with open(segment.path) as f:
+			try:
+				shutil.copyfileobj(f, pipe)
+			except OSError as e:
+				# ignore EPIPE, as this just means the end cut meant we didn't need all input
+				if e.errno != errno.EPIPE:
+					raise
+	pipe.close()
+
+
+def full_cut_segments(segments, start, end, encode_args):
+	# how far into the first segment to begin
+	cut_start = max(0, (start - segments[0].start).total_seconds())
+	# how much of final segment should be cut off
+	cut_end = max(0, (segments[-1].end - end).total_seconds())
+
+	ffmpeg = None
+	input_feeder = None
+	try:
+		ffmpeg = ffmpeg_cut_stdin(cut_start, cut_end, encode_args)
+		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+		# stream the output until it is closed
+		for chunk in read_chunks(ffmpeg.stdout):
+			yield chunk
+		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+		if ffmpeg.wait() != 0:
+			raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
+		input_feeder.get() # re-raise any errors from feed_input()
+	finally:
+		# if something goes wrong, try to clean up ignoring errors
+		if input_feeder is not None:
+			input_feeder.kill()
+		if ffmpeg is not None and ffmpeg.poll() is None:
+			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+				try:
+					action()
+				except (OSError, IOError):
+					pass
