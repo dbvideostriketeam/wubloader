@@ -31,12 +31,14 @@ class UploadBackend(object):
 	The upload backend also determines the encoding settings for the cutting
 	process, this is given as a list of ffmpeg args
 	under the 'encoding_settings' attribute.
+	If this is None, instead uses the 'fast cut' strategy where nothing
+	is transcoded.
 	"""
 
 	needs_transcode = False
 
 	# reasonable default if settings don't otherwise matter
-	encoding_settings = [] # TODO
+	encoding_settings = ['-f', 'mp4']
 
 	def upload_video(self, title, description, tags, data):
 		raise NotImplementedError
@@ -59,7 +61,18 @@ class Youtube(UploadBackend):
 	"""
 
 	needs_transcode = True
-	encoding_settings = [] # TODO youtube's recommended settings
+	encoding_settings = [
+		# Youtube's recommended settings:
+		'-codec:v', 'libx264', # Make the video codec x264
+		'-crf', '21', # Set the video quality, this produces the bitrate range that YT likes
+		'-bf', '2', # Have 2 consecutive bframes, as requested
+		'-flags', '+cgop', # Use closed GOP, as requested
+		'-pix_fmt', 'yuv420p', # chroma subsampling 4:2:0, as requrested
+		'-codec:a', 'aac', '-strict', '-2', # audio codec aac, as requested
+		'-b:a', '384k' # audio bitrate at 348k for 2 channel, use 512k if 5.1 audio
+		'-r:a', '48000', # set audio sample rate at 48000Hz, as requested
+		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
+	]
 
 	def __init__(self, credentials, hidden=False, category_id=23, language="en"):
 		self.logger = logging.getLogger(type(self).__name__)

@@ -16,7 +16,7 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query
-from common.segments import get_best_segments, fast_cut_segments, ContainsHoles
+from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, ContainsHoles
 
 from .upload_backends import Youtube, Local
 
@@ -267,7 +267,13 @@ class Cutter(object):
 
 		upload_backend = self.upload_locations[job.upload_location]
 		self.logger.info("Cutting and uploading job {} to {}".format(format_job(job), upload_backend))
-		cut = fast_cut_segments(job.segments, job.video_start, job.video_end)
+
+		if upload_backend.encoding_settings is None:
+			self.logger.debug("No encoding settings, using fast cut")
+			cut = fast_cut_segments(job.segments, job.video_start, job.video_end)
+		else:
+			self.logger.debug("Using encoding settings for cut: {}".format(upload_backend.encoding_settings))
+			cut = full_cut_segments(job.segments, job.video_start, job.video_end, upload_backend.encoding_settings)
 
 		# This flag tracks whether we've told requests to finalize the upload,
 		# and serves to detect whether errors from the request call are recoverable.
@@ -550,6 +556,9 @@ def main(
 			This is useful when multiple upload locations actually refer to the
 			same place just with different settings, and you only want one of them
 			to actually do the check.
+		cut_type:
+			One of 'fast' or 'full'. Default 'fast'. This indicates whether to use
+			fast_cut_segments() or full_cut_segments() for this location.
 	along with any additional config options defined for that backend type.
 
 	creds_file should contain any required credentials for the upload backends, as JSON.
@@ -608,6 +617,7 @@ def main(
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
 		no_transcode_check = backend_config.pop('no_transcode_check', False)
+		cut_type = backend_config.pop('cut_type', 'fast')
 		if type == 'youtube':
 			backend_type = Youtube
 		elif type == 'local':
@@ -615,6 +625,11 @@ def main(
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(type))
 		backend = backend_type(credentials, **backend_config)
+		if cut_type == 'fast':
+			# mark for fast cut by clearing encoding settings
+			backend.encoding_settings = None
+		elif cut_type != 'full':
+			raise ValueError("Unknown cut type: {!r}".format(cut_type))
 		upload_locations[location] = backend
 		if backend.needs_transcode and not no_transcode_check:
 			needs_transcode_check.append(backend)
