@@ -2,11 +2,13 @@ import datetime
 import itertools
 import logging
 import os
+import random
 import signal
 
 import argh
 import gevent.backdoor
 import matplotlib
+import matplotlib.image
 import numpy as np
 import prometheus_client as prom
 
@@ -25,8 +27,14 @@ partial_segment_count_gauge = prom.Gauge(
 		['channel', 'quality', 'hour'],
 )
 
+bad_segment_count_gauge = prom.Gauge(
+		'bad_segment_count',
+		'Number of segments that fail to parse in an hour',
+		['channel', 'quality', 'hour'],
+)
+
 full_segment_duration_gauge = prom.Gauge(
-		'full_segment_count',
+		'full_segment_duration',
 		'Full segment duration in an hour',
 		['channel', 'quality', 'hour'],
 )
@@ -109,56 +117,67 @@ class CoverageChecker(object):
 		self.logger.info('Stopping')
 		self.stopping.set()
 
-	def create_coverage_map(self, quality, all_hour_holes, all_hour_partials):
-		"""Create a PNG show segment coverage for the last week."""
+	def create_coverage_map(self, quality, all_hour_holes, all_hour_partials,
+			pixel_length=2, hour_count=168):
+		"""Create a PNG show segment coverage.
+
+		If any part of a pixel does not have coverage, it is marked as not
+		having coverage. Likewise, if only a partial segment is available for
+		any part of a pixel, it is marked as partial.
+
+		all_hour_holes -- a dict mapping hours to lists of holes
+		all_hour_holes -- a dict mapping hours to lists of partial segments
+		pixel_length -- length of a pixel in seconds
+		hour_count -- number of hours to create the map for"""
+
+		self.logger.info('Creating coverage map for {}'.format(quality))
 
 		latest_hour = datetime.datetime.strptime(max(all_hour_holes.keys()), HOUR_FMT)
-		hours = [latest_hour - datetime.timedelta(hours=i) for i in range(167, -1, -1)]
+		hours = [latest_hour - datetime.timedelta(hours=i) for i in range(hour_count - 1, -1, -1)]
 
-		pixel_starts = np.arange(0, 3600, 2)
-		pixel_ends = np.arange(2, 3601, 2)
+		pixel_starts = np.arange(0, 3600, pixel_length) # starts of the pixels in 
+		pixel_ends = np.arange(pixel_length, 3601, pixel_length)
 
-		coverage_mask = np.zeros(168 * 1800, dtype=np.bool_)
-		partial_mask = np.zeros(168 * 1800, dtype=np.bool_)
+		pixel_count = 3600 / pixel_length # number of pixels in an hour
+		coverage_mask = np.zeros(hour_count * pixel_count, dtype=np.bool_)
+		partial_mask = np.zeros(hour_count * pixel_count, dtype=np.bool_)
 		for i in range(len(hours)):
 			hour = hours[i]
-			if hour not in all_hour_holes:
-				continue	
+			hour_str = hour.strftime(HOUR_FMT)
+			if hour_str in all_hour_holes:
 
-			else:
-				hour_str = hour.strftime(HOUR_FMT)
-
-				hour_coverage = np.ones(1800, dtype=np.bool_)
-				hour_partial = np.zeros(1800, dtype=np.bool_)
+				hour_coverage = np.ones(pixel_count, dtype=np.bool_)
+				hour_partial = np.zeros(pixel_count, dtype=np.bool_)
 
 				for hole in all_hour_holes[hour_str]:
-					hole_start = np.floor((hole[0] - hour).seconds)
-					hole_end = np.ceil((hole[1] - hour).seconds)
+					hole_start = np.floor((hole[0] - hour).total_seconds() / pixel_length) * pixel_length # the start of the pixel containing the start of the hole
+					hole_end = np.ceil((hole[1] - hour).total_seconds() / pixel_length) * pixel_length # the end of the pixel containing the end of the hole
 					hour_coverage = hour_coverage & ((pixel_starts < hole_start) | (pixel_ends > hole_end))
 
 				for partial in all_hour_partials[hour_str]:
-					partial_start = np.floor((partial[0] - hour).seconds)
-					partial_end = np.ceil((partial[1] - hour).seconds)
+					partial_start = np.floor((partial[0] - hour).total_seconds() / pixel_length) * pixel_length
+					partial_end = np.ceil((partial[1] - hour).total_seconds() / pixel_length) * pixel_length
 					hour_partial = hour_partial | ((pixel_starts >= partial_start) & (pixel_ends <= partial_end))
 
-				coverage_mask[i * 1800:(i + 1) * 1800] = hour_coverage
-				partial_mask[i * 1800:(i + 1) * 1800] = hour_partial
+				coverage_mask[i * pixel_count:(i + 1) * pixel_count] = hour_coverage
+				partial_mask[i * pixel_count:(i + 1) * pixel_count] = hour_partial
 
-		columns = 300
-		rows = coverage_mask.size / columns
+		rows = 300
+		columns = coverage_mask.size / rows
 		
-		coverage_mask = coverage_mask.reshape((rows, columns)).T
-		partial_mask = partial_mask.reshape((rows, columns)).T
+		coverage_mask = coverage_mask.reshape((columns, rows)).T
+		partial_mask = partial_mask.reshape((columns, rows)).T
 		
-		colours = np.ones((columns, rows, 3))
+		colours = np.ones((rows, columns, 3))
 		colours[coverage_mask] = matplotlib.colors.to_rgb('tab:blue')
 		colours[coverage_mask & partial_mask] = matplotlib.colors.to_rgb('tab:orange')
 		
-		final_path = os.path.join(self.basedir, 'coverage-maps', '{}_{}_coverage.png'.format(self.channel, quality))
-		temp_path = final_path.replace('_coverage', '_temp')
+		final_path = os.path.join(self.base_dir, 'coverage-maps', '{}_{}_coverage.png'.format(self.channel, quality))
+		temp_path = final_path.replace('_coverage', '_{}'.format(random.getrandbits(32)))
 		common.ensure_directory(temp_path)
 		matplotlib.image.imsave(temp_path, colours)
 		os.rename(temp_path, final_path)
+		self.logger.info('Coverage map for {} created'.format(quality))
 
 	def run(self):
 		"""Loop over available hours for each quality, checking segment coverage."""
@@ -186,12 +205,21 @@ class CoverageChecker(object):
 					hour_path = os.path.join(self.base_dir, self.channel, quality, hour)
 					segment_names = [name for name in os.listdir(hour_path) if not name.startswith('.')]
 
-					if not segment_names:
-						self.logger.info('{}/{} is empty'.format(quality, hour))
-						continue
 
 					segment_names.sort()
-					parsed = (common.parse_segment_path(os.path.join(hour_path, name)) for name in segment_names)
+					parsed = []
+					bad_segment_count = 0
+					for name in segment_names:
+						try:
+							parsed.append(common.parse_segment_path(os.path.join(hour_path, name)))
+						except ValueError as e:
+							self.logger.warn(e)
+							bad_segment_count += 1
+
+					#parsed = (common.parse_segment_path(os.path.join(hour_path, name)) for name in segment_names)
+					if not parsed:
+						self.logger.info('{}/{} is empty'.format(quality, hour))
+						continue					
 
 					full_segment_count = 0
 					partial_segment_count = 0
@@ -302,16 +330,31 @@ class CoverageChecker(object):
 						editable_holes.append((end, hour_end))
 						editable_hole_duration += hour_end - end
 
-					#put all of the guages here
+					full_segment_count_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(full_segment_count)
+					partial_segment_count_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(partial_segment_count)
+					bad_segment_count_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(bad_segment_count)
+					full_segment_duration_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(full_segment_duration.total_seconds())
+					partial_segment_duration_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(partial_segment_duration.total_seconds())
+					raw_coverage_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(coverage.total_seconds())
+					editable_coverage_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(editable_coverage.total_seconds())
+					raw_holes_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(len(holes))
+					editable_holes_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(len(editable_holes))
+					full_overlap_count_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(full_overlaps)
+					partial_overlap_count_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(partial_overlaps)
+					full_overlap_duration_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(full_overlap_duration.total_seconds())
+					partial_overlap_duration_gauge.labels(channel=self.channel, quality=quality, hour=hour).set(partial_overlap_duration.total_seconds())
 
-					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).seconds))
-					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.seconds))
-					self.logger.info('{}/{}: {} overlapping full segments totalling {} s'.format(quality, hour, full_overlaps, full_overlap_duration.seconds))
-					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, partial_segment_count, partial_segment_duration.seconds))
-					self.logger.info('{}/{}: {} overlapping partial segments totalling {} s'.format(quality, hour, partial_overlaps, partial_overlap_duration.seconds))
-					self.logger.info('{}/{}: raw coverage {} s, editable coverage {} s '.format(quality, hour, coverage.seconds, editable_coverage.seconds))
-					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.seconds))
-					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.seconds))
+
+
+					self.logger.info('{}/{}: Start: {} End: {} ({} s)'.format(quality, hour, start, end, (end - start).total_seconds()))
+					self.logger.info('{}/{}: {} full segments totalling {} s'.format(quality, hour, full_segment_count, full_segment_duration.total_seconds()))
+					self.logger.info('{}/{}: {} bad segments'.format(quality, hour, bad_segment_count))
+					self.logger.info('{}/{}: {} overlapping full segments totalling {} s'.format(quality, hour, full_overlaps, full_overlap_duration.total_seconds()))
+					self.logger.info('{}/{}: {} partial segments totalling {} s'.format(quality, hour, partial_segment_count, partial_segment_duration.total_seconds()))
+					self.logger.info('{}/{}: {} overlapping partial segments totalling {} s'.format(quality, hour, partial_overlaps, partial_overlap_duration.total_seconds()))
+					self.logger.info('{}/{}: raw coverage {} s, editable coverage {} s '.format(quality, hour, coverage.total_seconds(), editable_coverage.total_seconds()))
+					self.logger.info('{}/{}: {} holes totalling {} s '.format(quality, hour, len(holes), hole_duration.total_seconds()))
+					self.logger.info('{}/{}: {} editable holes totalling {} s '.format(quality, hour, len(editable_holes), editable_hole_duration.total_seconds()))
 					self.logger.info('Checking {}/{} complete'.format(quality, hour))
 
 					# add holes for the start and end hours for the coverage map
