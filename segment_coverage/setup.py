@@ -7,10 +7,9 @@ setup(
 	install_requires = [
 		'argh',
 		'gevent',
-                'matplotlib',
-                'numpy',
+		'matplotlib',
+		'numpy',
 		'prometheus-client',
-		'python-dateutil',
 		'wubloader-common',
 	],
 )
