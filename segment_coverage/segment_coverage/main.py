@@ -222,10 +222,6 @@ class CoverageChecker(object):
 							self.logger.warn(e)
 							bad_segment_count += 1
 
-					#if not parsed:
-					#	self.logger.info('{}/{} is empty'.format(quality, hour))
-					#	continue					
-
 					full_segment_count = 0
 					partial_segment_count = 0
 					full_segment_duration = datetime.timedelta()
