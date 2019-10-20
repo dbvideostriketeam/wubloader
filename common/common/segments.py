@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import sys
+import warnings
 from collections import namedtuple
 from contextlib import closing
 
@@ -222,7 +223,13 @@ def best_segments_by_start(hour):
 	segment_paths.sort()
 	# note we only parse them as we need them, which is unlikely to save us much time overall
 	# but is easy enough to do, so we might as well.
-	parsed = (parse_segment_path(os.path.join(hour, name)) for name in segment_paths)
+	# raise a warning for any files that don't parse as segments and ignore them
+	parsed = []
+	for name in segment_paths:
+		try:
+			parsed.append(parse_segment_path(os.path.join(hour, name)))
+		except ValueError as e:
+			warnings.warn(e)
 	for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
 		# ignore temp segments as they might go away by the time we want to use them
 		segments = [segment for segment in segments if segment.type != "temp"]
