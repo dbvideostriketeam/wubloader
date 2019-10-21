@@ -11,7 +11,6 @@ import logging
 import os
 import shutil
 import sys
-import warnings
 from collections import namedtuple
 from contextlib import closing
 
@@ -229,7 +228,8 @@ def best_segments_by_start(hour):
 		try:
 			parsed.append(parse_segment_path(os.path.join(hour, name)))
 		except ValueError as e:
-			warnings.warn(e)
+			logging.warning("Failed to parse segment {!r}".format(os.path.join(hour, name)), exc_info=True)
+
 	for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
 		# ignore temp segments as they might go away by the time we want to use them
 		segments = [segment for segment in segments if segment.type != "temp"]
