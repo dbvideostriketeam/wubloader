@@ -220,8 +220,6 @@ def best_segments_by_start(hour):
 		# path does not exist, treat it as having no files
 		return
 	segment_paths.sort()
-	# note we only parse them as we need them, which is unlikely to save us much time overall
-	# but is easy enough to do, so we might as well.
 	# raise a warning for any files that don't parse as segments and ignore them
 	parsed = []
 	for name in segment_paths:
