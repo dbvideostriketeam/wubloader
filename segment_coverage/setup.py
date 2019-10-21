@@ -10,6 +10,7 @@ setup(
 		'matplotlib',
 		'numpy',
 		'prometheus-client',
+		'python-dateutil',
 		'wubloader-common',
 	],
 )
