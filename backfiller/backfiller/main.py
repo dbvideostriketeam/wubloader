@@ -499,9 +499,13 @@ def main(channels, base_dir='.', qualities='source', metrics_port=8002,
 		try:
 			start = float(start)
 			logging.info('Backfilling last {} hours'.format(start))
+			if delete_before and start > delete_before:
+				logging.warn('Keeping fewer hours ({}) than backfilling ({})'.format(delete_before, start))
 		except ValueError:
 			start = dateutil.parse(start)
-			logging.info('Backfilling since {}'.format(start)) 
+			logging.info('Backfilling since {}'.format(start))
+			if delete_before:
+				logging.warn('Only keeping {} hours when backfilling since {}'.format(delete_before, start))
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
