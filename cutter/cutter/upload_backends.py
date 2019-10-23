@@ -9,6 +9,40 @@ import uuid
 from common.googleapis import GoogleAPIClient
 
 
+class UploadError(Exception):
+	"""Upload backends should raise this error when uploading
+	and an expected failure occurs.
+	In particular, they should NOT raise this error if they're
+	unsure whether the video was uploaded or not.
+	They should also indicate if the error is retryable without
+	manual intervention.
+	Examples of retryable errors:
+		Authorization errors (likely a bad config - let another node get it)
+		Short-term rate limits (try again in a few seconds)
+	Examples of unretryable errors:
+		Bad Request (indicates logic bug, or that the video is unacceptable in some way)
+		Long-term rate limits (trying again quickly is counterproductive, wait for operator)
+	Examples of errors which should not be caught, allowing the FINALIZING logic
+	to determine if it's safe to retry:
+		500s (We don't know if the request went through)
+		Network errors (same as above)
+		Unexpected exceptions (they might have occurred after the upload is finished)
+
+	Raisers should log the underlying exception before raising, as this error
+	will not be further logged.
+	"""
+	def __init__(self, error, retryable=False):
+		"""Error should be a string error message to put into the database."""
+		self.error = error
+		self.retryable = retryable
+
+	def __str__(self):
+		return "{} error while uploading: {}".format(
+			"Retryable" if self.retryable else "Non-retryable",
+			self.error,
+		)
+
+
 class UploadBackend(object):
 	"""Represents a place a video can be uploaded,
 	and maintains any state needed to perform uploads.
