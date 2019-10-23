@@ -350,7 +350,7 @@ class Cutter(object):
 			# from requests.post() are not recoverable.
 
 		try:
-			video_id = upload_backend.upload_video(
+			video_id, video_link = upload_backend.upload_video(
 				title=(
 					"{} - {}".format(self.title_header, job.video_title)
 					if self.title_header else job.video_title
@@ -418,8 +418,7 @@ class Cutter(object):
 
 		# Success! Set TRANSCODING or DONE and clear any previous error.
 		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
-		link = "https://youtu.be/{}".format(video_id)
-		if not set_row(state=success_state, video_id=video_id, video_link=link, error=None):
+		if not set_row(state=success_state, video_id=video_id, video_link=video_link, error=None):
 			# This will result in it being stuck in FINALIZING, and an operator will need to go
 			# confirm it was really uploaded.
 			raise JobConsistencyError(
@@ -427,7 +426,7 @@ class Cutter(object):
 				.format(job.id, self.name, success_state)
 			)
 
-		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), link))
+		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), video_link))
 		videos_uploaded.labels(video_channel=job.video_channel,
 				video_quality=job.video_quality,
 				upload_location=job.upload_location).inc()
