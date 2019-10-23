@@ -17,8 +17,8 @@ class UploadError(Exception):
 	They should also indicate if the error is retryable without
 	manual intervention.
 	Examples of retryable errors:
-		Authorization errors (likely a bad config - let another node get it)
 		Short-term rate limits (try again in a few seconds)
+		Upload backends which are fully idempotent
 	Examples of unretryable errors:
 		Bad Request (indicates logic bug, or that the video is unacceptable in some way)
 		Long-term rate limits (trying again quickly is counterproductive, wait for operator)
@@ -144,9 +144,16 @@ class Youtube(UploadBackend):
 			},
 			json=json,
 		)
-		resp.raise_for_status()
+		if not resp.ok:
+			# Don't retry, because failed calls still count against our upload quota.
+			# The risk of repeated failed attempts blowing through our quota is too high.
+			raise UploadError("Youtube create video call failed with {resp.status_code}: {resp.content}".format(resp=resp))
 		upload_url = resp.headers['Location']
 		resp = self.client.request('POST', upload_url, data=data)
+		if 400 <= resp.status_code < 500:
+			# As above, don't retry. But with 4xx's we know the upload didn't go through.
+			# On a 5xx, we can't be sure (the server is in an unspecified state).
+			raise UploadError("Youtube video data upload failed with {status_code}: {resp.content}".format(resp=resp))
 		resp.raise_for_status()
 		id = resp.json()['id']
 		return id, 'https://youtu.be/{}'.format(id)
@@ -210,16 +217,21 @@ class Local(UploadBackend):
 		ext = 'ts' if self.encoding_settings is None else 'mp4'
 		filename = '{}-{}.{}'.format(safe_title, video_id, ext)
 		filepath = os.path.join(self.path, filename)
-		if self.write_info:
-			with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
-				f.write(json.dumps({
-					'title': title,
-					'description': description,
-					'tags': tags,
-				}) + '\n')
-		with open(filepath, 'w') as f:
-			for chunk in data:
-				f.write(chunk)
+		try:
+			if self.write_info:
+				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
+					f.write(json.dumps({
+						'title': title,
+						'description': description,
+						'tags': tags,
+					}) + '\n')
+			with open(filepath, 'w') as f:
+				for chunk in data:
+					f.write(chunk)
+		except (OSError, IOError) as e:
+			# Because duplicate videos don't actually matter with this backend,
+			# we consider all disk errors retryable.
+			raise UploadError("{} while writing local file: {}".format(type(e).__name__, e), retryable=True)
 		if self.url_prefix is not None:
 			url = self.url_prefix + filename
 		else:
