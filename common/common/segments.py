@@ -262,7 +262,7 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	"""
 	args = [
 		'ffmpeg',
-		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
+		'-hide_banner', '-loglevel', 'error', # suppress noisy output
 		'-i', segment.path,
 	]
 	# output from ffprobe is generally already sorted but let's be paranoid,
@@ -291,7 +291,7 @@ def ffmpeg_cut_stdin(cut_start, duration, encode_args):
 	This is used when doing a full cut."""
 	args = [
 		'ffmpeg',
-		'-hide_banner', '-loglevel', 'fatal', # suppress noisy output
+		'-hide_banner', '-loglevel', 'error', # suppress noisy output
 		'-i', '-',
 		'-ss', cut_start,
 		'-t', duration,
