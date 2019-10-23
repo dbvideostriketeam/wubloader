@@ -172,10 +172,12 @@ class Local(UploadBackend):
 		video_id = uuid.uuid4()
 		# make title safe by removing offending characters, replacing with '-'
 		title = re.sub('[^A-Za-z0-9_]', '-', title)
-		filename = '{}-{}.ts'.format(title, video_id) # TODO with re-encoding, this ext must change
+		# If fast cut enabled, use .ts, otherwise use .mp4
+		ext = 'ts' if self.encoding_settings is None else 'mp4'
+		filename = '{}-{}.{}'.format(title, video_id, ext)
 		filepath = os.path.join(self.path, filename)
 		if self.write_info:
-			with open(os.path.join(self.path, '{}-{}.json'.format(title, video_id))) as f:
+			with open(os.path.join(self.path, '{}-{}.json'.format(title, video_id)), 'w') as f:
 				f.write(json.dumps({
 					'title': title,
 					'description': description,
