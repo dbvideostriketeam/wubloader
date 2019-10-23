@@ -146,7 +146,7 @@ class Cutter(object):
 							UPDATE events
 							SET error = %s
 							WHERE id = %s AND state = 'EDITED' AND error IS NULL
-						""", id=candidate.id, error=error)
+						""", candidate.id, error)
 					except Exception:
 						self.logger.exception("Failed to set error for candidate {}, ignoring".format(format_job(candidate)))
 						self.refresh_conn()
