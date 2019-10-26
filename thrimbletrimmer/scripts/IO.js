@@ -137,7 +137,7 @@ thrimbletrimmerSubmit = function(state) {
             alert(error);
             document.getElementById('SubmitButton').disabled = false;
         } else {
-            setTimeout(() => window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
+            setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
         }
     }));
 };
@@ -184,7 +184,7 @@ thrimbletrimmerManualLink = function() {
             document.getElementById("ManualButton").disabled = false;
         } else {
             alert("Manual link set to " + body.link);
-            setTimeout(() => window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
+            setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
         }
     }));
 };
@@ -221,7 +221,7 @@ thrimbletrimmerResetLink = function() {
             document.getElementById("ResetButton").disabled = false;
         } else {
             alert("Row has been reset. Reloading...");
-            setTimeout(() => window.location.reload(); }, 500);
+            setTimeout(() => { window.location.reload(); }, 500);
         }
     }));
 };
