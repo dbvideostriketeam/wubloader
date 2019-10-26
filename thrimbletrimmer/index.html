@@ -127,11 +127,13 @@
         }
         function toggleTimeInput(toggleInput) {
             if(toggleInput == "UTC") {
+                setStreamRange();
                 document.getElementById("BusTimeStart").style.display = "none";
                 document.getElementById("BusTimeEnd").style.display = "none";
                 document.getElementById("StreamStart").style.display = "";
                 document.getElementById("StreamEnd").style.display = "";
             } else {
+                setBustimeRange();
                 document.getElementById("StreamStart").style.display = "none";
                 document.getElementById("StreamEnd").style.display = "none";
                 document.getElementById("BusTimeStart").style.display = "";

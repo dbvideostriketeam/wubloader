@@ -9,19 +9,19 @@ pageSetup = function() {
                 alert("No video available for stream.");
                 return;
             }
-            //data = testThrimShim;
             desertBusStart = new Date(data.bustime_start);
             document.getElementById("VideoTitlePrefix").value = data.title_prefix;
             document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
 
             document.getElementById("hiddenSubmissionID").value = data.id;
             document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
+            // set stream start/end, then copy to bustime inputs
             document.getElementById("StreamStart").value = data.event_start;
-            document.getElementById("BusTimeStart").value = (new Date(data.event_start+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_start+"Z") - desertBusStart)/1000), 600.01).padStart(7, "0:");
             document.getElementById("StreamEnd").value = data.event_end;
-            document.getElementById("BusTimeEnd").value = (new Date(data.event_end+"Z") < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((new Date(data.event_end+"Z") - desertBusStart)/1000), 600.01).padStart(7, "0:");
-            document.getElementById("VideoTitle").value = data.video_title ? data.video_title:document.getElementById("VideoTitle").value;
-            document.getElementById("VideoDescription").value = data.video_description ? data.video_description:data.description;
+            setBustimeRange();
+            // title and description both default to row description
+            document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
+            document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
 
             loadPlaylist(data.video_start, data.video_end);
         });
@@ -37,20 +37,38 @@ pageSetup = function() {
     }
 };
 
+timestampToBustime = function(ts) {
+    date = new Date(ts + "Z");
+    return (date < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((date - desertBusStart)/1000), 600.01).padStart(7, "0:");
+};
+
+bustimeToTimestamp = function(bustime) {
+    direction = 1;
+    if(bustime.startsWith("-")) {
+        bustime = bustime.slice(1);
+        direction = -1;
+    }
+    parts = bustime.split(':')
+    bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
+    return new Date(desertBusStart.getTime() + direction * bustime_ms).toISOString().substring(0, 19);
+};
+
+setBustimeRange = function() {
+    document.getElementById("BusTimeStart").value = timestampToBustime(document.getElementById("StreamStart").value);
+    document.getElementById("BusTimeEnd").value = timestampToBustime(document.getElementById("StreamEnd").value);
+};
+
+setStreamRange = function() {
+    document.getElementById("StreamStart").value = bustimeToTimestamp(document.getElementById("BusTimeStart").value);
+    document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
+}
+
 loadPlaylist = function(startTrim, endTrim) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
+    // If we're using bustime, update stream start/end from it first
     if(document.getElementById("BusTimeToggleBus").checked) {
-        var streamStart = desertBusStart;
-        var busTimeStart = document.getElementById("BusTimeStart").value;
-        var busTimeEnd = document.getElementById("BusTimeEnd").value;
-        
-        //Convert BusTime to milliseconds from start of stream
-        busTimeStart = (parseInt(busTimeStart.split(':')[0]) + busTimeStart.split(':')[1]/60)  * 1000 * 60 * 60;
-        busTimeEnd = (parseInt(busTimeEnd.split(':')[0]) + busTimeEnd.split(':')[1]/60)  * 1000 * 60 * 60;
-        
-        document.getElementById("StreamStart").value = new Date(streamStart.getTime() + busTimeStart).toISOString().substring(0,19);
-        document.getElementById("StreamEnd").value = new Date(streamStart.getTime() + busTimeEnd).toISOString().substring(0,19);
+        setStreamRange();
     }
 
     var streamStart = document.getElementById("StreamStart").value ? "start="+document.getElementById("StreamStart").value:null;
