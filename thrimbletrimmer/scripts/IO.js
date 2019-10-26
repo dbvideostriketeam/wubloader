@@ -154,36 +154,66 @@ thrimbletrimmerDownload = function() {
 };
 
 thrimbletrimmerManualLink = function() {
+    document.getElementById("ManualButton").disabled = true;
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+    body = {link: document.getElementById("ManualLink").value};
+    if (!!user) {
+        body.token = user.getAuthResponse().id_token;
+    }
     fetch("/thrimshim/manual-link/"+rowId, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
             'Content-Type': 'application/json'
         },
-        body: JSON.stringify({
-            link: document.getElementById("ManualLink").value, 
-            token: user.getAuthResponse().id_token
-        })
+        body: JSON.stringify(body)
     })
-    .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
-    .then(data => { console.log(data); setTimeout(() => { alert("Manual link set"); }, 500); })
-    .catch(error => { console.log(error); alert(error); });
+    .then(response => response.text().then(text => {
+        if (!response.ok) {
+            error = response.statusText + ": " + text;
+            console.log(error);
+            alert(error);
+            document.getElementById("ManualButton").disabled = false;
+        } else {
+            alert("Manual link set to " + body.link);
+            setTimeout(() => window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
+        }
+    }));
 };
 
 thrimbletrimmerResetLink = function() {
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    if(confirm('Are you sure you want to reset this event?')) {
-        fetch("/thrimshim/reset/"+rowId, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({token: user.getAuthResponse().id_token})
-        })
-        .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
-        .then(data => { console.log(data); setTimeout(() => { window.location.reload() }, 500); })
-        .catch(error => { console.log(error); alert(error); });
+    if(!confirm(
+        'Are you sure you want to reset this event? ' +
+        'This will set the row back to UNEDITED and forget about any video that already may exist. ' +
+        'It is intended as a last-ditch command to clear a malfunctioning cutter, ' +
+        'or if a video needs to be re-edited and replaced. ' +
+        'IT IS YOUR RESPONSIBILITY TO DEAL WITH ANY VIDEO THAT MAY HAVE ALREADY BEEN UPLOADED. '
+    )) {
+        return;
     }
+    document.getElementById("ResetButton").disabled = true;
+    body = {}
+    if (!!user) {
+        body.token = user.getAuthResponse().id_token;
+    }
+    fetch("/thrimshim/reset/"+rowId, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+    })
+    .then(response => response.text().then(text => {
+        if (!response.ok) {
+            error = response.statusText + ": " + text;
+            console.log(error);
+            alert(error);
+            document.getElementById("ResetButton").disabled = false;
+        } else {
+            alert("Row has been reset. Reloading...");
+            setTimeout(() => window.location.reload(); }, 500);
+        }
+    }));
 };
