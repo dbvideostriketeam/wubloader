@@ -93,43 +93,46 @@ loadPlaylist = function(startTrim, endTrim) {
 
 thrimbletrimmerSubmit = function(state) {
     document.getElementById('SubmitButton').disabled = true;
-    if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
-        alert("End Time must be greater than Start Time");
-        document.getElementById('SubmitButton').disabled = false;
-    } else {
-        var discontinuities = mapDiscontinuities();
+    var discontinuities = mapDiscontinuities();
 
-        var wubData = {
-            video_start:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim).replace('Z',''),
-            video_end:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim).replace('Z',''),
-            video_title:document.getElementById("VideoTitle").value,
-            video_description:document.getElementById("VideoDescription").value,
-            allow_holes:String(document.getElementById('AllowHoles').checked),
-            upload_location:document.getElementById('uploadLocation').value,
-            video_channel:document.getElementById("StreamName").value,
-            video_quality:document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value,
-            uploader_whitelist:(document.getElementById('uploaderWhitelist').value ? document.getElementById('uploaderWhitelist').value.split(','):null),
-            state:state,
-            token: user.getAuthResponse().id_token
-        };
-        // state_columns = ['state', 'uploader', 'error', 'video_link'] 
-        console.log(wubData);
-        console.log(JSON.stringify(wubData));
-
-        //Submit to thrimshim
-        var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-        fetch("/thrimshim/"+rowId, { 
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(wubData)
-        })
-        .then(response => { if (!response.ok) { throw Error(response.statusText); }; return response; })
-        .then(data => { console.log(data); setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500); })
-        .catch(error => { console.log(error); alert(error); });
+    var wubData = {
+        video_start:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim).replace('Z',''),
+        video_end:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim).replace('Z',''),
+        video_title:document.getElementById("VideoTitle").value,
+        video_description:document.getElementById("VideoDescription").value,
+        allow_holes:document.getElementById('AllowHoles').checked,
+        upload_location:document.getElementById('uploadLocation').value,
+        video_channel:document.getElementById("StreamName").value,
+        video_quality:document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value,
+        uploader_whitelist:(document.getElementById('uploaderWhitelist').value ? document.getElementById('uploaderWhitelist').value.split(','):null),
+        state:state,
+    };
+    if (!!user) {
+        wubData.token = user.getAuthResponse().id_token
     }
+    console.log(wubData);
+    console.log(JSON.stringify(wubData));
+
+    //Submit to thrimshim
+    var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+    fetch("/thrimshim/"+rowId, {
+        method: 'POST',
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(wubData)
+    })
+    .then(response => response.text().then(text => {
+        if (!response.ok) {
+            error = response.statusText + ": " + text;
+            console.log(error);
+            alert(error);
+            document.getElementById('SubmitButton').disabled = false;
+        } else {
+            setTimeout(() => window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
+        }
+    }));
 };
 
 thrimbletrimmerDownload = function() {
