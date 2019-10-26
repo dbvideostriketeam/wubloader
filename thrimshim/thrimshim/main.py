@@ -25,6 +25,10 @@ psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
 app.after_request(after_request)
 
+
+MAX_TITLE_LENGTH = 100 # Youtube only allows 100-character titles
+
+
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
 	HEADERS = [
@@ -140,21 +144,23 @@ def get_row(ident):
 	}
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
+	response["title_prefix"] = app.title_header
+	response["title_max_length"] = MAX_TITLE_LENGTH - len(app.title_header)
 	response["bustime_start"] = app.bustime_start
 
 	# remove any added headers or footers so round-tripping is a no-op
 	if (
-		app.title_header is not None
+		app.title_header
 		and response["video_title"] is not None
-		and response["video_title"].startswith(app.title_header + ' - ')
+		and response["video_title"].startswith(app.title_header)
 	):
-		response["video_title"] = response["video_title"][len(app.title_header + ' - '):]
+		response["video_title"] = response["video_title"][len(app.title_header):]
 	if (
-		app.description_footer is not None
+		app.description_footer
 		and response["video_description"] is not None
-		and response["video_description"].endswith('\n\n' + app.description_footer)
+		and response["video_description"].endswith(app.description_footer)
 	):
-		response["video_description"] = response["video_description"][:-len('\n\n' + app.description_footer)]
+		response["video_description"] = response["video_description"][:-len(app.description_footer)]
 
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
@@ -183,9 +189,15 @@ def update_row(ident, editor=None):
 	for extra in extras:
 		del new_row[extra]
 
-	#validate title length - YouTube titles are limited to 100 characters.
-	if len(new_row['video_title']) > 100:
-		return 'Title must be 100 characters or less', 400
+	# Include headers and footers
+	if 'video_title' in new_row:
+		new_row['video_title'] = app.title_header + new_row['video_title']
+	if 'video_description' in new_row:
+		new_row['video_description'] += app.description_footer
+
+	#validate title length
+	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
+		return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
 	#validate start time is less than end time
 	if new_row['video_start'] > new_row['video_end']:
 		return 'Video Start must be less than Video End.', 400
@@ -213,18 +225,16 @@ def update_row(ident, editor=None):
 				missing.append(column)
 		if missing:
 			return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+		if len(new_row.get('video_title', '')) <= len(app.title_header):
+			return 'Video title must not be blank', 400
+		if len(new_row.get('video_description', '')) <= len(app.description_footer):
+			return 'Video description must not be blank. If you have nothing else to say, just repeat the title.', 400
 	elif new_row['state'] != 'UNEDITED':
 		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
 	new_row['error'] = None
 	new_row['editor'] = editor
 	new_row['edit_time'] = datetime.datetime.utcnow()
-
-	# Include headers and footers
-	if app.title_header is not None and 'video_title' in new_row:
-		new_row['video_title'] = '{} - {}'.format(app.title_header, new_row['video_title'])
-	if app.description_footer is not None and 'video_description' in new_row:
-		new_row['video_description'] = '{}\n\n{}'.format(new_row['video_description'], app.description_footer)
 
 	# actually update database
 	build_query = sql.SQL("""
@@ -306,8 +316,8 @@ def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port
 	app.no_authentication = no_authentication
 	app.default_channel = default_channel
 	app.bustime_start = bustime_start
-	app.title_header = title_header
-	app.description_footer = description_footer
+	app.title_header = "" if title_header is None else "{} - ".format(title_header)
+	app.description_footer = "" if description_footer is None else "\n\n{}".format(description_footer)
 
 	stopping = gevent.event.Event()
 	def stop():
