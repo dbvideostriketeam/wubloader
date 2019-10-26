@@ -237,6 +237,7 @@
       // Args for the sheetsync
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
+        "--allocate-ids",
         $.db_connect,
         "/etc/wubloader-creds.json",
         $.edit_url,
