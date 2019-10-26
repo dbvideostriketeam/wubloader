@@ -4,7 +4,7 @@ pageSetup = function() {
     //Get values from ThrimShim
     if(/id=/.test(document.location.search)) {
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-        fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) { 
+        fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) {
             if (!data) {
                 alert("No video available for stream.");
                 return;
@@ -32,7 +32,7 @@ pageSetup = function() {
         var startOfHour = new Date(new Date().setMinutes(0,0,0));
         document.getElementById("StreamStart").value = new Date(startOfHour.getTime() - 1000*60*60).toISOString().substring(0,19);
         document.getElementById("StreamEnd").value = startOfHour.toISOString().substring(0,19);
-        
+
         loadPlaylist();
     }
 };
@@ -79,7 +79,7 @@ loadPlaylist = function(startTrim, endTrim) {
 
     //Get quality levels for advanced properties.
     document.getElementById('qualityLevel').innerHTML = "";
-    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) { 
+    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
         if (!data.length) {
             console.log("Could not retrieve quality levels");
             return;
@@ -136,20 +136,18 @@ thrimbletrimmerSubmit = function(state) {
 };
 
 thrimbletrimmerDownload = function() {
-    document.getElementById('SubmitButton').disabled = true;
     if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
         alert("End Time must be greater than Start Time");
-        document.getElementById('SubmitButton').disabled = false;
     } else {
         var discontinuities = mapDiscontinuities();
 
         var downloadStart = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
         var downloadEnd = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
 
-        var targetURL = "/cut/" + document.getElementById("StreamName").value + 
+        var targetURL = "/cut/" + document.getElementById("StreamName").value +
             "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
-            "?start=" + downloadStart + 
-            "&end=" + downloadEnd + 
+            "?start=" + downloadStart +
+            "&end=" + downloadEnd +
             "&allow_holes=" + String(document.getElementById('AllowHoles').checked);
         console.log(targetURL);
         document.getElementById('outputFile').src = targetURL;
