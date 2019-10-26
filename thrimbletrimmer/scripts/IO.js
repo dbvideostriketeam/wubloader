@@ -23,6 +23,8 @@ pageSetup = function() {
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
 
+            setOptions('uploadLocation', data.upload_locations);
+
             loadPlaylist(data.video_start, data.video_end);
         });
     }
@@ -63,6 +65,13 @@ setStreamRange = function() {
     document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
 }
 
+// For a given select input element id, add the given list of options, defaulting to the first one.
+setOptions = function(element, options) {
+    options.forEach(function(option, index) {
+        document.getElementById(element).innerHTML += '<option value="'+option+'" '+(index==0 ? 'selected':'')+'>'+option+'</option>';
+    });
+}
+
 loadPlaylist = function(startTrim, endTrim) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
@@ -85,9 +94,7 @@ loadPlaylist = function(startTrim, endTrim) {
             return;
         }
         var qualityLevels = data.sort().reverse();
-        qualityLevels.forEach(function(level, index) {
-            document.getElementById('qualityLevel').innerHTML += '<option value="'+level+'" '+(index==0 ? 'selected':'')+'>'+level+'</option>';
-        });
+        setOptions('qualityLevel', qualityLevels);
     });
 };
 

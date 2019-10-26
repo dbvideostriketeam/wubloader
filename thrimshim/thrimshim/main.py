@@ -147,6 +147,7 @@ def get_row(ident):
 	response["title_prefix"] = app.title_header
 	response["title_max_length"] = MAX_TITLE_LENGTH - len(app.title_header)
 	response["bustime_start"] = app.bustime_start
+	response["upload_locations"] = app.upload_locations
 
 	# remove any added headers or footers so round-tripping is a no-op
 	if (
@@ -308,8 +309,9 @@ def reset_row(ident, editor=None):
 @argh.arg('--no-authentication', help='Do not authenticate')
 @argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
 @argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
+@argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
 def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False, title_header=None, description_footer=None):
+	no_authentication=False, title_header=None, description_footer=None, upload_locations=''):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 
@@ -318,6 +320,7 @@ def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port
 	app.bustime_start = bustime_start
 	app.title_header = "" if title_header is None else "{} - ".format(title_header)
 	app.description_footer = "" if description_footer is None else "\n\n{}".format(description_footer)
+	app.upload_locations = upload_locations.split(',') if upload_locations else []
 
 	stopping = gevent.event.Event()
 	def stop():
