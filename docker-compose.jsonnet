@@ -194,8 +194,6 @@
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         "--tags", std.join(",", $.video_tags),
-        "--title-header", $.title_header,
-        "--description-footer", $.description_footer,
         $.db_connect,
         std.manifestJson($.cutter_config),
         "/etc/wubloader-creds.json",
@@ -219,6 +217,8 @@
       // Args for the thrimshim: database connection string 
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
+        "--title-header", $.title_header,
+        "--description-footer", $.description_footer,
         $.db_connect,
         $.channel,
         $.bustime_start,

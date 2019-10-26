@@ -141,6 +141,21 @@ def get_row(ident):
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
 	response["bustime_start"] = app.bustime_start
+
+	# remove any added headers or footers so round-tripping is a no-op
+	if (
+		app.title_header is not None
+		and response["video_title"] is not None
+		and response["video_title"].startswith(app.title_header + ' - ')
+	):
+		response["video_title"] = response["video_title"][len(app.title_header + ' - '):]
+	if (
+		app.description_footer is not None
+		and response["video_description"] is not None
+		and response["video_description"].endswith('\n\n' + app.description_footer)
+	):
+		response["video_description"] = response["video_description"][:-len('\n\n' + app.description_footer)]
+
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
@@ -204,6 +219,12 @@ def update_row(ident, editor=None):
 	new_row['error'] = None
 	new_row['editor'] = editor
 	new_row['edit_time'] = datetime.datetime.utcnow()
+
+	# Include headers and footers
+	if app.title_header is not None and 'video_title' in new_row:
+		new_row['video_title'] = '{} - {}'.format(app.title_header, new_row['video_title'])
+	if app.description_footer is not None and 'video_description' in new_row:
+		new_row['video_description'] = '{}\n\n{}'.format(new_row['video_description'], app.description_footer)
 
 	# actually update database
 	build_query = sql.SQL("""
@@ -275,14 +296,18 @@ def reset_row(ident, editor=None):
 @argh.arg('bustime-start', help='The start time in UTC for the event, for UTC-Bustime conversion')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
 @argh.arg('--no-authentication', help='Do not authenticate')
+@argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
+@argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
 def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False):
+	no_authentication=False, title_header=None, description_footer=None):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 
 	app.no_authentication = no_authentication
 	app.default_channel = default_channel
 	app.bustime_start = bustime_start
+	app.title_header = title_header
+	app.description_footer = description_footer
 
 	stopping = gevent.event.Event()
 	def stop():
