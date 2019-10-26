@@ -9,7 +9,7 @@ generate_location() {
 }
 
 LOCATIONS=$(
-	echo "$SERVICES" | while read name port; do
+	[ -n "$SERVICES" ] && echo "$SERVICES" | while read name port; do
 		# restreamer is the catch-all
 		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
 		# thrimshim takes any calls to thrimshim/
