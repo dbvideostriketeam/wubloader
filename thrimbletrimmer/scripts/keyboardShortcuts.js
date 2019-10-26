@@ -6,6 +6,7 @@ document.addEventListener('keypress', (event) => {
                 player.currentTime(player.currentTime()-10);
                 break;
             case "k":
+            case " ": // also pause on space
                 player.paused() ? player.play():player.pause();
                 break;
             case "l":
