@@ -41,9 +41,18 @@ pageSetup = function() {
     else {
         document.getElementById('SubmitButton').disabled = true;
 
-        var startOfHour = new Date(new Date().setMinutes(0,0,0));
-        document.getElementById("StreamStart").value = new Date(startOfHour.getTime() - 1000*60*60).toISOString().substring(0,19);
-        document.getElementById("StreamEnd").value = startOfHour.toISOString().substring(0,19);
+        fetch("/thrimshim/defaults").then(data => data.json()).then(function (data) {
+            desertBusStart = new Date(data.bustime_start);
+            document.getElementById("VideoTitlePrefix").value = data.title_prefix;
+            document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
+            document.getElementById("StreamName").value = data.video_channel;
+            setOptions('uploadLocation', data.upload_locations);
+
+            // Default time range to the last 10min. This is useful for giffers, immediate replay, etc.
+            document.getElementById("StreamStart").value = new Date(new Date().getTime() - 1000*60*10).toISOString().substring(0,19);
+            document.getElementById("StreamEnd").value = new Date().toISOString().substring(0,19);
+            setBustimeRange();
+        });
 
         loadPlaylist();
     }

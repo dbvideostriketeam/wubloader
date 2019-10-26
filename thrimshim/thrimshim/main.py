@@ -120,6 +120,19 @@ def get_all_rows():
 	return json.dumps(rows)
 
 
+@app.route('/thrimshim/defaults')
+@request_stats
+def get_defaults():
+	"""Get default info needed by thrimbletrimmer when not loading a specific row."""
+	return json.dumps({
+		"video_channel": app.default_channel,
+		"bustime_start": app.bustime_start,
+		"title_prefix": app.title_header,
+		"title_max_length": MAX_TITLE_LENGTH - len(app.title_header),
+		"upload_locations": app.upload_locations,
+	})
+
+
 @app.route('/thrimshim/<uuid:ident>', methods=['GET'])
 @request_stats
 def get_row(ident):
