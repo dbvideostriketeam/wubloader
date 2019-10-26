@@ -135,10 +135,12 @@ thrimbletrimmerSubmit = function(state) {
             error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
-            document.getElementById('SubmitButton').disabled = false;
-        } else {
+        } else if (state == 'EDITED') {
+            // Only return to dashboard if submitted, not for save draft
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
+            return
         }
+        document.getElementById('SubmitButton').disabled = false;
     }));
 };
 
