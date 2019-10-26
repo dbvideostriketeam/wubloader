@@ -17,7 +17,9 @@ LOCATIONS=$(
 		# all services have metrics under /metrics/SERVICE, except for thrimebletrimmer
 		generate_location "/metrics/$name" "http://$name:$port/metrics"
 	done
-	[ -n "$THRIMBLETRIMMER" ] && echo -e "\t\tlocation = / { return 301 /thrimbletrimmer/dashboard.html; }\n\t\tlocation /thrimbletrimmer { }"
+	[ -n "$THRIMBLETRIMMER" ] &&
+		echo -e "\t\tlocation = / { return 301 /thrimbletrimmer/dashboard.html; }" &&
+		echo -e "\t\tlocation /thrimbletrimmer { }"
 )
 
 cat > /etc/nginx/nginx.conf <<EOF
