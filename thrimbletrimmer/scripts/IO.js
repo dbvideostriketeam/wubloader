@@ -13,8 +13,8 @@ pageSetup = function() {
             document.getElementById("VideoTitlePrefix").value = data.title_prefix;
             document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
 
-            document.getElementById("hiddenSubmissionID").value = data.id;
             document.getElementById("StreamName").value = data.video_channel ? data.video_channel:document.getElementById("StreamName").value;
+            document.getElementById("hiddenSubmissionID").value = data.id;
             // set stream start/end, then copy to bustime inputs
             document.getElementById("StreamStart").value = data.event_start;
             document.getElementById("StreamEnd").value = data.event_end;
@@ -23,9 +23,19 @@ pageSetup = function() {
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
 
-            setOptions('uploadLocation', data.upload_locations);
+            // Restore advanced options. If any of these are non-default, automatically expand the advanced options pane.
+            setOptions('uploadLocation', data.upload_locations, data.upload_location);
+            document.getElementById("AllowHoles").checked = data.allow_holes;
+            document.getElementById("uploaderWhitelist").value = (!!data.uploader_whitelist) ? data.uploader_whitelist.join(",") : "";
+            if (
+                (data.upload_locations.length > 0 && data.upload_location != data.upload_locations[0])
+                || data.allow_holes
+                || !!data.uploader_whitelist
+            ) {
+                document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
+            }
 
-            loadPlaylist(data.video_start, data.video_end);
+            loadPlaylist(data.video_start, data.video_end, data.video_quality);
         });
     }
     else {
@@ -65,14 +75,19 @@ setStreamRange = function() {
     document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
 }
 
-// For a given select input element id, add the given list of options, defaulting to the first one.
-setOptions = function(element, options) {
-    options.forEach(function(option, index) {
-        document.getElementById(element).innerHTML += '<option value="'+option+'" '+(index==0 ? 'selected':'')+'>'+option+'</option>';
+// For a given select input element id, add the given list of options.
+// If selected is given, it should be the name of an option to select.
+// Otherwise the first one is used.
+setOptions = function(element, options, selected) {
+    if (!selected && options.length > 0) {
+        selected = options[0]
+    }
+    options.forEach(function(option) {
+        document.getElementById(element).innerHTML += '<option value="'+option+'" '+(option==selected ? 'selected':'')+'>'+option+'</option>';
     });
 }
 
-loadPlaylist = function(startTrim, endTrim) {
+loadPlaylist = function(startTrim, endTrim, defaultQuality) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
     // If we're using bustime, update stream start/end from it first
@@ -94,7 +109,10 @@ loadPlaylist = function(startTrim, endTrim) {
             return;
         }
         var qualityLevels = data.sort().reverse();
-        setOptions('qualityLevel', qualityLevels);
+        setOptions('qualityLevel', qualityLevels, defaultQuality);
+        if (!!defaultQuality && qualityLevels.length > 0 && defaultQuality != qualityLevels[0]) {
+            document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
+        }
     });
 };
 
