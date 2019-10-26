@@ -23,6 +23,12 @@ pageSetup = function() {
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
 
+            // If any edit notes, show them
+            if (data.notes.length > 0) {
+                document.getElementById("EditNotes").value = data.notes;
+                document.getElementById("EditNotesPane").style.display = "block";
+            }
+
             // Restore advanced options. If any of these are non-default, automatically expand the advanced options pane.
             setOptions('uploadLocation', data.upload_locations, data.upload_location);
             document.getElementById("AllowHoles").checked = data.allow_holes;
