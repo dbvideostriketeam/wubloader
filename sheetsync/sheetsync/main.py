@@ -130,6 +130,8 @@ class SheetSync(object):
 				sync_errors.inc()
 				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
 				# This is heavy-handed but simple and effective.
+				# If we can't re-connect, the program will crash from here,
+				# then restart and wait until it can connect again.
 				self.conn = self.dbmanager.get_conn()
 				self.wait(self.ERROR_RETRY_INTERVAL)
 			else:
@@ -293,14 +295,20 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 
 	logging.info("Starting up")
 
-	dbmanager = None
-	while dbmanager is None:
+	dbmanager = DBManager(dsn=dbconnect)
+	while True:
 		try:
-			dbmanager = DBManager(dsn=dbconnect)
+			# Get a test connection so we know the database is up,
+			# this produces a clearer error in cases where there's a connection problem.
+			conn = dbmanager.get_conn()
 		except Exception:
 			delay = common.jitter(10)
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stop.wait(delay)
+		else:
+			# put it back so it gets reused on next get_conn()
+			dbmanager.put_conn(conn)
+			break
 
 	sheets_creds = json.load(open(sheets_creds_file))
 
