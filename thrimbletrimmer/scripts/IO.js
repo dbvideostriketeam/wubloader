@@ -72,19 +72,23 @@ pageSetup = function(isEditor) {
 
 // Time-formatting functions
 
+parseDuration = function(duration) {
+    var direction = 1;
+    if(duration.startsWith("-")) {
+        duration = duration.slice(1);
+        direction = -1;
+    }
+    var parts = duration.split(':');
+	parts.reverse();
+    return (parseInt(parts[2] || "0") + (parts[1] || "0")/60 + parts[0]/3600) * 60 * 60 * direction;
+}
+
 toBustime = function(date) {
     return (date < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((date - desertBusStart)/1000), 600.01).padStart(7, "0:");
 };
 
 fromBustime = function(bustime) {
-    var direction = 1;
-    if(bustime.startsWith("-")) {
-        bustime = bustime.slice(1);
-        direction = -1;
-    }
-    var parts = bustime.split(':')
-    var bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
-    return new Date(desertBusStart.getTime() + direction * bustime_ms);
+    return new Date(desertBusStart.getTime() + 1000 * parseDuration(bustime));
 };
 
 toTimestamp = function(date) {
@@ -101,14 +105,7 @@ toAgo = function(date) {
 }
 
 fromAgo = function(ago) {
-    var direction = 1;
-    if(ago.startsWith("-")) {
-        bustime = ago.slice(1);
-        direction = -1;
-    }
-    var parts = ago.split(':')
-    var ago_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
-    return new Date(new Date().getTime() - direction * ago_ms);
+    return new Date(new Date().getTime() - 1000 * parseDuration(ago));
 }
 
 // Set the stream start/end range from a pair of Dates using the current format
@@ -132,7 +129,7 @@ getTimeRange = function() {
 		BUSTIME: fromBustime,
 		AGO: fromAgo,
 	}[timeFormat];
-	convert = function(value) {
+	var convert = function(value) {
 		if (!value) { return null; }
 		var date = fromFunc(value);
 		return (isNaN(date)) ? null : date;
