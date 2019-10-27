@@ -347,14 +347,7 @@ def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port
 			sys.exit()
 	gevent.signal(signal.SIGTERM, stop)
 
-	app.db_manager = None
-	while app.db_manager is None and not stopping.is_set():
-		try:
-			app.db_manager = database.DBManager(dsn=connection_string)
-		except Exception:
-			delay = common.jitter(10)
-			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
-			stopping.wait(delay)
+	app.db_manager = database.DBManager(dsn=connection_string)
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
