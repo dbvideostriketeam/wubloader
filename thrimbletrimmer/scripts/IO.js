@@ -58,9 +58,10 @@ pageSetup = function() {
             document.getElementById("StreamStart").value = new Date(new Date().getTime() - 1000*60*10).toISOString().substring(0,19);
             document.getElementById("StreamEnd").value = new Date().toISOString().substring(0,19);
             setBustimeRange();
+
+	        loadPlaylist();
         });
 
-        loadPlaylist();
     }
 };
 
