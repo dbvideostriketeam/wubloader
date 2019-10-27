@@ -239,8 +239,16 @@ def cut(channel, quality):
 			A fast cut is much faster but minor artifacting may be present near the start and end.
 			A fast cut is encoded as MPEG-TS, a full as mp4.
 	"""
-	start = dateutil.parse_utc_only(request.args['start'])
-	end = dateutil.parse_utc_only(request.args['end'])
+	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
+	if start is None or end is None:
+		# If start or end are not given, use the earliest/latest time available
+		first, last = time_range_for_quality(channel, quality)
+		if start is None:
+			start = first
+		if end is None:
+			end = last
+
 	if end <= start:
 		return "End must be after start", 400
 
