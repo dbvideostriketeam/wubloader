@@ -8,7 +8,7 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
         liveui: true,
         //fluid:true,
         controls:true,
-        autoplay:true,
+        autoplay:false,
         width:1280,
         height:420,
         playbackRates: [0.5, 1, 1.25, 1.5, 2],
