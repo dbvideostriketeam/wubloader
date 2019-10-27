@@ -1,9 +1,9 @@
 var desertBusStart = new Date("1970-01-01T00:00:00Z");
 var timeFormat = 'BUSTIME';
 
-pageSetup = function() {
+pageSetup = function(isEditor) {
     //Get values from ThrimShim
-    if(/id=/.test(document.location.search)) {
+    if(isEditor && /id=/.test(document.location.search)) {
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
         fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) {
             if (!data) {
@@ -39,25 +39,26 @@ pageSetup = function() {
                 document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
             }
 
-            loadPlaylist(data.video_start, data.video_end, data.video_quality);
+            loadPlaylist(isEditor, data.video_start, data.video_end, data.video_quality);
         });
     }
     else {
-        document.getElementById('SubmitButton').disabled = true;
+        if (isEditor) { document.getElementById('SubmitButton').disabled = true; }
 
         fetch("/thrimshim/defaults").then(data => data.json()).then(function (data) {
             desertBusStart = new Date(data.bustime_start);
-            document.getElementById("VideoTitlePrefix").value = data.title_prefix;
-            document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
             document.getElementById("StreamName").value = data.video_channel;
-            setOptions('uploadLocation', data.upload_locations);
+			if (isEditor) {
+				document.getElementById("VideoTitlePrefix").value = data.title_prefix;
+				document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
+				setOptions('uploadLocation', data.upload_locations);
+			}
 
-            // Default time range to the last 10min. This is useful for immediate replay, etc.
-            var end = new Date();
-            var start = new Date(end.getTime() - 1000*60*10);
-            setTimeRange(start, end);
+            // Default time range from to the last 10min to live. This is useful for immediate replay, etc.
+            var start = new Date(new Date().getTime() - 1000*60*10);
+            setTimeRange(start, null);
 
-	        loadPlaylist();
+	        loadPlaylist(isEditor);
         });
 
     }
@@ -118,6 +119,15 @@ getTimeRange = function() {
 	};
 }
 
+getTimeRangeAsTimestamp = function() {
+	var range = getTimeRange();
+	return {
+		// if not null, format as timestamp
+		start: range.start && toTimestamp(range.start),
+		end: range.end && toTimestamp(range.end),
+	};
+}
+
 toggleHiddenPane = function(paneID) {
 	var pane = document.getElementById(paneID);
 	pane.style.display = (pane.style.display === "none") ? "block":"none";
@@ -153,31 +163,27 @@ buildQuery = function(params) {
 	).join('&');
 }
 
-loadPlaylist = function(startTrim, endTrim, defaultQuality) {
+loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
-	var range = getTimeRange();
-	var queryString = buildQuery({
-		// if not null, format as timestamp
-		start: range.start && toTimestamp(range.start),
-		end: range.end && toTimestamp(range.end),
+	var range = getTimeRangeAsTimestamp();
+	var queryString = buildQuery(range);
+
+    setupPlayer(isEditor, playlist + '?' + queryString, startTrim, endTrim);
+
+	//Get quality levels for advanced properties / download
+	document.getElementById('qualityLevel').innerHTML = "";
+	fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
+		if (!data.length) {
+			console.log("Could not retrieve quality levels");
+			return;
+		}
+		var qualityLevels = data.sort().reverse();
+		setOptions('qualityLevel', qualityLevels, defaultQuality);
+		if (!!defaultQuality && qualityLevels.length > 0 && defaultQuality != qualityLevels[0]) {
+			document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
+		}
 	});
-
-    setupPlayer(playlist + '?' + queryString, startTrim, endTrim);
-
-    //Get quality levels for advanced properties.
-    document.getElementById('qualityLevel').innerHTML = "";
-    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
-        if (!data.length) {
-            console.log("Could not retrieve quality levels");
-            return;
-        }
-        var qualityLevels = data.sort().reverse();
-        setOptions('qualityLevel', qualityLevels, defaultQuality);
-        if (!!defaultQuality && qualityLevels.length > 0 && defaultQuality != qualityLevels[0]) {
-            document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
-        }
-    });
 };
 
 thrimbletrimmerSubmit = function(state) {
@@ -226,25 +232,28 @@ thrimbletrimmerSubmit = function(state) {
     }));
 };
 
-thrimbletrimmerDownload = function() {
-    if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
-        alert("End Time must be greater than Start Time");
-    } else {
-        var discontinuities = mapDiscontinuities();
+thrimbletrimmerDownload = function(isEditor) {
+	var range = getTimeRangeAsTimestamp();
+	if (isEditor) {
+		if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
+			alert("End Time must be greater than Start Time");
+			return;
+		}
+		var discontinuities = mapDiscontinuities();
+		range.start = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
+		range.end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
+	}
 
-        var downloadStart = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
-        var downloadEnd = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
-
-        var targetURL = "/cut/" + document.getElementById("StreamName").value +
-            "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
-            "?" + buildQuery({
-				start: downloadStart,
-				end: downloadEnd,
-				allow_holes: String(document.getElementById('AllowHoles').checked),
-			});
-        console.log(targetURL);
-        document.getElementById('outputFile').src = targetURL;
-    }
+	var targetURL = "/cut/" + document.getElementById("StreamName").value +
+		"/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
+		"?" + buildQuery({
+			start: range.start,
+			end: range.end,
+			// Always allow holes in non-editor, accidentially including holes isn't important
+			allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
+		});
+	console.log(targetURL);
+	document.getElementById('outputFile').src = targetURL;
 };
 
 thrimbletrimmerManualLink = function() {

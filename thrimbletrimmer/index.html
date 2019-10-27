@@ -41,9 +41,9 @@
             </tr>
             <tr>
                 <td><input id="StreamName" value="desertbus" /></td>
-                <td><input id="StreamStart" class="UTCTimeInput" value="" />
-                <td><input id="StreamEnd" class="UTCTimeInput" value="" />
-                <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
+                <td><input id="StreamStart" value="" />
+                <td><input id="StreamEnd" value="" />
+                <td><input type="button" value="Load Playlist" onclick="loadPlaylist(true)" /></td>
             </tr>
             <tr>
                     <td></td>
@@ -93,8 +93,9 @@
             </div>
             <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit('EDITED')"/>
             <input type="button" id="DraftButton" value="Save Draft" onclick="thrimbletrimmerSubmit('UNEDITED')"/>
-            <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload()"/>
+            <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload(true)"/>
             <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
+			<a href="/thrimbletrimmer/stream.html">Go to Re-stream View</a> |
             <a id="ManualLinkButton" href="JavaScript:toggleHiddenPane('ManualLinkPane');">Manual Link</a> | 
             <a id="ResetButton" href="JavaScript:thrimbletrimmerResetLink();">Reset Edits</a>
             <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
@@ -119,7 +120,7 @@
     <script src="/thrimbletrimmer/scripts/keyboardShortcuts.js"></script>
     <script src="/thrimbletrimmer/scripts/IO.js"></script>
 
-    <script>pageSetup();</script>
+    <script>pageSetup(true);</script>
 
 <div class="g-signin2" data-onsuccess="onSignIn"></div>
 <a href="#" onclick="signOut();">Sign out</a>
