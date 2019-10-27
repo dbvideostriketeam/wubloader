@@ -8,13 +8,13 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
         liveui: true,
         //fluid:true,
         controls:true,
-        autoplay:false,
+        autoplay:true,
         width:1280,
         height:420,
         playbackRates: [0.5, 1, 1.25, 1.5, 2],
         inactivityTimeout: 0,
         controlBar: {
-            fullscreenToggle: false,
+            fullscreenToggle: true,
             volumePanel: {
                 inline: false
             }
