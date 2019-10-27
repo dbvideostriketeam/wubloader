@@ -68,6 +68,8 @@
 
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
 
+  nginx_serve_segments:: true, // set to false to not have nginx serve segments directly, letting restreamer do it instead.
+
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
   db_args:: {
@@ -280,7 +282,9 @@
           if service in $.enabled && $.enabled[service]
         ]),
         THRIMBLETRIMMER: if $.thrimbletrimmer then "true" else "",
+        SEGMENTS: if $.nginx_serve_segments then "/mnt" else "",
       },
+      volumes: if $.nginx_serve_segments then ["%s:/mnt" % $.segments_path] else [],
     },
 
     [if $.enabled.postgres then "postgres"]: {
