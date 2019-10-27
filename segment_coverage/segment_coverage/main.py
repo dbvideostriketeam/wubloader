@@ -6,7 +6,6 @@ import signal
 import uuid
 
 import argh
-import dateutil
 import gevent.backdoor
 import matplotlib
 import matplotlib.image
@@ -123,11 +122,11 @@ class CoverageChecker(object):
 		self.logger.info('Creating coverage map for {} from {} to {}'.format(quality,
 			first_hour.strftime(HOUR_FMT), last_hour.strftime(HOUR_FMT)))
 
-		hours = [first_hour]
+		hours = []
 		latest_hour = first_hour
-		while latest_hour < last_hour:
-			latest_hour += datetime.timedelta(hours = 1)
+		while latest_hour <= last_hour:
 			hours.append(latest_hour)
+			latest_hour += datetime.timedelta(hours = 1)
 
 		pixel_starts = np.arange(0, 3600, pixel_length) # start times of the pixels in an hour in seconds
 		pixel_ends = np.arange(pixel_length, 3601, pixel_length) # end times of the pixels in an hour in seconds
