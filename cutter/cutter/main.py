@@ -73,7 +73,7 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags, title_header, description_footer):
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags):
 		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
@@ -86,8 +86,6 @@ class Cutter(object):
 		self.stop = stop
 		self.segments_path = segments_path
 		self.tags = tags
-		self.title_header = title_header
-		self.description_footer = description_footer
 		self.logger = logging.getLogger(type(self).__name__)
 		self.refresh_conn()
 
@@ -338,14 +336,8 @@ class Cutter(object):
 			# a second try around the whole thing.
 			try:
 				video_id, video_link = upload_backend.upload_video(
-					title=(
-						"{} - {}".format(self.title_header, job.video_title)
-						if self.title_header else job.video_title
-					),
-					description=(
-						"{}\n\n{}".format(job.video_description, self.description_footer)
-						if self.description_footer else job.video_description
-					),
+					title=job.video_title,
+					description=job.video_description,
 					# Add category and sheet_name as tags
 					tags=self.tags + [job.category, job.sheet_name],
 					data=upload_wrapper(),
@@ -524,8 +516,6 @@ def main(
 	name=None,
 	base_dir=".",
 	tags='',
-	title_header="",
-	description_footer="",
 	metrics_port=8003,
 	backdoor_port=0,
 ):
@@ -552,17 +542,6 @@ def main(
 	name defaults to hostname.
 
 	tags should be a comma-seperated list of tags to attach to all videos.
-
-	title_header will be prepended to all video titles, seperated by a " - ".
-	description_footer will be added as a seperate paragraph at the end of all video descriptions.
-	For example, with --title-header foo --description-footer 'A video of foo.',
-	then a video with title 'bar' and a description 'Bar with baz' would actually have:
-		title: foo - bar
-		description:
-			Bar with baz
-
-			A video of foo.
-
 	"""
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
@@ -620,7 +599,7 @@ def main(
 		if backend.needs_transcode and not no_transcode_check:
 			needs_transcode_check.append(backend)
 
-	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, title_header, description_footer)
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags)
 	transcode_checkers = [
 		TranscodeChecker(backend, dbmanager, stop)
 		for backend in needs_transcode_check

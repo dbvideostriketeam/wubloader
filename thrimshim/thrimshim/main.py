@@ -25,6 +25,10 @@ psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
 app.after_request(after_request)
 
+
+MAX_TITLE_LENGTH = 100 # Youtube only allows 100-character titles
+
+
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
 	HEADERS = [
@@ -116,6 +120,19 @@ def get_all_rows():
 	return json.dumps(rows)
 
 
+@app.route('/thrimshim/defaults')
+@request_stats
+def get_defaults():
+	"""Get default info needed by thrimbletrimmer when not loading a specific row."""
+	return json.dumps({
+		"video_channel": app.default_channel,
+		"bustime_start": app.bustime_start,
+		"title_prefix": app.title_header,
+		"title_max_length": MAX_TITLE_LENGTH - len(app.title_header),
+		"upload_locations": app.upload_locations,
+	})
+
+
 @app.route('/thrimshim/<uuid:ident>', methods=['GET'])
 @request_stats
 def get_row(ident):
@@ -140,7 +157,25 @@ def get_row(ident):
 	}
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
+	response["title_prefix"] = app.title_header
+	response["title_max_length"] = MAX_TITLE_LENGTH - len(app.title_header)
 	response["bustime_start"] = app.bustime_start
+	response["upload_locations"] = app.upload_locations
+
+	# remove any added headers or footers so round-tripping is a no-op
+	if (
+		app.title_header
+		and response["video_title"] is not None
+		and response["video_title"].startswith(app.title_header)
+	):
+		response["video_title"] = response["video_title"][len(app.title_header):]
+	if (
+		app.description_footer
+		and response["video_description"] is not None
+		and response["video_description"].endswith(app.description_footer)
+	):
+		response["video_description"] = response["video_description"][:-len(app.description_footer)]
+
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
@@ -168,9 +203,15 @@ def update_row(ident, editor=None):
 	for extra in extras:
 		del new_row[extra]
 
-	#validate title length - YouTube titles are limited to 100 characters.
-	if len(new_row['video_title']) > 100:
-		return 'Title must be 100 characters or less', 400
+	# Include headers and footers
+	if 'video_title' in new_row:
+		new_row['video_title'] = app.title_header + new_row['video_title']
+	if 'video_description' in new_row:
+		new_row['video_description'] += app.description_footer
+
+	#validate title length
+	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
+		return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
 	#validate start time is less than end time
 	if new_row['video_start'] > new_row['video_end']:
 		return 'Video Start must be less than Video End.', 400
@@ -198,6 +239,10 @@ def update_row(ident, editor=None):
 				missing.append(column)
 		if missing:
 			return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+		if len(new_row.get('video_title', '')) <= len(app.title_header):
+			return 'Video title must not be blank', 400
+		if len(new_row.get('video_description', '')) <= len(app.description_footer):
+			return 'Video description must not be blank. If you have nothing else to say, just repeat the title.', 400
 	elif new_row['state'] != 'UNEDITED':
 		return 'Invalid state {}'.format(new_row['state']), 400
 	new_row['uploader'] = None
@@ -275,14 +320,20 @@ def reset_row(ident, editor=None):
 @argh.arg('bustime-start', help='The start time in UTC for the event, for UTC-Bustime conversion')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
 @argh.arg('--no-authentication', help='Do not authenticate')
+@argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
+@argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
+@argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
 def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False):
+	no_authentication=False, title_header=None, description_footer=None, upload_locations=''):
 	"""Thrimshim service."""
 	server = WSGIServer((host, port), cors(app))
 
 	app.no_authentication = no_authentication
 	app.default_channel = default_channel
 	app.bustime_start = bustime_start
+	app.title_header = "" if title_header is None else "{} - ".format(title_header)
+	app.description_footer = "" if description_footer is None else "\n\n{}".format(description_footer)
+	app.upload_locations = upload_locations.split(',') if upload_locations else []
 
 	stopping = gevent.event.Event()
 	def stop():

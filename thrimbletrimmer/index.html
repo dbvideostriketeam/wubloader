@@ -41,8 +41,8 @@
             </tr>
             <tr>
                 <td><input id="StreamName" value="desertbus" /></td>
-                <td><input id="StreamStart" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeStart" class="BusTimeInput" value="0:00" /></td>
-                <td><input id="StreamEnd" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeEnd" class="BusTimeInput" value="1:00" /></td>
+                <td><input id="StreamStart" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeStart" class="BusTimeInput" value="0:00:00" /></td>
+                <td><input id="StreamEnd" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeEnd" class="BusTimeInput" value="0:00:00" /></td>
                 <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
             </tr>
             <tr>
@@ -57,12 +57,12 @@
         </table>
         <table id="wubloaderAdvancedInputTable" style="display:none;">
             <tr>
-                <td><a href="javascript:window.open('/files');">Streams</a></td>
-                <td><a href="javascript:window.open('/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
+                <td><a href="#" onclick="window.open('/files');">Streams</a></td>
+                <td><a href="#" onclick="window.open('/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
             </tr>
-            <tr><td>Allow Holes: </td><td><input id="AllowHoles" type="checkbox" checked /></td></tr>
+            <tr><td>Allow Holes: </td><td><input id="AllowHoles" type="checkbox" /></td></tr>
             <tr><td>Quality Level: </td><td><select id="qualityLevel"></select></td></tr>
-            <tr><td>Upload Location: </td><td><select id="uploadLocation"><option value="YouTube" selected>YouTube</option></select></td></tr>
+            <tr><td>Upload Location: </td><td><select id="uploadLocation"></select></td></tr>
             <tr><td>Uploader Whitelist: </td><td><input id="uploaderWhitelist" title="Uploader Whitelist" /></td></tr>
             <tr>
                 <td>ThrimShim ID:</td>
@@ -78,9 +78,14 @@
         </div>
 
         <div id="EditorDetailsPane">
+            <div id="EditNotesPane" style="display:none">
+                Edit Notes: <br/>
+                <textarea id="EditNotes" disabled ></textarea>
+            </div>
             <div>
                 Title: <br />
-                <input type="text" id="VideoTitle" value="DB2019 - " maxlength="91" />
+                <input type="text" id="VideoTitlePrefix" value="DB2019 - " disabled />
+                <input type="text" id="VideoTitle" value="" maxlength="82" />
             </div>
             <div>
                 Description:<br/>
@@ -96,7 +101,7 @@
             <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
         </div>
         <div id="ManualLinkPane" style="display:none">
-            <input id="ManualLink" /> <input type="button" onclick="thrimbletrimmerManualLink()" value="Set Link" />
+            <input id="ManualLink" /> <input type="button" id="ManualButton" onclick="thrimbletrimmerManualLink()" value="Set Link" />
         </div>
         <div id="HelpPane" style="display:none;">
             <ul>
@@ -126,11 +131,13 @@
         }
         function toggleTimeInput(toggleInput) {
             if(toggleInput == "UTC") {
+                setStreamRange();
                 document.getElementById("BusTimeStart").style.display = "none";
                 document.getElementById("BusTimeEnd").style.display = "none";
                 document.getElementById("StreamStart").style.display = "";
                 document.getElementById("StreamEnd").style.display = "";
             } else {
+                setBustimeRange();
                 document.getElementById("StreamStart").style.display = "none";
                 document.getElementById("StreamEnd").style.display = "none";
                 document.getElementById("BusTimeStart").style.display = "";

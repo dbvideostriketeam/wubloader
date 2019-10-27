@@ -53,7 +53,6 @@ function setupPlayer(source, startTrim, endTrim) {
         this.on('error', function() {
             videojs.log("Could not load video stream");
             alert("No video available for stream.");
-            document.getElementById("my-player").style.display = "none";
         })
     });
     var hlsQS = player.hlsQualitySelector();
