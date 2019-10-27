@@ -90,6 +90,32 @@ setStreamRange = function() {
     document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
 }
 
+toggleHiddenPane = function(paneID) {
+	var pane = document.getElementById(paneID);
+	pane.style.display = (pane.style.display === "none") ? "block":"none";
+}
+
+toggleUltrawide = function() {
+	var body = document.getElementsByTagName("Body")[0];
+	body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
+}
+
+toggleTimeInput = function(toggleInput) {
+	if(toggleInput == "UTC") {
+		setStreamRange();
+		document.getElementById("BusTimeStart").style.display = "none";
+		document.getElementById("BusTimeEnd").style.display = "none";
+		document.getElementById("StreamStart").style.display = "";
+		document.getElementById("StreamEnd").style.display = "";
+	} else {
+		setBustimeRange();
+		document.getElementById("StreamStart").style.display = "none";
+		document.getElementById("StreamEnd").style.display = "none";
+		document.getElementById("BusTimeStart").style.display = "";
+		document.getElementById("BusTimeEnd").style.display = "";
+	}
+}
+
 // For a given select input element id, add the given list of options.
 // If selected is given, it should be the name of an option to select.
 // Otherwise the first one is used.

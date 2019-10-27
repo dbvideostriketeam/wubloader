@@ -120,31 +120,6 @@
     <script src="/thrimbletrimmer/scripts/IO.js"></script>
 
     <script>pageSetup();</script>
-    <script>
-        function toggleHiddenPane(paneID) {
-            var pane = document.getElementById(paneID);
-            pane.style.display = (pane.style.display === "none") ? "block":"none";
-        }
-        function toggleUltrawide() {
-            var body = document.getElementsByTagName("Body")[0];
-            body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
-        }
-        function toggleTimeInput(toggleInput) {
-            if(toggleInput == "UTC") {
-                setStreamRange();
-                document.getElementById("BusTimeStart").style.display = "none";
-                document.getElementById("BusTimeEnd").style.display = "none";
-                document.getElementById("StreamStart").style.display = "";
-                document.getElementById("StreamEnd").style.display = "";
-            } else {
-                setBustimeRange();
-                document.getElementById("StreamStart").style.display = "none";
-                document.getElementById("StreamEnd").style.display = "none";
-                document.getElementById("BusTimeStart").style.display = "";
-                document.getElementById("BusTimeEnd").style.display = "";
-            }
-        }
-    </script>
 
 <div class="g-signin2" data-onsuccess="onSignIn"></div>
 <a href="#" onclick="signOut();">Sign out</a>
