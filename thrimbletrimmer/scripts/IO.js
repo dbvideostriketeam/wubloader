@@ -1,7 +1,8 @@
 var desertBusStart = new Date("1970-01-01T00:00:00Z");
-var timeFormat = 'BUSTIME';
+var timeFormat = 'AGO';
 
 pageSetup = function(isEditor) {
+
     //Get values from ThrimShim
     if(isEditor && /id=/.test(document.location.search)) {
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
@@ -16,6 +17,8 @@ pageSetup = function(isEditor) {
 
             document.getElementById("StreamName").value = data.video_channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
+			// for editor, switch to bustime since that's the default
+			timeFormat = 'BUSTIME';
             setTimeRange(fromTimestamp(data.event_start), fromTimestamp(data.event_end));
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
@@ -54,9 +57,12 @@ pageSetup = function(isEditor) {
 				setOptions('uploadLocation', data.upload_locations);
 			}
 
-            // Default time range from to the last 10min to live. This is useful for immediate replay, etc.
-            var start = new Date(new Date().getTime() - 1000*60*10);
-            setTimeRange(start, null);
+			// Default time format changes depending on mode.
+			// But in both cases the default input value is 10min ago / "",
+			// it's just for editor we convert it before the user sees.
+			if (isEditor) {
+				toggleTimeInput('BUSTIME');
+			}
 
 	        loadPlaylist(isEditor);
         });
@@ -89,12 +95,29 @@ fromTimestamp = function(ts) {
 	return new Date(ts + "Z");
 }
 
+toAgo = function(date) {
+	now = new Date()
+    return (date < now ? "":"-") + videojs.formatTime(Math.abs((date - now)/1000), 600.01).padStart(7, "0:");
+}
+
+fromAgo = function(ago) {
+    var direction = 1;
+    if(ago.startsWith("-")) {
+        bustime = ago.slice(1);
+        direction = -1;
+    }
+    var parts = ago.split(':')
+    var ago_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
+    return new Date(new Date().getTime() - direction * ago_ms);
+}
+
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
 setTimeRange = function(start, end) {
 	var toFunc = {
 		UTC: toTimestamp,
 		BUSTIME: toBustime,
+		AGO: toAgo,
 	}[timeFormat];
     document.getElementById("StreamStart").value = (start) ? toFunc(start) : "";
     document.getElementById("StreamEnd").value = (end) ? toFunc(end) : "";
@@ -107,6 +130,7 @@ getTimeRange = function() {
 	var fromFunc = {
 		UTC: fromTimestamp,
 		BUSTIME: fromBustime,
+		AGO: fromAgo,
 	}[timeFormat];
 	convert = function(value) {
 		if (!value) { return null; }

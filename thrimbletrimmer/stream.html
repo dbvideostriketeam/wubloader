@@ -28,7 +28,7 @@
             </tr>
             <tr>
                 <td><input id="StreamName" value="desertbus" /></td>
-                <td><input id="StreamStart" value="" />
+                <td><input id="StreamStart" value="0:10:00" />
                 <td><input id="StreamEnd" value="" />
                 <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
             </tr>
@@ -37,7 +37,8 @@
                 <td></td>
                 <td>
                     <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
-                    <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
+                    <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)"> Bustime
+					<input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" checked="checked"> Time Ago
                 </td>
             </tr>
         </table>
