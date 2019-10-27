@@ -53,8 +53,8 @@ pageSetup = function() {
             setOptions('uploadLocation', data.upload_locations);
 
             // Default time range to the last 10min. This is useful for immediate replay, etc.
-            end = new Date();
-            start = new Date(end.getTime() - 1000*60*10);
+            var end = new Date();
+            var start = new Date(end.getTime() - 1000*60*10);
             setTimeRange(start, end);
 
 	        loadPlaylist();
@@ -70,13 +70,13 @@ toBustime = function(date) {
 };
 
 fromBustime = function(bustime) {
-    direction = 1;
+    var direction = 1;
     if(bustime.startsWith("-")) {
         bustime = bustime.slice(1);
         direction = -1;
     }
-    parts = bustime.split(':')
-    bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
+    var parts = bustime.split(':')
+    var bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
     return new Date(desertBusStart.getTime() + direction * bustime_ms);
 };
 
@@ -91,7 +91,7 @@ fromTimestamp = function(ts) {
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
 setTimeRange = function(start, end) {
-	toFunc = {
+	var toFunc = {
 		UTC: toTimestamp,
 		BUSTIME: toBustime,
 	}[timeFormat];
@@ -103,13 +103,13 @@ setTimeRange = function(start, end) {
 // Returns an object containing 'start' and 'end' fields.
 // If either is empty / invalid, returns null.
 getTimeRange = function() {
-	fromFunc = {
+	var fromFunc = {
 		UTC: fromTimestamp,
 		BUSTIME: fromBustime,
 	}[timeFormat];
 	convert = function(value) {
 		if (!value) { return null; }
-		date = fromFunc(value);
+		var date = fromFunc(value);
 		return (isNaN(date)) ? null : date;
 	};
 	return {
@@ -130,7 +130,7 @@ toggleUltrawide = function() {
 
 toggleTimeInput = function(toggleInput) {
 	// Get times using current format, then change format, then write them back
-	range = getTimeRange();
+	var range = getTimeRange();
 	timeFormat = toggleInput;
 	setTimeRange(range.start, range.end);
 }
@@ -214,7 +214,7 @@ thrimbletrimmerSubmit = function(state) {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
         } else if (state == 'EDITED') {
@@ -250,7 +250,7 @@ thrimbletrimmerDownload = function() {
 thrimbletrimmerManualLink = function() {
     document.getElementById("ManualButton").disabled = true;
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    body = {link: document.getElementById("ManualLink").value};
+    var body = {link: document.getElementById("ManualLink").value};
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
@@ -264,7 +264,7 @@ thrimbletrimmerManualLink = function() {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
             document.getElementById("ManualButton").disabled = false;
@@ -287,7 +287,7 @@ thrimbletrimmerResetLink = function() {
         return;
     }
     document.getElementById("ResetButton").disabled = true;
-    body = {}
+    var body = {}
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
@@ -301,7 +301,7 @@ thrimbletrimmerResetLink = function() {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
             document.getElementById("ResetButton").disabled = false;

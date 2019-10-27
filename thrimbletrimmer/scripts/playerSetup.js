@@ -39,7 +39,7 @@ function setupPlayer(source, startTrim, endTrim) {
         this.vhs.playlists.on('loadedmetadata', function() {
             // setTimeout(function() { player.play(); }, 1000);
             player.hasStarted(true); //So it displays all the controls.
-            stream_start = player.vhs.playlists.master.playlists.filter(playlist => typeof playlist.discontinuityStarts !== "undefined")[0].dateTimeObject;
+            var stream_start = player.vhs.playlists.master.playlists.filter(playlist => typeof playlist.discontinuityStarts !== "undefined")[0].dateTimeObject;
             startTrim = startTrim ? (new Date(startTrim+"Z")-stream_start)/1000:0;
             endTrim = endTrim ? (new Date(endTrim+"Z")-stream_start)/1000:player.duration();
             var trimmingControls = player.trimmingControls({ startTrim:startTrim, endTrim:endTrim });
@@ -56,7 +56,6 @@ function setupPlayer(source, startTrim, endTrim) {
         })
     });
     var hlsQS = player.hlsQualitySelector();
-    //var trimmingControls = player.trimmingControls({ startTrim:(startTrim ? startTrim:0), endTrim:(endTrim ? endTrim:player.duration()) });
 }
 
 mapDiscontinuities = function() {
