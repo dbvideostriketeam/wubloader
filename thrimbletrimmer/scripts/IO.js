@@ -1,4 +1,5 @@
 var desertBusStart = new Date("1970-01-01T00:00:00Z");
+var timeFormat = 'BUSTIME';
 
 pageSetup = function() {
     //Get values from ThrimShim
@@ -15,10 +16,7 @@ pageSetup = function() {
 
             document.getElementById("StreamName").value = data.video_channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
-            // set stream start/end, then copy to bustime inputs
-            document.getElementById("StreamStart").value = data.event_start;
-            document.getElementById("StreamEnd").value = data.event_end;
-            setBustimeRange();
+            setTimeRange(fromTimestamp(data.event_start), fromTimestamp(data.event_end));
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
@@ -54,10 +52,10 @@ pageSetup = function() {
             document.getElementById("StreamName").value = data.video_channel;
             setOptions('uploadLocation', data.upload_locations);
 
-            // Default time range to the last 10min. This is useful for giffers, immediate replay, etc.
-            document.getElementById("StreamStart").value = new Date(new Date().getTime() - 1000*60*10).toISOString().substring(0,19);
-            document.getElementById("StreamEnd").value = new Date().toISOString().substring(0,19);
-            setBustimeRange();
+            // Default time range to the last 10min. This is useful for immediate replay, etc.
+            end = new Date();
+            start = new Date(end.getTime() - 1000*60*10);
+            setTimeRange(start, end);
 
 	        loadPlaylist();
         });
@@ -65,12 +63,13 @@ pageSetup = function() {
     }
 };
 
-timestampToBustime = function(ts) {
-    date = new Date(ts + "Z");
+// Time-formatting functions
+
+toBustime = function(date) {
     return (date < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((date - desertBusStart)/1000), 600.01).padStart(7, "0:");
 };
 
-bustimeToTimestamp = function(bustime) {
+fromBustime = function(bustime) {
     direction = 1;
     if(bustime.startsWith("-")) {
         bustime = bustime.slice(1);
@@ -78,17 +77,45 @@ bustimeToTimestamp = function(bustime) {
     }
     parts = bustime.split(':')
     bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
-    return new Date(desertBusStart.getTime() + direction * bustime_ms).toISOString().substring(0, 19);
+    return new Date(desertBusStart.getTime() + direction * bustime_ms);
 };
 
-setBustimeRange = function() {
-    document.getElementById("BusTimeStart").value = timestampToBustime(document.getElementById("StreamStart").value);
-    document.getElementById("BusTimeEnd").value = timestampToBustime(document.getElementById("StreamEnd").value);
-};
+toTimestamp = function(date) {
+	return date.toISOString().substring(0, 19);
+}
 
-setStreamRange = function() {
-    document.getElementById("StreamStart").value = bustimeToTimestamp(document.getElementById("BusTimeStart").value);
-    document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
+fromTimestamp = function(ts) {
+	return new Date(ts + "Z");
+}
+
+// Set the stream start/end range from a pair of Dates using the current format
+// If given null, sets to blank.
+setTimeRange = function(start, end) {
+	toFunc = {
+		UTC: toTimestamp,
+		BUSTIME: toBustime,
+	}[timeFormat];
+    document.getElementById("StreamStart").value = (start) ? toFunc(start) : "";
+    document.getElementById("StreamEnd").value = (end) ? toFunc(end) : "";
+}
+
+// Get the current start/end range as Dates using the current format
+// Returns an object containing 'start' and 'end' fields.
+// If either is empty / invalid, returns null.
+getTimeRange = function() {
+	fromFunc = {
+		UTC: fromTimestamp,
+		BUSTIME: fromBustime,
+	}[timeFormat];
+	convert = function(value) {
+		if (!value) { return null; }
+		date = fromFunc(value);
+		return (isNaN(date)) ? null : date;
+	};
+	return {
+		start: convert(document.getElementById("StreamStart").value),
+		end: convert(document.getElementById("StreamEnd").value),
+	};
 }
 
 toggleHiddenPane = function(paneID) {
@@ -102,19 +129,10 @@ toggleUltrawide = function() {
 }
 
 toggleTimeInput = function(toggleInput) {
-	if(toggleInput == "UTC") {
-		setStreamRange();
-		document.getElementById("BusTimeStart").style.display = "none";
-		document.getElementById("BusTimeEnd").style.display = "none";
-		document.getElementById("StreamStart").style.display = "";
-		document.getElementById("StreamEnd").style.display = "";
-	} else {
-		setBustimeRange();
-		document.getElementById("StreamStart").style.display = "none";
-		document.getElementById("StreamEnd").style.display = "none";
-		document.getElementById("BusTimeStart").style.display = "";
-		document.getElementById("BusTimeEnd").style.display = "";
-	}
+	// Get times using current format, then change format, then write them back
+	range = getTimeRange();
+	timeFormat = toggleInput;
+	setTimeRange(range.start, range.end);
 }
 
 // For a given select input element id, add the given list of options.
@@ -129,19 +147,23 @@ setOptions = function(element, options, selected) {
     });
 }
 
+buildQuery = function(params) {
+	return Object.keys(params).filter(key => params[key] !== null).map(key =>
+		encodeURIComponent(key) + '=' + encodeURIComponent(params[key])
+	).join('&');
+}
+
 loadPlaylist = function(startTrim, endTrim, defaultQuality) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
-    // If we're using bustime, update stream start/end from it first
-    if(document.getElementById("BusTimeToggleBus").checked) {
-        setStreamRange();
-    }
+	var range = getTimeRange();
+	var queryString = buildQuery({
+		// if not null, format as timestamp
+		start: range.start && toTimestamp(range.start),
+		end: range.end && toTimestamp(range.end),
+	});
 
-    var streamStart = document.getElementById("StreamStart").value ? "start="+document.getElementById("StreamStart").value:null;
-    var streamEnd = document.getElementById("StreamEnd").value ? "end="+document.getElementById("StreamEnd").value:null;
-    var queryString = (streamStart || streamEnd) ? "?" + [streamStart, streamEnd].filter((a) => !!a).join("&"):"";
-
-    setupPlayer(playlist + queryString, startTrim, endTrim);
+    setupPlayer(playlist + '?' + queryString, startTrim, endTrim);
 
     //Get quality levels for advanced properties.
     document.getElementById('qualityLevel').innerHTML = "";
@@ -215,9 +237,11 @@ thrimbletrimmerDownload = function() {
 
         var targetURL = "/cut/" + document.getElementById("StreamName").value +
             "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
-            "?start=" + downloadStart +
-            "&end=" + downloadEnd +
-            "&allow_holes=" + String(document.getElementById('AllowHoles').checked);
+            "?" + buildQuery({
+				start: downloadStart,
+				end: downloadEnd,
+				allow_holes: String(document.getElementById('AllowHoles').checked),
+			});
         console.log(targetURL);
         document.getElementById('outputFile').src = targetURL;
     }
