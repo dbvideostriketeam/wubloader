@@ -49,11 +49,16 @@
             </video>
         </div>
 
-        <div id="EditorDetailsPane">
+        <div id="InfoPane">
+			<br/>
+			When no end time is set, the stream will continue to play as it arrives.</br>
+			Trying to watch live will result in buffering, as those segments haven't been captured yet.<br/>
+			If you watch for a long time, it may become difficult to navigate on the video bar because there's too long a time loaded.
+			To fix this, re-load the video in the desired time range (default: the last 10 minutes) by clicking Load Playlist.<br/>
 			Download Quality: <select id="qualityLevel"></select>
 			<input type="button" id="DownloadButton" value="Download this time range" onclick="thrimbletrimmerDownload()"/>
             <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
-            <a href="/thrimbletrimmer/dashboard.html">Go To Editor</a> | 
+            <a href="/thrimbletrimmer/dashboard.html">Go To Editor</a>
             <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
             <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
         </div>
