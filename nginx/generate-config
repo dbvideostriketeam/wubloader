@@ -3,6 +3,10 @@
 # This script expects a mapping of services and ports in the SERVICES env var,
 # with one line per service containing "NAME PORT".
 
+# Other vars:
+#  THRIMBLETRIMMER: Set non-empty to also serve thrimbletrimmer on /thrimbletrimmer
+#  SEGMENTS: Set to path to segments dir to also serve segments dir on /segments
+
 generate_location() {
 	# generate_location PATH URL
 	echo -e "\t\tlocation $1 { proxy_pass $2; }"
@@ -20,6 +24,8 @@ LOCATIONS=$(
 	[ -n "$THRIMBLETRIMMER" ] &&
 		echo -e "\t\tlocation = / { return 301 /thrimbletrimmer/dashboard.html; }" &&
 		echo -e "\t\tlocation /thrimbletrimmer { }"
+	[ -n "$SEGMENTS" ] &&
+		echo -e "\t\tlocation /segments/ { alias $SEGMENTS/; }"
 )
 
 cat > /etc/nginx/nginx.conf <<EOF
