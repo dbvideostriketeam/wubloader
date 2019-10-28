@@ -424,12 +424,13 @@ class BackfillerWorker(object):
 			for hour in hours:
 				# since backfilling can take a long time, recheck whether this
 				# hour is after the start
-				if not isinstance(self.start, datetime.datetime):
-					start_hour = datetime.datetime.utcnow() - datetime.timedelta(hours=self.start)
-				else:
-					start_hour = self.start
-				if datetime.datetime.strptime(hour, HOUR_FMT) < start_hour:
-					break
+				if self.start is not None:
+					if not isinstance(self.start, datetime.datetime):
+						start_hour = datetime.datetime.utcnow() - datetime.timedelta(hours=self.start)
+					else:
+						start_hour = self.start
+					if datetime.datetime.strptime(hour, HOUR_FMT) < start_hour:
+						break
 
 				self.logger.info('Backfilling {}/{}'.format(quality, hour))
 	
