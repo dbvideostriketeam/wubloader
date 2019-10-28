@@ -19,8 +19,7 @@ class DBManager(object):
 	returning them.
 
 	It has the ability to serve as a primitive connection pool, as getting a
-	new conn will return existing conns it knows about first, but this mainly
-	just exists to re-use the initial conn used to test the connection, and you 
+	new conn will return existing conns it knows about first, but you
 	should use a real conn pool for any non-trivial use.
 
 	Returned conns are set to seralizable isolation level, autocommit, and use
@@ -30,9 +29,6 @@ class DBManager(object):
 		self.conns = []
 		self.connect_timeout = connect_timeout
 		self.connect_kwargs = connect_kwargs
-		# get a connection to test whether connection is working. 
-		conn = self.get_conn()
-		self.put_conn(conn)
 
 	def put_conn(self, conn):
 		self.conns.append(conn)

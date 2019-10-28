@@ -188,9 +188,8 @@ class BackfillerManager(object):
 		self.start = start
 		self.run_once = run_once
 		self.node_file = node_file
-		self.node_database = node_database
-		if self.node_database is not None:
-			self.db_manager = database.DBManager(dsn=self.node_database)
+		self.db_manager = None if node_database is None else database.DBManager(dsn=node_database)
+		self.connection = None
 		self.localhost = localhost
 		self.download_concurrency = download_concurrency
 		self.recent_cutoff = recent_cutoff
@@ -227,8 +226,6 @@ class BackfillerManager(object):
 		get_nodes are stopped. If self.run_once, only call nodes once. Calling
 		stop will exit the loop."""
 		self.logger.info('Starting')
-		if self.node_database is not None:
-			self.connection = self.db_manager.get_conn()
 		failures = 0
 
 		while not self.stopping.is_set():
@@ -237,17 +234,12 @@ class BackfillerManager(object):
 			except Exception:
 				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
 				# This is heavy-handed but simple and effective.
-				if self.node_database is not None:
-					self.connection = self.db_manager.get_conn()
+				self.connection = None
 				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay))
-				try:
-					host = [s.split('=')[-1] for s in self.connection.dsn.split() if 'host' in s][0]
-				except Exception:
-					host = ''
-				node_list_errors.labels(filename=self.node_file, database=host).inc()
+				node_list_errors.labels(filename=self.node_file).inc()
 				self.stopping.wait(delay)
 				continue
 			exisiting_nodes = set(self.workers.keys())
@@ -298,7 +290,9 @@ class BackfillerManager(object):
 					else:
 						nodes[substrs[0]] = substrs[1]
 
-		if self.node_database is not None:
+		if self.db_manager is not None:
+			if self.connection is None:
+				self.connection = self.db_manager.get_conn()
 			host = [s.split('=')[-1] for s in self.connection.dsn.split() if 'host' in s][0]
 			self.logger.info('Fetching list of nodes from {}'.format(host))
 			results = database.query(self.connection, """

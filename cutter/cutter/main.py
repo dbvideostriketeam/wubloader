@@ -565,13 +565,20 @@ def main(
 	# We want to error if either errors, and shut down if either exits.
 	dbmanager = None
 	stopping = gevent.event.Event()
-	while dbmanager is None:
+	dbmanager = DBManager(dsn=dbconnect)
+	while True:
 		try:
-			dbmanager = DBManager(dsn=dbconnect)
+			# Get a test connection so we know the database is up,
+			# this produces a clearer error in cases where there's a connection problem.
+			conn = dbmanager.get_conn()
 		except Exception:
 			delay = common.jitter(10)
 			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stop.wait(delay)
+		else:
+			# put it back so it gets reused on next get_conn()
+			dbmanager.put_conn(conn)
+			break
 
 	with open(creds_file) as f:
 		credentials = json.load(f)
