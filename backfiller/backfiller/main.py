@@ -51,6 +51,12 @@ backfill_errors = prom.Counter(
 	['remote', 'channel'],
 )
 
+segments_deleted = prom.Counter(
+	'segments_deleted',
+	'Number of segments successfully deleted',
+	['channel', 'quality', 'hour'],
+)
+
 HOUR_FMT = '%Y-%m-%dT%H'
 TIMEOUT = 5 #default timeout in seconds for remote requests or exceptions 
 MAX_BACKOFF = 4 #number of times to back off
@@ -259,16 +265,20 @@ class BackfillerManager(object):
 			hours.sort()
 
 			for hour in hours:
+				# deleting segments can take a bit time but is less important
+				# than the actually backfilling so we yield
+				gevent.idle()
 				path = os.path.join(self.base_dir, self.channel, quality, hour)
 				self.logger.info('Deleting {}'.format(path))
 				segments = list_local_segments(self.base_dir, self.channel, quality, hour)
 				for segment in segments:
 					try:
 						os.remove(os.path.join(path, segment))
+						segments_deleted.labels(channel=self.channel, quality=quality, hour=hour).inc()
 					except OSError as e:
 						# ignore error when the file is already gone
 						if e.errno != errno.ENOENT:
-							raise
+							pass
 
 				try:
 					os.rmdir(path)
@@ -280,8 +290,6 @@ class BackfillerManager(object):
 					# warn if not empty (will try to delete folder again next time) 
 					elif e.errno == errno.ENOTEMPTY:
 						self.logger.warn('Failed to delete non-empty folder {}'.format(path))
-					else:
-						raise e
 				else:
 					self.logger.info('{} deleted'.format(path))
 
@@ -323,8 +331,12 @@ class BackfillerManager(object):
 			if self.run_once:
 				break
 
+			# if get_nodes() raises an error, this will deletes will not occur
 			if self.delete_old and self.start:
-				self.delete_hours()
+				try:
+					self.delete_hours()
+				except Exception:
+					self.logger.warning('Failed to delete old segments', exc_info=True)
 
 			self.stopping.wait(common.jitter(self.NODE_INTERVAL))
 
