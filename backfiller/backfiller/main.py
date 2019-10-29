@@ -278,7 +278,7 @@ class BackfillerManager(object):
 					except OSError as e:
 						# ignore error when the file is already gone
 						if e.errno != errno.ENOENT:
-							pass
+							raise
 
 				try:
 					os.rmdir(path)
