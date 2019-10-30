@@ -286,10 +286,11 @@ class BackfillerManager(object):
 					# ignore error when file is already deleted
 					if e.errno == errno.ENOENT:
 						self.logger.warn('{} already deleted'.format(path))
-						
 					# warn if not empty (will try to delete folder again next time) 
 					elif e.errno == errno.ENOTEMPTY:
 						self.logger.warn('Failed to delete non-empty folder {}'.format(path))
+					else:
+						raise
 				else:
 					self.logger.info('{} deleted'.format(path))
 
@@ -331,7 +332,7 @@ class BackfillerManager(object):
 			if self.run_once:
 				break
 
-			# if get_nodes() raises an error, this will deletes will not occur
+			# note that if get_nodes() raises an error, then deletes will not occur
 			if self.delete_old and self.start:
 				try:
 					self.delete_hours()
