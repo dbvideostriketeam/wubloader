@@ -259,13 +259,16 @@ class CoverageChecker(object):
 							for segment in partial_segments:
 								partial_overlaps += 1
 								partial_overlap_duration += segment.duration
-						else:
+						elif partial_segments:
 							partial_segments.sort(key=lambda segment: os.stat(segment.path).st_size)
 							best_segment = partial_segments[-1]
 							only_partials.append((best_segment.start, best_segment.start + best_segment.duration))
 							for segment in partial_segments[:-1]:
 								partial_overlaps += 1
 								partial_overlap_duration += segment.duration
+						else:
+							# ignore any start times with only temporary segments
+							continue
 						self.logger.debug(best_segment.path.split('/')[-1])
 						best_segments.append(best_segment)
 
