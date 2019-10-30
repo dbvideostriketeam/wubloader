@@ -1,3 +1,4 @@
+import errno
 import datetime
 import itertools
 import logging
@@ -110,6 +111,10 @@ class CoverageChecker(object):
 		pixel_length -- length of a pixel in seconds
 		rows -- the height of the image"""
 
+		if not all_hour_holes:
+			self.logger.warning('No hours to generate coverage map from')
+			return
+
 
 		if self.first_hour is None:
 			first_hour = datetime.datetime.strptime(min(all_hour_holes.keys()), HOUR_FMT)
@@ -183,7 +188,13 @@ class CoverageChecker(object):
 					break
 
 				path = os.path.join(self.base_dir, self.channel, quality)
-				hours = [name for name in os.listdir(path) if not name.startswith('.')]
+				try:
+					hours = [name for name in os.listdir(path) if not name.startswith('.')]
+				except OSError as e:
+					if e.errno == errno.ENOENT:
+						self.logger.warning('{} does not exist')
+						break
+
 				hours.sort()
 				previous_hour_segments = None
 				all_hour_holes = {}
