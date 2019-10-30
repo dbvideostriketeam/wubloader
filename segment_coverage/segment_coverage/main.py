@@ -192,7 +192,7 @@ class CoverageChecker(object):
 					hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				except OSError as e:
 					if e.errno == errno.ENOENT:
-						self.logger.warning('{} does not exist')
+						self.logger.warning('{} does not exist'.format(path))
 						break
 
 				hours.sort()
@@ -207,7 +207,12 @@ class CoverageChecker(object):
 					# based on common.segments.best_segments_by_start
 					# but more complicated to capture more detailed metrics
 					hour_path = os.path.join(self.base_dir, self.channel, quality, hour)
-					segment_names = [name for name in os.listdir(hour_path) if not name.startswith('.')]
+					try:
+						segment_names = [name for name in os.listdir(hour_path) if not name.startswith('.')]
+					except OSError as e:
+						if e.errno == errno.ENOENT:
+							self.logger.warning('{} does not exist'.format(hour_path))
+							break 
 					segment_names.sort()
 					parsed = []
 					bad_segment_count = 0
