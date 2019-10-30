@@ -193,7 +193,7 @@ class CoverageChecker(object):
 				except OSError as e:
 					if e.errno == errno.ENOENT:
 						self.logger.warning('{} does not exist'.format(path))
-						break
+						continue
 
 				hours.sort()
 				previous_hour_segments = None
@@ -211,8 +211,8 @@ class CoverageChecker(object):
 						segment_names = [name for name in os.listdir(hour_path) if not name.startswith('.')]
 					except OSError as e:
 						if e.errno == errno.ENOENT:
-							self.logger.warning('{} does not exist'.format(hour_path))
-							break 
+							self.logger.warning('Hour {} was deleted between finding it and processing it, ignoring'.format(hour))
+							continue 
 					segment_names.sort()
 					parsed = []
 					bad_segment_count = 0
