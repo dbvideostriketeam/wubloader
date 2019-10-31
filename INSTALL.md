@@ -37,6 +37,9 @@ You can edit the `docker-compose.jsonnet` file to set the configuration options.
 * `db_args`, the arguments for connecting to the wubloader database. You will likely need to update the `user`, `password` and `host` to match the database node that you are connecting to.
 * `ports`, the ports to expose each service on. Only the `nginx` port (default on port 80) needs to be externally accessible for a non-database node as all the other services are routed through `nginx`.
 * `localhost`, the name of the local machine as it appears in the database `nodes` table. This is prevent the node from backfilling from itself.
+* `bustime_start`, the time the stream started.
+* `cutter_config`, the configuration for cutter upload locations.
+* `default_location`, the default cutter upload location.
 
 To generate the `docker-compose.yml` file used by `docker-compose`, run `generate-docker-compose`
 
@@ -44,7 +47,9 @@ To generate the `docker-compose.yml` file used by `docker-compose`, run `generat
   
 After making any changes to `docker-compose.jsonnet`, you will need to rerun `generate-docker-compose`.
 
-By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim` and `nginx` services of the wubloader will be run. To change which services are run edit the `enabled` object in `docker-compose.jsonnet`. A complete wubloader set up also requires one and only one `database` service (though having a backup database is a good idea) and one and only one `sheetsync` service.
+By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim`, `segment_coverage` and `nginx` services of the wubloader will be run. To change which services are run edit the `enabled` object in `docker-compose.jsonnet`. A complete wubloader set up also requires one and only one `database` service (though having a backup database is a good idea) and one and only one `sheetsync` service.
+
+If you are running a `cutter` you will have to place the appropriate Google credentials in a JSON file given by the `cutter_creds_file`. Likewise, if you are running the `sheetsync` service, you will have to place the appropriate credentials in the JSON file pointed to by `sheetsync_creds_file` as well as set the appropriate `sheet_id` and `worksheets` for the Google sheet to sync with. You will also need to set the appropriate `edit_url` to access `thrimbletrimmer`.  
 
 ## Running the wubloader
 
