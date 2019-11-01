@@ -41,9 +41,9 @@
             </tr>
             <tr>
                 <td><input id="StreamName" value="desertbus" /></td>
-                <td><input id="StreamStart" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeStart" class="BusTimeInput" value="0:00:00" /></td>
-                <td><input id="StreamEnd" style="display:none;" class="UTCTimeInput" value="" /><input id="BusTimeEnd" class="BusTimeInput" value="0:00:00" /></td>
-                <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
+                <td><input id="StreamStart" value="0:10:00" />
+                <td><input id="StreamEnd" value="" />
+                <td><input type="button" value="Load Playlist" onclick="loadPlaylist(true)" /></td>
             </tr>
             <tr>
                     <td></td>
@@ -51,6 +51,7 @@
                 <td>
                     <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
                     <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
+                    <input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" > Time Ago
                 </td>
                 <td><a id="AdvancedOptionsButton" href="JavaScript:toggleHiddenPane('wubloaderAdvancedInputTable');">Advanced Submit Options</a></td>
             </tr>
@@ -93,8 +94,9 @@
             </div>
             <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit('EDITED')"/>
             <input type="button" id="DraftButton" value="Save Draft" onclick="thrimbletrimmerSubmit('UNEDITED')"/>
-            <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload()"/>
+            <input type="button" id="DownloadButton" value="Download" onclick="thrimbletrimmerDownload(true)"/>
             <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
+            <a href="/thrimbletrimmer/stream.html">Go to Re-stream View</a> |
             <a id="ManualLinkButton" href="JavaScript:toggleHiddenPane('ManualLinkPane');">Manual Link</a> | 
             <a id="ResetButton" href="JavaScript:thrimbletrimmerResetLink();">Reset Edits</a>
             <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
@@ -119,32 +121,7 @@
     <script src="/thrimbletrimmer/scripts/keyboardShortcuts.js"></script>
     <script src="/thrimbletrimmer/scripts/IO.js"></script>
 
-    <script>pageSetup();</script>
-    <script>
-        function toggleHiddenPane(paneID) {
-            var pane = document.getElementById(paneID);
-            pane.style.display = (pane.style.display === "none") ? "block":"none";
-        }
-        function toggleUltrawide() {
-            var body = document.getElementsByTagName("Body")[0];
-            body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
-        }
-        function toggleTimeInput(toggleInput) {
-            if(toggleInput == "UTC") {
-                setStreamRange();
-                document.getElementById("BusTimeStart").style.display = "none";
-                document.getElementById("BusTimeEnd").style.display = "none";
-                document.getElementById("StreamStart").style.display = "";
-                document.getElementById("StreamEnd").style.display = "";
-            } else {
-                setBustimeRange();
-                document.getElementById("StreamStart").style.display = "none";
-                document.getElementById("StreamEnd").style.display = "none";
-                document.getElementById("BusTimeStart").style.display = "";
-                document.getElementById("BusTimeEnd").style.display = "";
-            }
-        }
-    </script>
+    <script>pageSetup(true);</script>
 
 <div class="g-signin2" data-onsuccess="onSignIn"></div>
 <a href="#" onclick="signOut();">Sign out</a>

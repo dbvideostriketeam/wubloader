@@ -1,8 +1,10 @@
 var desertBusStart = new Date("1970-01-01T00:00:00Z");
+var timeFormat = 'AGO';
 
-pageSetup = function() {
+pageSetup = function(isEditor) {
+
     //Get values from ThrimShim
-    if(/id=/.test(document.location.search)) {
+    if(isEditor && /id=/.test(document.location.search)) {
         var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
         fetch("/thrimshim/"+rowId).then(data => data.json()).then(function (data) {
             if (!data) {
@@ -15,10 +17,14 @@ pageSetup = function() {
 
             document.getElementById("StreamName").value = data.video_channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
-            // set stream start/end, then copy to bustime inputs
-            document.getElementById("StreamStart").value = data.event_start;
-            document.getElementById("StreamEnd").value = data.event_end;
-            setBustimeRange();
+            // for editor, switch to bustime since that's the default
+            timeFormat = 'BUSTIME';
+            // Apply padding - start 1min early, finish 2min late because these times are generally
+            // rounded down to the minute, so if something ends at "00:10" it might actually end
+            // at 00:10:59 so we should pad to 00:12:00.
+            var start = (data.event_start) ? new Date(fromTimestamp(data.event_start).getTime() - 60*1000) : null;
+            var end = (data.event_end) ? new Date(fromTimestamp(data.event_end).getTime() + 2*60*1000) : null;
+            setTimeRange(start, end);
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
@@ -41,53 +47,127 @@ pageSetup = function() {
                 document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
             }
 
-            loadPlaylist(data.video_start, data.video_end, data.video_quality);
+            loadPlaylist(isEditor, data.video_start, data.video_end, data.video_quality);
         });
     }
     else {
-        document.getElementById('SubmitButton').disabled = true;
+        if (isEditor) { document.getElementById('SubmitButton').disabled = true; }
 
         fetch("/thrimshim/defaults").then(data => data.json()).then(function (data) {
             desertBusStart = new Date(data.bustime_start);
-            document.getElementById("VideoTitlePrefix").value = data.title_prefix;
-            document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
             document.getElementById("StreamName").value = data.video_channel;
-            setOptions('uploadLocation', data.upload_locations);
+            if (isEditor) {
+                document.getElementById("VideoTitlePrefix").value = data.title_prefix;
+                document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
+                setOptions('uploadLocation', data.upload_locations);
+            }
 
-            // Default time range to the last 10min. This is useful for giffers, immediate replay, etc.
-            document.getElementById("StreamStart").value = new Date(new Date().getTime() - 1000*60*10).toISOString().substring(0,19);
-            document.getElementById("StreamEnd").value = new Date().toISOString().substring(0,19);
-            setBustimeRange();
+            // Default time format changes depending on mode.
+            // But in both cases the default input value is 10min ago / "",
+            // it's just for editor we convert it before the user sees.
+            if (isEditor) {
+                toggleTimeInput('BUSTIME');
+            }
+
+            loadPlaylist(isEditor);
         });
 
-        loadPlaylist();
     }
 };
 
-timestampToBustime = function(ts) {
-    date = new Date(ts + "Z");
+// Time-formatting functions
+
+parseDuration = function(duration) {
+    var direction = 1;
+    if(duration.startsWith("-")) {
+        duration = duration.slice(1);
+        direction = -1;
+    }
+    var parts = duration.split(':');
+    return (parseInt(parts[0]) + (parts[1] || "0")/60 + (parts[2] || "0")/3600) * 60 * 60 * direction;
+}
+
+toBustime = function(date) {
     return (date < desertBusStart ? "-":"") + videojs.formatTime(Math.abs((date - desertBusStart)/1000), 600.01).padStart(7, "0:");
 };
 
-bustimeToTimestamp = function(bustime) {
-    direction = 1;
-    if(bustime.startsWith("-")) {
-        bustime = bustime.slice(1);
-        direction = -1;
-    }
-    parts = bustime.split(':')
-    bustime_ms = (parseInt(parts[0]) + parts[1]/60 + parts[2]/3600) * 1000 * 60 * 60;
-    return new Date(desertBusStart.getTime() + direction * bustime_ms).toISOString().substring(0, 19);
+fromBustime = function(bustime) {
+    return new Date(desertBusStart.getTime() + 1000 * parseDuration(bustime));
 };
 
-setBustimeRange = function() {
-    document.getElementById("BusTimeStart").value = timestampToBustime(document.getElementById("StreamStart").value);
-    document.getElementById("BusTimeEnd").value = timestampToBustime(document.getElementById("StreamEnd").value);
-};
+toTimestamp = function(date) {
+    return date.toISOString().substring(0, 19);
+}
 
-setStreamRange = function() {
-    document.getElementById("StreamStart").value = bustimeToTimestamp(document.getElementById("BusTimeStart").value);
-    document.getElementById("StreamEnd").value = bustimeToTimestamp(document.getElementById("BusTimeEnd").value);
+fromTimestamp = function(ts) {
+    return new Date(ts + "Z");
+}
+
+toAgo = function(date) {
+    now = new Date()
+    return (date < now ? "":"-") + videojs.formatTime(Math.abs((date - now)/1000), 600.01).padStart(7, "0:");
+}
+
+fromAgo = function(ago) {
+    return new Date(new Date().getTime() - 1000 * parseDuration(ago));
+}
+
+// Set the stream start/end range from a pair of Dates using the current format
+// If given null, sets to blank.
+setTimeRange = function(start, end) {
+    var toFunc = {
+        UTC: toTimestamp,
+        BUSTIME: toBustime,
+        AGO: toAgo,
+    }[timeFormat];
+    document.getElementById("StreamStart").value = (start) ? toFunc(start) : "";
+    document.getElementById("StreamEnd").value = (end) ? toFunc(end) : "";
+}
+
+// Get the current start/end range as Dates using the current format
+// Returns an object containing 'start' and 'end' fields.
+// If either is empty / invalid, returns null.
+getTimeRange = function() {
+    var fromFunc = {
+        UTC: fromTimestamp,
+        BUSTIME: fromBustime,
+        AGO: fromAgo,
+    }[timeFormat];
+    var convert = function(value) {
+        if (!value) { return null; }
+        var date = fromFunc(value);
+        return (isNaN(date)) ? null : date;
+    };
+    return {
+        start: convert(document.getElementById("StreamStart").value),
+        end: convert(document.getElementById("StreamEnd").value),
+    };
+}
+
+getTimeRangeAsTimestamp = function() {
+    var range = getTimeRange();
+    return {
+        // if not null, format as timestamp
+        start: range.start && toTimestamp(range.start),
+        end: range.end && toTimestamp(range.end),
+    };
+}
+
+toggleHiddenPane = function(paneID) {
+    var pane = document.getElementById(paneID);
+    pane.style.display = (pane.style.display === "none") ? "block":"none";
+}
+
+toggleUltrawide = function() {
+    var body = document.getElementsByTagName("Body")[0];
+    body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
+}
+
+toggleTimeInput = function(toggleInput) {
+    // Get times using current format, then change format, then write them back
+    var range = getTimeRange();
+    timeFormat = toggleInput;
+    setTimeRange(range.start, range.end);
 }
 
 // For a given select input element id, add the given list of options.
@@ -102,21 +182,21 @@ setOptions = function(element, options, selected) {
     });
 }
 
-loadPlaylist = function(startTrim, endTrim, defaultQuality) {
+buildQuery = function(params) {
+    return Object.keys(params).filter(key => params[key] !== null).map(key =>
+        encodeURIComponent(key) + '=' + encodeURIComponent(params[key])
+    ).join('&');
+}
+
+loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
-    // If we're using bustime, update stream start/end from it first
-    if(document.getElementById("BusTimeToggleBus").checked) {
-        setStreamRange();
-    }
+    var range = getTimeRangeAsTimestamp();
+    var queryString = buildQuery(range);
 
-    var streamStart = document.getElementById("StreamStart").value ? "start="+document.getElementById("StreamStart").value:null;
-    var streamEnd = document.getElementById("StreamEnd").value ? "end="+document.getElementById("StreamEnd").value:null;
-    var queryString = (streamStart || streamEnd) ? "?" + [streamStart, streamEnd].filter((a) => !!a).join("&"):"";
+    setupPlayer(isEditor, playlist + '?' + queryString, startTrim, endTrim);
 
-    setupPlayer(playlist + queryString, startTrim, endTrim);
-
-    //Get quality levels for advanced properties.
+    //Get quality levels for advanced properties / download
     document.getElementById('qualityLevel').innerHTML = "";
     fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
         if (!data.length) {
@@ -165,7 +245,7 @@ thrimbletrimmerSubmit = function(state) {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
         } else if (state == 'EDITED') {
@@ -177,29 +257,34 @@ thrimbletrimmerSubmit = function(state) {
     }));
 };
 
-thrimbletrimmerDownload = function() {
-    if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
-        alert("End Time must be greater than Start Time");
-    } else {
+thrimbletrimmerDownload = function(isEditor) {
+    var range = getTimeRangeAsTimestamp();
+    if (isEditor) {
+        if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
+            alert("End Time must be greater than Start Time");
+            return;
+        }
         var discontinuities = mapDiscontinuities();
-
-        var downloadStart = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
-        var downloadEnd = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
-
-        var targetURL = "/cut/" + document.getElementById("StreamName").value +
-            "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
-            "?start=" + downloadStart +
-            "&end=" + downloadEnd +
-            "&allow_holes=" + String(document.getElementById('AllowHoles').checked);
-        console.log(targetURL);
-        document.getElementById('outputFile').src = targetURL;
+        range.start = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
+        range.end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
     }
+
+    var targetURL = "/cut/" + document.getElementById("StreamName").value +
+        "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
+        "?" + buildQuery({
+            start: range.start,
+            end: range.end,
+            // Always allow holes in non-editor, accidentially including holes isn't important
+            allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
+        });
+    console.log(targetURL);
+    document.getElementById('outputFile').src = targetURL;
 };
 
 thrimbletrimmerManualLink = function() {
     document.getElementById("ManualButton").disabled = true;
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    body = {link: document.getElementById("ManualLink").value};
+    var body = {link: document.getElementById("ManualLink").value};
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
@@ -213,7 +298,7 @@ thrimbletrimmerManualLink = function() {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
             document.getElementById("ManualButton").disabled = false;
@@ -236,7 +321,7 @@ thrimbletrimmerResetLink = function() {
         return;
     }
     document.getElementById("ResetButton").disabled = true;
-    body = {}
+    var body = {}
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
@@ -250,7 +335,7 @@ thrimbletrimmerResetLink = function() {
     })
     .then(response => response.text().then(text => {
         if (!response.ok) {
-            error = response.statusText + ": " + text;
+            var error = response.statusText + ": " + text;
             console.log(error);
             alert(error);
             document.getElementById("ResetButton").disabled = false;

@@ -1,6 +1,6 @@
 var player = null;
 
-function setupPlayer(source, startTrim, endTrim) {
+function setupPlayer(isEditor, source, startTrim, endTrim) {
     document.getElementById("my-player").style.display = "";
     //Make poster of DB logo in correct aspect ratio, to control initial size of fluid container.
     var options = {
@@ -14,7 +14,7 @@ function setupPlayer(source, startTrim, endTrim) {
         playbackRates: [0.5, 1, 1.25, 1.5, 2],
         inactivityTimeout: 0,
         controlBar: {
-            fullscreenToggle: false,
+            fullscreenToggle: true,
             volumePanel: {
                 inline: false
             }
@@ -39,10 +39,12 @@ function setupPlayer(source, startTrim, endTrim) {
         this.vhs.playlists.on('loadedmetadata', function() {
             // setTimeout(function() { player.play(); }, 1000);
             player.hasStarted(true); //So it displays all the controls.
-            stream_start = player.vhs.playlists.master.playlists.filter(playlist => typeof playlist.discontinuityStarts !== "undefined")[0].dateTimeObject;
-            startTrim = startTrim ? (new Date(startTrim+"Z")-stream_start)/1000:0;
-            endTrim = endTrim ? (new Date(endTrim+"Z")-stream_start)/1000:player.duration();
-            var trimmingControls = player.trimmingControls({ startTrim:startTrim, endTrim:endTrim });
+            if (isEditor) {
+                var stream_start = player.vhs.playlists.master.playlists.filter(playlist => typeof playlist.discontinuityStarts !== "undefined")[0].dateTimeObject;
+                startTrim = startTrim ? (new Date(startTrim+"Z")-stream_start)/1000:0;
+                endTrim = endTrim ? (new Date(endTrim+"Z")-stream_start)/1000:player.duration();
+                var trimmingControls = player.trimmingControls({ startTrim:startTrim, endTrim:endTrim });
+            }
         });
 
         // How about an event listener?
@@ -56,7 +58,6 @@ function setupPlayer(source, startTrim, endTrim) {
         })
     });
     var hlsQS = player.hlsQualitySelector();
-    //var trimmingControls = player.trimmingControls({ startTrim:(startTrim ? startTrim:0), endTrim:(endTrim ? endTrim:player.duration()) });
 }
 
 mapDiscontinuities = function() {
