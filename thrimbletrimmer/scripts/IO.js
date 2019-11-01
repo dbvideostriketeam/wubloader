@@ -19,7 +19,12 @@ pageSetup = function(isEditor) {
             document.getElementById("hiddenSubmissionID").value = data.id;
             // for editor, switch to bustime since that's the default
             timeFormat = 'BUSTIME';
-            setTimeRange(fromTimestamp(data.event_start), fromTimestamp(data.event_end));
+            // Apply padding - start 1min early, finish 2min late because these times are generally
+            // rounded down to the minute, so if something ends at "00:10" it might actually end
+            // at 00:10:59 so we should pad to 00:12:00.
+            var start = (data.event_start) ? new Date(fromTimestamp(data.event_start).getTime() - 60*1000) : null;
+            var end = (data.event_end) ? new Date(fromTimestamp(data.event_end).getTime() + 2*60*1000) : null;
+            setTimeRange(start, end);
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
