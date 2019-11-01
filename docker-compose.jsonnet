@@ -25,7 +25,7 @@
   },
 
   // Twitch channel to capture
-  channel:: "desertbus",
+  channels:: ["desertbus"],
 
   // Stream qualities to capture
   qualities:: ["source", "480p"],
@@ -141,8 +141,8 @@
     [if $.enabled.downloader then "downloader"]: {
       image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
       // Args for the downloader: set channel and qualities
-      command: [
-        $.channel,
+      command: [channel for channel in $.channels] +
+      [  
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
@@ -174,8 +174,8 @@
     [if $.enabled.backfiller then "backfiller"]: {
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
-      command: [
-        $.channel,
+      command: [channel for channel in $.channels] +
+      [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--static-nodes", std.join(",", $.peers),
@@ -229,7 +229,7 @@
           if location != $.default_location
         ]),
         $.db_connect,
-        $.channel,
+        $.channels[0], // use first element as default channel
         $.bustime_start,
       ] + if $.authentication then [] else ["--no-authentication"],
       // Mount the segments directory at /mnt
@@ -267,8 +267,8 @@
     [if $.enabled.segment_coverage then "segment_coverage"]: {
       image: "quay.io/ekimekim/wubloader-segment_coverage:%s" % $.image_tag,
       // Args for the segment_coverage
-      command: [
-        $.channel,
+      command: [channel for channel in $.channels] +
+      [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
       ],
