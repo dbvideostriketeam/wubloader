@@ -28,6 +28,18 @@ sync_errors = prom.Counter(
 	'Number of errors syncing sheets',
 )
 
+rows_found = prom.Counter(
+	'rows_found',
+	'Number of rows that sheetsync looked at with an id',
+	['worksheet'],
+)
+
+rows_changed = prom.Counter(
+	'rows_changed',
+	'Number of rows that needed changes applied, with type=insert, type=input or type=output',
+	['type', 'worksheet'],
+)
+
 class SheetSync(object):
 
 	# Time between syncs
@@ -202,7 +214,11 @@ class SheetSync(object):
 				sql.SQL(", ").join(sql.Placeholder(col) for col in insert_cols),
 			)
 			query(self.conn, built_query, sheet_name=worksheet, **row)
+			rows_found(worksheet).inc()
+			rows_changed('insert', worksheet).inc()
 			return
+
+		rows_found(worksheet).inc()
 
 		# Update database with any changed inputs
 		changed = [col for col in self.input_columns if row[col] != getattr(event, col)]
@@ -220,6 +236,7 @@ class SheetSync(object):
 				) for col in changed
 			))
 			query(self.conn, built_query, **row)
+			rows_changed('input', worksheet).inc()
 
 		# Update sheet with any changed outputs
 		format_output = lambda v: '' if v is None else v # cast nulls to empty string
@@ -234,6 +251,7 @@ class SheetSync(object):
 					row_index, self.column_map[col],
 					format_output(getattr(event, col)),
 				)
+			rows_changed('output', worksheet).inc()
 
 		# Set edit link if marked for editing and start/end set.
 		# This prevents accidents / clicking the wrong row and provides
