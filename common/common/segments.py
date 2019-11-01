@@ -328,6 +328,7 @@ def read_chunks(fileobj, chunk_size=16*1024):
 		yield chunk
 
 
+@timed('cut', type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
 def fast_cut_segments(segments, start, end):
 	"""Yields chunks of a MPEGTS video file covering the exact timestamp range.
 	segments should be a list of segments as returned by get_best_segments().
@@ -400,6 +401,7 @@ def fast_cut_segments(segments, start, end):
 					yield chunk
 
 
+@timed('cut', type='full', normalize=lambda _, segments, start, end, encode_args: (end - start).total_seconds())
 def full_cut_segments(segments, start, end, encode_args):
 	# how far into the first segment to begin
 	cut_start = max(0, (start - segments[0].start).total_seconds())
