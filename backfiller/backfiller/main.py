@@ -15,11 +15,14 @@ import argh
 import gevent.backdoor
 import gevent.pool
 import prometheus_client as prom
-import requests
 
 import common
 from common import dateutil
 from common import database
+from common.requests import InstrumentedSession
+
+# Wraps all requests in some metric collection
+requests = InstrumentedSession()
 
 segments_backfilled = prom.Counter(
 	'segments_backfilled',
@@ -103,7 +106,7 @@ def list_remote_hours(node, channel, quality, timeout=TIMEOUT):
 	"""Wrapper around a call to restreamer.list_hours."""
 	uri = '{}/files/{}/{}'.format(node, channel, quality)
 	logging.debug('Getting list of hours from {}'.format(uri))
-	resp = requests.get(uri, timeout=timeout)
+	resp = requests.get(uri, timeout=timeout, metric_name='list_remote_hours')
 	return common.encode_strings(resp.json())
 
 
@@ -111,7 +114,7 @@ def list_remote_segments(node, channel, quality, hour, timeout=TIMEOUT):
 	"""Wrapper around a call to restreamer.list_segments."""
 	uri = '{}/files/{}/{}/{}'.format(node, channel, quality, hour)
 	logging.debug('Getting list of segments from {}'.format(uri))
-	resp = requests.get(uri, timeout=timeout)
+	resp = requests.get(uri, timeout=timeout, metric_name='list_remote_segments')
 	return common.encode_strings(resp.json())
 
 
@@ -140,7 +143,7 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 	try:
 		logging.debug('Fetching segment {} from {}'.format(path, node))
 		uri = '{}/segments/{}/{}/{}/{}'.format(node, channel, quality, hour, missing_segment)
-		resp = requests.get(uri, stream=True, timeout=timeout)
+		resp = requests.get(uri, stream=True, timeout=timeout, metric_name='get_remote_segment')
 
 		resp.raise_for_status()
 
