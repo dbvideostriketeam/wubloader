@@ -2,16 +2,18 @@
 import logging
 import random
 
-import requests
-
 import hls_playlist
+
+from common.requests import InstrumentedSession
 
 
 logger = logging.getLogger(__name__)
 
 
-def get_master_playlist(channel, session=requests):
+def get_master_playlist(channel, session=None):
 	"""Get the master playlist for given channel from twitch"""
+	if session is None:
+		session = InstrumentedSession()
 	resp = session.get(
 		"https://api.twitch.tv/api/channels/{}/access_token.json".format(channel),
 		params={'as3': 't'},
@@ -19,6 +21,7 @@ def get_master_playlist(channel, session=requests):
 			'Accept': 'application/vnd.twitchtv.v3+json',
 			'Client-ID': 'pwkzresl8kj2rdj6g7bvxl9ys1wly3j',
 		},
+		metric_name='get_access_token',
 	)
 	resp.raise_for_status() # getting access token
 	token = resp.json()
@@ -42,6 +45,7 @@ def get_master_playlist(channel, session=requests):
 			# in flux. Better to just blend in with the crowd for now.
 			# "platform": "_"
 		},
+		metric_name='get_master_playlist',
 	)
 	resp.raise_for_status() # getting master playlist
 	playlist = hls_playlist.load(resp.text, base_uri=resp.url)
@@ -96,7 +100,9 @@ def get_media_playlist_uris(master_playlist, target_qualities):
 	return {name: variant.uri for name, variant in variants.items()}
 
 
-def get_media_playlist(uri, session=requests):
-	resp = session.get(uri)
+def get_media_playlist(uri, session=None):
+	if session is None:
+		session = InstrumentedSession()
+	resp = session.get(uri, metric_name='get_media_playlist')
 	resp.raise_for_status()
 	return hls_playlist.load(resp.text, base_uri=resp.url)
