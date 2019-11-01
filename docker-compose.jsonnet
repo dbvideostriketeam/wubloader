@@ -24,7 +24,7 @@
     postgres: false,
   },
 
-  // Twitch channel to capture
+  // Twitch channels to capture. The first one will be used as the default channel in the editor.
   channels:: ["desertbus"],
 
   // Stream qualities to capture
@@ -141,7 +141,7 @@
     [if $.enabled.downloader then "downloader"]: {
       image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
       // Args for the downloader: set channel and qualities
-      command: [channel for channel in $.channels] +
+      command: $.channels +
       [  
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
@@ -174,7 +174,7 @@
     [if $.enabled.backfiller then "backfiller"]: {
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
-      command: [channel for channel in $.channels] +
+      command: $.channels +
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
@@ -267,7 +267,7 @@
     [if $.enabled.segment_coverage then "segment_coverage"]: {
       image: "quay.io/ekimekim/wubloader-segment_coverage:%s" % $.image_tag,
       // Args for the segment_coverage
-      command: [channel for channel in $.channels] +
+      command: $.channels +
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
