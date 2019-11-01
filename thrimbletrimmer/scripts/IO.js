@@ -79,8 +79,7 @@ parseDuration = function(duration) {
         direction = -1;
     }
     var parts = duration.split(':');
-	parts.reverse();
-    return (parseInt(parts[2] || "0") + (parts[1] || "0")/60 + parts[0]/3600) * 60 * 60 * direction;
+    return (parseInt(parts[0]) + (parts[1] || "0")/60 + (parts[2] || "0")/3600) * 60 * 60 * direction;
 }
 
 toBustime = function(date) {
