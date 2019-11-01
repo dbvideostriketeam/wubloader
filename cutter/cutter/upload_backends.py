@@ -143,13 +143,14 @@ class Youtube(UploadBackend):
 				'uploadType': 'resumable',
 			},
 			json=json,
+			metric_name='create_video',
 		)
 		if not resp.ok:
 			# Don't retry, because failed calls still count against our upload quota.
 			# The risk of repeated failed attempts blowing through our quota is too high.
 			raise UploadError("Youtube create video call failed with {resp.status_code}: {resp.content}".format(resp=resp))
 		upload_url = resp.headers['Location']
-		resp = self.client.request('POST', upload_url, data=data)
+		resp = self.client.request('POST', upload_url, data=data, metric_name='upload_video')
 		if 400 <= resp.status_code < 500:
 			# As above, don't retry. But with 4xx's we know the upload didn't go through.
 			# On a 5xx, we can't be sure (the server is in an unspecified state).
@@ -169,6 +170,7 @@ class Youtube(UploadBackend):
 					'part': 'id,status',
 					'id': ','.join(group),
 				},
+				metric_name='list_videos',
 			)
 			resp.raise_for_status()
 			for item in resp.json()['items']:
