@@ -17,8 +17,8 @@ pageSetup = function(isEditor) {
 
             document.getElementById("StreamName").value = data.video_channel;
             document.getElementById("hiddenSubmissionID").value = data.id;
-			// for editor, switch to bustime since that's the default
-			timeFormat = 'BUSTIME';
+            // for editor, switch to bustime since that's the default
+            timeFormat = 'BUSTIME';
             setTimeRange(fromTimestamp(data.event_start), fromTimestamp(data.event_end));
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
@@ -51,20 +51,20 @@ pageSetup = function(isEditor) {
         fetch("/thrimshim/defaults").then(data => data.json()).then(function (data) {
             desertBusStart = new Date(data.bustime_start);
             document.getElementById("StreamName").value = data.video_channel;
-			if (isEditor) {
-				document.getElementById("VideoTitlePrefix").value = data.title_prefix;
-				document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
-				setOptions('uploadLocation', data.upload_locations);
-			}
+            if (isEditor) {
+                document.getElementById("VideoTitlePrefix").value = data.title_prefix;
+                document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
+                setOptions('uploadLocation', data.upload_locations);
+            }
 
-			// Default time format changes depending on mode.
-			// But in both cases the default input value is 10min ago / "",
-			// it's just for editor we convert it before the user sees.
-			if (isEditor) {
-				toggleTimeInput('BUSTIME');
-			}
+            // Default time format changes depending on mode.
+            // But in both cases the default input value is 10min ago / "",
+            // it's just for editor we convert it before the user sees.
+            if (isEditor) {
+                toggleTimeInput('BUSTIME');
+            }
 
-	        loadPlaylist(isEditor);
+            loadPlaylist(isEditor);
         });
 
     }
@@ -91,15 +91,15 @@ fromBustime = function(bustime) {
 };
 
 toTimestamp = function(date) {
-	return date.toISOString().substring(0, 19);
+    return date.toISOString().substring(0, 19);
 }
 
 fromTimestamp = function(ts) {
-	return new Date(ts + "Z");
+    return new Date(ts + "Z");
 }
 
 toAgo = function(date) {
-	now = new Date()
+    now = new Date()
     return (date < now ? "":"-") + videojs.formatTime(Math.abs((date - now)/1000), 600.01).padStart(7, "0:");
 }
 
@@ -110,11 +110,11 @@ fromAgo = function(ago) {
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
 setTimeRange = function(start, end) {
-	var toFunc = {
-		UTC: toTimestamp,
-		BUSTIME: toBustime,
-		AGO: toAgo,
-	}[timeFormat];
+    var toFunc = {
+        UTC: toTimestamp,
+        BUSTIME: toBustime,
+        AGO: toAgo,
+    }[timeFormat];
     document.getElementById("StreamStart").value = (start) ? toFunc(start) : "";
     document.getElementById("StreamEnd").value = (end) ? toFunc(end) : "";
 }
@@ -123,46 +123,46 @@ setTimeRange = function(start, end) {
 // Returns an object containing 'start' and 'end' fields.
 // If either is empty / invalid, returns null.
 getTimeRange = function() {
-	var fromFunc = {
-		UTC: fromTimestamp,
-		BUSTIME: fromBustime,
-		AGO: fromAgo,
-	}[timeFormat];
-	var convert = function(value) {
-		if (!value) { return null; }
-		var date = fromFunc(value);
-		return (isNaN(date)) ? null : date;
-	};
-	return {
-		start: convert(document.getElementById("StreamStart").value),
-		end: convert(document.getElementById("StreamEnd").value),
-	};
+    var fromFunc = {
+        UTC: fromTimestamp,
+        BUSTIME: fromBustime,
+        AGO: fromAgo,
+    }[timeFormat];
+    var convert = function(value) {
+        if (!value) { return null; }
+        var date = fromFunc(value);
+        return (isNaN(date)) ? null : date;
+    };
+    return {
+        start: convert(document.getElementById("StreamStart").value),
+        end: convert(document.getElementById("StreamEnd").value),
+    };
 }
 
 getTimeRangeAsTimestamp = function() {
-	var range = getTimeRange();
-	return {
-		// if not null, format as timestamp
-		start: range.start && toTimestamp(range.start),
-		end: range.end && toTimestamp(range.end),
-	};
+    var range = getTimeRange();
+    return {
+        // if not null, format as timestamp
+        start: range.start && toTimestamp(range.start),
+        end: range.end && toTimestamp(range.end),
+    };
 }
 
 toggleHiddenPane = function(paneID) {
-	var pane = document.getElementById(paneID);
-	pane.style.display = (pane.style.display === "none") ? "block":"none";
+    var pane = document.getElementById(paneID);
+    pane.style.display = (pane.style.display === "none") ? "block":"none";
 }
 
 toggleUltrawide = function() {
-	var body = document.getElementsByTagName("Body")[0];
-	body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
+    var body = document.getElementsByTagName("Body")[0];
+    body.classList.contains("ultrawide") ? body.classList.remove("ultrawide"):body.classList.add("ultrawide");
 }
 
 toggleTimeInput = function(toggleInput) {
-	// Get times using current format, then change format, then write them back
-	var range = getTimeRange();
-	timeFormat = toggleInput;
-	setTimeRange(range.start, range.end);
+    // Get times using current format, then change format, then write them back
+    var range = getTimeRange();
+    timeFormat = toggleInput;
+    setTimeRange(range.start, range.end);
 }
 
 // For a given select input element id, add the given list of options.
@@ -178,32 +178,32 @@ setOptions = function(element, options, selected) {
 }
 
 buildQuery = function(params) {
-	return Object.keys(params).filter(key => params[key] !== null).map(key =>
-		encodeURIComponent(key) + '=' + encodeURIComponent(params[key])
-	).join('&');
+    return Object.keys(params).filter(key => params[key] !== null).map(key =>
+        encodeURIComponent(key) + '=' + encodeURIComponent(params[key])
+    ).join('&');
 }
 
 loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
-	var range = getTimeRangeAsTimestamp();
-	var queryString = buildQuery(range);
+    var range = getTimeRangeAsTimestamp();
+    var queryString = buildQuery(range);
 
     setupPlayer(isEditor, playlist + '?' + queryString, startTrim, endTrim);
 
-	//Get quality levels for advanced properties / download
-	document.getElementById('qualityLevel').innerHTML = "";
-	fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
-		if (!data.length) {
-			console.log("Could not retrieve quality levels");
-			return;
-		}
-		var qualityLevels = data.sort().reverse();
-		setOptions('qualityLevel', qualityLevels, defaultQuality);
-		if (!!defaultQuality && qualityLevels.length > 0 && defaultQuality != qualityLevels[0]) {
-			document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
-		}
-	});
+    //Get quality levels for advanced properties / download
+    document.getElementById('qualityLevel').innerHTML = "";
+    fetch('/files/' + document.getElementById('StreamName').value).then(data => data.json()).then(function (data) {
+        if (!data.length) {
+            console.log("Could not retrieve quality levels");
+            return;
+        }
+        var qualityLevels = data.sort().reverse();
+        setOptions('qualityLevel', qualityLevels, defaultQuality);
+        if (!!defaultQuality && qualityLevels.length > 0 && defaultQuality != qualityLevels[0]) {
+            document.getElementById('wubloaderAdvancedInputTable').style.display = "block";
+        }
+    });
 };
 
 thrimbletrimmerSubmit = function(state) {
@@ -253,27 +253,27 @@ thrimbletrimmerSubmit = function(state) {
 };
 
 thrimbletrimmerDownload = function(isEditor) {
-	var range = getTimeRangeAsTimestamp();
-	if (isEditor) {
-		if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
-			alert("End Time must be greater than Start Time");
-			return;
-		}
-		var discontinuities = mapDiscontinuities();
-		range.start = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
-		range.end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
-	}
+    var range = getTimeRangeAsTimestamp();
+    if (isEditor) {
+        if(player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
+            alert("End Time must be greater than Start Time");
+            return;
+        }
+        var discontinuities = mapDiscontinuities();
+        range.start = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
+        range.end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
+    }
 
-	var targetURL = "/cut/" + document.getElementById("StreamName").value +
-		"/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
-		"?" + buildQuery({
-			start: range.start,
-			end: range.end,
-			// Always allow holes in non-editor, accidentially including holes isn't important
-			allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
-		});
-	console.log(targetURL);
-	document.getElementById('outputFile').src = targetURL;
+    var targetURL = "/cut/" + document.getElementById("StreamName").value +
+        "/"+document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value+".ts" +
+        "?" + buildQuery({
+            start: range.start,
+            end: range.end,
+            // Always allow holes in non-editor, accidentially including holes isn't important
+            allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
+        });
+    console.log(targetURL);
+    document.getElementById('outputFile').src = targetURL;
 };
 
 thrimbletrimmerManualLink = function() {

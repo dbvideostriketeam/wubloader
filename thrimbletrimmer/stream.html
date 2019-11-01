@@ -38,7 +38,7 @@
                 <td>
                     <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
                     <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)"> Bustime
-					<input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" checked="checked"> Time Ago
+                    <input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" checked="checked"> Time Ago
                 </td>
             </tr>
         </table>
@@ -50,13 +50,13 @@
         </div>
 
         <div id="InfoPane">
-			<br/>
-			When no end time is set, the stream will continue to play as it arrives.</br>
-			Trying to watch live will result in buffering, as those segments haven't been captured yet.<br/>
-			If you watch for a long time, it may become difficult to navigate on the video bar because there's too long a time loaded.
-			To fix this, re-load the video in the desired time range (default: the last 10 minutes) by clicking Load Playlist.<br/>
-			Download Quality: <select id="qualityLevel"></select>
-			<input type="button" id="DownloadButton" value="Download this time range" onclick="thrimbletrimmerDownload()"/>
+            <br/>
+            When no end time is set, the stream will continue to play as it arrives.</br>
+            Trying to watch live will result in buffering, as those segments haven't been captured yet.<br/>
+            If you watch for a long time, it may become difficult to navigate on the video bar because there's too long a time loaded.
+            To fix this, re-load the video in the desired time range (default: the last 10 minutes) by clicking Load Playlist.<br/>
+            Download Quality: <select id="qualityLevel"></select>
+            <input type="button" id="DownloadButton" value="Download this time range" onclick="thrimbletrimmerDownload()"/>
             <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
             <a href="/thrimbletrimmer/dashboard.html">Go To Editor</a>
             <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>

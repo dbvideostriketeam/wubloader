@@ -25,7 +25,7 @@ body.ultrawide .my-player-dimensions { width:100% !important; }
     bottom:-3px;
 }
 .video-js .vjs-picture-in-picture-control {
-	display: none;
+    display: none;
 }
 
 
