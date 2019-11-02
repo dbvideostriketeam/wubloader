@@ -414,7 +414,7 @@ def feed_input(segments, pipe):
 			try:
 				shutil.copyfileobj(f, pipe)
 			except OSError as e:
-				# ignore EPIPE, as this just means the end cut meant we didn't need all i>
+				# ignore EPIPE, as this just means the end cut meant we didn't need all it
 				if e.errno != errno.EPIPE:
 					raise
 	pipe.close()

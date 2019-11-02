@@ -67,12 +67,17 @@ class UploadBackend(object):
 	under the 'encoding_settings' attribute.
 	If this is None, instead uses the 'fast cut' strategy where nothing
 	is transcoded.
+
+	In addition, if the output format doesn't need a seekable file,
+	you should set encoding_streamable = True so we know we can stream the output directly.
 	"""
 
 	needs_transcode = False
 
-	# reasonable default if settings don't otherwise matter
-	encoding_settings = ['-f', 'mp4']
+	# reasonable default if settings don't otherwise matter:
+	# high-quality mpegts, without wasting too much cpu on encoding
+	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
+	encoding_streamable = True
 
 	def upload_video(self, title, description, tags, data):
 		raise NotImplementedError
@@ -92,10 +97,14 @@ class Youtube(UploadBackend):
 		language:
 			The language code to describe all videos as.
 			Default is "en", ie. English. Set to null to not set.
+		use_yt_recommended_encoding:
+			Default False. If True, use the ffmpeg settings that Youtube recommends for
+			fast processing once uploaded. We suggest not bothering, as it doesn't appear
+			to make much difference.
 	"""
 
 	needs_transcode = True
-	encoding_settings = [
+	recommended_settings = [
 		# Youtube's recommended settings:
 		'-codec:v', 'libx264', # Make the video codec x264
 		'-crf', '21', # Set the video quality, this produces the bitrate range that YT likes
@@ -108,7 +117,7 @@ class Youtube(UploadBackend):
 		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
 	]
 
-	def __init__(self, credentials, hidden=False, category_id=23, language="en"):
+	def __init__(self, credentials, hidden=False, category_id=23, language="en", use_yt_recommended_encoding=False):
 		self.logger = logging.getLogger(type(self).__name__)
 		self.client = GoogleAPIClient(
 			credentials['client_id'],
@@ -118,6 +127,9 @@ class Youtube(UploadBackend):
 		self.hidden = hidden
 		self.category_id = category_id
 		self.language = language
+		if use_yt_recommended_encoding:
+			self.encoding_settings = self.recommended_settings
+			self.encoding_streamable = False
 
 	def upload_video(self, title, description, tags, data):
 		json = {

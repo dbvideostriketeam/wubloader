@@ -294,8 +294,14 @@ class Cutter(object):
 			self.logger.debug("No encoding settings, using fast cut")
 			cut = fast_cut_segments(job.segments, job.video_start, job.video_end)
 		else:
-			self.logger.debug("Using encoding settings for cut: {}".format(upload_backend.encoding_settings))
-			cut = full_cut_segments(job.segments, job.video_start, job.video_end, upload_backend.encoding_settings)
+			self.logger.debug("Using encoding settings for {} cut: {}".format(
+				"streamable" if upload_backend.encoding_streamable else "non-streamable",
+				upload_backend.encoding_settings,
+			))
+			cut = full_cut_segments(
+				job.segments, job.video_start, job.video_end,
+				upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
+			)
 
 		# This flag tracks whether we've told requests to finalize the upload,
 		# and serves to detect whether errors from the request call are recoverable.
