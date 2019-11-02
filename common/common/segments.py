@@ -295,8 +295,9 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 	"""Return a Popen object which is ffmpeg cutting from stdin.
 	This is used when doing a full cut.
-	Note the explicit output file object instead of using a pipe,
-	because most video formats require a seekable file.
+	If output_file is not subprocess.PIPE,
+	uses explicit output file object instead of using a pipe,
+	because some video formats require a seekable file.
 	"""
 	args = [
 		'ffmpeg',
@@ -304,16 +305,20 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 		'-i', '-',
 		'-ss', cut_start,
 		'-t', duration,
-	] + list(encode_args) + [
-		# We want ffmpeg to write to our tempfile, which is its stdout.
-		# However, it assumes that '-' means the output is not seekable.
-		# We trick it into understanding that its stdout is seekable by
-		# telling it to write to the fd via its /proc/self filename.
-		'/proc/self/fd/1',
-		# But of course, that file "already exists", so we need to give it
-		# permission to "overwrite" it.
-		'-y',
-	]
+	] + list(encode_args)
+	if output_file is subprocess.PIPE:
+		args.append('-') # output to stdout
+	else:
+		args += [
+			# We want ffmpeg to write to our tempfile, which is its stdout.
+			# However, it assumes that '-' means the output is not seekable.
+			# We trick it into understanding that its stdout is seekable by
+			# telling it to write to the fd via its /proc/self filename.
+			'/proc/self/fd/1',
+			# But of course, that file "already exists", so we need to give it
+			# permission to "overwrite" it.
+			'-y',
+		]
 	args = map(str, args)
 	logging.info("Running full cut with args: {}".format(" ".join(args)))
 	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=output_file)
@@ -401,41 +406,67 @@ def fast_cut_segments(segments, start, end):
 					yield chunk
 
 
-@timed('cut', type='full', normalize=lambda _, segments, start, end, encode_args: (end - start).total_seconds())
-def full_cut_segments(segments, start, end, encode_args):
+def feed_input(segments, pipe):
+	"""Write each segment's data into the given pipe in order.
+	This is used to provide input to ffmpeg in a full cut."""
+	for segment in segments:
+		with open(segment.path) as f:
+			try:
+				shutil.copyfileobj(f, pipe)
+			except OSError as e:
+				# ignore EPIPE, as this just means the end cut meant we didn't need all i>
+				if e.errno != errno.EPIPE:
+					raise
+	pipe.close()
+
+
+@timed('cut',
+	type=lambda _, segments, start, end, encode_args, stream=False: "full-streamed" if stream else "full-buffered",
+	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds()),
+)
+def full_cut_segments(segments, start, end, encode_args, stream=False):
+	"""If stream=true, assume encode_args gives a streamable format,
+	and begin returning output immediately instead of waiting for ffmpeg to finish
+	and buffering to disk."""
 	# how far into the first segment to begin
 	cut_start = max(0, (start - segments[0].start).total_seconds())
 	# duration
 	duration = (end - start).total_seconds()
 
 	ffmpeg = None
+	input_feeder = None
 	try:
-		# Most ffmpeg output formats require a seekable file.
-		# For the same reason, it's not safe to begin uploading until ffmpeg
-		# has finished. We create a temporary file for this.
-		tempfile = TemporaryFile()
-		ffmpeg = ffmpeg_cut_stdin(tempfile, cut_start, duration, encode_args)
 
-		# stream the input
-		for segment in segments:
-			with open(segment.path) as f:
-				try:
-					shutil.copyfileobj(f, ffmpeg.stdin)
-				except OSError as e:
-					# ignore EPIPE, as this just means the end cut meant we didn't need all input
-					if e.errno != errno.EPIPE:
-						raise
-		ffmpeg.stdin.close()
+		if stream:
+			# When streaming, we can just use a pipe
+			tempfile = subprocess.PIPE
+		else:
+			# Some ffmpeg output formats require a seekable file.
+			# For the same reason, it's not safe to begin uploading until ffmpeg
+			# has finished. We create a temporary file for this.
+			tempfile = TemporaryFile()
+
+		ffmpeg = ffmpeg_cut_stdin(tempfile, cut_start, duration, encode_args)
+		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+
+		# When streaming, we can return data as it is available
+		if stream:
+			for chunk in read_chunks(ffmpeg.stdout):
+				yield chunk
 
 		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
 		if ffmpeg.wait() != 0:
 			raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
+		input_feeder.get() # re-raise any errors from feed_input()
 
-		# Now actually yield the resulting file
-		for chunk in read_chunks(tempfile):
-			yield chunk
+		# When not streaming, we can only return the data once ffmpeg has exited
+		if not stream:
+			for chunk in read_chunks(tempfile):
+				yield chunk
 	finally:
 		# if something goes wrong, try to clean up ignoring errors
+		if input_feeder is not None:
+			input_feeder.kill()
 		if ffmpeg is not None and ffmpeg.poll() is None:
 			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
 				try:
