@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# cd to location of script
+cd "$(dirname "$(readlink -f "$0")")"
+
+TAG=$(git rev-parse --short HEAD)
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+	TAG="$TAG-wip"
+fi
+
+echo "$TAG"

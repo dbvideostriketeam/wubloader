@@ -7,9 +7,11 @@
   // Change these to configure the services.
 
   // Image tag (application version) to use.
+  // By default, will use the current commit, ie. the same thing that ./build would tag
+  // things it builds with.
   // Note: "latest" is not recommended in production, as you can't be sure what version
   // you're actually running, and must manually re-pull to get an updated copy.
-  image_tag:: "latest",
+  image_tag:: std.extVar("tag"),
 
   // For each service, whether to deploy that service.
   enabled:: {
