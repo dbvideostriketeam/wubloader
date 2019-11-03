@@ -23,6 +23,7 @@ class Sheets(object):
 			'https://sheets.googleapis.com/v4/spreadsheets/{}/values/{}'.format(
 				spreadsheet_id, range,
 			),
+			metric_name='get_rows',
 		)
 		resp.raise_for_status()
 		data = resp.json()
@@ -46,6 +47,7 @@ class Sheets(object):
 				"range": range,
 				"values": [[value]],
 			},
+			metric_name='write_value',
 		)
 		resp.raise_for_status()
 

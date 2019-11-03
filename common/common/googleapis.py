@@ -2,7 +2,11 @@
 import time
 
 import gevent
-import requests
+
+from .requests import InstrumentedSession
+
+# Wraps all requests in some metric collection
+requests = InstrumentedSession()
 
 
 class GoogleAPIClient(object):
@@ -40,7 +44,7 @@ class GoogleAPIClient(object):
 					'client_secret': self.client_secret,
 					'refresh_token': self.refresh_token,
 					'grant_type': 'refresh_token',
-				})
+				}, metric_name='get_access_token')
 				resp.raise_for_status()
 				data = resp.json()
 				self._access_token = data['access_token']
