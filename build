@@ -2,6 +2,9 @@
 
 set -eu
 
+# cd to location of script
+cd "$(dirname "$(readlink -f "$0")")"
+
 # Builds the docker images.
 # Usage: ./build {COMPONENTS}, or just ./build to build all.
 # The resulting images are named wubloader-COMPONENT.
@@ -17,10 +20,7 @@ PUSH=${PUSH:-}
 BASE="quay.io/ekimekim"
 
 # The docker image tag, derived from the git commit + whether working tree is clean
-TAG=$(git rev-parse --short HEAD)
-if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
-	TAG="$TAG-wip"
-fi
+TAG=$(./get-build-tag)
 
 if [ "$#" -gt 0 ]; then
 	COMPONENTS=("$@")
