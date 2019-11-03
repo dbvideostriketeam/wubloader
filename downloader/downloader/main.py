@@ -126,6 +126,7 @@ class StreamsManager(object):
 		self.refresh_needed = gevent.event.Event() # set to tell main loop to refresh now
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
+		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
 			self.FETCH_MIN_INTERVAL = self.IMPORTANT_FETCH_MIN_INTERVAL
 
@@ -203,7 +204,7 @@ class StreamsManager(object):
 		"""Re-fetch master playlist and start new workers if needed"""
 		try:
 			# Fetch playlist. On soft timeout, retry.
-			self.logger.info("Fetching master playlist")
+			self.logger.log(self.master_playlist_log_level, "Fetching master playlist")
 			fetch_time = monotonic()
 			with soft_hard_timeout(self.logger, "fetching master playlist", self.FETCH_TIMEOUTS, self.trigger_refresh):
 				master_playlist = twitch.get_master_playlist(self.channel)
@@ -226,8 +227,7 @@ class StreamsManager(object):
 		except Exception as e:
 			if isinstance(e, requests.HTTPError) and e.response is not None and e.response.status_code == 404:
 				# Log about important streams being down at info, but others at debug.
-				level = logging.INFO if self.important else logging.DEBUG
-				self.logger.log(level, "Stream is not up. Retrying.")
+				self.logger.log(self.master_playlist_log_level, "Stream is not up. Retrying.")
 				self.trigger_refresh()
 			else:
 				self.logger.exception("Failed to fetch master playlist")
@@ -243,7 +243,7 @@ class StreamsManager(object):
 				self.MAX_WORKER_AGE - workers[-1].age()
 				for workers in self.stream_workers.values() if workers
 			] or [0]))
-			self.logger.info("Next master playlist refresh in at most {} sec".format(time_to_next_max_age))
+			self.logger.log(self.master_playlist_log_level, "Next master playlist refresh in at most {} sec".format(time_to_next_max_age))
 			# wait until refresh triggered, next max age reached, or we're stopping (whichever happens first)
 			gevent.wait([self.stopping, self.refresh_needed], timeout=time_to_next_max_age, count=1)
 			if not self.stopping.is_set():
