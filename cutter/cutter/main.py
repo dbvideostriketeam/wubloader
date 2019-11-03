@@ -617,7 +617,7 @@ def main(
 			conn = dbmanager.get_conn()
 		except Exception:
 			delay = common.jitter(10)
-			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			logging.warning('Cannot connect to database. Retrying in {:.0f} s'.format(delay), exc_info=True)
 			stop.wait(delay)
 		else:
 			# put it back so it gets reused on next get_conn()
