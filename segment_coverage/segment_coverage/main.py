@@ -192,7 +192,7 @@ class CoverageChecker(object):
 					hours = [name for name in os.listdir(path) if not name.startswith('.')]
 				except OSError as e:
 					if e.errno == errno.ENOENT:
-						self.logger.warning('{} does not exist'.format(path))
+						self.logger.info('{} does not exist, skipping'.format(path))
 						continue
 
 				hours.sort()

@@ -341,7 +341,7 @@ class Cutter(object):
 			if result.rowcount != 1:
 				# If we hadn't yet set finalizing, then this means an operator cancelled the job
 				# while we were cutting it. This isn't a problem.
-				if not finalize_begun:
+				if not finalize_begun[0]:
 					raise JobCancelled()
 				raise JobConsistencyError("No job with id {} and uploader {} when setting: {}".format(
 					job.id, self.name, ", ".join("{} = {!r}".format(k, v) for k, v in kwargs.items())
@@ -444,7 +444,8 @@ class Cutter(object):
 
 		# Success! Set TRANSCODING or DONE and clear any previous error.
 		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
-		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None)
+		maybe_upload_time = {"upload_time": datetime.datetime.utcnow()} if success_state == 'DONE' else {}
+		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None, **maybe_upload_time)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), video_link))
 		videos_uploaded.labels(video_channel=job.video_channel,
@@ -617,7 +618,7 @@ def main(
 			conn = dbmanager.get_conn()
 		except Exception:
 			delay = common.jitter(10)
-			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			logging.warning('Cannot connect to database. Retrying in {:.0f} s'.format(delay), exc_info=True)
 			stop.wait(delay)
 		else:
 			# put it back so it gets reused on next get_conn()

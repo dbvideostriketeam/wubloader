@@ -1,9 +1,12 @@
 
 """Code for instrumenting requests calls. Requires requests, obviously."""
 
+# absolute_import prevents "import requests" in this module from just importing itself
+from __future__ import absolute_import
+
 import urlparse
 
-import requests
+import requests.sessions
 import prometheus_client as prom
 from monotonic import monotonic
 
@@ -27,7 +30,7 @@ request_concurrency = prom.Gauge(
 	['name', 'method', 'domain'],
 )
 
-class InstrumentedSession(requests.Session):
+class InstrumentedSession(requests.sessions.Session):
 	"""A requests Session that automatically records metrics on requests made.
 	Users may optionally pass a 'metric_name' kwarg that will be included as the 'name' label.
 	"""
@@ -45,7 +48,11 @@ class InstrumentedSession(requests.Session):
 			request_latency.labels(name, method, domain, "error").observe(latency)
 			raise
 
-		request_latency.labels(name, method, domain, response.status_code).observe(response.elapsed)
-		if 'content-length' in response.headers:
-			response_size.labels(name, method, domain, response.status_code).observe(response.headers['content-length'])
+		request_latency.labels(name, method, domain, response.status_code).observe(response.elapsed.total_seconds())
+		try:
+			content_length = int(response.headers['content-length'])
+		except (KeyError, ValueError):
+			pass # either not present or not valid
+		else:
+			response_size.labels(name, method, domain, response.status_code).observe(content_length)
 		return response

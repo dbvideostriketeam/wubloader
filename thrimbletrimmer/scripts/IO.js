@@ -40,7 +40,11 @@ pageSetup = function(isEditor) {
             document.getElementById("AllowHoles").checked = data.allow_holes;
             document.getElementById("uploaderWhitelist").value = (!!data.uploader_whitelist) ? data.uploader_whitelist.join(",") : "";
             if (
-                (data.upload_locations.length > 0 && data.upload_location != data.upload_locations[0])
+                (
+					data.upload_locations.length > 0
+					&& data.upload_location != null
+					&& data.upload_location != data.upload_locations[0]
+				)
                 || data.allow_holes
                 || !!data.uploader_whitelist
             ) {
@@ -253,6 +257,7 @@ thrimbletrimmerSubmit = function(state) {
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
             return
         }
+		alert("Draft saved");
         document.getElementById('SubmitButton').disabled = false;
     }));
 };

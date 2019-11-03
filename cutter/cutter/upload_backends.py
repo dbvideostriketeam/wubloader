@@ -76,7 +76,7 @@ class UploadBackend(object):
 
 	# reasonable default if settings don't otherwise matter:
 	# high-quality mpegts, without wasting too much cpu on encoding
-	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
+	encoding_settings = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
 	encoding_streamable = True
 
 	def upload_video(self, title, description, tags, data):
@@ -224,11 +224,10 @@ class Local(UploadBackend):
 			# ignore already-exists errors
 
 	def upload_video(self, title, description, tags, data):
-		video_id = uuid.uuid4()
+		video_id = str(uuid.uuid4())
 		# make title safe by removing offending characters, replacing with '-'
 		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
-		# If fast cut enabled, use .ts, otherwise use .mp4
-		ext = 'ts' if self.encoding_settings is None else 'mp4'
+		ext = 'ts'
 		filename = '{}-{}.{}'.format(safe_title, video_id, ext)
 		filepath = os.path.join(self.path, filename)
 		try:

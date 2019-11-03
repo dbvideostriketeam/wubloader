@@ -3,7 +3,7 @@
 set -eu
 
 # cd to location of script
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(realpath "$0")")"
 
 # We generate first, and capture the output, to avoid overwriting the file on error.
 # To avoid jsonnet needing to exist locally, we run it in a container.
