@@ -133,7 +133,7 @@
 
   // The connection string for the database. Constructed from db_args.
   db_connect:: std.join(" ", [
-    "%s=%s" % [key, $.db_args[key]]
+    "%s='%s'" % [key, $.db_args[key]]
     for key in std.objectFields($.db_args)
   ]),
 
