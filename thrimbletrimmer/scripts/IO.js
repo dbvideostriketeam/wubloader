@@ -257,6 +257,7 @@ thrimbletrimmerSubmit = function(state) {
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
             return
         }
+		alert("Draft saved");
         document.getElementById('SubmitButton').disabled = false;
     }));
 };
