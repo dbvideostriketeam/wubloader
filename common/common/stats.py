@@ -91,8 +91,8 @@ def timed(name=None,
 		# can't safely assign to name inside closure, we use a new _name variable instead
 		_name = fn.__name__ if name is None else name
 
-		if name in metrics:
-			latency, cputime = metrics[name]
+		if _name in metrics:
+			latency, cputime = metrics[_name]
 		else:
 			latency = prom.Histogram(
 				"{}_latency".format(_name),
@@ -106,9 +106,9 @@ def timed(name=None,
 				labels.keys() + ['error', 'type'],
 				buckets=buckets,
 			)
-			metrics[name] = latency, cputime
+			metrics[_name] = latency, cputime
 		if normalize:
-			normname = '{} normalized'.format(name)
+			normname = '{} normalized'.format(_name)
 			if normname in metrics:
 				normal_latency, normal_cputime = metrics[normname]
 			else:
