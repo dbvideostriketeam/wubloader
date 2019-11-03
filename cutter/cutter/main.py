@@ -444,7 +444,8 @@ class Cutter(object):
 
 		# Success! Set TRANSCODING or DONE and clear any previous error.
 		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
-		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None)
+		maybe_upload_time = {"upload_time": datetime.datetime.utcnow()} if success_state == 'DONE' else {}
+		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None, **maybe_upload_time)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), video_link))
 		videos_uploaded.labels(video_channel=job.video_channel,
