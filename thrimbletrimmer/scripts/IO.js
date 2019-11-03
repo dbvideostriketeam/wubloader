@@ -314,9 +314,9 @@ thrimbletrimmerManualLink = function() {
     }));
 };
 
-thrimbletrimmerResetLink = function() {
+thrimbletrimmerResetLink = function(force) {
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    if(!confirm(
+    if(force && !confirm(
         'Are you sure you want to reset this event? ' +
         'This will set the row back to UNEDITED and forget about any video that already may exist. ' +
         'It is intended as a last-ditch command to clear a malfunctioning cutter, ' +
@@ -326,11 +326,12 @@ thrimbletrimmerResetLink = function() {
         return;
     }
     document.getElementById("ResetButton").disabled = true;
+    document.getElementById("CancelButton").disabled = true;
     var body = {}
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
-    fetch("/thrimshim/reset/"+rowId, {
+    fetch("/thrimshim/reset/"+rowId + "?force=" + force, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -344,8 +345,9 @@ thrimbletrimmerResetLink = function() {
             console.log(error);
             alert(error);
             document.getElementById("ResetButton").disabled = false;
+			document.getElementById("CancelButton").disabled = true;
         } else {
-            alert("Row has been reset. Reloading...");
+            alert("Row has been " + ((force) ? "reset" : "cancelled") +". Reloading...");
             setTimeout(() => { window.location.reload(); }, 500);
         }
     }));

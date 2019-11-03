@@ -300,15 +300,24 @@ def manual_link(ident, editor=None):
 @request_stats
 @authenticate
 def reset_row(ident, editor=None):
-	"""Clear state and video_link columns and reset state to 'UNEDITED'."""
+	"""Clear state and video_link columns and reset state to 'UNEDITED'.
+	If force is 'true', it will do so regardless of current state.
+	Otherwise, it will only do so if we know no video has been uploaded
+	(state is UNEDITED, EDITED or CLAIMED)
+	"""
+	force = (flask.request.args.get('force', '').lower() == "true")
 	conn = app.db_manager.get_conn()
-	results = database.query(conn, """
+	query = """
 		UPDATE events 
 		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
 			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL
-		WHERE id = %s""", ident)
+		WHERE id = %s{}
+	""".format(
+		"" if force else " AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
+	)
+	results = database.query(conn, query, ident)
 	if results.rowcount != 1:
-		return 'Row id = {} not found'.format(ident), 404
+		return 'Row id = {} not found or not in cancellable state'.format(ident), 404
 	logging.info("Row {} reset to 'UNEDITED'".format(ident))
 	return ''	
 		
