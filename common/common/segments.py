@@ -421,8 +421,8 @@ def feed_input(segments, pipe):
 
 
 @timed('cut',
-	type=lambda _, segments, start, end, encode_args, stream=False: "full-streamed" if stream else "full-buffered",
-	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds()),
+	type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
+	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds(),
 )
 def full_cut_segments(segments, start, end, encode_args, stream=False):
 	"""If stream=true, assume encode_args gives a streamable format,
