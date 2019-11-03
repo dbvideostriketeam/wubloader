@@ -224,7 +224,7 @@ class Local(UploadBackend):
 			# ignore already-exists errors
 
 	def upload_video(self, title, description, tags, data):
-		video_id = uuid.uuid4()
+		video_id = str(uuid.uuid4())
 		# make title safe by removing offending characters, replacing with '-'
 		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
 		# If fast cut enabled, use .ts, otherwise use .mp4
