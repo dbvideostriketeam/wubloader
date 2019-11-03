@@ -76,7 +76,7 @@ class UploadBackend(object):
 
 	# reasonable default if settings don't otherwise matter:
 	# high-quality mpegts, without wasting too much cpu on encoding
-	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
+	encoding_settings = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
 	encoding_streamable = True
 
 	def upload_video(self, title, description, tags, data):
