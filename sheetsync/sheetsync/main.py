@@ -196,7 +196,7 @@ class SheetSync(object):
 
 	def parse_row(self, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
-		row_dict = {}
+		row_dict = {'_parse_errors': []}
 		for column, index in self.column_map.items():
 			if index >= len(row):
 				# Sheets omits trailing columns if they're all empty, so substitute empty string
@@ -206,8 +206,9 @@ class SheetSync(object):
 			if column in self.column_parsers:
 				try:
 					value = self.column_parsers[column](value)
-				except ValueError:
+				except ValueError as e:
 					value = None
+					row_dict['_parse_errors'].append("Failed to parse column {}: {}".format(column, e))
 			row_dict[column] = value
 		return row_dict
 
@@ -255,6 +256,10 @@ class SheetSync(object):
 			return
 
 		rows_found.labels(worksheet).inc()
+
+		# If no database error, but we have parse errors, indicate they should be displayed.
+		if event.error is None and row['_parse_errors']:
+			event = event._replace(error=", ".join(row['_parse_errors']))
 
 		# Update database with any changed inputs
 		changed = [col for col in self.input_columns if row[col] != getattr(event, col)]
