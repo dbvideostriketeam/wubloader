@@ -25,7 +25,9 @@
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
-  channels:: ["desertbus"],
+  // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
+  // and warned about if they're not currently streaming.
+  channels:: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
 
   // Stream qualities to capture
   qualities:: ["source", "480p"],
@@ -133,6 +135,9 @@
     for key in std.objectFields($.db_args)
   ]),
 
+  // Cleaned up version of $.channels without importance markers
+  clean_channels:: [std.split(c, '!')[0] for c in $.channels],
+
   // docker-compose version
   version: "3",
 
@@ -174,7 +179,7 @@
     [if $.enabled.backfiller then "backfiller"]: {
       image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
       // Args for the backfiller: set channel and qualities
-      command: $.channels +
+      command: $.clean_channels +
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
@@ -229,7 +234,7 @@
           if location != $.default_location
         ]),
         $.db_connect,
-        $.channels[0], // use first element as default channel
+        $.clean_channels[0], // use first element as default channel
         $.bustime_start,
       ] + if $.authentication then [] else ["--no-authentication"],
       // Mount the segments directory at /mnt
@@ -267,7 +272,7 @@
     [if $.enabled.segment_coverage then "segment_coverage"]: {
       image: "quay.io/ekimekim/wubloader-segment_coverage:%s" % $.image_tag,
       // Args for the segment_coverage
-      command: $.channels +
+      command: $.clean_channels +
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
