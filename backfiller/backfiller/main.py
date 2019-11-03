@@ -45,7 +45,6 @@ hash_mismatches = prom.Counter(
 node_list_errors = prom.Counter(
 	'node_list_errors',
 	'Number of errors fetching a list of nodes',
-	['filename', 'database'],
 )
 
 backfill_errors = prom.Counter(
@@ -321,7 +320,7 @@ class BackfillerManager(object):
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
 				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay))
-				node_list_errors.labels(filename=self.node_file).inc()
+				node_list_errors.inc()
 				self.stopping.wait(delay)
 				continue
 			exisiting_nodes = set(self.workers.keys())
