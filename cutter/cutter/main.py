@@ -86,6 +86,10 @@ class CandidateGone(Exception):
 	"""Exception indicating a job candidate is no longer available"""
 
 
+class JobCancelled(Exception):
+	"""Exception indicating a job was cancelled by an operator after we had claimed it."""
+
+
 class Cutter(object):
 	NO_CANDIDATES_RETRY_INTERVAL = 1
 	ERROR_RETRY_INTERVAL = 5
@@ -125,7 +129,10 @@ class Cutter(object):
 				self.claim_job(job)
 			except CandidateGone:
 				continue
-			self.cut_job(job)
+			try:
+				self.cut_job(job)
+			except JobCancelled:
+				self.logger.info("Job was cancelled while we were cutting it: {}".format(format_job(job)))
 
 	def refresh_conn(self):
 		"""After errors, we reconnect in case the error was connection-related."""
@@ -332,6 +339,10 @@ class Cutter(object):
 			))
 			result = query(self.conn, built_query, id=job.id, name=self.name, **kwargs)
 			if result.rowcount != 1:
+				# If we hadn't yet set finalizing, then this means an operator cancelled the job
+				# while we were cutting it. This isn't a problem.
+				if not finalize_begun:
+					raise JobCancelled()
 				raise JobConsistencyError("No job with id {} and uploader {} when setting: {}".format(
 					job.id, self.name, ", ".join("{} = {!r}".format(k, v) for k, v in kwargs.items())
 				))
@@ -372,7 +383,7 @@ class Cutter(object):
 					tags=self.tags + [job.category, job.sheet_name],
 					data=upload_wrapper(),
 				)
-			except (JobConsistencyError, UploadError):
+			except (JobConsistencyError, JobCancelled, UploadError):
 				raise # this ensures these aren't not caught in the except Exception block
 			except Exception as ex:
 				self.refresh_conn()
