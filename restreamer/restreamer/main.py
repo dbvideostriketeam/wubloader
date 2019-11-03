@@ -13,7 +13,7 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import dateutil, get_best_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
+from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 
 import generate_hls
@@ -235,8 +235,15 @@ def cut(channel, quality):
 			if any holes are detected, rather than producing a video with missing parts.
 			Set to true by passing "true" (case insensitive).
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
-		type: One of "fast" or "full". Default to "fast".
-			A fast cut is much faster but minor artifacting may be present near the start and end.
+		type: One of:
+			"rough": A direct concat, like a fast cut but without any ffmpeg.
+				It may extend beyond the requested start and end times by a few seconds.
+			"fast": Very fast but with minor artifacting where the first and last segments join
+				the other segments.
+			"mpegts": A full cut to a streamable mpegts format. This consumes signifigant server
+				resources, so please use sparingly.
+			"mp4": As mpegts, but encodes as MP4. This format must be buffered to disk before
+				sending so it's a bit slower.
 	"""
 	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
 	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
@@ -268,14 +275,17 @@ def cut(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	type = request.args.get('type', 'fast')
+	if type == 'rough':
+		return Response(rough_cut_segments(segments, start, end), mimetype='video/MP2T')
 	if type == 'fast':
 		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
-	elif type == 'full':
-		# output as high-quality mpegts, without wasting too much cpu on encoding
-		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
-		return Response(full_cut_segments(segments, start, end, encoding_args, stream=True), mimetype='video/MP2T')
+	elif type in ('mpegts', 'mp4'):
+		# encode as high-quality, without wasting too much cpu on encoding
+		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
+		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
+		return Response(full_cut_segments(segments, start, end, encoding_args, stream=stream), mimetype=mimetype)
 	else:
-		return "Unknown type {!r}. Must be 'fast' or 'full'.".format(type), 400
+		return "Unknown type {!r}".format(type), 400
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
