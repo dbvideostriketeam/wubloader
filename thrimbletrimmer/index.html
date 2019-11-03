@@ -101,6 +101,14 @@
             <a id="ResetButton" href="JavaScript:thrimbletrimmerResetLink();">Reset Edits</a>
             <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
             <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
+			<br/>
+			Download type:
+			<select id="DownloadType">
+				<option value="rough" selected>Rough (fastest, pads start and end by a few seconds)</option>
+				<option value="fast">Fast (may have artifacts a few seconds in from start and end)</option>
+				<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
+				<option value="mp4">MP4 (slower, consumes server resources, output is MP4 file)</option>
+			</select>
         </div>
         <div id="ManualLinkPane" style="display:none">
             <input id="ManualLink" /> <input type="button" id="ManualButton" onclick="thrimbletrimmerManualLink()" value="Set Link" />

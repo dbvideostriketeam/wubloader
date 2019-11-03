@@ -333,7 +333,19 @@ def read_chunks(fileobj, chunk_size=16*1024):
 		yield chunk
 
 
-@timed('cut', type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
+@timed('cut', cut_type='rough', normalize=lambda _, segments, start, end: (end - start).total_seconds())
+def rough_cut_segments(segments, start, end):
+	"""Yields chunks of a MPEGTS video file covering at least the timestamp range,
+	likely with a few extra seconds on either side.
+	This method works by simply concatenating all the segments, without any re-encoding.
+	"""
+	for segment in segments:
+		with open(segment.path) as f:
+			for chunk in read_chunks(f):
+				yield chunk
+
+
+@timed('cut', cut_type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
 def fast_cut_segments(segments, start, end):
 	"""Yields chunks of a MPEGTS video file covering the exact timestamp range.
 	segments should be a list of segments as returned by get_best_segments().
@@ -421,7 +433,7 @@ def feed_input(segments, pipe):
 
 
 @timed('cut',
-	type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
+	cut_type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
 	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds(),
 )
 def full_cut_segments(segments, start, end, encode_args, stream=False):

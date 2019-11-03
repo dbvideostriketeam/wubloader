@@ -11,6 +11,10 @@ from monotonic import monotonic
 import prometheus_client as prom
 
 
+# need to keep global track of what metrics we've registered
+# because we're not allowed to re-register
+metrics = {}
+
 
 def timed(name=None,
 	buckets=[10.**x for x in range(-9, 5)], normalized_buckets=None,
@@ -25,6 +29,7 @@ def timed(name=None,
 	if you're using gevent and the wrapped function blocks) and do not include subprocesses.
 
 	NAME defaults to the wrapped function's name.
+	NAME must be unique OR have the exact same labels as other timed() calls with that name.
 
 	Any labels passed in are included. Given label values may be callable, in which case
 	they are passed the input and result from the wrapped function and should return a label value.
@@ -86,31 +91,40 @@ def timed(name=None,
 		# can't safely assign to name inside closure, we use a new _name variable instead
 		_name = fn.__name__ if name is None else name
 
-		latency = prom.Histogram(
-			"{}_latency".format(_name),
-			"Wall clock time taken to execute {}".format(_name),
-			labels.keys() + ['error'],
-			buckets=buckets,
-		)
-		cputime = prom.Histogram(
-			"{}_cputime".format(_name),
-			"Process-wide consumed CPU time during execution of {}".format(_name),
-			labels.keys() + ['error', 'type'],
-			buckets=buckets,
-		)
-		if normalize:
-			normal_latency = prom.Histogram(
-				"{}_latency_normalized".format(_name),
-				"Wall clock time taken to execute {} per unit of work".format(_name),
+		if name in metrics:
+			latency, cputime = metrics[name]
+		else:
+			latency = prom.Histogram(
+				"{}_latency".format(_name),
+				"Wall clock time taken to execute {}".format(_name),
 				labels.keys() + ['error'],
-				buckets=normalized_buckets,
+				buckets=buckets,
 			)
-			normal_cputime = prom.Histogram(
-				"{}_cputime_normalized".format(_name),
-				"Process-wide consumed CPU time during execution of {} per unit of work".format(_name),
+			cputime = prom.Histogram(
+				"{}_cputime".format(_name),
+				"Process-wide consumed CPU time during execution of {}".format(_name),
 				labels.keys() + ['error', 'type'],
-				buckets=normalized_buckets,
+				buckets=buckets,
 			)
+			metrics[name] = latency, cputime
+		if normalize:
+			normname = '{} normalized'.format(name)
+			if normname in metrics:
+				normal_latency, normal_cputime = metrics[normname]
+			else:
+				normal_latency = prom.Histogram(
+					"{}_latency_normalized".format(_name),
+					"Wall clock time taken to execute {} per unit of work".format(_name),
+					labels.keys() + ['error'],
+					buckets=normalized_buckets,
+				)
+				normal_cputime = prom.Histogram(
+					"{}_cputime_normalized".format(_name),
+					"Process-wide consumed CPU time during execution of {} per unit of work".format(_name),
+					labels.keys() + ['error', 'type'],
+					buckets=normalized_buckets,
+				)
+				metrics[normname] = normal_latency, normal_cputime
 
 		@functools.wraps(fn)
 		def wrapper(*args, **kwargs):

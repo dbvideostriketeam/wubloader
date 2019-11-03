@@ -274,6 +274,11 @@ thrimbletrimmerDownload = function(isEditor) {
         "?" + buildQuery({
             start: range.start,
             end: range.end,
+			// In non-editor, always use rough cut. They don't have the edit controls to do
+			// fine time selection anyway.
+			type: (isEditor) ? (
+				document.getElementById('DownloadType').options[document.getElementById('DownloadType').options.selectedIndex].value
+			) : "rough",
             // Always allow holes in non-editor, accidentially including holes isn't important
             allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
         });
