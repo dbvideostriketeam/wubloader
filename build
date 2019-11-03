@@ -3,7 +3,7 @@
 set -eu
 
 # cd to location of script
-cd "$(dirname "$(readlink -f "$0")")"
+cd "$(dirname "$(realpath "$0")")"
 
 # Builds the docker images.
 # Usage: ./build {COMPONENTS}, or just ./build to build all.
