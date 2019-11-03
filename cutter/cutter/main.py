@@ -633,7 +633,7 @@ def main(
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
 		no_transcode_check = backend_config.pop('no_transcode_check', False)
-		cut_type = backend_config.pop('cut_type', 'fast')
+		cut_type = backend_config.pop('cut_type', 'full')
 		if backend_type == 'youtube':
 			backend_type = Youtube
 		elif backend_type == 'local':
