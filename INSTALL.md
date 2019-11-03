@@ -86,8 +86,8 @@ example,http://example.com,TRUE
 ```
 editors.csv
 
-name,email
-example,example@gmail.com
+email,name
+example@gmail.com,example
 ```
 
 Alternatively, nodes can be added manually to the database's `nodes` table:
