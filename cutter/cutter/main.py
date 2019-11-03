@@ -341,7 +341,7 @@ class Cutter(object):
 			if result.rowcount != 1:
 				# If we hadn't yet set finalizing, then this means an operator cancelled the job
 				# while we were cutting it. This isn't a problem.
-				if not finalize_begun:
+				if not finalize_begun[0]:
 					raise JobCancelled()
 				raise JobConsistencyError("No job with id {} and uploader {} when setting: {}".format(
 					job.id, self.name, ", ".join("{} = {!r}".format(k, v) for k, v in kwargs.items())
