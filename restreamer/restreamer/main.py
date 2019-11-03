@@ -237,7 +237,6 @@ def cut(channel, quality):
 			Even if holes are allowed, a 406 may result if the resulting video would be empty.
 		type: One of "fast" or "full". Default to "fast".
 			A fast cut is much faster but minor artifacting may be present near the start and end.
-			A fast cut is encoded as MPEG-TS, a full as mp4.
 	"""
 	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
 	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
@@ -272,8 +271,9 @@ def cut(channel, quality):
 	if type == 'fast':
 		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
 	elif type == 'full':
-		# output as mp4 with no more specific encoding args
-		return Response(full_cut_segments(segments, start, end, ['-f', 'mp4']), mimetype='video/mp4')
+		# output as high-quality mpegts, without wasting too much cpu on encoding
+		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
+		return Response(full_cut_segments(segments, start, end, encoding_args, stream=True), mimetype='video/MP2T')
 	else:
 		return "Unknown type {!r}. Must be 'fast' or 'full'.".format(type), 400
 
