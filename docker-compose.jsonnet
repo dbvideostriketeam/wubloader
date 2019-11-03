@@ -206,6 +206,7 @@
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         "--tags", std.join(",", $.video_tags),
+        "--name", $.localhost,
         $.db_connect,
         std.manifestJson($.cutter_config),
         "/etc/wubloader-creds.json",
