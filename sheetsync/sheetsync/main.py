@@ -182,7 +182,7 @@ class SheetSync(object):
 				self.conn = self.dbmanager.get_conn()
 				self.wait(sync_start, self.ERROR_RETRY_INTERVAL)
 			else:
-				logging.info("Successful sync")
+				logging.info("Successful sync of worksheets: {}".format(", ".join(worksheets)))
 				sheets_synced.inc()
 				self.wait(sync_start, self.RETRY_INTERVAL)
 
