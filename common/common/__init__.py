@@ -2,6 +2,13 @@
 """A place for common utilities between wubloader components"""
 
 
+# HACK: This sets the default encoding for the entire process.
+# It is possible this may break (badly-written) third party libs.
+import sys
+reload(sys)
+sys.setdefaultencoding('utf-8')
+
+
 import datetime
 import errno
 import os
