@@ -34,7 +34,7 @@ segment_duration_downloaded = prom.Counter(
 	"segment_duration_downloaded",
 	"Total duration of all segments partially or fully downloaded. "
 	"Note partial segments still count the full duration.",
-	["partial", "stream", "variant"],
+	["partial", "channel", "quality"],
 )
 
 latest_segment = prom.Gauge(
