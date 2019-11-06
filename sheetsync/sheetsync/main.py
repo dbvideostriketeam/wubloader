@@ -3,6 +3,7 @@ import json
 import logging
 import signal
 import uuid
+from collections import defaultdict
 
 import argh
 import gevent.backdoor
@@ -39,6 +40,12 @@ rows_changed = prom.Counter(
 	'rows_changed',
 	'Number of rows that needed changes applied, with type=insert, type=input or type=output',
 	['type', 'worksheet'],
+)
+
+event_counts = prom.Gauge(
+	'event_counts',
+	'Number of rows in the database',
+	['sheet_name', 'category', 'poster_moment', 'state', 'errored'],
 )
 
 class SheetSync(object):
@@ -190,8 +197,12 @@ class SheetSync(object):
 		"""Return the entire events table as a map {id: event namedtuple}"""
 		result = query(self.conn, "SELECT * FROM events")
 		by_id = {}
+		counts = defaultdict(lambda: 0)
 		for row in result.fetchall():
 			by_id[row.id] = row
+			counts[row.sheet_name, row.category, str(row.poster_moment), row.state, str(bool(row.error))] += 1
+		for labels, count in counts.items():
+			event_counts.labels(*labels).set(count)
 		return by_id
 
 	def parse_row(self, row):

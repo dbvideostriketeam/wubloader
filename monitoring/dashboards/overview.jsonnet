@@ -151,8 +151,12 @@ grafana.dashboard({
           {
             name: "Database events by state",
             axis: {min: 0, label: "events"},
-            tooltip: "Not implemented", // TODO
-            expressions: {"Not implemented": "0"},
+            stack: true,
+            expressions: {
+              "{{state}}": |||
+                sum(event_counts) by (state)
+              |||,
+            },
           },
         ],
       ],
