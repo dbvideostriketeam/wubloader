@@ -12,8 +12,8 @@
       "panels": [
         {
           "sort": {
-            "col": 0, 
-            "desc": true
+            "col": 1, 
+            "desc": false
           }, 
           "styles": [
             {
@@ -169,7 +169,7 @@
                 "0.5"
               ], 
               "dateFormat": "YYYY-MM-DD HH:mm:ss", 
-              "alias": "cutter", 
+              "alias": "segment_coverage", 
               "colors": [
                 "rgba(245, 54, 54, 0.9)", 
                 "rgba(237, 129, 40, 0.89)", 
@@ -227,7 +227,7 @@
                 "0.5"
               ], 
               "dateFormat": "YYYY-MM-DD HH:mm:ss", 
-              "alias": "sheetsync", 
+              "alias": "cutter", 
               "colors": [
                 "rgba(245, 54, 54, 0.9)", 
                 "rgba(237, 129, 40, 0.89)", 
@@ -235,6 +235,35 @@
               ], 
               "decimals": 2, 
               "pattern": "Value #F", 
+              "type": "string", 
+              "unit": "short"
+            }, 
+            {
+              "mappingType": 1, 
+              "valueMaps": [
+                {
+                  "text": "DOWN", 
+                  "value": "0"
+                }, 
+                {
+                  "text": "UP", 
+                  "value": "1"
+                }
+              ], 
+              "colorMode": "cell", 
+              "thresholds": [
+                "0.5", 
+                "0.5"
+              ], 
+              "dateFormat": "YYYY-MM-DD HH:mm:ss", 
+              "alias": "sheetsync", 
+              "colors": [
+                "rgba(245, 54, 54, 0.9)", 
+                "rgba(237, 129, 40, 0.89)", 
+                "rgba(50, 172, 45, 0.97)"
+              ], 
+              "decimals": 2, 
+              "pattern": "Value #G", 
               "type": "string", 
               "unit": "short"
             }
@@ -249,7 +278,7 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"restreamer\"}) by (instance)", 
+              "expr": "sum(up{job=\"restreamer\", role=~\".*\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "A"
@@ -257,7 +286,7 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"downloader\"}) by (instance)", 
+              "expr": "sum(up{job=\"downloader\", role=~\".*\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "B"
@@ -265,7 +294,7 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"backfiller\"}) by (instance)", 
+              "expr": "sum(up{job=\"backfiller\", role=~\".*\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "C"
@@ -273,7 +302,7 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"cutter\"}) by (instance)", 
+              "expr": "sum(up{job=\"segment_coverage\", role=~\".*\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "D"
@@ -281,7 +310,7 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"thrimshim\"}) by (instance)", 
+              "expr": "sum(up{job=\"thrimshim\", role=~\"leader|edit|local_edit\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "E"
@@ -289,10 +318,18 @@
             {
               "instant": true, 
               "format": "table", 
-              "expr": "sum(up{job=\"sheetsync\"}) by (instance)", 
+              "expr": "sum(up{job=\"cutter\", role=~\"leader|edit\"}) by (instance)", 
               "legendFormat": "", 
               "intervalFactor": 1, 
               "refId": "F"
+            }, 
+            {
+              "instant": true, 
+              "format": "table", 
+              "expr": "sum(up{job=\"sheetsync\", role=~\"leader\"}) by (instance)", 
+              "legendFormat": "", 
+              "intervalFactor": 1, 
+              "refId": "G"
             }
           ], 
           "fontSize": "100%", 

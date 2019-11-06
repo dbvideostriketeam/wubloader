@@ -1,11 +1,29 @@
 local grafana = import "grafana.libsonnet";
 
+// Map from service to regex of matching roles.
+// Role explanations:
+//  replica: Just downloads and replicates segments
+//  local_edit: Also runs a local thrimbletrimmer for doing local cuts
+//  edit: Also runs cutter for doing uploads
+//  leader: Also runs things that only run in one place, eg. sheetsync
+local roles_for_service = {
+  "restreamer": ".*",
+  "downloader": ".*",
+  "backfiller": ".*",
+  "segment_coverage": ".*",
+  "thrimshim": "leader|edit|local_edit",
+  "cutter": "leader|edit",
+  "sheetsync": "leader",
+};
+
+// List of services, to impart ordering
 local services = [
   "restreamer",
   "downloader",
   "backfiller",
-  "cutter",
+  "segment_coverage",
   "thrimshim",
+  "cutter",
   "sheetsync",
 ];
 
@@ -14,7 +32,7 @@ local service_status_table = {
   type: "table",
   targets: [
     {
-      expr: 'sum(up{job="%s"}) by (instance)' % services[i],
+      expr: 'sum(up{job="%s", role=~"%s"}) by (instance)' % [services[i], roles_for_service[services[i]]],
       intervalFactor: 1,
       format: "table",
       refId: refId(i),
@@ -80,10 +98,7 @@ local service_status_table = {
   columns: [],
   scroll: true,
   fontSize: "100%",
-  sort: {
-    col: 0,
-    desc: true,
-  },
+  sort: {col: 1, desc: false}, // sort by instance
   links: [],
 };
 
