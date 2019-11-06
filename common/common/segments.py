@@ -232,6 +232,9 @@ def best_segments_by_start(hour):
 	for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
 		# ignore temp segments as they might go away by the time we want to use them
 		segments = [segment for segment in segments if segment.type != "temp"]
+		if not segments:
+			# all segments were temp, move on
+			continue
 
 		full_segments = [segment for segment in segments if not segment.is_partial]
 		if full_segments:
