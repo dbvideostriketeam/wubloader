@@ -122,8 +122,8 @@ grafana.dashboard({
             axis: {min: 0, label: "logs / sec"},
             display: "bars",
             expressions: {
-              "{{job}} {{level}}({{module}}:{{function}})": |||
-                sum(irate(log_count_total{level!="INFO"}[2m])) by (job, level, module, function) > 0
+              "{{instance}} {{job}} {{level}}({{module}}:{{function}})": |||
+                sum(irate(log_count_total{level!="INFO"}[2m])) by (instance, job, level, module, function) > 0
               |||,
             },
           },

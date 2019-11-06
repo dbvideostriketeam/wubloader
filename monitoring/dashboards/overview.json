@@ -353,9 +353,9 @@
           "targets": [
             {
               "intervalFactor": 1, 
-              "expr": "sum(irate(log_count_total{level!=\"INFO\"}[2m])) by (job, level, module, function) > 0\n", 
+              "expr": "sum(irate(log_count_total{level!=\"INFO\"}[2m])) by (instance, job, level, module, function) > 0\n", 
               "refId": "A", 
-              "legendFormat": "{{job}} {{level}}({{module}}:{{function}})", 
+              "legendFormat": "{{instance}} {{job}} {{level}}({{module}}:{{function}})", 
               "format": "time_series"
             }
           ], 
