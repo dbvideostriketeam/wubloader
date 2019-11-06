@@ -105,6 +105,7 @@ local service_status_table = {
 grafana.dashboard({
   name: "Overview",
   uid: "rjd405mn",
+  refresh: "30s",
 
   rows: [
 
