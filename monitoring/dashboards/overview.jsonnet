@@ -7,6 +7,7 @@ local services = [
   "cutter",
   "thrimshim",
   "sheetsync",
+  "segment_coverage",
 ];
 
 local service_status_table = {

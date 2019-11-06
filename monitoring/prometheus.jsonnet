@@ -10,6 +10,7 @@ local services = [
   "cutter",
   "thrimshim",
   "sheetsync",
+  "segment_coverage",
 ];
 
 {
