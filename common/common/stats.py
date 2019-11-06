@@ -194,6 +194,10 @@ def install_stacksampler(interval=0.005):
 	We could use user+sys time but that leads to interrupting syscalls,
 	which may affect performance, and we care mostly about user time anyway.
 	"""
+	if os.environ.get('WUBLOADER_DISABLE_STACKSAMPLER', '').lower() == 'true':
+		logging.info("Not installing stacksampler - disabled by WUBLOADER_DISABLE_STACKSAMPLER env var")
+		return
+
 	# Note we only start each next timer once the previous timer signal has been processed.
 	# There are two reasons for this:
 	# 1. Avoid handling a signal while already handling a signal, however unlikely,
