@@ -256,8 +256,9 @@ thrimbletrimmerSubmit = function(state) {
             // Only return to dashboard if submitted, not for save draft
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
             return
-        }
-		alert("Draft saved");
+        } else {
+			alert("Draft saved");
+		}
         document.getElementById('SubmitButton').disabled = false;
     }));
 };
