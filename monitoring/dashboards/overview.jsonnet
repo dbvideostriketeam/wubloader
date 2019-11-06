@@ -175,7 +175,12 @@ grafana.dashboard({
           axis: {min: 0, format: grafana.formats.time},
           expressions: {
             "{{instance}} {{channel}}({{quality}})":
-              'time() - max(latest_segment) by (instance, channel, quality)',
+              // Ignore series where we're no longer fetching segments,
+              // as they just show that it's been a long time since the last segment.
+              |||
+                time() - max(latest_segment) by (instance, channel, quality)
+                and sum(irate(segments_downloaded_total[2m])) by (instance, channel, quality) > 0
+              |||,
           },
         },
       ],
