@@ -1,7 +1,4 @@
 local hosts = [
-  "toodles.videostrike.team:1337",
-  "http://136.24.9.73:20088",
-  "wubloader.codegunner.com",
 ];
 local services = [
   "restreamer",
