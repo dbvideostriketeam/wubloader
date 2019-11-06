@@ -1,5 +1,6 @@
-local hosts = [
-];
+local hosts = {
+  // name: "host:port"
+};
 local services = [
   "restreamer",
   "downloader",
@@ -16,14 +17,22 @@ local services = [
     scrape_interval: "15s",
   },
   scrape_configs: [
-    {job_name: "prometheus", static_configs: [{targets: ["localhost:9090"]}]},
+    {
+      job_name: "prometheus",
+      static_configs: [
+        {targets: ["localhost:9090"], labels: {instance: "prometheus"}}
+      ],
+    },
   ] + [
     {
       job_name: service,
       metrics_path: "/metrics/%s" % service,
-      static_configs: [{
-        targets: hosts,
-      }],
+      static_configs: [
+        {
+          targets: [hosts[host]],
+          labels: {instance: host},
+        } for host in std.objectFields(hosts)
+      ],
     }
     for service in services
   ],
