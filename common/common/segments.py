@@ -239,7 +239,7 @@ def best_segments_by_start(hour):
 		full_segments = [segment for segment in segments if not segment.is_partial]
 		if full_segments:
 			if len(full_segments) != 1:
-				logging.warning("Multiple versions of full segment at start_time {}: {}".format(
+				logging.info("Multiple versions of full segment at start_time {}: {}".format(
 					start_time, ", ".join(map(str, segments))
 				))
 				# We've observed some cases where the same segment (with the same hash) will be reported
