@@ -1,5 +1,7 @@
 local hosts = {
-  // name: "host:port"
+  // name: ["host:port", role]
+  // See overview.jsonnet for role explanations.
+  mynode: ["localhost:8080", "replica"]
 };
 local services = [
   "restreamer",
@@ -29,8 +31,11 @@ local services = [
       metrics_path: "/metrics/%s" % service,
       static_configs: [
         {
-          targets: [hosts[host]],
-          labels: {instance: host},
+          targets: [hosts[host][0]],
+          labels: {
+            instance: host,
+            role: hosts[host][1],
+          },
         } for host in std.objectFields(hosts)
       ],
     }
