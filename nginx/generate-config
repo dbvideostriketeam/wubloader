@@ -9,7 +9,8 @@
 
 generate_location() {
 	# generate_location PATH URL
-	echo -e "\t\tlocation $1 { proxy_pass $2; }"
+	# We indirect via a variable to prevent nginx from caching dns forever
+	echo -e "\t\tlocation $1 { set \$name \"$2\"; proxy_pass \$name; }"
 }
 
 LOCATIONS=$(
@@ -37,6 +38,7 @@ events {
 
 http {
 	include /etc/nginx/mime.types;
+	resolver 127.0.0.11 valid=10s;
 	server {
 		listen 80;
 		gzip on;
