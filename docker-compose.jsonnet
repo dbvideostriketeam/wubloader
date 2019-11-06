@@ -129,6 +129,15 @@
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 7)],
 
+  // Extra options to pass via environment variables,
+  // eg. log level, disabling stack sampling.
+  env:: {
+    // Uncomment this to set log level to debug
+    // WUBLOADER_LOG_LEVEL: "DEBUG",
+    // Uncomment this to disable stacksampling performance monitoring
+    // WUBLOADER_DISABLE_STACKSAMPLER: "true",
+  },
+
   // Now for the actual docker-compose config
 
   // The connection string for the database. Constructed from db_args.
@@ -160,7 +169,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for downloader, which is 8001.
-      [if "downloader" in $.ports then "ports"]: ["%s:8001" % $.ports.downloader]
+      [if "downloader" in $.ports then "ports"]: ["%s:8001" % $.ports.downloader],
+      environment: $.env,
     },
 
     [if $.enabled.restreamer then "restreamer"]: {
@@ -176,6 +186,7 @@
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
       ],
+      environment: $.env,
     },
 
     [if $.enabled.backfiller then "backfiller"]: {
@@ -196,7 +207,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for backfiller, which is 8002.
-      [if "backfiller" in $.ports then "ports"]: ["%s:8002" % $.ports.backfiller]
+      [if "backfiller" in $.ports then "ports"]: ["%s:8002" % $.ports.backfiller],
+      environment: $.env,
     },
 
     [if $.enabled.cutter then "cutter"]: {
@@ -222,7 +234,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for cutter, which is 8003.
-      [if "cutter" in $.ports then "ports"]: ["%s:8003" % $.ports.cutter]
+      [if "cutter" in $.ports then "ports"]: ["%s:8003" % $.ports.cutter],
+      environment: $.env,
     },
 
     [if $.enabled.thrimshim then "thrimshim"]: {
@@ -246,7 +259,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
-      [if "thrimshim" in $.ports then "ports"]: ["%s:8004" % $.ports.thrimshim]
+      [if "thrimshim" in $.ports then "ports"]: ["%s:8004" % $.ports.thrimshim],
+      environment: $.env,
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {
@@ -269,7 +283,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for sheetsync, which is 8005.
-      [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync]
+      [if "sheetsync" in $.ports then "ports"]: ["%s:8005" % $.ports.sheetsync],
+      environment: $.env,
     },
 
     [if $.enabled.segment_coverage then "segment_coverage"]: {
@@ -286,7 +301,8 @@
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
-      [if "segment_coverage" in $.ports then "ports"]: ["%s:8006" % $.ports.segment_coverage]
+      [if "segment_coverage" in $.ports then "ports"]: ["%s:8006" % $.ports.segment_coverage],
+      environment: $.env,
     },
 
     [if $.enabled.nginx then "nginx"]: {
@@ -303,7 +319,7 @@
       image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
       [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
-      environment: {
+      environment: $.env + {
         SERVICES: std.join("\n", [
           "%s %s" % [service, forward_ports[service]]
           for service in std.objectFields(forward_ports)
@@ -319,7 +335,7 @@
       image: "quay.io/ekimekim/wubloader-postgres:%s" % $.image_tag,
       restart: "on-failure",
       [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
-      environment: {
+      environment: $.env + {
         POSTGRES_USER: $.db_super_user,
         POSTGRES_PASSWORD: $.db_super_password,
         POSTGRES_DB: $.db_args.dbname,
