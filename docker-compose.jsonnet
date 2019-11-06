@@ -56,6 +56,7 @@
     sheetsync: 8005,
     segment_coverage: 8006,
     nginx: 80,
+    nginx_ssl: 443,
     postgres: 5432,
   },
 
@@ -75,6 +76,8 @@
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
 
   nginx_serve_segments:: true, // set to false to not have nginx serve segments directly, letting restreamer do it instead.
+
+  ssl_certificate_path:: null, // set to path to SSL certs (cert chain + priv key in one file) to enable SSL
 
   // Connection args for the database.
   // If database is defined in this config, host and port should be postgres:5432.
@@ -318,7 +321,10 @@
       },
       image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
-      [if "nginx" in $.ports then "ports"]: ["%s:80" % $.ports.nginx],
+      ports: std.prune([
+        if "nginx" in $.ports then "%s:80" % $.ports.nginx,
+        if "nginx_ssl" in $.ports then "%s:443" % $.ports.nginx_ssl,
+      ]),
       environment: $.env + {
         SERVICES: std.join("\n", [
           "%s %s" % [service, forward_ports[service]]
@@ -327,8 +333,12 @@
         ]),
         THRIMBLETRIMMER: if $.thrimbletrimmer then "true" else "",
         SEGMENTS: if $.nginx_serve_segments then "/mnt" else "",
+        SSL: if $.ssl_certificate_path != null then "/certs.pem" else "",
       },
-      volumes: if $.nginx_serve_segments then ["%s:/mnt" % $.segments_path] else [],
+      volumes: std.prune([
+        if $.nginx_serve_segments then "%s:/mnt" % $.segments_path,
+        if $.ssl_certificate_path != null then "%s:/certs.pem" % $.ssl_certificate_path,
+      ]),
     },
 
     [if $.enabled.postgres then "postgres"]: {

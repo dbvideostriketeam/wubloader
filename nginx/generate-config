@@ -6,6 +6,7 @@
 # Other vars:
 #  THRIMBLETRIMMER: Set non-empty to also serve thrimbletrimmer on /thrimbletrimmer
 #  SEGMENTS: Set to path to segments dir to also serve segments dir on /segments
+#  SSL: Set to path to file containing SSL cert and key, if any.
 
 generate_location() {
 	# generate_location PATH URL
@@ -29,8 +30,19 @@ LOCATIONS=$(
 		echo -e "\t\tlocation /segments/ { alias $SEGMENTS/; }"
 )
 
+[ -n "$SSL" ] && SSL_CONF=$(cat <<EOF
+	server {
+		listen 443 ssl;
+		ssl_certificate $SSL;
+		ssl_certificate_key $SSL;
+		ssl_session_cache shared:SSL:10m;
+$LOCATIONS
+	}
+EOF
+)
+
 cat > /etc/nginx/nginx.conf <<EOF
-worker_processes 1;
+worker_processes auto;
 
 events {
 	worker_connections 1024;
@@ -39,6 +51,7 @@ events {
 http {
 	include /etc/nginx/mime.types;
 	resolver 127.0.0.11 valid=10s;
+$SSL_CONF
 	server {
 		listen 80;
 		gzip on;
