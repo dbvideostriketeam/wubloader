@@ -430,6 +430,7 @@ class Cutter(object):
 			else:
 				state = 'UNEDITED'
 				kwargs = {'uploader': None}
+			self.logger.exception("Upload error for job {}: {}".format(format_job(job), ex))
 			upload_errors.labels(
 				video_channel=job.video_channel,
 				video_quality=job.video_quality,
