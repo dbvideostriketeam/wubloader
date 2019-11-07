@@ -91,6 +91,8 @@
   db_super_password:: "postgres", // Must not contain ' or \ as these are not escaped.
   db_replication_user:: "replicate", // if empty, don't allow replication
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
+  db_readonly_user:: "vst-ro", // if empty, don't have a readonly account
+  db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
   db_standby:: false, // set to true to have this database replicate another server
 
   // Path to a JSON file containing google credentials for cutter as keys
@@ -344,6 +346,8 @@
         WUBLOADER_PASSWORD: $.db_args.password,
         REPLICATION_USER: $.db_replication_user,
         REPLICATION_PASSWORD: $.db_replication_password,
+        READONLY_USER: $.db_readonly_user,
+        READONLY_PASSWORD: $.db_readonly_password,
         MASTER_NODE: $.db_args.host,
       },
       volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
