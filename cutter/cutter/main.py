@@ -19,7 +19,7 @@ from common.database import DBManager, query
 from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, ContainsHoles
 from common.stats import timed
 
-from .upload_backends import Youtube, Local, UploadError
+from .upload_backends import Youtube, Local, Manual, UploadError
 
 
 videos_uploaded = prom.Counter(
@@ -443,12 +443,17 @@ class Cutter(object):
 				gevent.sleep(self.RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL)
 			return
 
-		# Success! Set TRANSCODING or DONE and clear any previous error.
-		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
+		# Success! Set UPLOAD_PENDING, TRANSCODING or DONE and clear any previous error.
+		if upload_backend.needs_manual_upload:
+			success_state = 'UPLOAD_PENDING'
+		elif upload_backend.needs_transcode:
+			success_state = 'TRANSCODING'
+		else:
+			success_state = 'DONE'
 		maybe_upload_time = {"upload_time": datetime.datetime.utcnow()} if success_state == 'DONE' else {}
 		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None, **maybe_upload_time)
 
-		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), video_link))
+		self.logger.info("Successfully cut and put into {} job {} as {}".format(success_state, format_job(job), video_link))
 		videos_uploaded.labels(video_channel=job.video_channel,
 				video_quality=job.video_quality,
 				upload_location=job.upload_location).inc()
@@ -640,6 +645,8 @@ def main(
 			backend_type = Youtube
 		elif backend_type == 'local':
 			backend_type = Local
+		elif backend_type == 'manual':
+			backend_type = Manual
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(backend_type))
 		backend = backend_type(credentials, **backend_config)

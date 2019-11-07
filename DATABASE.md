@@ -40,6 +40,9 @@ finalizing the upload to make it official. If a cutter dies and leaves an event 
 it is indeterminate whether the upload actually occurred - in this unlikely scenario, an operator
 should manually inspect things and decide on further action.
 
+* `MANUAL_UPLOAD`: A hack because youtube APIs aren't usable. An event for which a video has been
+created but not uploaded. It must be uploaded manually, at which point it will be moved to transcoding.
+
 * `TRANSCODING`: An event which has been succesfully uploaded, but is not yet ready for public consumption.
 The upload is no longer cancellable. If further re-edits need to be applied,
 an operator should manually delete or unlist the video then set the state back to `UNEDITED`.
@@ -76,16 +79,23 @@ we are certain the upload didn't actually go through, and the cut can be immedia
 * `FINALIZING -> UNEDITED`: When the finalization failed with an unknown error,
 we are certain the upload didn't actually go through, and operator intervention is required.
 
+* `FINALIZING -> UPLOAD_PENDING`: When you cannot use the youtube API, and need to designate
+the video for manual uploading, or to be uploaded later.
+
 * `FINALIZING -> TRANSCODING`: When the cutter has successfully finalized the upload,
 but the upload location requires further processing before the video is done.
 
 * `FINALIZING -> DONE`: When the cutter has successfully finalized the upload,
 and the upload location requires no further processing.
 
+* `UPLOAD_PENDING -> TRANSCODING`: When an operator has uploaded the video.
+
 * `TRANSCODING -> DONE`: When any cutter detects that the upload location is finished
 transcoding the video, and it is ready for public consumption.
 
-This is summarised in the below graph:
+* Missing some states here around rollbacks of upload pending
+
+This is summarised in the below graph: (missing `UPLOAD_PENDING`)
 
 ```
                                             retry
