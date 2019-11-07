@@ -2,6 +2,7 @@ import datetime
 from functools import wraps
 import json
 import logging
+import re
 import signal
 import sys
 
@@ -272,9 +273,19 @@ def update_row(ident, editor=None):
 @request_stats
 @authenticate
 def manual_link(ident, editor=None):
-	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
-	upload_location is 'manual'."""
+	"""Manually set a video_link if the state is 'UNEDITED', 'UPLOAD_PENDING' or 'DONE'"""
 	link = flask.request.json['link']
+	new_state = flask.request.json.get('state', 'DONE')
+	if new_state == 'DONE':
+		video_id = link
+	else:
+		# Attempt to parse from youtube URL https://www.youtube.com/watch?v=XXXXXXXXXXX or https://youtu.be/XXXXXXXXXXX
+		match = re.search(r'[0-9A-Za-z_-]{11}$', link)
+		if not match:
+			return 'Could not parse youtube id from url {!r}'.format(link), 400
+		video_id = match.group(0)
+		# Normalize URL
+		link = 'https://youtu.be/{}'.format(video_id)
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
 		SELECT id, state, upload_location 
@@ -283,16 +294,16 @@ def manual_link(ident, editor=None):
 	old_row = results.fetchone()
 	if old_row is None:
 		return 'Row {} not found'.format(ident), 404
-	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
+	if old_row.state not in ('UNEDITED', 'UPLOAD_PENDING') and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
 	now = datetime.datetime.utcnow()
 	results = database.query(conn, """
 		UPDATE events 
-		SET state='DONE', upload_location = 'manual', video_link = %s,
-			editor = %s, edit_time = %s, upload_time = %s
-		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
-			upload_location = 'manual'))""", link, editor, now, now, ident)
-	logging.info("Row {} video_link set to {}".format(ident, link))
+		SET state=%s, upload_location = 'manual', video_link = %s,
+			upload_time = %s, video_id = %s
+		WHERE id = %s AND (state IN ('UNEDITED', 'UPLOAD_PENDING') OR (state = 'DONE' AND
+			upload_location = 'manual'))""", new_state, link, now, video_id, ident)
+	logging.info("Row {} {} and video_link set to {}".format(ident, new_state, link))
 	return ''	
 	
 
