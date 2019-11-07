@@ -7,7 +7,7 @@ setup(
 	install_requires = [
 		"argh",
 		"gevent",
-		"prometheus-client",
+		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"psycogreen",
 		"psycopg2",
 		"python-dateutil",
