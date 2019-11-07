@@ -13,5 +13,5 @@ script:
 - if [ "$TRAVIS_PULL_REQUEST" == "false" ] && [ "$TRAVIS_BRANCH" == "master" ]; then export PUSH=latest; fi
 # log into quay.io so we can push
 - echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USER" --password-stdin
-# build and push all components
-- ./build
+# build and push all components. Try to pull and re-use layers from images for all parent commits.
+- 'CACHE_FROM=$(git rev-list HEAD -n1 --parents | cut -d" " -f 2-) ./build'
