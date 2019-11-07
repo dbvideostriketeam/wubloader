@@ -36,6 +36,9 @@ LOCATIONS=$(
 		ssl_certificate $SSL;
 		ssl_certificate_key $SSL;
 		ssl_session_cache shared:SSL:10m;
+		gzip on;
+		gzip_comp_level 9;
+		absolute_redirect off;
 $LOCATIONS
 	}
 EOF
