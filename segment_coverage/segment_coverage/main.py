@@ -112,7 +112,7 @@ class CoverageChecker(object):
 		rows -- the height of the image"""
 
 		if not all_hour_holes:
-			self.logger.warning('No hours to generate coverage map from')
+			self.logger.info('No hours to generate coverage map from')
 			return
 
 
