@@ -160,6 +160,35 @@ grafana.dashboard({
             },
           },
         ],
+        // Third row - process-level health
+        [
+          {
+            name: "CPU usage",
+            axis: {min: 0, label: "cores", format: grafana.formats.percent},
+            expressions: {
+              "{{instance}} {{job}}": |||
+                sum by (instance, job) (
+                  rate(process_cpu_seconds_total[2m])
+                )
+              |||
+            },
+          },
+          {
+            name: "Memory usage (RSS)",
+            axis: {min: 0, format: grafana.formats.bytes},
+            expressions: {
+              "{{instance}} {{job}}": "process_resident_memory_bytes",
+            },
+          },
+          {
+            name: "Process restarts",
+            axis: {min: 0, label: "restarts within last minute"},
+            tooltip: "Multiple restarts within 15sec will be missed, and only counted as one.",
+            expressions: {
+              "{{instance}} {{job}}": "changes(process_start_time_seconds[1m])",
+            },
+          },
+        ],
       ],
     },
 
