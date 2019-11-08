@@ -42,7 +42,6 @@ CREATE TYPE event_state as ENUM (
 	'EDITED',
 	'CLAIMED',
 	'FINALIZING',
-	'UPLOAD_PENDING',
 	'TRANSCODING',
 	'DONE'
 );

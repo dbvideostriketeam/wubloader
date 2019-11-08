@@ -62,10 +62,6 @@ class UploadBackend(object):
 	If it does, it should also have a method check_status(ids) which takes a
 	list of video ids and returns a list of the ones who have finished processing.
 
-	If the upload backend cannot actually upload the file but needs to leave it
-	in a state for further manual processing, it should set needs_manual_upload.
-	This will put the video into the UPLOAD_PENDING state.
-
 	The upload backend also determines the encoding settings for the cutting
 	process, this is given as a list of ffmpeg args
 	under the 'encoding_settings' attribute.
@@ -77,7 +73,6 @@ class UploadBackend(object):
 	"""
 
 	needs_transcode = False
-	needs_manual_upload = False
 
 	# reasonable default if settings don't otherwise matter:
 	# high-quality mpegts, without wasting too much cpu on encoding
@@ -255,7 +250,3 @@ class Local(UploadBackend):
 		else:
 			url = 'file://{}'.format(filepath)
 		return video_id, url
-
-
-class Manual(Local):
-	needs_manual_upload = True
