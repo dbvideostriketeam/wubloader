@@ -280,6 +280,8 @@ def cut(channel, quality):
 	if type == 'fast':
 		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
+		if type == 'mp4':
+			return "mp4 type has been disabled due to the load it causes", 400
 		# encode as high-quality, without wasting too much cpu on encoding
 		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
