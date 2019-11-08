@@ -18,7 +18,7 @@ def get_master_playlist(channel, session=None):
 		"https://api.twitch.tv/api/channels/{}/access_token.json".format(channel),
 		params={'as3': 't'},
 		headers={
-			'Accept': 'application/vnd.twitchtv.v3+json',
+			'Accept': 'application/vnd.twitchtv.v5+json',
 			'Client-ID': 'pwkzresl8kj2rdj6g7bvxl9ys1wly3j',
 		},
 		metric_name='get_access_token',
