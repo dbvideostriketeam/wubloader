@@ -24,15 +24,6 @@ generic_latency = prom.Histogram(
 	buckets=LATENCY_BUCKETS,
 )
 
-SIZE_HELP = 'Size in bytes of response body for non-chunked responses'
-# buckets: powers of 4 up to 1GiB (1, 4, 16, 64, 256, 1Ki, 4Ki, ...)
-SIZE_BUCKETS = [4**i for i in range(16)]
-generic_size = prom.Histogram(
-	'http_response_size_all', SIZE_HELP,
-	['endpoint', 'method', 'status'],
-	buckets=SIZE_BUCKETS,
-)
-
 CONCURRENT_HELP = 'Number of requests currently ongoing'
 generic_concurrent = prom.Gauge(
 	'http_request_concurrency_all', CONCURRENT_HELP,
@@ -63,10 +54,6 @@ def request_stats(fn):
 			metrics['latency'] = prom.Histogram(
 				'http_request_latency_{}'.format(endpoint), LATENCY_HELP,
 				labels, buckets=LATENCY_BUCKETS,
-			)
-			metrics['size'] = prom.Histogram(
-				'http_response_size_{}'.format(endpoint), SIZE_HELP,
-				labels, buckets=SIZE_BUCKETS,
 			)
 			metrics['concurrent'] = prom.Gauge(
 				'http_request_concurrency_{}'.format(endpoint), CONCURRENT_HELP,
@@ -107,9 +94,5 @@ def after_request(response):
 	status = str(response.status_code)
 	generic_latency.labels(endpoint=endpoint, method=method, status=status).observe(end_time - start_time)
 	metrics['latency'].labels(endpoint=endpoint, method=method, status=status, **labels).observe(end_time - start_time)
-	size = response.calculate_content_length()
-	if size is not None:
-		generic_size.labels(endpoint=endpoint, method=method, status=status).observe(size)
-		metrics['size'].labels(endpoint=endpoint, method=method, status=status, **labels).observe(size)
 
 	return response
