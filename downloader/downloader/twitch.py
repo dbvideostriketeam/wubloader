@@ -16,7 +16,7 @@ def get_master_playlist(channel, session=None):
 		session = InstrumentedSession()
 	resp = session.get(
 		"https://api.twitch.tv/api/channels/{}/access_token.json".format(channel),
-		params={'as3': 't'},
+		params={'oauth_token': 'undefined', 'need_https': 'true', 'platform': '_', 'player_type': 'site', 'player_backend': 'mediaplayer'},
 		headers={
 			'Accept': 'application/vnd.twitchtv.v5+json',
 			'Client-ID': 'pwkzresl8kj2rdj6g7bvxl9ys1wly3j',
