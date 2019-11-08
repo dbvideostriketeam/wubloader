@@ -12,6 +12,6 @@ if [ "$(wc -l <<<"$CONTAINER")" -ne 1 ]; then
 	exit 1
 fi
 
-FILE="$PREFIX-$(date +%Y-%m-%dT%H:%M:%S).sql"
+FILE="$PREFIX-$(date -u +%Y-%m-%dT%H:%M:%S).sql"
 echo "Dumping $CONTAINER to $FILE"
 docker exec $CONTAINER pg_dump wubloader -U postgres | aws s3 cp - "s3://$BUCKET/$FILE"
