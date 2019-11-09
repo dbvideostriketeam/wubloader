@@ -33,13 +33,13 @@ local services = [
     [
       {
         local hosts = hosts_by_scheme[scheme],
-        local url = hosts[host][0],
-        local role = hosts[host][1],
         job_name: "%s-%s" % [scheme, service],
         metrics_path: "/metrics/%s" % service,
         scheme: scheme,
         static_configs: [
           {
+            local url = hosts[host][0],
+            local role = hosts[host][1],
             targets: [url],
             labels: {
               instance: host,
