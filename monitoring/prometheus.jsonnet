@@ -42,6 +42,7 @@ local services = [
             labels: {
               instance: host,
               role: hosts[host][1],
+              service: service,
             },
           } for host in std.objectFields(hosts)
         ],

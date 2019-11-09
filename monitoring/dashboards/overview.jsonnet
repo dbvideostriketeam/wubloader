@@ -32,7 +32,7 @@ local service_status_table = {
   type: "table",
   targets: [
     {
-      expr: 'sum(up{job="%s", role=~"%s"}) by (instance)' % [services[i], roles_for_service[services[i]]],
+      expr: 'sum(up{service="%s", role=~"%s"}) by (instance)' % [services[i], roles_for_service[services[i]]],
       intervalFactor: 1,
       format: "table",
       refId: refId(i),
