@@ -153,9 +153,10 @@ grafana.dashboard({
             name: "Database events by state",
             axis: {min: 0, label: "events"},
             stack: true,
+            tooltip: "Does not include UNEDITED or DONE events",
             expressions: {
               "{{state}}": |||
-                sum(event_counts) by (state)
+                sum(event_counts{state!="UNEDITED", state!="DONE"}) by (state)
               |||,
             },
           },
