@@ -59,7 +59,7 @@ local service_status_table = {
       thresholds: [],
       mappingType: 1,
     }
-    for name in ["__name__", "job", "Time"]
+    for name in ["__name__", "service", "Time"]
   ] + [
     // service cols
     {
@@ -123,8 +123,8 @@ grafana.dashboard({
             axis: {min: 0, label: "logs / sec"},
             display: "bars",
             expressions: {
-              "{{instance}} {{job}} {{level}}({{module}}:{{function}})": |||
-                sum(irate(log_count_total{level!="INFO"}[2m])) by (instance, job, level, module, function) > 0
+              "{{instance}} {{service}} {{level}}({{module}}:{{function}})": |||
+                sum(irate(log_count_total{level!="INFO"}[2m])) by (instance, service, level, module, function) > 0
               |||,
             },
           },
@@ -167,8 +167,8 @@ grafana.dashboard({
             name: "CPU usage",
             axis: {min: 0, label: "cores", format: grafana.formats.percent},
             expressions: {
-              "{{instance}} {{job}}": |||
-                sum by (instance, job) (
+              "{{instance}} {{service}}": |||
+                sum by (instance, service) (
                   rate(process_cpu_seconds_total[2m])
                 )
               |||
@@ -178,7 +178,7 @@ grafana.dashboard({
             name: "Memory usage (RSS)",
             axis: {min: 0, format: grafana.formats.bytes},
             expressions: {
-              "{{instance}} {{job}}": "process_resident_memory_bytes",
+              "{{instance}} {{service}}": "process_resident_memory_bytes",
             },
           },
           {
@@ -186,7 +186,7 @@ grafana.dashboard({
             axis: {min: 0, label: "restarts within last minute"},
             tooltip: "Multiple restarts within 15sec will be missed, and only counted as one.",
             expressions: {
-              "{{instance}} {{job}}": "changes(process_start_time_seconds[1m])",
+              "{{instance}} {{service}}": "changes(process_start_time_seconds[1m])",
             },
           },
         ],
