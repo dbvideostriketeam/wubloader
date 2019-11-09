@@ -101,6 +101,8 @@ class Youtube(UploadBackend):
 			Default False. If True, use the ffmpeg settings that Youtube recommends for
 			fast processing once uploaded. We suggest not bothering, as it doesn't appear
 			to make much difference.
+		mime_type: You must set this to the correct mime type for the encoded video.
+			Default is video/MP2T, suitable for fast cuts or -f mpegts.
 	"""
 
 	needs_transcode = True
@@ -117,7 +119,8 @@ class Youtube(UploadBackend):
 		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
 	]
 
-	def __init__(self, credentials, hidden=False, category_id=23, language="en", use_yt_recommended_encoding=False):
+	def __init__(self, credentials, hidden=False, category_id=23, language="en", use_yt_recommended_encoding=False,
+		mime_type='video/MP2T'):
 		self.logger = logging.getLogger(type(self).__name__)
 		self.client = GoogleAPIClient(
 			credentials['client_id'],
@@ -127,6 +130,7 @@ class Youtube(UploadBackend):
 		self.hidden = hidden
 		self.category_id = category_id
 		self.language = language
+		self.mime_type = mime_type
 		if use_yt_recommended_encoding:
 			self.encoding_settings = self.recommended_settings
 			self.encoding_streamable = False
@@ -162,7 +166,12 @@ class Youtube(UploadBackend):
 			# The risk of repeated failed attempts blowing through our quota is too high.
 			raise UploadError("Youtube create video call failed with {resp.status_code}: {resp.content}".format(resp=resp))
 		upload_url = resp.headers['Location']
-		resp = self.client.request('POST', upload_url, data=data, metric_name='upload_video')
+		resp = self.client.request(
+			'POST', upload_url,
+			headers={'Content-Type': self.mime_type},
+			data=data,
+			metric_name='upload_video',
+		)
 		if 400 <= resp.status_code < 500:
 			# As above, don't retry. But with 4xx's we know the upload didn't go through.
 			# On a 5xx, we can't be sure (the server is in an unspecified state).
