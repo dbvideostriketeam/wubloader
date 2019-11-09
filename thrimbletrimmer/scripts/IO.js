@@ -198,6 +198,17 @@ loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     var range = getTimeRangeAsTimestamp();
     var queryString = buildQuery(range);
 
+	// Preserve existing edit times
+	if (player) {
+		var discontinuities = mapDiscontinuities();
+		if (!startTrim) {
+			startTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim).replace('Z','');
+		}
+		if (!endTrim) {
+			endTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim).replace('Z','');
+		}
+	}
+
     setupPlayer(isEditor, playlist + '?' + queryString, startTrim, endTrim);
 
     //Get quality levels for advanced properties / download
