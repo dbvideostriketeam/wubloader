@@ -166,7 +166,7 @@ class Youtube(UploadBackend):
 		if 400 <= resp.status_code < 500:
 			# As above, don't retry. But with 4xx's we know the upload didn't go through.
 			# On a 5xx, we can't be sure (the server is in an unspecified state).
-			raise UploadError("Youtube video data upload failed with {status_code}: {resp.content}".format(resp=resp))
+			raise UploadError("Youtube video data upload failed with {resp.status_code}: {resp.content}".format(resp=resp))
 		resp.raise_for_status()
 		id = resp.json()['id']
 		return id, 'https://youtu.be/{}'.format(id)

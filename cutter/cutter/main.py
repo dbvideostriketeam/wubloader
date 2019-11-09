@@ -402,7 +402,7 @@ class Cutter(object):
 				self.logger.critical((
 					"Error occurred while finalizing upload of job {}. "
 					"You will need to check the state of the video manually."
-				).format(format_job(job)))
+				).format(format_job(job)), exc_info=True)
 				error = (
 					"An error occurred during FINALIZING, please determine if video was actually "
 					"uploaded or not and either move to TRANSCODING/DONE and populate video_id or rollback "
