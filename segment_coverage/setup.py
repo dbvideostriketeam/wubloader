@@ -9,6 +9,8 @@ setup(
 		'gevent',
 		'matplotlib',
 		'numpy',
+		'psycogreen',
+		'psycopg2',                
 		'prometheus-client',
 		'python-dateutil',
 		'wubloader-common',
