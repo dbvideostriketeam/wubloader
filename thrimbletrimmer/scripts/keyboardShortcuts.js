@@ -1,3 +1,18 @@
+function changeSpeed(direction) {
+	var speeds = [0.5, 1, 1.25, 1.5, 2];
+	var currentIndex = speeds.indexOf(player.playbackRate());
+	if (currentIndex < 0) {
+		// not present
+		return;
+	}
+	var newIndex = currentIndex + direction;
+	if (newIndex < 0 || newIndex >= speeds.length) {
+		// out of range
+		return
+	}
+	player.playbackRate(speeds[newIndex]);
+}
+
 document.addEventListener('keypress', (event) => {
     //if(event.target.nodeName == "BODY") {
     if(event.target.nodeName !== "INPUT" && event.target.nodeName !== "TEXTAREA") {
@@ -24,6 +39,12 @@ document.addEventListener('keypress', (event) => {
             case "o":
                 player.trimmingControls().updateTrimTimes(player.trimmingControls().options.startTrim, player.currentTime());
                 break;
+			case "=":
+				changeSpeed(1);
+				break
+			case "-":
+				changeSpeed(-1);
+				break
             case "0":
                 player.currentTime(0);
                 break;
