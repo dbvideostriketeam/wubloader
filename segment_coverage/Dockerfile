@@ -13,7 +13,7 @@ RUN pip install /tmp/common && rm -r /tmp/common
 # Install actual application
 
 # freetype-dev and libpng-dev are required for matplotlib
-RUN apk add freetype-dev libpng-dev build-base libstdc++
+RUN apk add freetype-dev libpng-dev build-base libstdc++ postgresql-dev postgresql-libs
 # need to install these manually
 RUN ln -s /usr/include/locale.h /usr/include/xlocale.h \
 	&& pip install numpy \
