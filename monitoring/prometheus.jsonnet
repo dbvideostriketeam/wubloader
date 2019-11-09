@@ -38,12 +38,13 @@ local services = [
         scheme: scheme,
         static_configs: [
           {
-            local url = hosts[host][0],
+            local target = hosts[host][0],
             local role = hosts[host][1],
-            targets: [url],
+            targets: [target],
             labels: {
               instance: host,
-              url: url,
+              target: target,
+              url: "%s://%s" % [scheme, target],
               role: role,
               service: service,
             },
