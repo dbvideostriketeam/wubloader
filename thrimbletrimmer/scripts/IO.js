@@ -300,7 +300,8 @@ thrimbletrimmerDownload = function(isEditor) {
             allow_holes: (isEditor) ? String(document.getElementById('AllowHoles').checked) : "true",
         });
     console.log(targetURL);
-    document.getElementById('outputFile').src = targetURL;
+    document.getElementById('DownloadLink').href = targetURL;
+	document.getElementById('DownloadLink').style.display = "";
 };
 
 thrimbletrimmerManualLink = function() {
