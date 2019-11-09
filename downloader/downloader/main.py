@@ -219,6 +219,7 @@ class StreamsManager(object):
 				if not workers and quality in self.latest_urls:
 					self.logger.info("Starting new worker for {} as none exist".format(quality))
 					self.start_worker(quality)
+					continue
 				latest_worker = workers[-1]
 				# is the old worker too old?
 				if latest_worker.age() > self.MAX_WORKER_AGE:
