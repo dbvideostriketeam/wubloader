@@ -102,10 +102,21 @@ local service_status_table = {
   links: [],
 };
 
+local labels = {
+  labels: 'instance=~"$instance"'
+};
+
 grafana.dashboard({
   name: "Overview",
   uid: "rjd405mn",
   refresh: "30s",
+
+  templates: [
+    {
+      name: "instance",
+      query: 'label_values(up, instance)'
+    },
+  ],
 
   rows: [
 
@@ -124,8 +135,8 @@ grafana.dashboard({
             display: "bars",
             expressions: {
               "{{instance}} {{service}} {{level}}({{module}}:{{function}})": |||
-                sum(irate(log_count_total{level!="INFO"}[2m])) by (instance, service, level, module, function) > 0
-              |||,
+                sum(irate(log_count_total{level!="INFO", %(labels)s}[2m])) by (instance, service, level, module, function) > 0
+              ||| % labels,
             },
           },
         ],
@@ -136,9 +147,9 @@ grafana.dashboard({
             axis: {min: 0, label: "segments / sec"},
             expressions: {
               "{{channel}}({{quality}}) live capture":
-                'sum(rate(segments_downloaded_total[2m])) by (channel, quality)',
+                'sum(rate(segments_downloaded_total{%(labels)s}[2m])) by (channel, quality)' % labels,
               "{{channel}}({{quality}}) backfilled":
-                'sum(rate(segments_backfilled_total[2m])) by (channel, quality)',
+                'sum(rate(segments_backfilled_total{%(labels)s}[2m])) by (channel, quality)' % labels,
             },
           },
           {
@@ -146,7 +157,7 @@ grafana.dashboard({
             axis: {min: 0, label: "requests / sec"},
             expressions: {
               "{{method}} {{endpoint}}":
-                'sum(rate(http_request_latency_all_count{status="200"}[2m])) by (endpoint, method)',
+                'sum(rate(http_request_latency_all_count{status="200", %(labels)s}[2m])) by (endpoint, method)' % labels,
             },
           },
           {
@@ -156,8 +167,8 @@ grafana.dashboard({
             tooltip: "Does not include UNEDITED or DONE events",
             expressions: {
               "{{state}}": |||
-                sum(event_counts{state!="UNEDITED", state!="DONE"}) by (state)
-              |||,
+                sum(event_counts{state!="UNEDITED", state!="DONE", %(labels)s}) by (state)
+              ||| % labels,
             },
           },
         ],
@@ -169,16 +180,16 @@ grafana.dashboard({
             expressions: {
               "{{instance}} {{service}}": |||
                 sum by (instance, service) (
-                  rate(process_cpu_seconds_total[2m])
+                  rate(process_cpu_seconds_total{%(labels)s}[2m])
                 )
-              |||
+              ||| % labels,
             },
           },
           {
             name: "Memory usage (RSS)",
             axis: {min: 0, format: grafana.formats.bytes},
             expressions: {
-              "{{instance}} {{service}}": "process_resident_memory_bytes",
+              "{{instance}} {{service}}": "process_resident_memory_bytes{%(labels)s}" % labels,
             },
           },
           {
@@ -186,7 +197,7 @@ grafana.dashboard({
             axis: {min: 0, label: "restarts within last minute"},
             tooltip: "Multiple restarts within 15sec will be missed, and only counted as one.",
             expressions: {
-              "{{instance}} {{service}}": "changes(process_start_time_seconds[1m])",
+              "{{instance}} {{service}}": "changes(process_start_time_seconds{%(labels)s}[1m])" % labels,
             },
           },
         ],
@@ -201,7 +212,7 @@ grafana.dashboard({
           axis: {min: 0, label: "segments / sec"},
           expressions: {
             "{{instance}} {{channel}}({{quality}})":
-              'sum(rate(segments_downloaded_total[2m])) by (instance, channel, quality)',
+              'sum(rate(segments_downloaded_total{%(labels)s}[2m])) by (instance, channel, quality)' % labels,
           },
         },
         {
@@ -213,9 +224,9 @@ grafana.dashboard({
               // Ignore series where we're no longer fetching segments,
               // as they just show that it's been a long time since the last segment.
               |||
-                time() - max(latest_segment) by (instance, channel, quality)
-                and sum(irate(segments_downloaded_total[2m])) by (instance, channel, quality) > 0
-              |||,
+                time() - max(latest_segment{%(labels)s}) by (instance, channel, quality)
+                and sum(irate(segments_downloaded_total{%(labels)s}[2m])) by (instance, channel, quality) > 0
+              ||| % labels,
           },
         },
       ],
@@ -229,7 +240,7 @@ grafana.dashboard({
           axis: {min: 0, label: "segments / sec"},
           expressions: {
             "{{remote}} -> {{instance}}":
-              'sum(rate(segments_backfilled_total[2m])) by (remote, instance)',
+              'sum(rate(segments_backfilled_total{%(labels)s}[2m])) by (remote, instance)' % labels,
           },
         },
       ],
