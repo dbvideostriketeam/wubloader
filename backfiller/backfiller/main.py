@@ -319,7 +319,7 @@ class BackfillerManager(object):
 				if failures < MAX_BACKOFF:
 					failures += 1
 				delay = common.jitter(TIMEOUT * 2**failures)
-				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay), exc_info=True)
+				self.logger.exception('Getting nodes failed. Retrying in {:.0f} s'.format(delay))
 				node_list_errors.inc()
 				self.stopping.wait(delay)
 				continue
