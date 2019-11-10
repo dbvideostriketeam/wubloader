@@ -426,10 +426,10 @@ class Cutter(object):
 			# and we set it back to UNEDITED, waiting for an editor to manually retry.
 			if ex.retryable:
 				state = 'EDITED'
-				kwargs = {}
+				kwargs = {'uploader': None}
 			else:
 				state = 'UNEDITED'
-				kwargs = {'uploader': None}
+				kwargs = {}
 			self.logger.exception("Upload error for job {}: {}".format(format_job(job), ex))
 			upload_errors.labels(
 				video_channel=job.video_channel,
