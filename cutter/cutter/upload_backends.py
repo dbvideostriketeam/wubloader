@@ -154,6 +154,7 @@ class Youtube(UploadBackend):
 			}
 		resp = self.client.request('POST',
 			'https://www.googleapis.com/upload/youtube/v3/videos',
+			headers={'X-Upload-Content-Type': self.mime_type},
 			params={
 				'part': 'snippet,status' if self.hidden else 'snippet',
 				'uploadType': 'resumable',
@@ -168,7 +169,6 @@ class Youtube(UploadBackend):
 		upload_url = resp.headers['Location']
 		resp = self.client.request(
 			'POST', upload_url,
-			headers={'Content-Type': self.mime_type},
 			data=data,
 			metric_name='upload_video',
 		)
