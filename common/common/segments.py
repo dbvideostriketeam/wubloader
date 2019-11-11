@@ -40,6 +40,7 @@ class SegmentInfo(
 		return self.start + self.duration
 	@property
 	def is_partial(self):
+		"""Note that suspect is considered partial"""
 		return self.type != "full"
 
 
@@ -60,7 +61,7 @@ def parse_segment_path(path):
 		if len(parts) != 4:
 			raise ValueError("Not enough dashes in filename")
 		time, duration, type, hash = parts
-		if type not in ('full', 'partial', 'temp'):
+		if type not in ('full', 'suspect', 'partial', 'temp'):
 			raise ValueError("Unknown type {!r}".format(type))
 		hash = None if type == 'temp' else unpadded_b64_decode(hash)
 		start = None if hour is None else datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f")
@@ -210,8 +211,8 @@ def hour_paths_for_range(hours_path, start, end):
 
 def best_segments_by_start(hour):
 	"""Within a given hour path, yield the "best" segment per unique segment start time.
-	Best is defined as non-partial, or failing that the longest partial.
-	Note this means this function may perform os.stat()s in order to find the longest partial.
+	Best is defined as type=full, or failing that type=suspect, or failing that the longest type=partial.
+	Note this means this function may perform os.stat()s.
 	"""
 	try:
 		segment_paths = os.listdir(hour)
@@ -251,8 +252,11 @@ def best_segments_by_start(hour):
 				full_segments = [max(full_segments, key=lambda segment: (segment.duration, sizes[segment], segment.hash))]
 			yield full_segments[0]
 			continue
-		# no full segments, fall back to measuring partials.
-		yield max(segments, key=lambda segment: os.stat(segment.path).st_size)
+		# no full segments, fall back to measuring partials. Prefer suspect over partial.
+		yield max(segments, key=lambda segment: (
+			1 if segment.type == 'suspect' else 0,
+			os.stat(segment.path).st_size,
+		))
 
 
 def streams_info(segment):
