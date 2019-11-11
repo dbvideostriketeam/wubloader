@@ -285,11 +285,15 @@ class CoverageChecker(object):
 							bad_segment_count += 1
 
 					full_segment_count = 0
+					suspect_segment_count = 0
 					partial_segment_count = 0
 					full_segment_duration = datetime.timedelta()
+					suspect_segment_duration = datetime.timedelta()
 					partial_segment_duration = datetime.timedelta()
 					full_overlaps = 0
 					full_overlap_duration = datetime.timedelta()
+					suspect_overlaps = 0
+					suspect_overlap_duration = datetime.timedelta()	
 					partial_overlaps = 0
 					partial_overlap_duration = datetime.timedelta()
 					best_segments = []
@@ -306,12 +310,17 @@ class CoverageChecker(object):
 					# then update coverage
 					for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
 						full_segments = []
+						suspect_segments = []
 						partial_segments = []
 						for segment in segments:
 							if segment.type == 'full':
 								full_segments.append(segment)
 								full_segment_count += 1
 								full_segment_duration += segment.duration
+							elif segment.type == 'suspect':
+								suspect_segments.append(segment)
+								suspect_segment_count += 1
+								suspect_segment_duration += segment.duration	
 							elif segment.type == 'partial':
 								partial_segments.append(segment)
 								partial_segment_count += 1
@@ -325,6 +334,14 @@ class CoverageChecker(object):
 							for segment in partial_segments:
 								partial_overlaps += 1
 								partial_overlap_duration += segment.duration
+						elif suspect_segments:
+							suspect_segments.sort(key=lambda segment: os.stat(segment.path).st_size)
+							best_segment = suspect_segments[-1]
+							only_partials.append((best_segment.start, best_segment.start + best_segment.duration))
+							for segment in suspect_segments[:-1]:
+								suspect_overlaps += 1
+								suspect_overlap_duration += segment.duration
+
 						elif partial_segments:
 							partial_segments.sort(key=lambda segment: os.stat(segment.path).st_size)
 							best_segment = partial_segments[-1]
@@ -349,6 +366,9 @@ class CoverageChecker(object):
 								if segment.type == 'full':
 									full_overlaps += 1
 									full_overlap_duration += previous_end - segment.start
+								elif segment.type == 'suspect':
+									suspect_overlaps += 1
+									suspect_overlap_duration += previous_end - segment.start
 								else:
 									partial_overlaps += 1
 									partial_overlap_duration += previous_end - segment.start
@@ -397,6 +417,9 @@ class CoverageChecker(object):
 							channel=self.channel, quality=quality, hour=hour, type='full'
 							).set(full_segment_count)
 					segment_count_gauge.labels(
+							channel=self.channel, quality=quality, hour=hour, type='suspect'
+							).set(suspect_segment_count)					
+					segment_count_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='partial'
 							).set(partial_segment_count)
 					segment_count_gauge.labels(
@@ -405,6 +428,9 @@ class CoverageChecker(object):
 					segment_duration_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='full'
 							).set(full_segment_duration.total_seconds())
+					segment_duration_gauge.labels(
+							channel=self.channel, quality=quality, hour=hour, type='suspect'
+							).set(suspect_segment_duration.total_seconds())
 					segment_duration_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='partial'
 							).set(partial_segment_duration.total_seconds())
@@ -424,11 +450,17 @@ class CoverageChecker(object):
 							channel=self.channel, quality=quality, hour=hour, type='full'
 							).set(full_overlaps)
 					overlap_count_gauge.labels(
+							channel=self.channel, quality=quality, hour=hour, type='suspect'
+							).set(suspect_overlaps)					
+					overlap_count_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='partial'
 							).set(partial_overlaps)
 					overlap_duration_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='full'
 							).set(full_overlap_duration.total_seconds())
+					overlap_duration_gauge.labels(
+							channel=self.channel, quality=quality, hour=hour, type='suspect'
+							).set(suspect_overlap_duration.total_seconds())
 					overlap_duration_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='partial'
 							).set(partial_overlap_duration.total_seconds())
@@ -446,6 +478,12 @@ class CoverageChecker(object):
 						self.logger.info('{}/{}: {} overlapping full segments totalling {} s'.format(
 							quality, hour, full_overlaps,
 							full_overlap_duration.total_seconds()))
+						self.logger.info('{}/{}: {} suspect segments totalling {} s'.format(
+							quality, hour, suspect_segment_count,
+							suspect_segment_duration.total_seconds()))
+						self.logger.info('{}/{}: {} overlapping suspect segments totalling {} s'.format(
+							quality, hour, suspect_overlaps,
+							suspect_overlap_duration.total_seconds()))	
 						self.logger.info('{}/{}: {} partial segments totalling {} s'.format(
 							quality, hour, partial_segment_count,
 							partial_segment_duration.total_seconds()))
