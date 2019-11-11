@@ -277,8 +277,10 @@ def cut(channel, quality):
 	type = request.args.get('type', 'fast')
 	if type == 'rough':
 		return Response(rough_cut_segments(segments, start, end), mimetype='video/MP2T')
-	if type == 'fast':
+	elif type == 'fast':
 		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
+	elif type == 'smart':
+		return Response(smart_cut_segments(segments, start, end), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
 			return "mp4 type has been disabled due to the load it causes", 400
