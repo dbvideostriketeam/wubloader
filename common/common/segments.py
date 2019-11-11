@@ -243,11 +243,12 @@ def best_segments_by_start(hour):
 					start_time, ", ".join(map(str, segments))
 				))
 				# We've observed some cases where the same segment (with the same hash) will be reported
-				# with different durations (generally at stream end). Prefer the longer duration,
+				# with different durations (generally at stream end). Prefer the longer duration (followed by longest size),
 				# as this will ensure that if hashes are different we get the most data, and if they
 				# are the same it should keep holes to a minimum.
-				# If same duration, we have to pick one, so pick highest-sorting hash just so we're consistent.
-				full_segments = [max(full_segments, key=lambda segment: (segment.duration, segment.hash))]
+				# If same duration and size, we have to pick one, so pick highest-sorting hash just so we're consistent.
+				sizes = {segment: os.stat(segment.path).st_size for segment in segments}
+				full_segments = [max(full_segments, key=lambda segment: (segment.duration, sizes[segment], segment.hash))]
 			yield full_segments[0]
 			continue
 		# no full segments, fall back to measuring partials.
