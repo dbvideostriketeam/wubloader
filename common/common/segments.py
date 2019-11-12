@@ -496,6 +496,7 @@ def smart_cut_segments(segments, start, end):
 			'-f', 'mpegts', # output as MPEGTS
 			'-',
 		]
+		logging.info("Running smart cut with args: {}".format(" ".join(args)))
 		concat_proc = subprocess.Popen(args,
 			stdin=subprocess.PIPE,
 			stdout=subprocess.PIPE,
