@@ -493,6 +493,7 @@ def smart_cut_segments(segments, start, end):
 			'-protocol_whitelist', 'file,pipe', # need to explicitly allow pipe
 			'-c', 'copy', # don't re-encode the actual video
 			'-fflags', '+genpts', # this does something to do with timestamps?
+			'-f', 'mpegts', # output as MPEGTS
 			'-',
 		]
 		concat_proc = subprocess.Popen(args,
