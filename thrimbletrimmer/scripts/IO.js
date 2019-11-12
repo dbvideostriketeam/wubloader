@@ -232,9 +232,14 @@ thrimbletrimmerSubmit = function(state) {
     document.getElementById('SubmitButton').disabled = true;
     var discontinuities = mapDiscontinuities();
 
+	var start = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
+	if (start) {start = start.replace('Z','');}
+	var end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
+	if (end) {end = end.replace('Z','');}
+
     var wubData = {
-        video_start:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim).replace('Z',''),
-        video_end:getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim).replace('Z',''),
+        video_start:start,
+        video_end:end,
         video_title:document.getElementById("VideoTitle").value,
         video_description:document.getElementById("VideoDescription").value,
         allow_holes:document.getElementById('AllowHoles').checked,
