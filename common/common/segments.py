@@ -527,7 +527,7 @@ def smart_cut_segments(segments, start, end):
 			input_feeder.kill()
 		for proc in procs:
 			if proc.poll() is not None:
-				for action in [proc.kill, proc.stdout.close] + [proc.stdin.close if proc is concat_proc else []]:
+				for action in [proc.kill, proc.stdout.close] + ([proc.stdin.close] if proc is concat_proc else []):
 					try:
 						action()
 					except (OSError, IOError):
