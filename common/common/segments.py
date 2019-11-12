@@ -5,6 +5,7 @@
 import base64
 import datetime
 import errno
+import fcntl
 import itertools
 import json
 import logging
@@ -480,6 +481,10 @@ def smart_cut_segments(segments, start, end):
 				procs.append(proc)
 				pipes.append(proc.stdout)
 				concat_entries.append('pipe:{}'.format(proc.stdout.fileno()))
+				# We need to unset the FD_CLOEXEC flag that subprocess sets by default
+				flags = fcntl.fcntl(proc.stdout.fileno(), fcntl.F_GETFD)
+				flags = flags & ~fcntl.FD_CLOEXEC
+				fcntl.fcntl(proc.stdout.fileno(), fcntl.F_SETFD, flags)
 			else:
 				# just pass the file directly
 				concat_entries.append('file:{}'.format(segment.path))
@@ -488,9 +493,10 @@ def smart_cut_segments(segments, start, end):
 		args = [
 			'ffmpeg',
 			'-hide_banner', '-loglevel', 'error', # suppress noisy output
-			'-f', 'concat', '-', # read concat config from stdin
+			'-f', 'concat', # read a concat config file
 			'-safe', '0', # trust weird filenames
 			'-protocol_whitelist', 'file,pipe', # need to explicitly allow pipe
+			'-i', '-', # read from stdin
 			'-c', 'copy', # don't re-encode the actual video
 			'-fflags', '+genpts', # this does something to do with timestamps?
 			'-f', 'mpegts', # output as MPEGTS
