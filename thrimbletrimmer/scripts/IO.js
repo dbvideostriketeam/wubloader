@@ -202,10 +202,12 @@ loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
 	if (player && player.trimmingControls) {
 		var discontinuities = mapDiscontinuities();
 		if (!startTrim) {
-			startTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim).replace('Z','');
+			startTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
+			if (startTrim) {startTrim = startTrim.replace('Z','');}
 		}
 		if (!endTrim) {
-			endTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim).replace('Z','');
+			endTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
+			if (endTrim) {endTrim = endTrim.replace('Z','');}
 		}
 	}
 
