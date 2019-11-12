@@ -489,7 +489,7 @@ def smart_cut_segments(segments, start, end):
 			'ffmpeg',
 			'-hide_banner', '-loglevel', 'error', # suppress noisy output
 			'-f', 'concat', '-', # read concat config from stdin
-			'-safe', 0, # trust weird filenames
+			'-safe', '0', # trust weird filenames
 			'-protocol_whitelist', 'file,pipe', # need to explicitly allow pipe
 			'-c', 'copy', # don't re-encode the actual video
 			'-fflags', '+genpts', # this does something to do with timestamps?
