@@ -248,6 +248,9 @@ thrimbletrimmerSubmit = function(state) {
     console.log(wubData);
     console.log(JSON.stringify(wubData));
 
+	if (!wubData.video_start) {alert("No start time set"); return;}
+	if (!wubData.video_end) {alert("No end time set"); return;}
+
     //Submit to thrimshim
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
     fetch("/thrimshim/"+rowId, {

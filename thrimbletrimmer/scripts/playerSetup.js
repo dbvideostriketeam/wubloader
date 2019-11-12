@@ -87,6 +87,8 @@ getRealTimeForPlayerTime = function(discontinuities, playbackIndex) {
         streamStart = lastDiscontinuity.segmentTimestamp;
         playbackIndex -= lastDiscontinuity.playbackIndex;
     }
-    
-    return new Date(streamStart.getTime()+playbackIndex*1000).toISOString();
+
+	var realTime = streamStart.getTime()+playbackIndex*1000;
+
+    return (isFinite(realTime)) ? new Date(realTime).toISOString() : null;
 };
