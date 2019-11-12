@@ -1,0 +1,27 @@
+<html>
+<script>
+delay = 10;
+bustime = 1573228800;
+
+function update() {
+	delay = parseInt(document.getElementById("Delay").value);
+}
+
+setInterval(function() {
+	var time = new Date().getTime() / 1000 - delay - bustime;
+	var hours = Math.trunc(time / 3600).toString();
+	var mins = Math.trunc((time % 3600) / 60).toString();
+	var secs = Math.trunc(time % 60).toString();
+	if (mins.length < 2) {mins = "0" + mins;}
+	if (secs.length < 2) {secs = "0" + secs;}
+	var formatted = hours + ":" + mins + ":" + secs;
+	document.getElementById("Clock").value = formatted;
+}, 1000);
+</script>
+<body>
+<input type="text" id="Clock" disabled />
+<br/>
+Delay: <input type="text" id="Delay" value="10"/>
+<input type="button" id="Update" onclick="update()" value="Update Delay"/>
+</body>
+</html>
