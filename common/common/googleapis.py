@@ -57,7 +57,7 @@ class GoogleAPIClient(object):
 				gevent.spawn_later(expires_in - self.ACCESS_TOKEN_REFRESH_TIME_BEFORE_EXPIRY, self.get_access_token)
 			except Exception:
 				logging.exception("Failed to fetch access token, retrying")
-				self.wait(self.ACCESS_TOKEN_ERROR_RETRY_INTERVAL)
+				gevent.sleep(self.ACCESS_TOKEN_ERROR_RETRY_INTERVAL)
 			else:
 				break
 
