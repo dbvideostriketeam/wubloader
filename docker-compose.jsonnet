@@ -18,11 +18,11 @@
   enabled:: {
     downloader: true,
     restreamer: true,
-    backfiller: true,
-    cutter: true,
+    backfiller: false,
+    cutter: false,
     sheetsync: false,
-    thrimshim: true,
-    segment_coverage: true,
+    thrimshim: false,
+    segment_coverage: false,
     playlist_manager: false,
     nginx: true,
     postgres: false,
@@ -31,11 +31,11 @@
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
   // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
   // and warned about if they're not currently streaming.
-  channels:: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
+  channels:: [],
   follow_games:: ["Crypt of the Necrodancer"],
 
   // Stream qualities to capture
-  qualities:: ["source", "480p"],
+  qualities:: ["source"],
 
   // Local path to save segments to. Full path must already exist. Cannot contain ':'.
   // On OSX you need to change this to /private/var/lib/wubloader
