@@ -1,0 +1,8 @@
+#!/bin/bash
+
+ARGS=()
+for arg in "$@"; do
+	ARGS+=("${arg}!")
+done
+
+WUBLOADER_DISABLE_STACKSAMPLER=true python -m downloader --base-dir /srv/wubloader "${ARGS[@]}"
