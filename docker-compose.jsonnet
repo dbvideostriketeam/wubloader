@@ -32,7 +32,6 @@
   // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
   // and warned about if they're not currently streaming.
   channels:: [],
-  follow_games:: ["Crypt of the Necrodancer"],
 
   // Stream qualities to capture
   qualities:: ["source"],
@@ -190,9 +189,7 @@
     [if $.enabled.downloader then "downloader"]: {
       image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
       // Args for the downloader: set channel and qualities
-      command: $.channels + std.flattenArrays([
-        ["--follow-game", game] for game in $.follow_games
-      ]) + [  
+      command: $.channels + [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
