@@ -245,8 +245,8 @@ def replay(stream, variant):
 		print "No replay, serving placeholder"
 		stream, variant = 'ekimekim', 'source'
 		segments = get_best_segments(os.path.join(app.static_folder, stream, variant),
-			datetime.datetime(2019, 5, 14, 9, 58, 46),
-			datetime.datetime(2019, 5, 14, 9, 58, 48),
+			datetime.datetime(2020, 2, 15, 7, 30, 00),
+			datetime.datetime(2020, 2, 15, 7, 31, 00),
 		)
 	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
 
