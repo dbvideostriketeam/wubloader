@@ -595,7 +595,7 @@ class SegmentGetter(object):
 	"Twitch channels to watch. Add a '!' suffix to indicate they're expected to be always up. "
 	"This affects retry interval, error reporting and monitoring."
 )
-@argh.arg('--league-db', default="necrobot-read:necrobot-read@condor.host/season_9", help=
+@argh.arg('--league-db', default="necrobot-read:necrobot-read@condor.host/condor_x", help=
 	"Connection string for database to check for racers and commentators. "
 	"Should be of form USER:PASSWORD@HOST/DATABASE.",
 )
