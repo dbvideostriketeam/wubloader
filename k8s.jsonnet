@@ -5,8 +5,9 @@
 // for the sake of simplicity.
 
 {
-
-  config: {
+  kind: "List",
+  apiVersion: "v1",
+  config:: {
     // These are the important top-level settings.
     // Change these to configure the services.
 
@@ -70,16 +71,16 @@
   // A few derived values.
 
   // The connection string for the database. Constructed from db_args.
-  db_connect: std.join(" ", [
+  db_connect:: std.join(" ", [
     "%s='%s'" % [key, $.config.db_args[key]]
     for key in std.objectFields($.config.db_args)
   ]),
 
   // Cleaned up version of $.channels without importance markers
-  clean_channels: [std.split(c, '!')[0] for c in $.config.channels],
+  clean_channels:: [std.split(c, '!')[0] for c in $.config.channels],
 
   // k8s-formatted version of env dict
-  env_list: [
+  env_list:: [
     {name: key, value: $.config.env[key]}
     for key in std.objectFields($.config.env)
   ],
@@ -129,7 +130,7 @@
   },
 
   // This function generates a Service object for each service, since they're basically identical.
-  service(name): {
+  service(name):: {
     kind: "Service",
     apiVersion: "v1",
     metadata: {
@@ -145,7 +146,7 @@
   // The actual manifests.
   // These are all deployments. Note that all components work fine if multiple are running
   // (they may duplicate work, but not cause errors by stepping on each others' toes).
-  manifests: [
+  items: [
     // The downloader watches the twitch stream and writes the HLS segments to disk
     $.deployment("downloader", args=$.config.channels + [
       "--base-dir", "/mnt",
@@ -187,10 +188,16 @@
       {name: "THRIMBLETRIMMER", value: "true"},
       {name: "SEGMENTS", value: "/mnt"},
     ]),
+    // Services for all deployments
+    $.service("downloader"),
+    $.service("backfiller"),
+    $.service("nginx"),
+    $.service("restreamer"),
+    $.service("segment_coverage"),
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
-      apiVersion: "v1",
+      apiVersion: "networking.k8s.io/v1beta1",
       metadata: {
         name: "wubloader",
         labels: {app: "wubloader"},
@@ -228,4 +235,4 @@
     },
   ],
 
-}.manifests // final output is just the manifest list, none of the other fields
+}
