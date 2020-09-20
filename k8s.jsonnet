@@ -111,7 +111,8 @@
           containers: [
             {
               name: name,
-              image: "quay.io/ekimekim/wubloader-%s:%s" % [name, $.config.image_tag],
+              // segment-coverage is called segment_coverage in the image, so replace - with _
+              image: "quay.io/ekimekim/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
               args: args,
               volumeMounts: [{name: "data", mountPath: "/mnt"}],
               env: $.env_list + env, // main env list combined with any deployment-specific ones
@@ -176,7 +177,7 @@
     // Segment coverage is a monitoring helper that periodically scans available segments
     // and reports stats. It also creates a "coverage map" image to represent this info.
     // It puts this in the segment directory where nginx will serve it.
-    $.deployment("segment_coverage", args=$.clean_channels + [
+    $.deployment("segment-coverage", args=$.clean_channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
       "--metrics-port", "80",
@@ -193,7 +194,7 @@
     $.service("backfiller"),
     $.service("nginx"),
     $.service("restreamer"),
-    $.service("segment_coverage"),
+    $.service("segment-coverage"),
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
@@ -221,7 +222,7 @@
                 // Map /metrics/NAME to each service (except restreamer)
                 metric_rule("downloader"),
                 metric_rule("backfiller"),
-                metric_rule("segment_coverage"),
+                metric_rule("segment-coverage"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
                 rule("nginx", "/thrimbletrimmer", "Prefix"),
