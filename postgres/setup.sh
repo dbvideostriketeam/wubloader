@@ -58,6 +58,7 @@ CREATE TABLE events (
 	poster_moment BOOLEAN NOT NULL DEFAULT FALSE,
 	image_links TEXT[] NOT NULL DEFAULT '{}', -- default empty array
 	notes TEXT NOT NULL DEFAULT '',
+	tags TEXT[] NOT NULL DEFAULT '{}', -- default empty array
 	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
 	uploader_whitelist TEXT[],
 	upload_location TEXT CHECK (state = 'UNEDITED' OR upload_location IS NOT NULL),
@@ -65,6 +66,7 @@ CREATE TABLE events (
 	video_end TIMESTAMP CHECK (state IN ('UNEDITED', 'DONE') OR video_end IS NOT NULL),
 	video_title TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_title IS NOT NULL),
 	video_description TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_description IS NOT NULL),
+	video_tags TEXT[] CHECK (state IN ('UNEDITED', 'DONE') OR video_tags IS NOT NULL),
 	video_channel TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_channel IS NOT NULL),
 	video_quality TEXT NOT NULL DEFAULT 'source',
 	state event_state NOT NULL DEFAULT 'UNEDITED',
