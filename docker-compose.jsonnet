@@ -330,6 +330,9 @@
         "--qualities", std.join(",", $.qualities),
         "--first-hour", $.coverage_start,
         "--last-hour", $.coverage_end,
+        // Render a html page showing all the images from all nodes
+        "--make-page",
+        "--connection-string", $.db_connect,
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
