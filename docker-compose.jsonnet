@@ -12,6 +12,7 @@
   // Note: "latest" is not recommended in production, as you can't be sure what version
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
+  database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
 
   // For each service, whether to deploy that service.
   enabled:: {
@@ -344,7 +345,7 @@
     },
 
     [if $.enabled.postgres then "postgres"]: {
-      image: "quay.io/ekimekim/wubloader-postgres:%s" % $.image_tag,
+      image: "quay.io/ekimekim/wubloader-postgres:%s" % $.database_tag,
       restart: "on-failure",
       [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
       environment: $.env + {
