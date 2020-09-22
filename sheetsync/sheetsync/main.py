@@ -91,6 +91,7 @@ class SheetSync(object):
 			'image_links': 6,
 			'marked_for_edit': 7,
 			'notes': 8,
+			'tags': 9,
 			'video_link': 11,
 			'state': 12,
 			'edit_link': 13,
@@ -106,6 +107,7 @@ class SheetSync(object):
 			'event_end': self.parse_bustime,
 			'poster_moment': lambda v: v == u'[\u2713]', # check mark
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
+			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
 			'id': lambda v: uuid.UUID(v) if v.strip() else None,
 		}
 		# List of input columns
@@ -118,6 +120,7 @@ class SheetSync(object):
 			'poster_moment',
 			'image_links',
 			'notes',
+			'tags',
 		]
 		# List of output columns
 		self.output_columns = [
