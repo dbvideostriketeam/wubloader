@@ -91,11 +91,11 @@ class SheetSync(object):
 			'image_links': 6,
 			'marked_for_edit': 7,
 			'notes': 8,
-			'video_link': 10,
-			'state': 11,
-			'edit_link': 12,
-			'error': 13,
-			'id': 14,
+			'video_link': 11,
+			'state': 12,
+			'edit_link': 13,
+			'error': 14,
+			'id': 15,
 		}
 		# Maps column names to a function that parses that column's value.
 		# Functions take a single arg (the value to parse) and ValueError is
