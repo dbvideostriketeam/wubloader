@@ -292,6 +292,39 @@ def cut(channel, quality):
 		return "Unknown type {!r}".format(type), 400
 
 
+@app.route('/generate_videos/<channel>/<quality>.ts')
+@request_stats
+@has_path_args
+def generate_videos(channel, quality):
+	"""Generate one video for each contiguous range of segments (ie. split at holes),
+	and save them as CHANNEL_QUALITY_N.ts in the segments directory.
+	"""
+	start, end = time_range_for_quality(channel, quality)
+	hours_path = os.path.join(app.static_folder, channel, quality)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	segments = get_best_segments(hours_path, start, end)
+	contiguous = []
+	n = [0]
+
+	def write_file():
+		if not contiguous:
+			return
+		with open(os.path.join(app.static_folder, "{}_{}_{}.ts".format(channel, quality, n[0])), 'w') as f:
+			for chunk in rough_cut_segments(contiguous, start, end):
+				f.write(chunk)
+		n[0] += 1
+
+	for segment in segments:
+		if segment is not None:
+			contiguous.append(segment)
+			continue
+		write_file()
+		contiguous = []
+	write_file()
+
+
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
 	app.static_folder = base_dir
 	server = WSGIServer((host, port), cors(app))
