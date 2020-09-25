@@ -1,7 +1,7 @@
 <html>
 <script>
 delay = 10;
-bustime = 1573228800;
+bustime = 1605290400;
 
 function update() {
 	delay = parseInt(document.getElementById("Delay").value);
@@ -9,12 +9,17 @@ function update() {
 
 setInterval(function() {
 	var time = new Date().getTime() / 1000 - delay - bustime;
+	var minus = "";
+	if (time < 0) {
+		time = -time
+		minus = "-";
+	}
 	var hours = Math.trunc(time / 3600).toString();
 	var mins = Math.trunc((time % 3600) / 60).toString();
 	var secs = Math.trunc(time % 60).toString();
 	if (mins.length < 2) {mins = "0" + mins;}
 	if (secs.length < 2) {secs = "0" + secs;}
-	var formatted = hours + ":" + mins + ":" + secs;
+	var formatted = minus + hours + ":" + mins + ":" + secs;
 	document.getElementById("Clock").value = formatted;
 }, 1000);
 </script>
