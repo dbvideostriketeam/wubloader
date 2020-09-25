@@ -199,7 +199,7 @@ loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     var queryString = buildQuery(range);
 
 	// Preserve existing edit times
-	if (player && player.trimmingControls) {
+	if (player && player.trimmingControls && player.vhs.playlists.master) {
 		var discontinuities = mapDiscontinuities();
 		if (!startTrim) {
 			startTrim = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.startTrim);
