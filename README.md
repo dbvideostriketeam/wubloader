@@ -30,4 +30,7 @@ A docker-compose file is provided to run all components. See `docker-compose.jso
 to set configuration options, then generate the compose file with `./generate-docker-compose`.
 Then run `docker-compose up`.
 
+There is also a kubernetes-based option, but it is less configurable and only supports replication nodes.
+See [k8s.jsonnet](./k8s.jsonnet) for details.
+
 Further details of installing and configuring the backfiller are provided in [INSTALL.md](./INSTALL.md).
