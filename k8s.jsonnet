@@ -47,9 +47,11 @@
     // Set to true to let the ingress handle TLS
     ingress_tls: true,
 
-    // Set to true and give a secretName for ingress, if required for ingress TLS
-    ingress_secret_name_needed: false,
-    ingress_secret_name: "wubloader-tls",
+    // Uncomment and give a secretName for ingress, if required for ingress TLS
+    //ingress_secret_name: "wubloader-tls",
+
+    // Additional metadata labels for Ingress (cert-manager, etc.) - uncomment if needed, adjust as necessary
+    //ingress_labels: {"cert-manager.io/cluster-issuer": "name-of-issuer"},
 
     // Connection args for the database.
     // If database is defined in this config, host and port should be postgres:5432.
@@ -208,7 +210,7 @@
       apiVersion: "networking.k8s.io/v1beta1",
       metadata: {
         name: "wubloader",
-        labels: {app: "wubloader"},
+        labels: {app: "wubloader"} + (if (std.objectHas($.config, "ingress_labels")) then $.config.ingress_labels else {}),
       },
       spec: {
         rules: [
@@ -244,7 +246,7 @@
                 hosts: [
                     $.config.ingress_host,
                 ],
-                [if ($.config.ingress_secret_name_needed) then 'secretName']: $.config.ingress_secret_name,
+                [if (std.objectHas($.config, "ingress_secret_name")) then 'secretName']: $.config.ingress_secret_name,
             },
         ],
       },
