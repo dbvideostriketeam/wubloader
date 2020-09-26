@@ -49,7 +49,7 @@
 
     // Set to true and give a secretName for ingress, if required for ingress TLS
     ingress_secret_name_needed: false,
-    ingress_secret_name: "wubloader/tls",
+    ingress_secret_name: "wubloader-tls",
 
     // Connection args for the database.
     // If database is defined in this config, host and port should be postgres:5432.
