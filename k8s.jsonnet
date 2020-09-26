@@ -43,7 +43,14 @@
 
     // The hostname to use in the Ingress
     ingress_host: "wubloader.example.com",
-    
+
+    // Set to true to let the ingress handle TLS
+    ingress_tls: true,
+
+    // Set to true and give a secretName for ingress, if required for ingress TLS
+    ingress_secret_name_needed: false,
+    ingress_secret_name: "wubloader/tls",
+
     // Connection args for the database.
     // If database is defined in this config, host and port should be postgres:5432.
     db_args: {
@@ -232,8 +239,15 @@
             },
           },
         ],
+        [if ($.config.ingress_tls) then 'tls']: [
+            {
+                hosts: [
+                    $.config.ingress_host,
+                ],
+                [if ($.config.ingress_secret_name_needed) then 'secretName']: $.config.ingress_secret_name,
+            },
+        ],
       },
     },
   ],
-
 }
