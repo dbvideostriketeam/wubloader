@@ -182,7 +182,7 @@ def get_row(ident):
 @app.route('/thrimshim/<uuid:ident>', methods=['POST'])
 @request_stats
 @authenticate
-def update_row(ident, editor=None):
+def update_row(ident, editor=None, override_changes=False):
 	new_row = flask.request.json
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
@@ -192,9 +192,10 @@ def update_row(ident, editor=None):
 	non_null_columns = ['upload_location', 'video_start', 'video_end',
 		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
+	sheet_columns = ['event_start', 'event_end', 'category', 'description', 'notes']
 
 	#check vital edit columns are in new_row
-	wanted = set(non_null_columns + ['state'])
+	wanted = set(non_null_columns + ['state'] + sheet_columns)
 	missing = wanted - set(new_row)
 	if missing:
 		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
@@ -218,19 +219,28 @@ def update_row(ident, editor=None):
 
 	conn = app.db_manager.get_conn()
 	#check a row with id = ident is in the database
-	results = database.query(conn, """
-		SELECT id, state 
+	built_query = sql.SQL("""
+		SELECT id, state, {} 
 		FROM events
-		WHERE id = %s""", ident)
+		WHERE id = %s""").format(sql.SQL(', ').join(
+			sql.Indentifier(key) for key in sheet_columns))
+	results = database.query(conn, built_query, ident)
 	old_row = results.fetchone()
 	if old_row is None:
 		return 'Row {} not found'.format(ident), 404
 	assert old_row.id == ident
-	
 
 	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
 		return 'Video already published', 403
-	
+
+	# check whether row has been changed in the sheet since editing has begun
+	changes = ''
+	for column in sheet_columns:
+		if new_row[column] != old_row[column]:
+			changes += '{}: Old {} New {}\n'.format(column, old_row[column], new_row[column])
+	if changes and not override_changes:
+		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
+
 	# handle state columns
 	if new_row['state'] == 'EDITED':
 		missing = []
