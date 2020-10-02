@@ -43,7 +43,16 @@
 
     // The hostname to use in the Ingress
     ingress_host: "wubloader.example.com",
-    
+
+    // Set to true to let the ingress handle TLS
+    ingress_tls: true,
+
+    // Uncomment and give a secretName for ingress, if required for ingress TLS
+    //ingress_secret_name: "wubloader-tls",
+
+    // Additional metadata labels for Ingress (cert-manager, etc.) - adjust as needed for your setup
+    ingress_labels: {},
+
     // Connection args for the database.
     // If database is defined in this config, host and port should be postgres:5432.
     db_args: {
@@ -201,7 +210,7 @@
       apiVersion: "networking.k8s.io/v1beta1",
       metadata: {
         name: "wubloader",
-        labels: {app: "wubloader"},
+        labels: {app: "wubloader"} + $.config.ingress_labels,
       },
       spec: {
         rules: [
@@ -232,8 +241,15 @@
             },
           },
         ],
+        [if $.config.ingress_tls then 'tls']: [
+            {
+                hosts: [
+                    $.config.ingress_host,
+                ],
+                [if "ingress_secret_name" in $.config then 'secretName']: $.config.ingress_secret_name,
+            },
+        ],
       },
     },
   ],
-
 }
