@@ -190,7 +190,7 @@ def update_row(ident, editor=None):
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	#these have to be set before a video can be set as 'EDITED'
 	non_null_columns = ['upload_location', 'video_start', 'video_end',
-		'video_channel', 'video_quality', 'video_title', 'video_description']
+		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
 
 	#check vital edit columns are in new_row
