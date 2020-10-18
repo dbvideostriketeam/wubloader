@@ -380,8 +380,8 @@ class Cutter(object):
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
 					description=job.video_description,
-					# Add category and sheet_name as tags
-					tags=self.tags + [job.category, job.sheet_name] + job.video_tags,
+					# Merge static and video-specific tags
+					tags=list(set(self.tags + job.video_tags)),
 					data=upload_wrapper(),
 				)
 			except (JobConsistencyError, JobCancelled, UploadError):

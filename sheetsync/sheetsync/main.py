@@ -176,7 +176,7 @@ class SheetSync(object):
 						# because then row_index won't be correct.
 						if row_index == 0:
 							continue
-						row = self.parse_row(row)
+						row = self.parse_row(worksheet, row)
 						self.sync_row(worksheet, row_index, row, events.get(row['id']))
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error
@@ -211,7 +211,7 @@ class SheetSync(object):
 			event_counts.labels(*labels).set(count)
 		return by_id
 
-	def parse_row(self, row):
+	def parse_row(self, worksheet, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
 		row_dict = {'_parse_errors': []}
 		for column, index in self.column_map.items():
@@ -227,6 +227,16 @@ class SheetSync(object):
 					value = None
 					row_dict['_parse_errors'].append("Failed to parse column {}: {}".format(column, e))
 			row_dict[column] = value
+		# As a special case, add some implicit tags to the tags column.
+		# We prepend these to make it slightly more consistent for the editor,
+		# ie. it's always DAY, CATEGORY, POSTER_MOMENT, CUSTOM
+		row_dict['tags'] = (
+			[
+				row_dict['category'], # category name
+				worksheet, # sheet name
+			] + (['Poster Moment'] if row_dict['poster_moment'] else [])
+			+ row_dict['tags']
+		)
 		return row_dict
 
 	def sync_row(self, worksheet, row_index, row, event):
@@ -236,7 +246,9 @@ class SheetSync(object):
 		if event is None:
 			# No event currently in DB, if any field is non-empty, then create it.
 			# Otherwise ignore it.
-			if not any(row[col] for col in self.input_columns):
+			# Ignore the tags column for this check since it is never non-empty due to implicit tags
+			# (and even if there's other tags, we don't care if there's nothing else in the row).
+			if not any(row[col] for col in self.input_columns if col != 'tags'):
 				return
 
 			# Only generate row when needed (unless it's already there)
