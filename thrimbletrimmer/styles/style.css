@@ -50,6 +50,9 @@ body.ultrawide .my-player-dimensions { width:100% !important; }
 #VideoDescription {
     width:98%;
 }
+#VideoTags {
+	width:80%;
+}
 
 *:focus {
     outline:none;

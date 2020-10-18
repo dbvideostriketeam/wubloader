@@ -28,6 +28,8 @@ pageSetup = function(isEditor) {
             // title and description both default to row description
             document.getElementById("VideoTitle").value = data.video_title ? data.video_title : data.description;
             document.getElementById("VideoDescription").value = data.video_description ? data.video_description : data.description;
+			// tags default to tags from sheet
+			document.getElementById("VideoTags").value = tags_list_to_string(data.video_tags ? data.video_tags : data.tags);
 
             // If any edit notes, show them
             if (data.notes.length > 0) {
@@ -242,6 +244,7 @@ thrimbletrimmerSubmit = function(state) {
         video_end:end,
         video_title:document.getElementById("VideoTitle").value,
         video_description:document.getElementById("VideoDescription").value,
+		video_tags:tags_string_to_list(document.getElementById("VideoTags").value),
         allow_holes:document.getElementById('AllowHoles').checked,
         upload_location:document.getElementById('uploadLocation').value,
         video_channel:document.getElementById("StreamName").value,
@@ -380,3 +383,20 @@ thrimbletrimmerResetLink = function(force) {
         }
     }));
 };
+
+tags_list_to_string = function(tag_list) {
+	return tag_list.join(", ");
+}
+
+tags_string_to_list = function(tag_string) {
+	return tag_string.split(",").map(tag => tag.trim()).filter(tag => tag.length > 0);
+}
+
+round_trip_tag_string = function() {
+	var element = document.getElementById("VideoTags");
+	element.value = tags_list_to_string(
+		tags_string_to_list(
+			element.value
+		)
+	);
+}

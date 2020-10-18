@@ -92,6 +92,12 @@
                 Description:<br/>
                 <textarea id="VideoDescription" ></textarea>
             </div>
+			<div>
+				Tags (comma-seperated):
+				<input type="text" id="VideoTags" onblur="round_trip_tag_string()" />
+				<br/>
+				Note that tag edits made here apply only to the uploaded video. Playlists are populated based on the tags in the sheet.
+			</div>
             <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit('EDITED')"/>
             <input type="button" id="DraftButton" value="Save Draft" onclick="thrimbletrimmerSubmit('UNEDITED')"/>
             <input type="button" id="DownloadButton" value="Create download link" onclick="thrimbletrimmerDownload(true)"/>
