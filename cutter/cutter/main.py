@@ -62,6 +62,7 @@ CUT_JOB_PARAMS = [
 	"video_end",
 	"video_title",
 	"video_description",
+	"video_tags",
 	"video_channel",
 	"video_quality",
 ]
@@ -380,7 +381,7 @@ class Cutter(object):
 					title=job.video_title,
 					description=job.video_description,
 					# Add category and sheet_name as tags
-					tags=self.tags + [job.category, job.sheet_name],
+					tags=self.tags + [job.category, job.sheet_name] + job.video_tags,
 					data=upload_wrapper(),
 				)
 			except (JobConsistencyError, JobCancelled, UploadError):
