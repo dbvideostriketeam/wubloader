@@ -604,7 +604,7 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 		for manager in managers:
 			manager.stop()
 
-	gevent.signal(signal.SIGTERM, stop) # shut down on sigterm
+	gevent.signal_handler(signal.SIGTERM, stop) # shut down on sigterm
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
