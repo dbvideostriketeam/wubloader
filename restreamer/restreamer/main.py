@@ -332,7 +332,7 @@ def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
 	def stop():
 		logging.info("Shutting down")
 		server.stop()
-	gevent.signal(signal.SIGTERM, stop)
+	gevent.signal_handler(signal.SIGTERM, stop)
 
 	PromLogCountsHandler.install()
 	install_stacksampler()

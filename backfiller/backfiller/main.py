@@ -573,7 +573,7 @@ def main(channels, base_dir='.', qualities='source', metrics_port=8002,
 	def stop():
 		manager.stop()
 
-	gevent.signal(signal.SIGTERM, stop)
+	gevent.signal_handler(signal.SIGTERM, stop)
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()

@@ -602,7 +602,7 @@ def main(
 	tags = tags.split(',') if tags else []
 
 	stop = gevent.event.Event()
-	gevent.signal(signal.SIGTERM, stop.set) # shut down on sigterm
+	gevent.signal_handler(signal.SIGTERM, stop.set) # shut down on sigterm
 
 	logging.info("Starting up")
 

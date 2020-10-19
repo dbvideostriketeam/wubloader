@@ -372,7 +372,7 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
 	stop = gevent.event.Event()
-	gevent.signal(signal.SIGTERM, stop.set) # shut down on sigterm
+	gevent.signal_handler(signal.SIGTERM, stop.set) # shut down on sigterm
 
 	logging.info("Starting up")
 

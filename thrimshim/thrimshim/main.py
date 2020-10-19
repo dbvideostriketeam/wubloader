@@ -354,7 +354,7 @@ def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port
 		# and when not
 		else:
 			sys.exit()
-	gevent.signal(signal.SIGTERM, stop)
+	gevent.signal_handler(signal.SIGTERM, stop)
 
 	app.db_manager = database.DBManager(dsn=connection_string)
 
