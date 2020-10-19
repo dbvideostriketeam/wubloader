@@ -43,6 +43,12 @@ latest_segment = prom.Gauge(
 	["channel", "quality"],
 )
 
+ad_segments_ignored = prom.Counter(
+	"ad_segments_ignored",
+	"Number of ad segments we saw and avoided downloading",
+	["channel", "quality"],
+)
+
 
 class TimedOutError(Exception):
 	pass
@@ -358,7 +364,8 @@ class StreamWorker(object):
 			date = None # tracks date in case some segment doesn't include it
 			for segment in playlist.segments:
 				if segment.ad_reason:
-					self.logger.debug("Ignoring ad segment: {}".format(segment.ad_reason))
+					self.logger.info("Ignoring ad segment: {}".format(segment.ad_reason))
+					ad_segments_ignored.labels(self.manager.channel, self.quality).inc()
 					continue
 
 				# We've got our first non-ad segment, so we're good to take it from here.
