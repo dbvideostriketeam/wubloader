@@ -62,7 +62,7 @@ IFrameStreamInfo = namedtuple("IFrameStreamInfo", "bandwidth program_id "
 Playlist = namedtuple("Playlist", "uri stream_info media is_iframe")
 Resolution = namedtuple("Resolution", "width height")
 Segment = namedtuple("Segment", "uri duration title key discontinuity "
-                                "byterange date map scte35")
+                                "byterange date map ad_reason")
 
 
 class M3U8(object):
@@ -180,16 +180,23 @@ class M3U8Parser(object):
         if not line.startswith("#"):
             if self.state.pop("expect_segment", None):
                 byterange = self.state.pop("byterange", None)
-                extinf = self.state.pop("extinf", (0, None))
+                duration, title = self.state.pop("extinf", (0, None))
                 date = self.state.pop("date", None)
                 map_ = self.state.get("map")
                 key = self.state.get("key")
                 scte35 = self.state.get("scte35")
 
-                segment = Segment(self.uri(line), extinf[0],
-                                  extinf[1], key,
+                if scte35:
+                    ad_reason = "Contains scte35 data: {}".format(scte35)
+                elif title and title.startswith("Amazon"):
+                    ad_reason = "Title begins with 'Amazon': {}".format(title)
+                else:
+                    ad_reason = None # not an ad
+
+                segment = Segment(self.uri(line), duration,
+                                  title, key,
                                   self.state.pop("discontinuity", False),
-                                  byterange, date, map_, scte35)
+                                  byterange, date, map_, ad_reason)
                 self.m3u8.segments.append(segment)
             elif self.state.pop("expect_playlist", None):
                 streaminf = self.state.pop("streaminf", {})
