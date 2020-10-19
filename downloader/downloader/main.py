@@ -357,8 +357,8 @@ class StreamWorker(object):
 			# Start any new segment getters
 			date = None # tracks date in case some segment doesn't include it
 			for segment in playlist.segments:
-				if segment.scte35:
-					self.logger.debug("Ignoring ad segment for {}".format(segment.scte35))
+				if segment.ad_reason:
+					self.logger.debug("Ignoring ad segment: {}".format(segment.ad_reason))
 					continue
 
 				# We've got our first non-ad segment, so we're good to take it from here.
