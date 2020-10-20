@@ -23,6 +23,7 @@
     sheetsync: false,
     thrimshim: true,
     segment_coverage: true,
+    playlist_manager: false,
     nginx: true,
     postgres: false,
   },
@@ -56,6 +57,7 @@
     thrimshim: 8004,
     sheetsync: 8005,
     segment_coverage: 8006,
+    playlist_manager: 8007,
     nginx: 80,
     nginx_ssl: 443,
     postgres: 5432,
@@ -135,6 +137,15 @@
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 7)],
 
+  // A map from youtube playlist IDs to a list of tags.
+  // Playlist manager will populate each playlist with all videos which have all those tags.
+  // For example, tags ["Day 1", "Technical"] will populate the playlist with all Technical
+  // youtube videos from Day 1.
+  // Note that you can make an "all videos" playlist by specifying no tags (ie. []).
+  playlists:: {
+    "YOUR-PLAYLIST-ID": ["some tag"],
+  },
+
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
   env:: {
@@ -154,6 +165,12 @@
 
   // Cleaned up version of $.channels without importance markers
   clean_channels:: [std.split(c, '!')[0] for c in $.channels],
+
+  // Which upload locations have type youtube, needed for playlist manager
+  youtube_upload_locations:: [
+    location for location in $.cutter_config
+    if $.cutter_config[location].type == "youtube"
+  ],
 
   // docker-compose version
   version: "3",
@@ -308,6 +325,30 @@
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
       [if "segment_coverage" in $.ports then "ports"]: ["%s:8006" % $.ports.segment_coverage],
+      environment: $.env,
+    },
+
+    [if $.enabled.playlist_manager then "playlist_manager"]: {
+      image: "quay.io/ekimekim/wubloader-playlist_manager:%s" % $.image_tag,
+      // Args for the playlist_manager
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+        "--upload-location-allowlist", std.join(",", $.youtube_upload_locations),
+        $.db_connect,
+        "/etc/wubloader-creds.json",
+      ] + [
+        "%s=%s" % [playlist, ",".join($.playlists[playlist])]
+        for playlist in std.objectFields($.playlists)
+      ],
+      volumes: [
+        // Mount the creds file into /etc
+        "%s:/etc/wubloader-creds.json" % $.cutter_creds_file,
+      ],
+      // If the application crashes, restart it.
+      restart: "on-failure",
+      // Expose on the configured host port by mapping that port to the default
+      // port for playlist_manager, which is 8007.
+      [if "playlist_manager" in $.ports then "ports"]: ["%s:8007" % $.ports.playlist_manager],
       environment: $.env,
     },
 
