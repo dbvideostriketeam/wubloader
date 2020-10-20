@@ -16,6 +16,7 @@ but a brief overview of the components:
 * `thrimshim` acts as an interface between the `thrimbletrimmer` editor and the database.
 * `thrimbletrimmer` is a browser based video editor.
 * `segment_coverage` regularly checks whether there is complete segment coverage for each hour. 
+* `playlist_manager` adds videos to youtube playlists depending on tags.
 * `database` hosts a Postgres database to store events to be edited.
 * `nginx` provides a webserver through which the other components are exposed to the outside world.
 * `common` provides code shared between the other components.

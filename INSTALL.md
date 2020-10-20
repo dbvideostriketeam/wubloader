@@ -47,7 +47,7 @@ To generate the `docker-compose.yml` file used by `docker-compose`, run `generat
   
 After making any changes to `docker-compose.jsonnet`, you will need to rerun `generate-docker-compose`.
 
-By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim`, `segment_coverage` and `nginx` services of the wubloader will be run. To change which services are run edit the `enabled` object in `docker-compose.jsonnet`. A complete wubloader set up also requires one and only one `database` service (though having a backup database is a good idea) and one and only one `sheetsync` service.
+By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim`, `segment_coverage` and `nginx` services of the wubloader will be run. To change which services are run edit the `enabled` object in `docker-compose.jsonnet`. A complete wubloader set up also requires one and only one `database` service (though having a backup database is a good idea), one and only one `sheetsync` service and one and only one `playlist_manager` service.
 
 If you are running a `cutter` you will have to place the appropriate Google credentials in a JSON file given by the `cutter_creds_file`. Likewise, if you are running the `sheetsync` service, you will have to place the appropriate credentials in the JSON file pointed to by `sheetsync_creds_file` as well as set the appropriate `sheet_id` and `worksheets` for the Google sheet to sync with. You will also need to set the appropriate `edit_url` to access `thrimbletrimmer`.  
 
