@@ -192,7 +192,8 @@ def update_row(ident, editor=None, override_changes=False):
 	non_null_columns = ['upload_location', 'video_start', 'video_end',
 		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
-	sheet_columns = ['event_start', 'event_end', 'category', 'description', 'notes']
+	sheet_columns = ['sheet_name', 'event_start', 'event_end', 'category',
+					 'description', 'notes']
 
 	#check vital edit columns are in new_row
 	wanted = set(non_null_columns + ['state'] + sheet_columns)
@@ -200,7 +201,7 @@ def update_row(ident, editor=None, override_changes=False):
 	if missing:
 		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
 	#get rid of irrelevant columns
-	extras = set(new_row) - set(edit_columns + state_columns)
+	extras = set(new_row) - set(edit_columns + state_columns + sheet_columns)
 	for extra in extras:
 		del new_row[extra]
 
@@ -223,21 +224,23 @@ def update_row(ident, editor=None, override_changes=False):
 		SELECT id, state, {} 
 		FROM events
 		WHERE id = %s""").format(sql.SQL(', ').join(
-			sql.Indentifier(key) for key in sheet_columns))
+			sql.Identifier(key) for key in sheet_columns))
 	results = database.query(conn, built_query, ident)
-	old_row = results.fetchone()
+	old_row = results.fetchone()._asdict()
 	if old_row is None:
 		return 'Row {} not found'.format(ident), 404
-	assert old_row.id == ident
+	assert old_row['id'] == ident
 
-	if old_row.state not in ['UNEDITED', 'EDITED', 'CLAIMED']:
+	if old_row['state'] not in ['UNEDITED', 'EDITED', 'CLAIMED']:
 		return 'Video already published', 403
 
 	# check whether row has been changed in the sheet since editing has begun
 	changes = ''
 	for column in sheet_columns:
+		if isinstance(old_row[column], datetime.datetime):
+			old_row[column] = old_row[column].isoformat()
 		if new_row[column] != old_row[column]:
-			changes += '{}: Old {} New {}\n'.format(column, old_row[column], new_row[column])
+			changes += '{}:: Database: {} Thrimbletrimmer: {}\n'.format(column, old_row[column], new_row[column])
 	if changes and not override_changes:
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
