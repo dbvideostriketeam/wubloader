@@ -8,7 +8,7 @@ setup(
 		"argh",
 		"gevent",
 		"psycogreen",
-		"psycopg2",
+		"psycopg2-binary",
 		"python-dateutil",
 		"requests",
 		"wubloader-common",

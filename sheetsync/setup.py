@@ -9,7 +9,7 @@ setup(
 		"gevent",
 		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"psycogreen",
-		"psycopg2",
+		"psycopg2-binary",
 		"python-dateutil",
 		"requests",
 		"wubloader-common",

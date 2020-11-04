@@ -9,7 +9,7 @@ setup(
 		"gevent",
 		"prometheus-client",
 		"psycogreen",
-		"psycopg2",
+		"psycopg2-binary",
 		"requests",
 		"wubloader-common",
 	],
