@@ -18,7 +18,7 @@
     image_tag: "latest",
 
     // For each component, whether to deploy that component.
-    enabled:: {
+    enabled: {
       downloader: true,
       restreamer: true,
       backfiller: true,
