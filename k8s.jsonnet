@@ -74,6 +74,20 @@
       // Uncomment this to disable stacksampling performance monitoring
       // WUBLOADER_DISABLE_STACKSAMPLER: "true",
     },
+    
+    // Config for cutter upload locations. See cutter docs for full detail.
+    cutter_config:: {
+      desertbus: {type: "youtube"},
+      unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
+    },
+    default_location:: "desertbus",
+    
+    // The header to put at the front of video titles, eg. a video with a title
+    // of "hello world" with title header "foo" becomes: "foo - hello world".
+    title_header:: "DB2019",
+    
+    // The footer to put at the bottom of descriptions, in its own paragraph
+    description_footer:: "Uploaded by the Desert Bus Video Strike Team",
 
   },
 
@@ -191,6 +205,19 @@
       "--qualities", std.join(",", $.config.qualities),
       "--metrics-port", "80",
     ]),
+    // Thrimshim acts as an interface between the thrimbletrimmer editor and the database
+    // It is needed for thrimbletrimmer to be able to get unedited videos and submit edits
+    $.deployment("thrimshim", args=[
+      "--backdoor-port", std.toString($.config.backdoor_port),
+      "--title-header", $.config.title_header,
+      "--description-footer", $.config.description_footer,
+      "--upload-locations", std.join(",", [$.config.default_location] + 
+      [location for location in std.objectFields($.config.cutter_config)
+      if location != $.config.default_location]),
+      $.db_connect,
+      $.clean_channels[0],  // use first element as default channel
+      $.bustime_start,
+      ]
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
     // static content - segments as well as thrimbletrimmer.
@@ -204,6 +231,7 @@
     $.service("nginx"),
     $.service("restreamer"),
     $.service("segment-coverage"),
+    $.service("thrimshim"),
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
@@ -232,9 +260,12 @@
                 metric_rule("downloader"),
                 metric_rule("backfiller"),
                 metric_rule("segment-coverage"),
+                metric_rule("thrimshim"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
                 rule("nginx", "/thrimbletrimmer", "Prefix"),
+                // Map /thrimshim to the thrimshim service
+                rule("thrimshim", "/thrimshim", "Prefix"),
                 // Map everything else to restreamer
                 rule("restreamer", "/", "Prefix"),
               ],
