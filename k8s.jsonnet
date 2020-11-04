@@ -226,6 +226,7 @@
     // Thrimshim acts as an interface between the thrimbletrimmer editor and the database
     // It is needed for thrimbletrimmer to be able to get unedited videos and submit edits
     if $.config.enabled.thrimshim then $.deployment("thrimshim", args=[
+      "--port", "80",
       "--backdoor-port", std.toString($.config.backdoor_port),
       "--title-header", $.config.title_header,
       "--description-footer", $.config.description_footer,
