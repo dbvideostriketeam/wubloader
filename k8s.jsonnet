@@ -1,8 +1,9 @@
 // This is a jsonnet file, it generates kubernetes manifests.
 // To generate and apply, run "jsonnet k8s.jsonnet | kubectl apply -f -"
 
-// Note this file is only set up to generate manifests for a basic replication node,
-// for the sake of simplicity.
+// Note that this file is currently not as advanced as its docker-compose variant
+// This file can only be used for replication nodes and editing nodes
+// see config.enabled for more info on what components can be used
 
 {
   kind: "List",
@@ -15,6 +16,20 @@
     // Note: "latest" is not recommended in production, as you can't be sure what version
     // you're actually running, and must manually re-pull to get an updated copy.
     image_tag: "latest",
+
+    // For each component, whether to deploy that component.
+    enabled:: {
+      downloader: true,
+      restreamer: true,
+      backfiller: true,
+      cutter: false,            // TODO, docker-compose only for now
+      sheetsync: false,         // TODO, docker-compose only for now
+      thrimshim: true,
+      segment_coverage: true,
+      playlist_manager: false,  // TODO, docker-compose only for now
+      nginx: true,
+      postgres: false,          // TODO, docker-compose only for now
+    },
 
     // Twitch channels to capture.
     // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
@@ -172,7 +187,7 @@
   // (they may duplicate work, but not cause errors by stepping on each others' toes).
   items: [
     // The downloader watches the twitch stream and writes the HLS segments to disk
-    $.deployment("downloader", args=$.config.channels + [
+    if $.config.enabled["downloader"] then $.deployment("downloader", args=$.config.channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
       "--backdoor-port", std.toString($.config.backdoor_port),
@@ -180,7 +195,7 @@
     ]),
     // The restreamer is a http server that fields requests for checking what segments exist
     // and allows HLS streaming of segments from any requested timestamp
-    $.deployment("restreamer", args=[
+    if $.config.enabled["restreamer"] then $.deployment("restreamer", args=[
       "--base-dir", "/mnt",
       "--backdoor-port", std.toString($.config.backdoor_port),
       "--port", "80",
@@ -188,7 +203,7 @@
     // The backfiller periodically compares what segments exist locally to what exists on
     // other nodes. If it finds ones it doesn't have, it downloads them.
     // It can talk to the database to discover other wubloader nodes, or be given a static list.
-    $.deployment("backfiller", args=$.clean_channels + [
+    if $.config.enabled["backfiller"] then $.deployment("backfiller", args=$.clean_channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
       "--static-nodes", std.join(",", $.config.peers),
@@ -200,14 +215,14 @@
     // Segment coverage is a monitoring helper that periodically scans available segments
     // and reports stats. It also creates a "coverage map" image to represent this info.
     // It puts this in the segment directory where nginx will serve it.
-    $.deployment("segment-coverage", args=$.clean_channels + [
+    if $.config.enabled["segment_coverage"] then $.deployment("segment-coverage", args=$.clean_channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
       "--metrics-port", "80",
     ]),
     // Thrimshim acts as an interface between the thrimbletrimmer editor and the database
     // It is needed for thrimbletrimmer to be able to get unedited videos and submit edits
-    $.deployment("thrimshim", args=[
+    if $.config.enabled["thrimshim"] then $.deployment("thrimshim", args=[
       "--backdoor-port", std.toString($.config.backdoor_port),
       "--title-header", $.config.title_header,
       "--description-footer", $.config.description_footer,
@@ -222,17 +237,17 @@
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
     // static content - segments as well as thrimbletrimmer.
-    $.deployment("nginx", env=[
+    if $.config.enabled["nginx"] then $.deployment("nginx", env=[
       {name: "THRIMBLETRIMMER", value: "true"},
       {name: "SEGMENTS", value: "/mnt"},
     ]),
     // Services for all deployments
-    $.service("downloader"),
-    $.service("backfiller"),
-    $.service("nginx"),
-    $.service("restreamer"),
-    $.service("segment-coverage"),
-    $.service("thrimshim"),
+    if $.config.enabled["downloader"] then $.service("downloader"),
+    if $.config.enabled["backfiller"] then $.service("backfiller"),
+    if $.config.enabled["nginx"] then $.service("nginx"),
+    if $.config.enabled["restreamer"] then $.service("restreamer"),
+    if $.config.enabled["segment_coverage"] then $.service("segment-coverage"),
+    if $.config.enabled["thrimshim"] then $.service("thrimshim"),
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
