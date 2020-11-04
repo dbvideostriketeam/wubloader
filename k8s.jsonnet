@@ -216,8 +216,9 @@
       if location != $.config.default_location]),
       $.db_connect,
       $.clean_channels[0],  // use first element as default channel
-      $.bustime_start,
+      $.config.bustime_start,
       ]
+    ),
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
     // static content - segments as well as thrimbletrimmer.
