@@ -221,6 +221,7 @@ class StreamsManager(object):
 				if quality not in new_urls:
 					self.logger.warning("Stream {} could not be found in latest master playlist, re-queueing refresh".format(quality))
 					self.trigger_refresh()
+					continue
 				# is it newly found?
 				if not workers and quality in self.latest_urls:
 					self.logger.info("Starting new worker for {} as none exist".format(quality))
