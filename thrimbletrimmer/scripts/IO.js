@@ -11,6 +11,7 @@ pageSetup = function(isEditor) {
                 alert("No video available for stream.");
                 return;
             }
+			document.data = data
             desertBusStart = new Date(data.bustime_start);
             document.getElementById("VideoTitlePrefix").value = data.title_prefix;
             document.getElementById("VideoTitle").setAttribute("maxlength", data.title_max_length);
@@ -230,7 +231,7 @@ loadPlaylist = function(isEditor, startTrim, endTrim, defaultQuality) {
     });
 };
 
-thrimbletrimmerSubmit = function(state) {
+thrimbletrimmerSubmit = function(state, override_changes=false) {
     document.getElementById('SubmitButton').disabled = true;
     var discontinuities = mapDiscontinuities();
 
@@ -250,11 +251,22 @@ thrimbletrimmerSubmit = function(state) {
         video_channel:document.getElementById("StreamName").value,
         video_quality:document.getElementById('qualityLevel').options[document.getElementById('qualityLevel').options.selectedIndex].value,
         uploader_whitelist:(document.getElementById('uploaderWhitelist').value ? document.getElementById('uploaderWhitelist').value.split(','):null),
-        state:state,
+		state:state,
+		//pass back the sheet columns to check if any have changed
+		sheet_name:document.data.sheet_name,
+		event_start:document.data.event_start,
+		event_end:document.data.event_end,
+		category:document.data.category,
+		description:document.data.description,
+		notes:document.data.notes,
+
     };
     if (!!user) {
         wubData.token = user.getAuthResponse().id_token
     }
+	if (override_changes) {
+		wubData["override_changes"] = true;
+	}
     console.log(wubData);
     console.log(JSON.stringify(wubData));
 
@@ -262,8 +274,9 @@ thrimbletrimmerSubmit = function(state) {
 	if (!wubData.video_end) {alert("No end time set"); return;}
 
     //Submit to thrimshim
-    var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    fetch("/thrimshim/"+rowId, {
+	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+	path = "/thrimshim/" + rowId + "?override_changes=" + override_changes; 
+    fetch(path, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
@@ -275,7 +288,14 @@ thrimbletrimmerSubmit = function(state) {
         if (!response.ok) {
             var error = response.statusText + ": " + text;
             console.log(error);
-            alert(error);
+			if (response.status == 409) {
+				if (confirm(text)) {
+					thrimbletrimmerSubmit(state, true);
+					
+			  } else { 
+            		alert(error);
+			    }
+			}
         } else if (state == 'EDITED') {
             // Only return to dashboard if submitted, not for save draft
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);

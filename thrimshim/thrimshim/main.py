@@ -182,8 +182,9 @@ def get_row(ident):
 @app.route('/thrimshim/<uuid:ident>', methods=['POST'])
 @request_stats
 @authenticate
-def update_row(ident, editor=None, override_changes=False):
+def update_row(ident, editor=None):
 	new_row = flask.request.json
+        override_changes = 'override_changes' in new_row
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
 
@@ -240,7 +241,7 @@ def update_row(ident, editor=None, override_changes=False):
 		if isinstance(old_row[column], datetime.datetime):
 			old_row[column] = old_row[column].isoformat()
 		if new_row[column] != old_row[column]:
-			changes += '{}:: Database: {} Thrimbletrimmer: {}\n'.format(column, old_row[column], new_row[column])
+			changes += '{}: Database: {} Thrimbletrimmer: {}\n'.format(column, old_row[column], new_row[column])
 	if changes and not override_changes:
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
@@ -272,7 +273,7 @@ def update_row(ident, editor=None, override_changes=False):
 		).format(sql.SQL(", ").join(
 			sql.SQL("{} = {}").format(
 				sql.Identifier(column), sql.Placeholder(column),
-			) for column in new_row.keys()
+			) for column in new_row.keys() if column not in sheet_columns
 	))
 	result = database.query(conn, build_query, id=ident, **new_row)
 	if result.rowcount != 1:
