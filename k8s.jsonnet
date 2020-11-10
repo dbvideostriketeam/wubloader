@@ -289,10 +289,11 @@
               },
               local metric_rule(name) = rule(name, "/metrics/%s" % name, "Exact"),
               paths: [
-                // Map /metrics/NAME to each service (except restreamer)
+                // Map /metrics/NAME to each service
                 metric_rule("downloader"),
                 metric_rule("backfiller"),
-                metric_rule("segment-coverage"),
+                metric_rule("restreamer"),
+                metric_rule("segment_coverage"),
                 metric_rule("thrimshim"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
