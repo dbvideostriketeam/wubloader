@@ -133,6 +133,10 @@
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
 
+  // Max hours ago to backfill, ie. do not backfill for times before this many hours ago.
+  // Set to null to disable.
+  backfill_max_hours_ago:: 24 * 30 * 6, // approx 6 months
+
   // The spreadsheet id and worksheet names for sheet sync to act on
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 7)],
@@ -223,7 +227,9 @@
         "--backdoor-port", std.toString($.backdoor_port),
         "--node-database", $.db_connect,
         "--localhost", $.localhost,
-      ],
+      ] + (if $.backfill_max_hours_ago == null then [] else [
+        "--start", std.toString($.backfill_max_hours_ago),
+      ]),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
