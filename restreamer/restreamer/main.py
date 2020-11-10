@@ -86,6 +86,13 @@ def metrics():
 	"""Return current metrics in prometheus metrics format"""
 	return prom.generate_latest()
 
+# To make nginx proxying simpler, we want to allow /metrics/* to work
+@app.route('/metrics/<trailing>')
+@request_stats
+def metrics_with_trailing(trailing):
+       """Expose Prometheus metrics."""
+       return prometheus_client.generate_latest()
+
 @app.route('/files')
 @request_stats
 def list_channels():
