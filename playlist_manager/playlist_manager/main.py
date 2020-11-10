@@ -82,7 +82,7 @@ class PlaylistManager(object):
 		# Filter the video list for videos with matching tags
 		matching = [
 			video for video in videos.values()
-			if all(tag in video.tags for tag in tags)
+			if all(tag in [t.lower() for t in video.tags] for tag in tags)
 		]
 		logging.debug("Found {} matching videos for playlist {}".format(len(matching), playlist))
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
@@ -244,7 +244,7 @@ class ListQuery(object):
 
 def parse_playlist_arg(arg):
 	playlist, tags = arg.split('=', 1)
-	tags = tags.split(",") if tags else []
+	tags = tags.split(",").lower() if tags else []
 	return playlist, tags
 
 
