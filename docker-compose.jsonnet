@@ -133,6 +133,11 @@
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
 
+  // The timestamps to start/end segment coverage maps at.
+  // Generally 1 day before and 7 days after bus start.
+  coverage_start:: "1969-12-31T00:00:00Z",
+  coverage_end:: "1970-01-07T00:00:00Z",
+
   // Max hours ago to backfill, ie. do not backfill for times before this many hours ago.
   // Set to null to disable.
   backfill_max_hours_ago:: 24 * 30 * 6, // approx 6 months
@@ -323,6 +328,8 @@
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
+        "--first-hour", $.coverage_start,
+        "--last-hour", $.coverage_end,
       ],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
