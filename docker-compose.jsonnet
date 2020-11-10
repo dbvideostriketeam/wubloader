@@ -151,8 +151,8 @@
   env:: {
     // Uncomment this to set log level to debug
     // WUBLOADER_LOG_LEVEL: "DEBUG",
-    // Uncomment this to disable stacksampling performance monitoring
-    // WUBLOADER_DISABLE_STACKSAMPLER: "true",
+    // Uncomment this to enable stacksampling performance monitoring
+    // WUBLOADER_ENABLE_STACKSAMPLER: "true",
   },
 
   // Now for the actual docker-compose config
