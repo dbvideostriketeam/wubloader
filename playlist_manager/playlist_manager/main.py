@@ -5,6 +5,7 @@ import signal
 
 import argh
 import gevent
+import gevent.backdoor
 import gevent.event
 import prometheus_client as prom
 
@@ -71,9 +72,9 @@ class PlaylistManager(object):
 		# the next time.
 		conn = self.dbmanager.get_conn()
 		videos = query(conn, """
-			SELECT video_id, tags, start_time
+			SELECT video_id, tags, COALESCE(video_start, event_start) AS start_time
 			FROM events
-			WHERE state = 'DONE' AND upload_location IN %s
+			WHERE state = 'DONE' AND upload_location = ANY (%s)
 		""", self.upload_locations)
 		self.dbmanager.put_conn(conn)
 		return {video.video_id: video for video in videos}
