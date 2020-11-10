@@ -177,7 +177,7 @@
 
   // Which upload locations have type youtube, needed for playlist manager
   youtube_upload_locations:: [
-    location for location in $.cutter_config
+    location for location in std.objectFields($.cutter_config)
     if $.cutter_config[location].type == "youtube"
   ],
 
@@ -350,7 +350,7 @@
         $.db_connect,
         "/etc/wubloader-creds.json",
       ] + [
-        "%s=%s" % [playlist, ",".join($.playlists[playlist])]
+        "%s=%s" % [playlist, std.join(",", $.playlists[playlist])]
         for playlist in std.objectFields($.playlists)
       ],
       volumes: [
