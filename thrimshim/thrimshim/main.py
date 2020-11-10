@@ -184,7 +184,7 @@ def get_row(ident):
 @authenticate
 def update_row(ident, editor=None):
 	new_row = flask.request.json
-        override_changes = 'override_changes' in new_row
+	override_changes = new_row.get('override_changes', False)
 	"""Updates row of database with id = ident with the edit columns in
 	new_row."""
 
@@ -193,8 +193,9 @@ def update_row(ident, editor=None):
 	non_null_columns = ['upload_location', 'video_start', 'video_end',
 		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
-	sheet_columns = ['sheet_name', 'event_start', 'event_end', 'category',
-					 'description', 'notes']
+	sheet_columns = [
+		'sheet_name', 'event_start', 'event_end', 'category', 'description', 'notes'
+		]
 
 	#check vital edit columns are in new_row
 	wanted = set(non_null_columns + ['state'] + sheet_columns)
@@ -224,8 +225,10 @@ def update_row(ident, editor=None):
 	built_query = sql.SQL("""
 		SELECT id, state, {} 
 		FROM events
-		WHERE id = %s""").format(sql.SQL(', ').join(
-			sql.Identifier(key) for key in sheet_columns))
+		WHERE id = %s
+	""").format(sql.SQL(', ').join(
+		sql.Identifier(key) for key in sheet_columns
+	))
 	results = database.query(conn, built_query, ident)
 	old_row = results.fetchone()._asdict()
 	if old_row is None:
