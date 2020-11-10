@@ -283,7 +283,7 @@
                 path: path,
                 pathType: type,
                 backend: {
-                  serviceName: "wubloader-%s" % std.strReplace(name, "-", "_"),
+                  serviceName: "wubloader-%s" % std.strReplace(name, "_", "-"),
                   servicePort: 80,
                 },
               },
