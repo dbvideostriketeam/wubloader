@@ -81,6 +81,10 @@
     // The timestamp corresponding to 00:00 in bustime
     bustime_start: "1970-01-01T00:00:00Z",
 
+    // Max hours ago to backfill, ie. do not backfill for times before this many hours ago.
+    // Set to null to disable.
+    backfill_max_hours_ago: 24 * 30 * 6, // approx 6 months
+
     // Extra options to pass via environment variables,
     // eg. log level, disabling stack sampling.
     env: {
@@ -214,7 +218,9 @@
       "--node-database", $.db_connect,
       "--localhost", $.config.localhost,
       "--metrics-port", "80",
-    ]),
+    ] + (if $.config.backfill_max_hours_ago == null then [] else [
+      "--start", std.toString($.config.backfill_max_hours_ago),
+    ])),
     // Segment coverage is a monitoring helper that periodically scans available segments
     // and reports stats. It also creates a "coverage map" image to represent this info.
     // It puts this in the segment directory where nginx will serve it.
