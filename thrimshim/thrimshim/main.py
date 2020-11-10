@@ -194,7 +194,7 @@ def update_row(ident, editor=None):
 		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
 	sheet_columns = [
-		'sheet_name', 'event_start', 'event_end', 'category', 'description', 'notes'
+		'sheet_name', 'event_start', 'event_end', 'category', 'description', 'notes', 'tags'
 		]
 
 	#check vital edit columns are in new_row
