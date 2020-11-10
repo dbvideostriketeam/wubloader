@@ -275,8 +275,7 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
 
     //Submit to thrimshim
 	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-	path = "/thrimshim/" + rowId + "?override_changes=" + override_changes; 
-    fetch(path, {
+    fetch("/thrimshim/" + rowId, {
         method: 'POST',
         headers: {
             'Accept': 'application/json',
