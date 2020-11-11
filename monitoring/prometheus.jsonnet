@@ -7,15 +7,18 @@ local hosts_by_scheme = {
   https: {
   },
 };
-local services = [
-  "restreamer",
-  "downloader",
-  "backfiller",
-  "cutter",
-  "thrimshim",
-  "sheetsync",
-  "segment_coverage",
-];
+local services_by_role = {
+  replica: [
+    "restreamer",
+    "downloader",
+    "backfiller",
+    "segment_coverage",
+  ],
+  local_edit: self.replica + ["thrimshim"],
+  edit: self.local_edit + ["cutter"],
+  leader: self.edit + ["sheetsync", "playlist_manager"],
+};
+local services = services_by_role.leader;
 
 {
   global: {
@@ -49,6 +52,7 @@ local services = [
               service: service,
             },
           } for host in std.objectFields(hosts)
+          if std.count(services_by_role[hosts[host][1]], service) > 0
         ],
       }
       for service in services
