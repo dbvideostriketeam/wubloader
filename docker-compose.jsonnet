@@ -375,6 +375,7 @@
         thrimshim: 8004,
         sheetsync: 8005,
         segment_coverage: 8006,
+        playlist_manager: 8007,
       },
       image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
       restart: "on-failure",
