@@ -91,7 +91,7 @@ def metrics():
 @request_stats
 def metrics_with_trailing(trailing):
        """Expose Prometheus metrics."""
-       return prometheus_client.generate_latest()
+       return prom.generate_latest()
 
 @app.route('/files')
 @request_stats
