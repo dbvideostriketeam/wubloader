@@ -45,6 +45,20 @@ class SegmentInfo(
 		return self.type != "full"
 
 
+def parse_segment_timestamp(hour_str, min_str):
+	"""This is faster than strptime, which dominates our segment processing time.
+	It takes strictly formatted hour = "%Y-%m-%dT%H" and time = "%M:%S.%f"."""
+	year = int(hour_str[0:4])
+	month = int(hour_str[5:7])
+	day = int(hour_str[8:10])
+	hour = int(hour_str[11:13])
+	min = int(min_str[0:2])
+	sec_float = float(min_str[3:])
+	sec = int(sec_float)
+	microsec = int(1000000 * (sec_float % 1))
+	return datetime.datetime(year, month, day, hour, min, sec, microsec)
+
+
 def parse_segment_path(path):
 	"""Parse segment path, returning a SegmentInfo. If path is only the trailing part,
 	eg. just a filename, it will leave unknown fields as None."""
@@ -65,7 +79,7 @@ def parse_segment_path(path):
 		if type not in ('full', 'suspect', 'partial', 'temp'):
 			raise ValueError("Unknown type {!r}".format(type))
 		hash = None if type == 'temp' else unpadded_b64_decode(hash)
-		start = None if hour is None else datetime.datetime.strptime("{}:{}".format(hour, time), "%Y-%m-%dT%H:%M:%S.%f")
+		start = None if hour is None else parse_segment_timestamp(hour, time)
 		return SegmentInfo(
 			path = path,
 			channel = channel,
