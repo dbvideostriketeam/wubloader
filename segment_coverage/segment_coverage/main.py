@@ -261,6 +261,11 @@ class CoverageChecker(object):
 				all_hour_holes = {}
 				all_hour_partials = {}
 				for hour in hours:
+					# Let other things run, to avoid starving them with CPU-heavy workload
+					# (in particular the metrics server can have issues responding in time
+					# otherwise).
+					gevent.idle()
+
 					if self.stopping.is_set():
 						break
 					self.logger.info('Checking {}/{}'.format(quality, hour))
