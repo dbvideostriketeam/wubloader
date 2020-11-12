@@ -543,7 +543,7 @@ class CoverageChecker(object):
 @argh.arg('--check-interval', help='How many seconds to wait in between doing checks.')
 def main(channels, base_dir='.', qualities='source', first_hour=None,
 		last_hour=None, make_page=False, connection_string=None,
-		metrics_port=8006, backdoor_port=0, check_interval=60):
+		metrics_port=8006, backdoor_port=0, check_interval=300):
 	"""Segment coverage service"""
 
 	qualities = qualities.split(',') if qualities else []
