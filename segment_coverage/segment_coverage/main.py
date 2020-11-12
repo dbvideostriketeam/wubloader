@@ -72,10 +72,8 @@ HOUR_FMT = '%Y-%m-%dT%H'
 class CoverageChecker(object):
 	"""Checks the segment coverage for a given channel in a a given directoy."""
 
-	CHECK_INTERVAL = 60 #seconds between checking coverage
-
 	def __init__(self, channel, qualities, base_dir, first_hour, last_hour,
-			make_page, connection_string):
+			make_page, connection_string, check_interval):
 		"""Constructor for CoverageChecker.
 
 		Creates a checker for a given channel with specified qualities."""
@@ -87,6 +85,7 @@ class CoverageChecker(object):
 		self.last_hour = last_hour
 		self.make_page = make_page
 		self.db_manager = None if connection_string is None else database.DBManager(dsn=connection_string)
+		self.check_interval = check_interval
 		self.stopping = gevent.event.Event()
 		self.logger = logging.getLogger('CoverageChecker({})'.format(channel))
 
@@ -529,7 +528,7 @@ class CoverageChecker(object):
 				if self.make_page:
 					self.create_coverage_page(quality)
 
-			self.stopping.wait(common.jitter(self.CHECK_INTERVAL))
+			self.stopping.wait(common.jitter(self.check_interval))
 
 
 @argh.arg('channels', nargs='*', help='Channels to check coverage of')
@@ -541,9 +540,10 @@ class CoverageChecker(object):
 @argh.arg('--connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--metrics-port', help='Port for Prometheus stats. Default is 8006.')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
+@argh.arg('--check-interval', help='How many seconds to wait in between doing checks.')
 def main(channels, base_dir='.', qualities='source', first_hour=None,
 		last_hour=None, make_page=False, connection_string=None,
-		metrics_port=8006, backdoor_port=0):
+		metrics_port=8006, backdoor_port=0, check_interval=60):
 	"""Segment coverage service"""
 
 	qualities = qualities.split(',') if qualities else []
@@ -562,7 +562,7 @@ def main(channels, base_dir='.', qualities='source', first_hour=None,
 	for channel in channels:
 		logging.info('Starting coverage checks {} with {} as qualities in {}'.format(channel, ', '.join(qualities), base_dir))
 		manager = CoverageChecker(channel, qualities, base_dir, first_hour,
-				last_hour, make_page, connection_string)
+				last_hour, make_page, connection_string, check_interval)
 		managers.append(manager)
 		workers.append(gevent.spawn(manager.run))
 
