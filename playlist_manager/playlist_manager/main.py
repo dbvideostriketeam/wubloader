@@ -245,7 +245,8 @@ class ListQuery(object):
 
 def parse_playlist_arg(arg):
 	playlist, tags = arg.split('=', 1)
-	tags = tags.split(",").lower() if tags else []
+	tags = tags.split(",") if tags else []
+	tags = [tag.lower() for tag in tags]
 	return playlist, tags
 
 
