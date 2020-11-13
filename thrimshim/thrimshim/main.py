@@ -250,7 +250,11 @@ def update_row(ident, editor=None):
 	for column in sheet_columns:
 		if isinstance(old_row[column], datetime.datetime):
 			old_row[column] = old_row[column].isoformat()
-		if new_row[column].lower().strip() != old_row[column].lower().strip():
+		def normalize(value):
+			if isinstance(value, list):
+				return sorted(map(normalize, value))
+			return value.lower().strip()
+		if normalize(new_row[column]) != normalize(old_row[column]):
 			changes += '{}: {} => {}\n'.format(column, new_row[column], old_row[column])
 	if changes and not override_changes:
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
