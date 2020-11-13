@@ -288,7 +288,8 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
             var error = response.statusText + ": " + text;
             console.log(error);
 			if (response.status == 409) {
-				if (confirm(text)) {
+				dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing"
+				if (confirm(dialogue)) {
 					thrimbletrimmerSubmit(state, true);
 					
 			  } else { 

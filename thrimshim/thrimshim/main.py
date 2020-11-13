@@ -250,8 +250,8 @@ def update_row(ident, editor=None):
 	for column in sheet_columns:
 		if isinstance(old_row[column], datetime.datetime):
 			old_row[column] = old_row[column].isoformat()
-		if new_row[column] != old_row[column]:
-			changes += '{}: Database: {} Thrimbletrimmer: {}\n'.format(column, old_row[column], new_row[column])
+		if new_row[column].lower().strip() != old_row[column].lower().strip():
+			changes += u'{}: {} \u2192 {}\n'.format(column, new_row[column], old_row[column])
 	if changes and not override_changes:
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
