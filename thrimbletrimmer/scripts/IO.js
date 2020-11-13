@@ -259,7 +259,7 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
 		category:document.data.category,
 		description:document.data.description,
 		notes:document.data.notes,
-
+		tags:document.data.tags,
     };
     if (!!user) {
         wubData.token = user.getAuthResponse().id_token
