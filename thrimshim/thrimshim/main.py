@@ -253,6 +253,8 @@ def update_row(ident, editor=None):
 		def normalize(value):
 			if isinstance(value, list):
 				return sorted(map(normalize, value))
+			if value is None:
+				return None
 			return value.lower().strip()
 		if normalize(new_row[column]) != normalize(old_row[column]):
 			changes += '{}: {} => {}\n'.format(column, new_row[column], old_row[column])
