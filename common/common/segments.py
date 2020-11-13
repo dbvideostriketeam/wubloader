@@ -14,7 +14,6 @@ import shutil
 import sys
 from collections import namedtuple
 from contextlib import closing
-from decimal import Decimal
 from tempfile import TemporaryFile
 
 import gevent
@@ -54,9 +53,10 @@ def parse_segment_timestamp(hour_str, min_str):
 	day = int(hour_str[8:10])
 	hour = int(hour_str[11:13])
 	min = int(min_str[0:2])
-	sec_float = Decimal(min_str[3:])
-	sec = int(sec_float)
-	microsec = int(1000000 * (sec_float % 1))
+	sec = int(min_str[3:5])
+	microsec_str = min_str[6:]
+	microsec_str += '0' * (6 - len(microsec_str)) # right-pad zeros to 6 digits, eg. "123" -> "123000"
+	microsec = int(microsec_str)
 	return datetime.datetime(year, month, day, hour, min, sec, microsec)
 
 
