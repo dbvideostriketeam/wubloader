@@ -137,6 +137,7 @@
                     <th>Link</th>
                     <th>Edit Time</th>
                     <th>Upload Time</th>
+					<th>Tags</th>
                 </tr>
             </table>
         </div>
@@ -234,8 +235,10 @@
                     <td>${event.video_link ? "<a href='"+event.video_link+"'>Link</a>":""}</td>
                     <td>${event.edit_time ? event.edit_time.substring(0,19):""}</td>
                     <td>${event.upload_time ? event.upload_time.substring(0,19):""}</td>
+					<td>${event.tags ? event.tags.join(", "):""}</td>
                 `;
                 document.getElementById('QueueTable').appendChild(row);
+				console.log(event.tags)
             });
         }
 
