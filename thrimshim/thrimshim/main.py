@@ -2,6 +2,7 @@ import datetime
 from functools import wraps
 import json
 import logging
+import re
 import signal
 import sys
 
@@ -303,25 +304,39 @@ def update_row(ident, editor=None):
 @authenticate
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the 
-	upload_location is 'manual'."""
+	upload_location is 'manual' or 'youtube-manual'."""
 	link = flask.request.json['link']
+	upload_location = flask.request.json.get('upload_location', 'manual')
+
+	
+	if upload_location == 'youtube-manual':
+		YOUTUBE_URL_RE = r'^https?://(?:youtu\.be/|youtube.com/watch\?v=)([a-zA-Z0-9_-]{11})$'
+		match = re.match(YOUTUBE_URL_RE, link)
+		if not match:
+			return 'Link does not appear to be a youtube.com or youtu.be video link. Try removing any extra query params (after the video id).', 400
+		video_id, = match.groups()
+	elif upload_location == 'manual':
+		video_id = None
+	else:
+		return 'Upload location must be "manual" or "youtube-manual"', 400
+
 	conn = app.db_manager.get_conn()
 	results = database.query(conn, """
-		SELECT id, state, upload_location 
+		SELECT id, state
 		FROM events
 		WHERE id = %s""", ident)
 	old_row = results.fetchone()
 	if old_row is None:
 		return 'Row {} not found'.format(ident), 404
-	if old_row.state != 'UNEDITED' and not (old_row.state == 'DONE' and old_row.upload_location == 'manual'):
+	if old_row.state != 'UNEDITED':
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
 	now = datetime.datetime.utcnow()
 	results = database.query(conn, """
 		UPDATE events 
-		SET state='DONE', upload_location = 'manual', video_link = %s,
+		SET state='DONE', upload_location = %s, video_link = %s, video_id = %s,
 			editor = %s, edit_time = %s, upload_time = %s
-		WHERE id = %s AND (state = 'UNEDITED' OR (state = 'DONE' AND
-			upload_location = 'manual'))""", link, editor, now, now, ident)
+		WHERE id = %s AND state = 'UNEDITED'
+	""", upload_location, link, video_id, editor, now, now, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
 	return ''	
 	

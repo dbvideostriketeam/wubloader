@@ -340,7 +340,8 @@ thrimbletrimmerDownload = function(isEditor) {
 thrimbletrimmerManualLink = function() {
     document.getElementById("ManualButton").disabled = true;
     var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-    var body = {link: document.getElementById("ManualLink").value};
+	var upload_location = (document.getElementById("ManualYoutube").checked) ? "youtube-manual" : "manual";
+    var body = {link: document.getElementById("ManualLink").value, upload_location: upload_location};
     if (!!user) {
         body.token = user.getAuthResponse().id_token;
     }
