@@ -155,6 +155,12 @@
     "YOUR-PLAYLIST-ID": ["some tag"],
   },
 
+  // Which upload locations should be added to playlists
+  youtube_upload_locations:: [
+    "desertbus",
+    "youtube-manual",
+  ],
+
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
   env:: {
@@ -175,11 +181,6 @@
   // Cleaned up version of $.channels without importance markers
   clean_channels:: [std.split(c, '!')[0] for c in $.channels],
 
-  // Which upload locations have type youtube, needed for playlist manager
-  youtube_upload_locations:: [
-    location for location in std.objectFields($.cutter_config)
-    if $.cutter_config[location].type == "youtube"
-  ],
 
   // docker-compose version
   version: "3",
