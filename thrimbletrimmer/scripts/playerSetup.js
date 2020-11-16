@@ -30,6 +30,10 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
     } 
     player = videojs('my-player', options, function onPlayerReady() {
         videojs.log('Your player is ready!');
+	
+	// Set player volume to 50% by default
+	var defaultVolume = 0.5;
+	this.volume(defaultVolume);
 
         // In this context, `this` is the player that was created by Video.js.
         this.on('ready', function() {
