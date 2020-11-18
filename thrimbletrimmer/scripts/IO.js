@@ -299,9 +299,7 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
                 alert(error);
             }
         } else if (state == 'EDITED') {
-            // Only return to dashboard if submitted, not for save draft
-            setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
-            return
+			alert(`Video submitted for edit from ${start} to ${end}`)
         } else {
 			alert("Draft saved");
 		}
