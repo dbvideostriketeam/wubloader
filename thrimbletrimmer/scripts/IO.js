@@ -61,6 +61,10 @@ pageSetup = function(isEditor) {
         if (isEditor) { document.getElementById('SubmitButton').disabled = true; }
 
         fetch("/thrimshim/defaults").then(data => data.json()).then(function (data) {
+            if (!data) {
+                alert("Editor results call failed, is thrimshim running?");
+                return;
+            }
             desertBusStart = new Date(data.bustime_start);
             document.getElementById("StreamName").value = data.video_channel;
             if (isEditor) {
@@ -286,16 +290,14 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
     .then(response => response.text().then(text => {
         if (!response.ok) {
             var error = response.statusText + ": " + text;
-            console.log(error);
-			if (response.status == 409) {
-				dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing"
-				if (confirm(dialogue)) {
-					thrimbletrimmerSubmit(state, true);
-					
-			  } else { 
-            		alert(error);
-			    }
-			}
+            if (response.status == 409) {
+                dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing"
+                if (confirm(dialogue)) {
+                    thrimbletrimmerSubmit(state, true);
+                }
+            } else { 
+                alert(error);
+            }
         } else if (state == 'EDITED') {
             // Only return to dashboard if submitted, not for save draft
             setTimeout(() => { window.location.href = '/thrimbletrimmer/dashboard.html'; }, 500);
