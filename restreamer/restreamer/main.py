@@ -6,6 +6,8 @@ import json
 import logging
 import os
 import signal
+import subprocess
+from uuid import uuid4
 
 import gevent
 import gevent.backdoor
@@ -15,6 +17,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, smart_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
+from common.segments import feed_input
 
 import generate_hls
 
@@ -299,37 +302,76 @@ def cut(channel, quality):
 		return "Unknown type {!r}".format(type), 400
 
 
-@app.route('/generate_videos/<channel>/<quality>.ts')
+@app.route('/generate_videos/<channel>/<quality>', methods=['POST'])
 @request_stats
 @has_path_args
 def generate_videos(channel, quality):
 	"""Generate one video for each contiguous range of segments (ie. split at holes),
 	and save them as CHANNEL_QUALITY_N.ts in the segments directory.
+
+	Takes a JSON body {name: [start, end]} where start and end are timestamps.
+	Creates files CHANNEL_QUALITY_NAME_N.mkv for each contiguous range of segments
+	in that hour range (ie. split at holes) and saves them in the segments directory.
 	"""
-	start, end = time_range_for_quality(channel, quality)
-	hours_path = os.path.join(app.static_folder, channel, quality)
-	if not os.path.isdir(hours_path):
-		abort(404)
+	videos = request.json
 
-	segments = get_best_segments(hours_path, start, end)
-	contiguous = []
-	n = [0]
+	for name, (start, end) in videos.items():
+		start = dateutil.parse_utc_only(start)
+		end = dateutil.parse_utc_only(end)
 
-	def write_file():
-		if not contiguous:
-			return
-		with open(os.path.join(app.static_folder, "{}_{}_{}.ts".format(channel, quality, n[0])), 'w') as f:
-			for chunk in rough_cut_segments(contiguous, start, end):
-				f.write(chunk)
-		n[0] += 1
+		if end <= start:
+			return "End must be after start", 400
 
-	for segment in segments:
-		if segment is not None:
-			contiguous.append(segment)
-			continue
-		write_file()
+		hours_path = os.path.join(app.static_folder, channel, quality)
+		if not os.path.isdir(hours_path):
+			abort(404)
+
+		segments = get_best_segments(hours_path, start, end)
 		contiguous = []
-	write_file()
+		n = 0
+		logging.info("Generating contiguous videos {!r} for {}/{} from {} to {}".format(
+			name, channel, quality, start, end,
+		))
+
+		def write_file(segments, n):
+			output_name = os.path.join(app.static_folder, '{}_{}_{}_{}.mkv'.format(channel, quality, name, n))
+			if os.path.exists(output_name):
+				logging.info("Skipping generating hours video - already exists")
+				return
+			temp_name = os.path.join(app.static_folder, "temp-{}.mkv".format(uuid4()))
+			args = [
+				'ffmpeg',
+				'-hide_banner', '-loglevel', 'error', # suppress noisy output
+				'-i', '-',
+				'-c', 'copy',
+				temp_name,
+			]
+			logging.info("Generating video with args: {}".format(" ".join(args)))
+			proc = None
+			try:
+				proc = subprocess.Popen(args, stdin=subprocess.PIPE)
+				# feed_input will write all the segments and close stdin
+				feed_input(segments, proc.stdin)
+				# now wait for it to finish and check errors
+				if proc.wait() != 0:
+					raise Exception("ffmpeg exited {}".format(proc.returncode))
+				os.rename(temp_name, output_name)
+			finally:
+				if os.path.exists(temp_name):
+					os.remove(temp_name)
+
+		for segment in segments:
+			if segment is not None:
+				contiguous.append(segment)
+				continue
+			if contiguous:
+				write_file(contiguous, n)
+				n += 1
+				contiguous = []
+		if contiguous:
+			write_file(contiguous, n)
+
+	return ''
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
