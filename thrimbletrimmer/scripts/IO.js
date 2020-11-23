@@ -299,7 +299,7 @@ thrimbletrimmerSubmit = function(state, override_changes=false) {
                 alert(error);
             }
         } else if (state == 'EDITED') {
-			alert(`Video submitted for edit from ${start} to ${end}`)
+			alert(`Edit submitted for video from ${start} to ${end}`)
         } else {
 			alert("Draft saved");
 		}
