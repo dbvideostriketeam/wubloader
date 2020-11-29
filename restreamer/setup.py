@@ -8,7 +8,7 @@ setup(
 		"argh",
 		"python-dateutil",
 		"flask",
-		"gevent",
+		"gevent==1.5a2",
 		"monotonic",
 		"prometheus-client",
 		"wubloader-common",
