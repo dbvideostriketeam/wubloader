@@ -144,7 +144,7 @@
 
   // The spreadsheet id and worksheet names for sheet sync to act on
   sheet_id:: "your_id_here",
-  worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 7)],
+  worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
