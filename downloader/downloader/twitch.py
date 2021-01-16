@@ -10,23 +10,45 @@ from common.requests import InstrumentedSession
 logger = logging.getLogger(__name__)
 
 
+def get_access_token(channel, session):
+	request = {
+		"operationName": "PlaybackAccessToken",
+		"extensions": {
+			"persistedQuery": {
+				"version": 1,
+				"sha256Hash": "0828119ded1c13477966434e15800ff57ddacf13ba1911c129dc2200705b0712"
+			}
+		},
+		"variables": {
+			"isLive": True,
+			"login": channel,
+			"isVod": False,
+			"vodID": "",
+			"playerType": "site"
+		}
+	}
+	resp = session.post(
+		"https://gql.twitch.tv/gql",
+		json=request,
+		headers={'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko'},
+		metric_name='get_access_token',
+	)
+	resp.raise_for_status()
+	data = resp.json()["data"]["streamPlaybackAccessToken"]
+	return data['signature'], data['value']
+
+
 def get_master_playlist(channel, session=None):
 	"""Get the master playlist for given channel from twitch"""
 	if session is None:
 		session = InstrumentedSession()
-	resp = session.get(
-		"https://api.twitch.tv/api/channels/{}/access_token.json".format(channel),
-		params={'oauth_token': 'undefined', 'need_https': 'true', 'platform': '_', 'player_type': 'site', 'player_backend': 'mediaplayer'},
-		headers={
-			'Accept': 'application/vnd.twitchtv.v5+json',
-			'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko',
-		},
-		metric_name='get_access_token',
-	)
-	resp.raise_for_status() # getting access token
-	token = resp.json()
+	sig, token = get_access_token(channel, session)
 	resp = session.get(
 		"https://usher.ttvnw.net/api/channel/hls/{}.m3u8".format(channel),
+		headers={
+			"referer": "https://player.twitch.tv",
+			"origin": "https://player.twitch.tv",
+		},
 		params={
 			# Taken from streamlink. Unsure what's needed and what changing things can do.
 			"player": "twitchweb",
@@ -35,15 +57,9 @@ def get_master_playlist(channel, session=None):
 			"allow_source": "true",
 			"allow_audio_only": "true",
 			"allow_spectre": "false",
-			"fast_bread": "True",
-			"sig": token["sig"],
-			"token": token["token"],
-			# Also observed in the wild but not used in streamlink:
-			# "playlist_include_framerate": "true"
-			# "reassignments_supported": "true"
-			# It's reported that setting this may affect whether you get ads, but this is
-			# in flux. Better to just blend in with the crowd for now.
-			# "platform": "_"
+			"fast_bread": "true",
+			"sig": sig,
+			"token": token,
 		},
 		metric_name='get_master_playlist',
 	)
