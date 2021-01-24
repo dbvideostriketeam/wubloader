@@ -38,29 +38,6 @@ def get_access_token(channel, session):
 	return data['signature'], data['value']
 
 
-def get_channels_for_game(game, session=None):
-	if session is None:
-		session = InstrumentedSession()
-	path = "https://api.twitch.tv/kraken/streams"
-	while True:
-		resp = session.get(
-			path,
-			params={"limit": 100, "game": game},
-			headers={
-				'Accept': 'application/vnd.twitchtv.v3+json',
-				'Client-ID': 'pwkzresl8kj2rdj6g7bvxl9ys1wly3j',
-			},
-		)
-		resp.raise_for_status()
-		data = resp.json()
-		streams = data["streams"]
-		if not streams:
-			return
-		for stream in streams:
-			yield stream["channel"]["name"]
-		path = data["_links"]["next"]
-
-
 def get_master_playlist(channel, session=None):
 	"""Get the master playlist for given channel from twitch"""
 	if session is None:
