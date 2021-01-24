@@ -70,7 +70,7 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source'):
 			f.write(chunk)
 
 
-def main(host='condor.host', user='necrobot-read', password=None, database='season_8', base_dir='.', output_dir='.', find=None):
+def main(host='condor.live', user='necrobot-read', password=None, database='season_8', base_dir='.', output_dir='.', find=None):
 	logging.basicConfig(level=logging.INFO)
 
 	if password is None:
