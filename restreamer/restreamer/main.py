@@ -234,20 +234,22 @@ def generate_media_playlist(channel, quality):
 @has_path_args
 def replay(stream, variant):
 	hours_path = os.path.join(app.static_folder, stream, variant)
-	if not os.path.isdir(hours_path):
-		abort(404)
 
 	start = datetime.datetime.utcnow() - datetime.timedelta(seconds=20)
 	end = datetime.datetime.utcnow() - datetime.timedelta(seconds=5)
 
-	segments = get_best_segments(hours_path, start, end)
+	if os.path.isdir(hours_path):
+		segments = get_best_segments(hours_path, start, end)
+	else:
+		segments = [None]
 	if segments == [None]:
 		print "No replay, serving placeholder"
 		stream, variant = 'ekimekim', 'source'
 		segments = get_best_segments(os.path.join(app.static_folder, stream, variant),
-			datetime.datetime(2020, 2, 15, 7, 30, 00),
-			datetime.datetime(2020, 2, 15, 7, 31, 00),
+			datetime.datetime(2021, 1, 24, 22, 51, 45),
+			datetime.datetime(2021, 1, 24, 22, 52, 15),
 		)
+		assert segments != [None], "missing placeholder"
 	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
 
 
