@@ -48,7 +48,7 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 		logging.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
 	if not segments or set(segments) == {None}:
 		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
-	filter_args = ["-vf", "scale=-1:720", "-timecode", "00:00:00.00"]
+	filter_args = ["-vf", "scale=-1:720"]
 	if frame_counter:
 		filter_args += [
 			"-vf", "drawtext="
@@ -112,13 +112,12 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer))
 		cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5), frame_counter=True)
 		print "Cut to {}".format(start_path)
-		frame_offset = int(raw_input("What frame of this video do we start at? "))
-		time_offset = datetime.timedelta(seconds=frame_offset/60.)
+		time_offset = float(raw_input("What timestamp of this video do we start at? "))
+		time_offset = datetime.timedelta(seconds=time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.
 		finish_start = end - datetime.timedelta(seconds=7) + time_offset
-		finish_start = start - datetime.timedelta(seconds=1) + time_offset # TEST
 		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer))
 		finish_paths.append(finish_path)
 		cut_to_file(finish_path, base_dir, racer, finish_start, finish_start + datetime.timedelta(seconds=5))
@@ -128,6 +127,7 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 	for path in finish_paths:
 		args += ['-i', path]
 	args += [
+		'-r', '60',
 		'-filter_complex', 'hstack',
 		'-y', output_path,
 	]

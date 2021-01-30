@@ -327,10 +327,9 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 	args = [
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'error', # suppress noisy output
-		'-copyts', '-start_at_zero',
-		'-i', '-',
 		'-ss', cut_start,
 		'-t', duration,
+		'-i', '-',
 	] + list(encode_args)
 	if output_file is subprocess.PIPE:
 		args.append('-') # output to stdout
