@@ -48,10 +48,12 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 		logging.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
 	if not segments or set(segments) == {None}:
 		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
-	filter_args = ["-vf", "scale=-1:720"]
+	filter_args = []
+	# standardize resolution
+	filter_args += ["-vf", "scale=-1:720"]
 	if frame_counter:
 		filter_args += [
-			"-vf", "drawtext="
+			"-vf", "scale=-1:480, drawtext="
 				"fontfile=DejaVuSansMono.ttf"
 				":fontcolor=white"
 				":text='%{e\:t}'"
@@ -87,7 +89,7 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 		JOIN match_races ON (match_info.match_id = match_races.match_id)
 		JOIN races ON (match_races.race_id = races.race_id)
 		JOIN race_runs ON (races.race_id = race_runs.race_id)
-		WHERE match_info.completed AND race_runs.rank = 1
+		WHERE race_runs.rank = 1
 			AND match_info.match_id = %(match_id)s
 			AND match_races.race_number = %(race_number)s
 	""", {'match_id': match_id, 'race_number': race_number})
@@ -110,14 +112,38 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 
 	for racer in (racer1, racer2):
 		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer))
-		cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5), frame_counter=True)
-		print "Cut to {}".format(start_path)
-		time_offset = float(raw_input("What timestamp of this video do we start at? "))
+
+		cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5))
+
+		args = [
+			'ffmpeg', '-hide_banner',
+			'-i', start_path,
+			'-vf', 'blackdetect=d=0.1',
+			'-f', 'null', '/dev/null'
+		]
+		proc = subprocess.Popen(args, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+		if proc.wait() != 0:
+			raise Exception("ffmpeg exited {}\n{}".format(proc.wait(), err))
+		lines = [
+			line for line in err.strip().split('\n')
+			if line.startswith('[blackdetect @ ')
+		]
+		if len(lines) == 1:
+			line, = lines
+			black_end = line.split(' ')[4]
+			assert black_end.startswith('black_end:')
+			time_offset = float(black_end.split(':')[1])
+		else:
+			print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
+			print "Cutting file {} for manual detection.".format(start_path)
+			cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5), frame_counter=True)
+			time_offset = float(raw_input("What timestamp of this video do we start at? "))
 		time_offset = datetime.timedelta(seconds=time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.
-		finish_start = end - datetime.timedelta(seconds=7) + time_offset
+		finish_start = end - datetime.timedelta(seconds=5) + time_offset
 		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer))
 		finish_paths.append(finish_path)
 		cut_to_file(finish_path, base_dir, racer, finish_start, finish_start + datetime.timedelta(seconds=5))
