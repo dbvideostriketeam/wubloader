@@ -253,7 +253,7 @@ def replay(stream, variant):
 	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, stream, variant))
 
 
-@app.route('/cut/<stream>/<variant>.ts')
+@app.route('/cut/<channel>/<quality>.ts')
 @request_stats
 @has_path_args
 def cut(channel, quality):
