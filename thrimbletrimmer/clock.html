@@ -1,32 +1,50 @@
+<!DOCTYPE html>
 <html>
-<script>
-delay = 10;
-bustime = 1605290400;
-
-function update() {
-	delay = parseInt(document.getElementById("Delay").value);
-}
-
-setInterval(function() {
-	var time = new Date().getTime() / 1000 - delay - bustime;
-	var minus = "";
-	if (time < 0) {
-		time = -time
-		minus = "-";
-	}
-	var hours = Math.trunc(time / 3600).toString();
-	var mins = Math.trunc((time % 3600) / 60).toString();
-	var secs = Math.trunc(time % 60).toString();
-	if (mins.length < 2) {mins = "0" + mins;}
-	if (secs.length < 2) {secs = "0" + secs;}
-	var formatted = minus + hours + ":" + mins + ":" + secs;
-	document.getElementById("Clock").value = formatted;
-}, 1000);
-</script>
+<head>
+	<meta charset="utf-8">
+	<title>Stream Time</title>
+	<style type="text/css">
+		#clock {
+			margin-bottom: 3px;
+		}
+	</style>
+</head>
 <body>
-<input type="text" id="Clock" disabled />
-<br/>
-Delay: <input type="text" id="Delay" value="10"/>
-<input type="button" id="Update" onclick="update()" value="Update Delay"/>
+	<div id="clock"></div>
+	<div>
+		<input type="number" id="delay" value="10" min="0"> seconds of delay
+	</div>
+	<script type="text/javascript">
+		const BUS_START_TIME = 1605290400;
+
+		let updateClock = () => {
+			let delay = parseInt(document.getElementById("delay").value);
+			if (isNaN(delay)) {
+				delay = 0;
+			}
+			let time = (new Date().getTime()) / 1000 - delay - BUS_START_TIME;
+			
+			let sign = "";
+			if (time < 0) {
+				time = -time
+				sign = "-";
+			}
+			
+			let hours = Math.trunc(time / 3600).toString();
+			let mins = Math.trunc((time % 3600) / 60).toString();
+			let secs = Math.trunc(time % 60).toString();
+			
+			if (mins.length < 2) {
+				mins = "0" + mins;
+			}
+			if (secs.length < 2) {
+				secs = "0" + secs;
+			}
+			let formatted = sign + hours + ":" + mins + ":" + secs;
+			document.getElementById("clock").innerText = formatted;
+		};
+
+		setInterval(updateClock, 1000);
+	</script>
 </body>
 </html>
