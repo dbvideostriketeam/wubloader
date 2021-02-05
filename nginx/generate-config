@@ -24,7 +24,7 @@ LOCATIONS=$(
 		generate_location "/metrics/$name" "http://$name:$port/metrics"
 	done
 	[ -n "$THRIMBLETRIMMER" ] &&
-		echo -e "\t\tlocation = / { return 301 /thrimbletrimmer/dashboard.html; }" &&
+		echo -e "\t\tlocation = / { return 301 /thrimbletrimmer/; }" &&
 		echo -e "\t\tlocation /thrimbletrimmer { }"
 	[ -n "$SEGMENTS" ] &&
 		echo -e "\t\tlocation /segments/ { alias $SEGMENTS/; }"
