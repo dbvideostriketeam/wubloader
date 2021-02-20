@@ -50,10 +50,10 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
 	filter_args = []
 	# standardize resolution
-	filter_args += ["-vf", "scale=-1:720"]
+	filter_args += ["-vf", "scale=-2:720"]
 	if frame_counter:
 		filter_args += [
-			"-vf", "scale=-1:480, drawtext="
+			"-vf", "scale=-2:480, drawtext="
 				"fontfile=DejaVuSansMono.ttf"
 				":fontcolor=white"
 				":text='%{e\:t}'"
