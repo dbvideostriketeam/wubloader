@@ -57,7 +57,7 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 				"fontfile=DejaVuSansMono.ttf"
 				":fontcolor=white"
 				":text='%{e\:t}'"
-				":x=(w-tw)/2"
+				":x=(w-tw)/2+100"
 				":y=h-(2*lh)",
 		]
 	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mp4']
@@ -66,7 +66,15 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 			f.write(chunk)
 
 
-def main(match_id, race_number, host='condor.live', user='necrobot-read', password=None, database='condor_x2', base_dir='/srv/wubloader', output_dir='/tmp'):
+def add_range(base, range):
+	return [base + datetime.timedelta(seconds=n) for n in range]
+
+
+def main(match_id, race_number,
+	host='condor.live', user='necrobot-read', password=None, database='condor_x2',
+	base_dir='/srv/wubloader', output_dir='/tmp',
+	start_range=(0, 5), finish_range=(-5, 5),
+):
 	logging.basicConfig(level=logging.INFO)
 
 	match_id = int(match_id)
@@ -113,7 +121,8 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 	for racer in (racer1, racer2):
 		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer))
 
-		cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5))
+		start_start, start_end = add_range(start, start_range)
+		cut_to_file(start_path, base_dir, racer, start_start, start_end)
 
 		args = [
 			'ffmpeg', '-hide_banner',
@@ -143,10 +152,11 @@ def main(match_id, race_number, host='condor.live', user='necrobot-read', passwo
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.
-		finish_start = end - datetime.timedelta(seconds=5) + time_offset
+		finish_base = end + time_offset
+		finish_start, finish_end = add_range(finish_base, finish_range)
 		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer))
 		finish_paths.append(finish_path)
-		cut_to_file(finish_path, base_dir, racer, finish_start, finish_start + datetime.timedelta(seconds=5))
+		cut_to_file(finish_path, base_dir, racer, finish_start, finish_end)
 
 	output_path = os.path.join(output_dir, "result.mp4")
 	args = ['ffmpeg']
