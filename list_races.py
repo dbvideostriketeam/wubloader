@@ -63,7 +63,10 @@ def main(find1, find2, host='condor.live', user='necrobot-read', password=None, 
 	find = [(find1.lower(), find2.lower())]
 	find.append(find[0][::-1])
 
+
 	for racer1, racer2, match_id, completed in data:
+		if not racer1: racer1 = ''
+		if not racer2: racer2 = ''
 		if (racer1.lower(), racer2.lower()) in find:
 			print "{}: {} vs {}, complete = {}".format(match_id, racer1, racer2, completed)
 
