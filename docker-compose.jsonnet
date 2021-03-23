@@ -31,7 +31,7 @@
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
   // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
   // and warned about if they're not currently streaming.
-  channels:: [],
+  channels:: ["ekimekim"],
 
   // Stream qualities to capture
   qualities:: ["source"],
