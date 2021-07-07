@@ -147,7 +147,7 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 
 		resp.raise_for_status()
 
-		with open(temp_path, 'w') as f:
+		with open(temp_path, 'wb') as f:
 			for chunk in resp.iter_content(8192):
 				f.write(chunk)
 				hash.update(chunk)

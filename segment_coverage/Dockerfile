@@ -1,7 +1,7 @@
-FROM alpine:3.7
+FROM alpine:3.14
 # dependencies needed for compiling c extensions
 # also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py2-pip gcc python-dev musl-dev file make busybox-extras
+RUN apk --update add py3-pip gcc python-dev musl-dev file make busybox-extras
 
 # Install gevent so that we don't need to re-install it when common changes
 RUN pip install gevent
@@ -21,4 +21,4 @@ RUN ln -s /usr/include/locale.h /usr/include/xlocale.h \
 COPY segment_coverage /tmp/segment_coverage
 RUN pip install /tmp/segment_coverage && rm -r /tmp/segment_coverage
 
-ENTRYPOINT ["python2", "-m", "segment_coverage"]
+ENTRYPOINT ["python3", "-m", "segment_coverage"]

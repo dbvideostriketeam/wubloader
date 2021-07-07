@@ -231,7 +231,7 @@ class CoverageChecker(object):
 		temp_path = '{}_{}.html'.format(path_prefix, uuid.uuid4())
 		final_path = '{}_coverage.html'.format(path_prefix)
 		common.ensure_directory(temp_path)
-		with open(temp_path, 'w') as f:
+		with open(temp_path, 'wb') as f:
 			f.write(html)
 		os.rename(temp_path, final_path)
 		self.logger.info('Coverage page for {} created'.format(quality))

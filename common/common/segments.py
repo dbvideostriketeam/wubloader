@@ -364,7 +364,7 @@ def rough_cut_segments(segments, start, end):
 	This method works by simply concatenating all the segments, without any re-encoding.
 	"""
 	for segment in segments:
-		with open(segment.path) as f:
+		with open(segment.path, 'rb') as f:
 			for chunk in read_chunks(f):
 				yield chunk
 
@@ -437,7 +437,7 @@ def fast_cut_segments(segments, start, end):
 					)
 		else:
 			# no cutting needed, just serve the file
-			with open(segment.path) as f:
+			with open(segment.path, 'rb') as f:
 				for chunk in read_chunks(f):
 					yield chunk
 

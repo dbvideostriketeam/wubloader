@@ -241,13 +241,13 @@ class Local(UploadBackend):
 		filepath = os.path.join(self.path, filename)
 		try:
 			if self.write_info:
-				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
+				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'wb') as f:
 					f.write(json.dumps({
 						'title': title,
 						'description': description,
 						'tags': tags,
 					}) + '\n')
-			with open(filepath, 'w') as f:
+			with open(filepath, 'wb') as f:
 				for chunk in data:
 					f.write(chunk)
 		except (OSError, IOError) as e:
