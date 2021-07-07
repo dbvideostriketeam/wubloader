@@ -3,6 +3,7 @@ import datetime
 import logging
 import os
 import subprocess
+from urlparse import urlparse
 
 import mysql.connector
 
@@ -14,14 +15,33 @@ class NoSegments(Exception):
 	pass
 
 
-def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_counter=False):
-	logging.info("Cutting {}".format(filename))
+class RaceNotFound(Exception):
+	pass
+
+
+class CantFindStart(Exception):
+	def __init__(self, racer, found):
+		self.racer = racer
+		self.found = found
+	def __str__(self):
+		if self.found > 0:
+			return "Found multiple ({}) possible start points for {}".format(self.found, self.racer)
+		else:
+			return "Failed to find start point for {}".format(self.racer)
+
+
+def ts(dt):
+	return dt.strftime("%FT%T")
+
+
+def cut_to_file(logger, filename, base_dir, stream, start, end, variant='source', frame_counter=False):
+	logger.info("Cutting {}".format(filename))
 	segments = get_best_segments(
 		os.path.join(base_dir, stream, variant).lower(),
 		start, end,
 	)
 	if None in segments:
-		logging.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
+		logger.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
 	if not segments or set(segments) == {None}:
 		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
 	filter_args = []
@@ -33,7 +53,7 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 				"fontfile=DejaVuSansMono.ttf"
 				":fontcolor=white"
 				":text='%{e\:t}'"
-				":x=(w-tw)/2"
+				":x=(w-tw)/2+100"
 				":y=h-(2*lh)",
 		]
 	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mp4']
@@ -42,20 +62,24 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 			f.write(chunk)
 
 
+def add_range(base, range):
+	return [base + datetime.timedelta(seconds=n) for n in range]
 
 
-def review(match_id, race_number, host='condor.live', user='necrobot-read', password=None, database='condor_x2', base_dir='/srv/wubloader', output_dir='/tmp'):
-	logging.basicConfig(level=logging.INFO)
-
-	match_id = int(match_id)
-	race_number = int(race_number)
-
-	if password is None:
-		password = getpass("Password? ")
-	conn = mysql.connector.connect(
-		host=host, user=user, password=password, database=database,
+def conn_from_url(url):
+	args = urlparse(url)
+	return mysql.connector.connect(
+		user=args.username,
+		password=args.password,
+		host=args.hostname,
+		database=args.path.lstrip('/'),
 	)
 
+
+def review(match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_range=(-5, 10)):
+	logger = logging.getLogger("review").getChild("{}-{}".format(match_id, race_number))
+
+	conn = conn_from_url(db_url)
 	cur = conn.cursor()
 	cur.execute("""
 		SELECT
@@ -80,19 +104,30 @@ def review(match_id, race_number, host='condor.live', user='necrobot-read', pass
 	]
 
 	if not data:
-		raise Exception("No such race")
+		raise RaceNotFound("Could not find race number {} of match {}".format(match_id, race_number))
 	assert len(data) == 1, repr(data)
 
 	(racer1, racer2, start, duration), = data
 	end = start + datetime.timedelta(seconds=duration/100.)
 
+	output_name = "{}-{}-{}-{}".format(match_id, racer1, racer2, race_number)
+	output_dir = os.path.join(base_dir, "reviews", output_name)
+	result_name = "review.{}.{}.mp4".format(*finish_range)
+	result_path = os.path.join(output_dir, result_name)
+	if os.path.exists(result_path):
+		logger.info("Result already exists for {}, reusing".format(result_path))
+		return result_path
+
 	finish_paths = []
 
-	for racer in (racer1, racer2):
-		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer))
+	for racer_number, racer in enumerate((racer1, racer2)):
+		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer_number))
 
-		cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5))
+		logger.info("Cutting start for racer {} ({})".format(racer_number, racer))
+		start_start, start_end = add_range(start, start_range)
+		cut_to_file(logger, start_path, base_dir, racer, start_start, start_end)
 
+		logger.info("Running blackdetect")
 		args = [
 			'ffmpeg', '-hide_banner',
 			'-i', start_path,
@@ -113,32 +148,33 @@ def review(match_id, race_number, host='condor.live', user='necrobot-read', pass
 			assert black_end.startswith('black_end:')
 			time_offset = float(black_end.split(':')[1])
 		else:
-			print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
-			print "Cutting file {} for manual detection.".format(start_path)
-			cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5), frame_counter=True)
-			time_offset = float(raw_input("What timestamp of this video do we start at? "))
+			found = len(lines)
+			logger.warning("Unable to detect start (expected 1 black interval, but found {})".format(found))
+			raise CantFindStart(racer, found)
 		time_offset = datetime.timedelta(seconds=time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.
-		finish_start = end - datetime.timedelta(seconds=5) + time_offset
-		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer))
+		finish_base = end + time_offset
+		finish_start, finish_end = add_range(finish_base, finish_range)
+		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer_number))
 		finish_paths.append(finish_path)
-		cut_to_file(finish_path, base_dir, racer, finish_start, finish_start + datetime.timedelta(seconds=5))
+		logger.info("Got time offset of {}, cutting finish at finish_base {}".format(time_offset, finish_base))
+		cut_to_file(logger, finish_path, base_dir, racer, finish_start, finish_end)
 
-	output_path = os.path.join(output_dir, "result.mp4")
+	temp_path = "{}.tmp.mp4".format(result_path)
 	args = ['ffmpeg']
 	for path in finish_paths:
 		args += ['-i', path]
 	args += [
 		'-r', '60',
 		'-filter_complex', 'hstack',
-		'-y', output_path,
+		'-y', temp_path,
 	]
 
+	logger.info("Cutting final result")
 	subprocess.check_call(args)
-	print "Review cut to file {}".format(output_path)
-
-
-if __name__ == '__main__':
-	argh.dispatch_command(main)
+	# atomic rename so that if result_path exists at all, we know it is complete and correct
+	os.rename(temp_path, result_path)
+	logger.info("Review done")
+	return result_path

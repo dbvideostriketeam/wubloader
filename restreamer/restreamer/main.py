@@ -10,13 +10,14 @@ import signal
 import gevent
 import gevent.backdoor
 import prometheus_client as prom
-from flask import Flask, url_for, request, abort, Response
+from flask import Flask, url_for, request, abort, redirect, Response
 from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, smart_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 
 import generate_hls
+from .review import review, NoSegments, RaceNotFound, CantFindStart
 
 
 app = Flask('restreamer', static_url_path='/segments')
@@ -355,8 +356,38 @@ def generate_videos(channel, quality):
 	write_file()
 
 
-def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
+@app.route('/review/<match_id>/<race_number>')
+@request_stats
+def review_race(match_id, race_number):
+	"""Cut a condor race review for given match id and race number.
+	Params:
+		start_range: Two numbers, comma-seperated. How long before and after the nominal
+			race start time to look for the start signal. Default 0,5.
+		finish_range: As start_range, but how long to make the final review video before/after
+			the nominal duration. Default -5,10.
+	"""
+	if app.condor_db is None:
+		return "Reviews are disabled", 501
+	start_range = map(float, request.args.get('start_range', '0,5').split(','))
+	finish_range = map(float, request.args.get('finish_range', '0,5').split(','))
+	try:
+		review_path = review(match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range)
+	except RaceNotFound as e:
+		return str(e), 404
+	except NoSegments:
+		logging.warning("Failed review due to no segments", exc_info=True)
+		return "Video content is missing - cannot review automatically", 400
+	except CantFindStart as e:
+		return str(e), 400
+
+	relative_path = os.path.relpath(review_path, app.static_folder)
+	review_url = os.path.join(app.static_url_path, relative_path)
+	return redirect(review_url)
+
+
+def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0, condor_db=None):
 	app.static_folder = base_dir
+	app.condor_db = condor_db
 	server = WSGIServer((host, port), cors(app))
 
 	def stop():

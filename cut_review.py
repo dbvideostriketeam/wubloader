@@ -146,7 +146,7 @@ def main(match_id, race_number,
 		else:
 			print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
 			print "Cutting file {} for manual detection.".format(start_path)
-			cut_to_file(start_path, base_dir, racer, start, start + datetime.timedelta(seconds=5), frame_counter=True)
+			cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True)
 			time_offset = float(raw_input("What timestamp of this video do we start at? "))
 		time_offset = datetime.timedelta(seconds=time_offset)
 
