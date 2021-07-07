@@ -555,7 +555,7 @@ class SegmentGetter(object):
 					return
 				resp.raise_for_status()
 				common.ensure_directory(temp_path)
-				with open(temp_path, 'w') as f:
+				with open(temp_path, 'wb') as f:
 					file_created = True
 					# We read chunk-wise in 8KiB chunks. Note that if the connection cuts halfway,
 					# we may lose part of the last chunk even though we did receive it.

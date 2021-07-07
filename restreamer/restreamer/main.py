@@ -306,9 +306,7 @@ def cut(channel, quality):
 @request_stats
 @has_path_args
 def generate_videos(channel, quality):
-	"""Generate one video for each contiguous range of segments (ie. split at holes),
-	and save them as CHANNEL_QUALITY_N.ts in the segments directory.
-
+	"""
 	Takes a JSON body {name: [start, end]} where start and end are timestamps.
 	Creates files CHANNEL_QUALITY_NAME_N.mkv for each contiguous range of segments
 	in that hour range (ie. split at holes) and saves them in the segments directory.
@@ -318,6 +316,10 @@ def generate_videos(channel, quality):
 	for name, (start, end) in videos.items():
 		start = dateutil.parse_utc_only(start)
 		end = dateutil.parse_utc_only(end)
+
+		# protect against directory traversal
+		if "/" in name:
+			return "Name cannot contain /", 400
 
 		if end <= start:
 			return "End must be after start", 400

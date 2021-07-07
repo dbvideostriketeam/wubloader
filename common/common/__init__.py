@@ -1,14 +1,5 @@
 
 """A place for common utilities between wubloader components"""
-
-
-# HACK: This sets the default encoding for the entire process.
-# It is possible this may break (badly-written) third party libs.
-import sys
-reload(sys)
-sys.setdefaultencoding('utf-8')
-
-
 import datetime
 import errno
 import os
@@ -104,15 +95,7 @@ def ensure_directory(path):
 	"""Create directory that contains path, as well as any parent directories,
 	if they don't already exist."""
 	dir_path = os.path.dirname(path)
-	if os.path.exists(dir_path):
-		return
-	ensure_directory(dir_path)
-	try:
-		os.mkdir(dir_path)
-	except OSError as e:
-		# Ignore if EEXISTS. This is needed to avoid a race if two getters run at once.
-		if e.errno != errno.EEXIST:
-			raise
+	os.mkdirs(dir_path, exist_ok=True)
 
 
 def jitter(interval):
