@@ -92,6 +92,8 @@
     dbname: "wubloader",
   },
 
+  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/condor_x2",
+
   // Other database arguments
   db_super_user:: "postgres", // only accessible from localhost
   db_super_password:: "postgres", // Must not contain ' or \ as these are not escaped.
@@ -216,7 +218,9 @@
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
-      ],
+      ] + (if $.condor_db == null then [] else [
+        "--condor-db", $.condor_db,
+      ]),
       environment: $.env,
     },
 

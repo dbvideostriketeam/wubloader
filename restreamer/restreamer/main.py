@@ -369,7 +369,7 @@ def review_race(match_id, race_number):
 	if app.condor_db is None:
 		return "Reviews are disabled", 501
 	start_range = map(float, request.args.get('start_range', '0,5').split(','))
-	finish_range = map(float, request.args.get('finish_range', '0,5').split(','))
+	finish_range = map(float, request.args.get('finish_range', '-5,10').split(','))
 	try:
 		review_path = review(match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range)
 	except RaceNotFound as e:

@@ -104,7 +104,7 @@ def review(match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_r
 	]
 
 	if not data:
-		raise RaceNotFound("Could not find race number {} of match {}".format(match_id, race_number))
+		raise RaceNotFound("Could not find race number {} of match {}".format(race_number, match_id))
 	assert len(data) == 1, repr(data)
 
 	(racer1, racer2, start, duration), = data
@@ -112,7 +112,9 @@ def review(match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_r
 
 	output_name = "{}-{}-{}-{}".format(match_id, racer1, racer2, race_number)
 	output_dir = os.path.join(base_dir, "reviews", output_name)
-	result_name = "review.{}.{}.mp4".format(*finish_range)
+	if not os.path.exists(output_dir):
+		os.makedirs(output_dir)
+	result_name = "review_{}_{}.mp4".format(*finish_range)
 	result_path = os.path.join(output_dir, result_name)
 	if os.path.exists(result_path):
 		logger.info("Result already exists for {}, reusing".format(result_path))

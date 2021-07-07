@@ -10,6 +10,7 @@ setup(
 		"flask",
 		"gevent",
 		"monotonic",
+		"mysql-connector-python==8.0.5", # old version for py2 compat
 		"prometheus-client",
 		"wubloader-common",
 	],

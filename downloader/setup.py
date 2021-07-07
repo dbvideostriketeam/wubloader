@@ -9,7 +9,7 @@ setup(
 		"python-dateutil",
 		"gevent",
 		"monotonic",
-		"mysql-connector-python",
+		"mysql-connector-python==8.0.5", # old version for py2 compat
 		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"requests",
 		"wubloader-common",

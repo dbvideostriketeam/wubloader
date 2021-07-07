@@ -10,6 +10,7 @@ import time
 import uuid
 from base64 import b64encode
 from contextlib import contextmanager
+from urlparse import urlparse
 
 import argh
 import gevent
@@ -595,11 +596,11 @@ class SegmentGetter(object):
 	"Twitch channels to watch. Add a '!' suffix to indicate they're expected to be always up. "
 	"This affects retry interval, error reporting and monitoring."
 )
-@argh.arg('--league-db', default="necrobot-read:necrobot-read@condor.live/condor_x2", help=
+@argh.arg('--condor-db', default="mysql://necrobot-read:necrobot-read@condor.live/condor_x2", help=
 	"Connection string for database to check for racers and commentators. "
-	"Should be of form USER:PASSWORD@HOST/DATABASE.",
+	"Should be of form mysql://USER:PASSWORD@HOST/DATABASE.",
 )
-def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, league_db=None):
+def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, condor_db=None):
 	qualities = qualities.split(",") if qualities else []
 
 	managers = {}
@@ -620,10 +621,12 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
-	if league_db:
-		user, rest = league_db.split(':', 1)
-		password, rest = rest.split('@', 1)
-		host, db = rest.split('/', 1)
+	if condor_db:
+		db_args = urlparse(condor_db)
+		user = db_args.username
+		password = db_args.password
+		host = db_args.hostname
+		db = db_args.path.lstrip('/')
 
 	prev_check = 0
 	CHECK_INTERVAL = 60
@@ -632,7 +635,7 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 			for channel in managers.keys():
 				logging.info("Stopping channel {} for shutdown".format(channel))
 				managers.pop(channel).stop()
-		elif league_db and time.time() - prev_check > CHECK_INTERVAL:
+		elif condor_db and time.time() - prev_check > CHECK_INTERVAL:
 			logging.info("Checking for new racers")
 			prev_check = time.time()
 			try:
