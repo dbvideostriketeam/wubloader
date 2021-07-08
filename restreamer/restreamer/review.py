@@ -4,6 +4,7 @@ import logging
 import os
 import subprocess
 from urlparse import urlparse
+from uuid import uuid4
 
 import mysql.connector
 
@@ -123,7 +124,8 @@ def review(match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_r
 	finish_paths = []
 
 	for racer_number, racer in enumerate((racer1, racer2)):
-		start_path = os.path.join(output_dir, "start-{}.mp4".format(racer_number))
+		nonce = str(uuid4())
+		start_path = os.path.join(output_dir, "start-{}-{}.mp4".format(racer_number, nonce))
 
 		logger.info("Cutting start for racer {} ({})".format(racer_number, racer))
 		start_start, start_end = add_range(start, start_range)
@@ -159,12 +161,12 @@ def review(match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_r
 		# time since their actual start.
 		finish_base = end + time_offset
 		finish_start, finish_end = add_range(finish_base, finish_range)
-		finish_path = os.path.join(output_dir, "finish-{}.mp4".format(racer_number))
+		finish_path = os.path.join(output_dir, "finish-{}-{}.mp4".format(racer_number, nonce))
 		finish_paths.append(finish_path)
 		logger.info("Got time offset of {}, cutting finish at finish_base {}".format(time_offset, finish_base))
 		cut_to_file(logger, finish_path, base_dir, racer, finish_start, finish_end)
 
-	temp_path = "{}.tmp.mp4".format(result_path)
+	temp_path = "{}.{}.mp4".format(result_path, str(uuid4()))
 	args = ['ffmpeg']
 	for path in finish_paths:
 		args += ['-i', path]
