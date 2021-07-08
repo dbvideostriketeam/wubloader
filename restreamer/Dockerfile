@@ -1,7 +1,6 @@
-FROM alpine:3.7
+FROM ubuntu:18.04
 # dependencies needed for compiling c extensions
-# also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py2-pip gcc python-dev musl-dev file make busybox-extras
+RUN chmod 1777 /tmp && apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install --yes python-pip python-dev file gcc make ffmpeg
 
 # Install gevent so that we don't need to re-install it when common changes
 RUN pip install gevent
@@ -11,7 +10,6 @@ COPY common /tmp/common
 RUN pip install /tmp/common && rm -r /tmp/common
 
 # Install actual application
-RUN apk add ffmpeg
 COPY restreamer /tmp/restreamer
 RUN pip install /tmp/restreamer && rm -r /tmp/restreamer
 

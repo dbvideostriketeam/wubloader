@@ -365,20 +365,32 @@ def review_race(match_id, race_number):
 			race start time to look for the start signal. Default 0,5.
 		finish_range: As start_range, but how long to make the final review video before/after
 			the nominal duration. Default -5,10.
+		racer1_start, racer2_start: Explicit start times, as float.
 	"""
 	if app.condor_db is None:
 		return "Reviews are disabled", 501
 	start_range = map(float, request.args.get('start_range', '0,5').split(','))
 	finish_range = map(float, request.args.get('finish_range', '-5,10').split(','))
+	racer1_start = float(request.args['racer1_start']) if 'racer1_start' in request.args else None
+	racer2_start = float(request.args['racer2_start']) if 'racer2_start' in request.args else None
 	try:
-		review_path = review(match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range)
+		review_path = review(
+			match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range,
+			racer1_start, racer2_start,
+		)
 	except RaceNotFound as e:
 		return str(e), 404
 	except NoSegments:
 		logging.warning("Failed review due to no segments", exc_info=True)
 		return "Video content is missing - cannot review automatically", 400
 	except CantFindStart as e:
-		return str(e), 400
+		return (
+			"{}\n"
+			"Please check start video and adjust start_range or set racer{}_start: {}\n"
+			"Note timestamps in that video are only valid for the current start_range.\n"
+		).format(
+			e, e.racer_number, os.path.join(app.static_url_path, os.path.relpath(e.path, app.static_folder))
+		), 400
 
 	relative_path = os.path.relpath(review_path, app.static_folder)
 	review_url = os.path.join(app.static_url_path, relative_path)
