@@ -92,7 +92,7 @@
     dbname: "wubloader",
   },
 
-  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/condor_x2",
+  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/condor_xii",
 
   // Other database arguments
   db_super_user:: "postgres", // only accessible from localhost
@@ -195,7 +195,9 @@
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
-      ],
+      ] + (if $.condor_db == null then [] else [
+        "--condor-db", $.condor_db,
+      ]),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
