@@ -142,8 +142,8 @@ def main(match_id, race_number, output_path,
 		line for line in re.split('[\r\n]', err.strip())
 		if line.startswith('[blackdetect @ ')
 	]
-	if len(lines) == 1:
-		line, = lines
+	if len(lines) > 0:
+		line = lines[0] # take first
 		black_end = line.split(' ')[4]
 		assert black_end.startswith('black_end:')
 		time_offset = float(black_end.split(':')[1])

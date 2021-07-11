@@ -28,7 +28,7 @@ from uuid import uuid4
 import argh
 import mysql.connector
 
-def main(league, limit=144,
+def main(league, limit=144, max_duration=3600.0,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
 ):
 	logging.basicConfig(level=logging.INFO)
@@ -50,9 +50,10 @@ def main(league, limit=144,
 		JOIN race_runs ON (races.race_id = race_runs.race_id)
 		WHERE race_runs.rank = 1
 			AND match_info.league_tag = %(league)s
+			AND race_runs.time < %(max_duration)s
 		ORDER BY race_runs.time ASC
 		LIMIT %(limit)s
-	""", {'limit': limit, 'league': league})
+	""", {'limit': limit, 'league': league, 'max_duration': int(max_duration * 100)})
 
 	data = cur.fetchall()
 	data = [
