@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en-US">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>Replay</title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link href="/thrimbletrimmer/plugins/video.js/dist/video-js.min.css" rel="stylesheet">
+    <link href="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <script src="/thrimbletrimmer/plugins/video.js/dist/video.min.js"></script>
+    <script src="/thrimbletrimmer/plugins/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>
+    <script src="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>
+
+    <link href="/thrimbletrimmer/styles/style.css" rel="stylesheet">
+</head>
+<body class=ultrawide>
+    <div style="max-width:1280px;margin:auto;padding-top:25px;">
+        <table id="wubloaderInputTable">
+            <tr>
+                <th>Stream</th>
+                <th>Start Time</th>
+                <th>End Time (blank for live)</th>
+                <th></th>
+            </tr>
+            <tr>
+                <td><input id="StreamName" value="desertbus" /></td>
+                <td><input id="StreamStart" value="0:00:15" />
+                <td><input id="StreamEnd" value="" />
+                <td><input type="button" value="Load Playlist" onclick="loadPlaylist()" /></td>
+            </tr>
+            <tr>
+                <td></td>
+                <td></td>
+                <td>
+                    <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
+                    <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)"> Bustime
+                    <input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" checked="checked"> Time Ago
+                </td>
+            </tr>
+        </table>
+
+        <div id="EditorContainer">
+            <video id="my-player" class="video-js" controls preload="auto" style="display:none">
+                <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+            </video>
+        </div>
+
+        <div id="InfoPane">
+            <br/>
+            When no end time is set, the stream will continue to play as it arrives.</br>
+            Trying to watch live will result in buffering, as those segments haven't been captured yet.<br/>
+            If you watch for a long time, it may become difficult to navigate on the video bar because there's too long a time loaded.
+            To fix this, re-load the video in the desired time range (default: the last 10 minutes) by clicking Load Playlist.<br/>
+            Download Quality: <select id="qualityLevel"></select>
+            <input type="button" id="DownloadButton" value="Download this time range" onclick="thrimbletrimmerDownload()"/>
+			<a id="DownloadLink" href="" style="display:none">Right click here and Save Link As to Download</a>
+            <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
+            <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
+        </div>
+        <div id="HelpPane" style="display:none;">
+            <ul>
+                <li>J/K/L - Back 10 seconds, Play/Pause, Advance 10 seconds</li>
+                <li>LeftArrow/RightArrow - Back 5 seconds, Advance 5 seconds</li>
+                <li>,/. - Back 0.1 seconds, Advance 0.1 seconds</li>
+                <li>0-9 - Jump to 0% - 90% through the video.</li>
+            </ul>
+        </div>
+    </div>
+    <iframe id="outputFile" style="display:none;"></iframe>
+
+    <script src="/thrimbletrimmer/scripts/playerSetup.js"></script>
+    <script src="/thrimbletrimmer/scripts/keyboardShortcuts.js"></script>
+    <script src="/thrimbletrimmer/scripts/IO.js"></script>
+
+	<script>
+		if (window.location.hash) {
+			const stream = window.location.hash.substring(1);
+			document.getElementById("StreamName").value = stream;
+			document.title = "Replay - " + stream;
+			loadPlaylist();
+		}
+	</script>
+
+</body>
+</html>
