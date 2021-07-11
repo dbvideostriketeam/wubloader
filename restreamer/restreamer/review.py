@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os
+import re
 import subprocess
 from hashlib import sha256
 from urlparse import urlparse
@@ -155,7 +156,7 @@ def review(
 			if proc.wait() != 0:
 				raise Exception("ffmpeg exited {}\n{}".format(proc.wait(), err))
 			lines = [
-				line for line in err.strip().split('\n')
+				line for line in re.split('[\r\n]', err.strip())
 				if line.startswith('[blackdetect @ ')
 			]
 			if len(lines) == 1:
