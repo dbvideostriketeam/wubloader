@@ -394,7 +394,9 @@ def review_race(match_id, race_number):
 
 	relative_path = os.path.relpath(review_path, app.static_folder)
 	review_url = os.path.join(app.static_url_path, relative_path)
-	return redirect(review_url)
+	response = redirect(review_url)
+	response.autocorrect_location_header = False
+	return response
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0, condor_db=None):
