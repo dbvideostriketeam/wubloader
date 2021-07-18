@@ -23,6 +23,8 @@ import logging
 import os
 import re
 import subprocess
+import tempfile
+import shutil
 from getpass import getpass
 from uuid import uuid4
 
@@ -78,11 +80,10 @@ def add_range(base, range):
 
 def main(match_id, race_number, output_path,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
-	base_dir='/srv/wubloader', temp_dir='/tmp', fast_encode=False,
-	start_range=(0, 10), output_range=(-1, 5), no_interactive=False,
+	base_dir='/srv/wubloader',
+	start_range=(0, 10), non_interactive=False,
 ):
 	logging.basicConfig(level=logging.INFO)
-	output_range = [datetime.timedelta(seconds=n) for n in output_range]
 
 	match_id = int(match_id)
 	race_number = int(race_number)
@@ -121,12 +122,20 @@ def main(match_id, race_number, output_path,
 	assert len(data) == 1, repr(data)
 
 	(racer1, racer2, start, duration, winner), = data
-	end = start + datetime.timedelta(seconds=duration/100.)
 	racer = [racer1, racer2][winner - 1]
 	if racer == 'smokepipe_':
 		racer = 'smokepipetwitch'
 
+	temp_dir = tempfile.mkdtemp()
+	try:
+		cut_race(output_path, racer, start, duration, start_range=start_range, non_interactive=non_interactive)
+	finally:
+		shutil.rmtree(temp_dir, ignore_errors=True)
+
+def cut_race(base_dir, output_path, temp_dir, racer, start, duration, start_range=(0, 10), non_interactive=False):
 	start_path = os.path.join(temp_dir, "start-{}.mp4".format(uuid4()))
+	end = start + datetime.timedelta(seconds=duration/100.)
+	output_range = [datetime.timedelta(seconds=n) for n in (-1, 5)]
 
 	start_start, start_end = add_range(start, start_range)
 	cut_to_file(start_path, base_dir, racer, start_start, start_end, fast_encode=True)
@@ -151,7 +160,7 @@ def main(match_id, race_number, output_path,
 		assert black_end.startswith('black_end:')
 		time_offset = float(black_end.split(':')[1])
 		os.remove(start_path) # clean up
-	elif no_interactive:
+	elif non_interactive:
 		raise Exception("Unable to detect start (expected 1 black interval, but found {}).".format(len(lines)))
 	else:
 		print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
@@ -161,7 +170,7 @@ def main(match_id, race_number, output_path,
 	time_offset = datetime.timedelta(seconds=time_offset)
 
 	output_start = start_start + time_offset + output_range[0]
-	cut_to_file(output_path, base_dir, racer, output_start, end + output_range[1], fast_encode=fast_encode)
+	cut_to_file(output_path, base_dir, racer, output_start, end + output_range[1], fast_encode=False)
 
 	print "Cut to file {}".format(output_path)
 
