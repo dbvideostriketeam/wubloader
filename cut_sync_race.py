@@ -41,7 +41,7 @@ class NoSegments(Exception):
 	pass
 
 
-def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_counter=False):
+def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_counter=False, fast_encode=False):
 	logging.info("Cutting {}".format(filename))
 	segments = get_best_segments(
 		os.path.join(base_dir, stream, variant).lower(),
@@ -63,7 +63,10 @@ def cut_to_file(filename, base_dir, stream, start, end, variant='source', frame_
 				":x=(w-tw)/2+100"
 				":y=h-(2*lh)",
 		]
-	encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mp4']
+	if fast_encode:
+		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mp4']
+	else:
+		encoding_args = ['-f', 'mp4']
 	with open(filename, 'w') as f:
 		for chunk in full_cut_segments(segments, start, end, filter_args + encoding_args):
 			f.write(chunk)
@@ -75,8 +78,8 @@ def add_range(base, range):
 
 def main(match_id, race_number, output_path,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
-	base_dir='/srv/wubloader', temp_dir='/tmp',
-	start_range=(0, 10), output_range=(-1, 5),
+	base_dir='/srv/wubloader', temp_dir='/tmp', fast_encode=False,
+	start_range=(0, 10), output_range=(-1, 5), no_interactive=False,
 ):
 	logging.basicConfig(level=logging.INFO)
 	output_range = [datetime.timedelta(seconds=n) for n in output_range]
@@ -126,7 +129,7 @@ def main(match_id, race_number, output_path,
 	start_path = os.path.join(temp_dir, "start-{}.mp4".format(uuid4()))
 
 	start_start, start_end = add_range(start, start_range)
-	cut_to_file(start_path, base_dir, racer, start_start, start_end)
+	cut_to_file(start_path, base_dir, racer, start_start, start_end, fast_encode=True)
 
 	args = [
 		'ffmpeg', '-hide_banner',
@@ -147,15 +150,18 @@ def main(match_id, race_number, output_path,
 		black_end = line.split(' ')[4]
 		assert black_end.startswith('black_end:')
 		time_offset = float(black_end.split(':')[1])
+		os.remove(start_path) # clean up
+	elif no_interactive:
+		raise Exception("Unable to detect start (expected 1 black interval, but found {}).".format(len(lines)))
 	else:
 		print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
 		print "Cutting file {} for manual detection.".format(start_path)
-		cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True)
+		cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True, fast_encode=True)
 		time_offset = float(raw_input("What timestamp of this video do we start at? "))
 	time_offset = datetime.timedelta(seconds=time_offset)
 
 	output_start = start_start + time_offset + output_range[0]
-	cut_to_file(output_path, base_dir, racer, output_start, end + output_range[1])
+	cut_to_file(output_path, base_dir, racer, output_start, end + output_range[1], fast_encode=fast_encode)
 
 	print "Cut to file {}".format(output_path)
 
