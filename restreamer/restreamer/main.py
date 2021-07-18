@@ -369,12 +369,12 @@ def review_race(match_id, race_number):
 	"""
 	if app.condor_db is None:
 		return "Reviews are disabled", 501
-	start_range = map(float, request.args.get('start_range', '0,5').split(','))
+	start_range = map(float, request.args.get('start_range', '0,10').split(','))
 	finish_range = map(float, request.args.get('finish_range', '-5,10').split(','))
 	racer1_start = float(request.args['racer1_start']) if 'racer1_start' in request.args else None
 	racer2_start = float(request.args['racer2_start']) if 'racer2_start' in request.args else None
 	try:
-		review_path = review(
+		review_path, suspect_starts = review(
 			match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range,
 			racer1_start, racer2_start,
 		)
@@ -394,9 +394,27 @@ def review_race(match_id, race_number):
 
 	relative_path = os.path.relpath(review_path, app.static_folder)
 	review_url = os.path.join(app.static_url_path, relative_path)
-	response = redirect(review_url)
-	response.autocorrect_location_header = False
-	return response
+
+	if suspect_starts:
+		# warn and link via html
+		return "\n".join([
+			"<html>",
+				"<body>",
+					"Review succeeded, but start times are uncertain. Please check start videos:</br>",
+					"\n".join('<a href="{}">{}</a></br>'.format(
+						os.path.join(app.static_url_path, os.path.relpath(e.path, app.static_folder)),
+						e,
+					) for e in suspect_starts),
+					"If all is well, the review is available",
+					'<a href="{}">HERE</a>'.format(review_url),
+				"</body>",
+			"</html>",
+		])
+	else:
+		# happy path, redirect
+		response = redirect(review_url)
+		response.autocorrect_location_header = False
+		return response
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0, condor_db=None):

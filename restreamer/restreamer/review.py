@@ -7,6 +7,7 @@ import subprocess
 from hashlib import sha256
 from urlparse import urlparse
 from uuid import uuid4
+from base64 import b64encode
 
 import mysql.connector
 
@@ -82,7 +83,7 @@ def conn_from_url(url):
 
 
 def review(
-	match_id, race_number, base_dir, db_url, start_range=(0, 5), finish_range=(-5, 10),
+	match_id, race_number, base_dir, db_url, start_range=(0, 10), finish_range=(-5, 10),
 	racer1_start=None, racer2_start=None,
 ):
 	logger = logging.getLogger("review").getChild("{}-{}".format(match_id, race_number))
@@ -120,7 +121,7 @@ def review(
 
 	# cache hash encapsulates all input args
 	cache_hash = sha256(str((match_id, race_number, start_range, finish_range, racer1_start, racer2_start)))
-	cache_str = cache_hash.digest().encode('base64')[:12]
+	cache_str = b64encode(cache_hash.digest(), "-_")[:12]
 
 	output_name = "{}-{}-{}-{}".format(match_id, racer1, racer2, race_number)
 	output_dir = os.path.join(base_dir, "reviews", output_name)
@@ -130,9 +131,10 @@ def review(
 	result_path = os.path.join(output_dir, result_name)
 	if os.path.exists(result_path):
 		logger.info("Result already exists for {}, reusing".format(result_path))
-		return result_path
+		return result_path, []
 
 	finish_paths = []
+	suspect_starts = []
 
 	for racer_index, (racer, time_offset) in enumerate(((racer1, racer1_start), (racer2, racer2_start))):
 		nonce = str(uuid4())
@@ -159,16 +161,19 @@ def review(
 				line for line in re.split('[\r\n]', err.strip())
 				if line.startswith('[blackdetect @ ')
 			]
-			if len(lines) == 1:
-				line, = lines
-				black_end = line.split(' ')[4]
-				assert black_end.startswith('black_end:')
-				time_offset = float(black_end.split(':')[1])
-			else:
+			if len(lines) != 1:
 				found = len(lines)
 				logger.warning("Unable to detect start (expected 1 black interval, but found {}), re-cutting with timestamps".format(found))
 				cut_to_file(logger, start_path, base_dir, racer, start_start, start_end, frame_counter=True)
-				raise CantFindStart(racer, racer_number, found, start_path)
+				error = CantFindStart(racer, racer_number, found, start_path)
+				if not lines:
+					raise error
+				# try to continue by picking first
+				suspect_starts.append(error)
+			line = lines[0]
+			black_end = line.split(' ')[4]
+			assert black_end.startswith('black_end:')
+			time_offset = float(black_end.split(':')[1])
 		time_offset = datetime.timedelta(seconds=time_offset - start_range[0])
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
@@ -193,6 +198,10 @@ def review(
 	logger.info("Cutting final result")
 	subprocess.check_call(args)
 	# atomic rename so that if result_path exists at all, we know it is complete and correct
-	os.rename(temp_path, result_path)
-	logger.info("Review done")
-	return result_path
+	# don't do this if we have a suspect start though, as the cached result wouldn't know.
+	if suspect_starts:
+		result_path = temp_path
+	else:
+		os.rename(temp_path, result_path)
+	logger.info("Review done, suspect starts = {}".format(len(suspect_starts)))
+	return result_path, suspect_starts
