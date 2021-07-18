@@ -13,6 +13,7 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
+  downloader_tag:: "59b0732-wip", // prevent downloader restarts
 
   // For each service, whether to deploy that service.
   enabled:: {
@@ -189,7 +190,7 @@
   services: {
 
     [if $.enabled.downloader then "downloader"]: {
-      image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
+      image: "quay.io/ekimekim/wubloader-downloader:%s" % $.downloader_tag,
       // Args for the downloader: set channel and qualities
       command: $.channels + [
         "--base-dir", "/mnt",
