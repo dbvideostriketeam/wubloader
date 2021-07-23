@@ -174,7 +174,7 @@ def review(
 			black_end = line.split(' ')[4]
 			assert black_end.startswith('black_end:')
 			time_offset = float(black_end.split(':')[1])
-		time_offset = datetime.timedelta(seconds=time_offset - start_range[0])
+		time_offset = datetime.timedelta(seconds=start_range[0] + time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.

@@ -149,7 +149,7 @@ def main(match_id, race_number,
 			print "Cutting file {} for manual detection.".format(start_path)
 			cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True)
 			time_offset = float(raw_input("What timestamp of this video do we start at? "))
-		time_offset = datetime.timedelta(seconds=time_offset)
+		time_offset = datetime.timedelta(seconds=start_range[0] + time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
 		# time since their actual start.
