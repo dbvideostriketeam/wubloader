@@ -1,38 +1,21 @@
 
-"""
-Attempts to cut every race for a league from local segments.
-
-Database info:
-
-matches maps to multiple races via match_races (on match_id)
-matches links to racers and cawmentator:
-	matches.racer_{1,2}_id
-	matches.cawmentator_id
-races contains start time:
-	races.timestamp
-races maps to multiple runs via race_runs
-race_runs contains time for each racer
-	race_runs.time: centiseconds
-	race_runs.rank: 1 for fastest time
-
-"""
-
-import datetime
 import logging
 import os
-import sys
-from getpass import getpass
+import tempfile
+import shutil
+from uuid import uuid4
 
 import argh
 import mysql.connector
 
-from common.segments import get_best_segments, cut_segments
+import cut_sync_race
 
 INFO_QUERY = """
 	SELECT
 		match_info.racer_1_name as racer_1,
 		match_info.racer_2_name as racer_2,
 		match_info.cawmentator_name as cawmentator,
+		match_info.league_tag as league,
 		match_info.match_id as match_id,
 		match_races.race_number as race_number,
 		races.timestamp as start,
@@ -42,45 +25,20 @@ INFO_QUERY = """
 	JOIN races ON (match_races.race_id = races.race_id)
 	JOIN race_runs ON (races.race_id = race_runs.race_id)
 	WHERE match_info.completed AND race_runs.rank = 1
+	ORDER BY start ASC
 """
 
-
-def ts(dt):
-	return dt.strftime("%FT%T")
-
-
-class NoSegments(Exception):
-	pass
-
-
-def cut_to_file(filename, base_dir, stream, start, end, variant='source'):
-	if os.path.exists(filename):
-		return
-	logging.info("Cutting {}".format(filename))
-	segments = get_best_segments(
-		os.path.join(base_dir, stream, variant).lower(),
-		start, end,
-	)
-	if None in segments:
-		logging.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
-	if not segments or set(segments) == {None}:
-		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
-	with open(filename, 'w') as f:
-		for chunk in cut_segments(segments, start, end):
-			f.write(chunk)
-
-
-def main(host='condor.live', user='necrobot-read', password=None, database='season_8', base_dir='.', output_dir='.', find=None):
+def main(
+	output_dir,
+	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
+	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False,
+):
 	logging.basicConfig(level=logging.INFO)
+	start_range = map(int, start_range.split(","))
 
-	if password is None:
-		password = getpass("Password? ")
 	conn = mysql.connector.connect(
 		host=host, user=user, password=password, database=database,
 	)
-
-	if find:
-		find = tuple(find.split('-'))
 
 	cur = conn.cursor()
 	cur.execute(INFO_QUERY)
@@ -93,28 +51,40 @@ def main(host='condor.live', user='necrobot-read', password=None, database='seas
 
 	logging.info("Got info on {} races".format(len(data)))
 
-	for racer1, racer2, cawmentator, match_id, race_number, start, duration in data:
-		if find and (racer1.lower(), racer2.lower()) != find:
-			continue
-
-		end = start + datetime.timedelta(seconds=duration/100.)
-		base_name = "-".join(map(str, [racer1, racer2, match_id, race_number]))
+	for racer1, racer2, cawmentator, league, match_id, race_number, start, duration in data:
+		base_name = "-".join(map(str, [league, match_id, race_number, racer1, racer2]))
 
 		items = [(racer1, racer1), (racer2, racer2)]
 		if cawmentator:
-			items.append(("cawmentary", cawmentator))
+			items.append(("caw-{}".format(cawmentator), cawmentator))
 		for name, stream in items:
+			output_path = os.path.join(output_dir, "{}-{}.mp4".format(base_name, name))
+			if os.path.exists(output_path):
+				continue
+			logging.info("Cutting {}, starting at {}".format(output_path, start))
+			output_temp = "{}.tmp{}.mp4".format(output_path, uuid4())
+			temp_dir = tempfile.mkdtemp()
+			caw_kwargs = {
+				# bypass start checks, cut a longer range instead
+				"output_range": (-5, 30),
+				"time_offset": 0,
+			} if name.startswith("caw-") else {}
 			try:
-				cut_to_file(
-					os.path.join(output_dir, "{}-{}.ts".format(base_name, name)),
-					base_dir, stream, start, end,
+				cut_sync_race.cut_race(
+					base_dir, output_temp, temp_dir, stream, start, duration,
+					start_range=start_range, non_interactive=non_interactive,
+					**caw_kwargs
 				)
-			except NoSegments as e:
+			except cut_sync_race.NoSegments as e:
 				logging.warning(e)
 			except Exception as e:
-				logging.exception("Failed to cut {}-{}.ts ({} to {})".format(
-					base_name, name, ts(start), ts(end),
-				), exc_info=True)
+				logging.exception("Failed to cut {}".format(output_path), exc_info=True)
+				if not non_interactive:
+					raw_input("Press enter to continue ")
+			else:
+				os.rename(output_temp, output_path)
+			finally:
+				shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 if __name__ == '__main__':

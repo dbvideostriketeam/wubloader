@@ -81,12 +81,13 @@ def add_range(base, range):
 def main(match_id, race_number, output_path,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
 	base_dir='/srv/wubloader',
-	start_range=(0, 10), non_interactive=False,
+	start_range="0,10", non_interactive=False, racer=0,
 ):
 	logging.basicConfig(level=logging.INFO)
 
 	match_id = int(match_id)
 	race_number = int(race_number)
+	start_range = map(int, start_range.split(","))
 
 	if password is None:
 		password = getpass("Password? ")
@@ -122,53 +123,60 @@ def main(match_id, race_number, output_path,
 	assert len(data) == 1, repr(data)
 
 	(racer1, racer2, start, duration, winner), = data
-	racer = [racer1, racer2][winner - 1]
+	if racer == 0:
+		racer = winner
+	racer = [racer1, racer2][racer - 1]
 	if racer == 'smokepipe_':
 		racer = 'smokepipetwitch'
 
 	temp_dir = tempfile.mkdtemp()
 	try:
-		cut_race(output_path, racer, start, duration, start_range=start_range, non_interactive=non_interactive)
+		cut_race(base_dir, output_path, temp_dir, racer, start, duration, start_range=start_range, non_interactive=non_interactive)
 	finally:
 		shutil.rmtree(temp_dir, ignore_errors=True)
 
-def cut_race(base_dir, output_path, temp_dir, racer, start, duration, start_range=(0, 10), non_interactive=False):
+def cut_race(
+	base_dir, output_path, temp_dir, racer, start, duration,
+	start_range=(0, 10), non_interactive=False, output_range=(-1, 5),
+	time_offset=None
+):
 	start_path = os.path.join(temp_dir, "start-{}.mp4".format(uuid4()))
 	end = start + datetime.timedelta(seconds=duration/100.)
-	output_range = [datetime.timedelta(seconds=n) for n in (-1, 5)]
-
+	output_range = [datetime.timedelta(seconds=n) for n in output_range]
 	start_start, start_end = add_range(start, start_range)
-	cut_to_file(start_path, base_dir, racer, start_start, start_end, fast_encode=True)
 
-	args = [
-		'ffmpeg', '-hide_banner',
-		'-i', start_path,
-		'-vf', 'blackdetect=d=0.1',
-		'-f', 'null', '/dev/null'
-	]
-	proc = subprocess.Popen(args, stderr=subprocess.PIPE)
-	out, err = proc.communicate()
-	if proc.wait() != 0:
-		raise Exception("ffmpeg exited {}\n{}".format(proc.wait(), err))
-	lines = [
-		line for line in re.split('[\r\n]', err.strip())
-		if line.startswith('[blackdetect @ ')
-	]
-	if len(lines) > 0:
-		line = lines[0] # take first
-		black_end = line.split(' ')[4]
-		assert black_end.startswith('black_end:')
-		time_offset = float(black_end.split(':')[1])
-		os.remove(start_path) # clean up
-	elif non_interactive:
-		raise Exception("Unable to detect start (expected 1 black interval, but found {}).".format(len(lines)))
-	else:
-		print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
-		print "Cutting file {} for manual detection.".format(start_path)
-		cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True, fast_encode=True)
-		time_offset = float(raw_input("What timestamp of this video do we start at? "))
+	if time_offset is None:
+		cut_to_file(start_path, base_dir, racer, start_start, start_end, fast_encode=True)
+
+		args = [
+			'ffmpeg', '-hide_banner',
+			'-i', start_path,
+			'-vf', 'blackdetect=d=0.1',
+			'-f', 'null', '/dev/null'
+		]
+		proc = subprocess.Popen(args, stderr=subprocess.PIPE)
+		out, err = proc.communicate()
+		if proc.wait() != 0:
+			raise Exception("ffmpeg exited {}\n{}".format(proc.wait(), err))
+		lines = [
+			line for line in re.split('[\r\n]', err.strip())
+			if line.startswith('[blackdetect @ ')
+		]
+		if len(lines) > 0:
+			line = lines[0] # take first
+			black_end = line.split(' ')[4]
+			assert black_end.startswith('black_end:')
+			time_offset = float(black_end.split(':')[1])
+			os.remove(start_path) # clean up
+		elif non_interactive:
+			raise Exception("Unable to detect start (expected 1 black interval, but found {}).".format(len(lines)))
+		else:
+			print "Unable to detect start (expected 1 black interval, but found {}).".format(len(lines))
+			print "Cutting file {} for manual detection.".format(start_path)
+			cut_to_file(start_path, base_dir, racer, start_start, start_end, frame_counter=True, fast_encode=True)
+			time_offset = float(raw_input("What timestamp of this video do we start at? "))
+
 	time_offset = datetime.timedelta(seconds=time_offset)
-
 	output_start = start_start + time_offset + output_range[0]
 	cut_to_file(output_path, base_dir, racer, output_start, end + output_range[1], fast_encode=False)
 
