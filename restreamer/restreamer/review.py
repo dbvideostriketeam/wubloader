@@ -1,5 +1,6 @@
 
 import datetime
+import json
 import logging
 import os
 import re
@@ -24,16 +25,12 @@ class RaceNotFound(Exception):
 
 
 class CantFindStart(Exception):
-	def __init__(self, racer, racer_number, found, path):
+	def __init__(self, racer, racer_number, path):
 		self.racer = racer
 		self.racer_number = racer_number
-		self.found = found
 		self.path = path
 	def __str__(self):
-		if self.found > 0:
-			return "Found multiple ({}) possible start points for racer {} ({})".format(self.found, self.racer_number, self.racer)
-		else:
-			return "Failed to find start point for racer {} ({})".format(self.racer_number, self.racer)
+		return "Failed to find start point for racer {} ({})".format(self.racer_number, self.racer)
 
 
 def ts(dt):
@@ -41,12 +38,14 @@ def ts(dt):
 
 
 def cut_to_file(logger, filename, base_dir, stream, start, end, variant='source', frame_counter=False):
+	"""Returns boolean of whether cut video contained holes"""
 	logger.info("Cutting {}".format(filename))
 	segments = get_best_segments(
 		os.path.join(base_dir, stream, variant).lower(),
 		start, end,
 	)
-	if None in segments:
+	contains_holes = None in segments
+	if contains_holes:
 		logger.warning("Cutting {} ({} to {}) but it contains holes".format(filename, ts(start), ts(end)))
 	if not segments or set(segments) == {None}:
 		raise NoSegments("Can't cut {} ({} to {}): No segments".format(filename, ts(start), ts(end)))
@@ -66,6 +65,7 @@ def cut_to_file(logger, filename, base_dir, stream, start, end, variant='source'
 	with open(filename, 'w') as f:
 		for chunk in full_cut_segments(segments, start, end, filter_args + encoding_args):
 			f.write(chunk)
+	return contains_holes
 
 
 def add_range(base, range):
@@ -86,6 +86,21 @@ def review(
 	match_id, race_number, base_dir, db_url, start_range=(0, 10), finish_range=(-5, 10),
 	racer1_start=None, racer2_start=None,
 ):
+	"""Cuts a review, returning the following structure:
+	{
+		racers: [
+			{
+				name: racer name
+				start_path: path to start video, omitted if start given
+				start_holes: bool, whether the start video contained holes, omitted if start given
+				starts: [start times within video], omitted if start given
+				offset: final time offset used
+				finish_holes: bool, whether the finish video contained holes
+			} for each racer
+		]
+		result_path: path to result video
+	}
+	"""
 	logger = logging.getLogger("review").getChild("{}-{}".format(match_id, race_number))
 
 	conn = conn_from_url(db_url)
@@ -129,22 +144,29 @@ def review(
 		os.makedirs(output_dir)
 	result_name = "review_{}.mp4".format(cache_str)
 	result_path = os.path.join(output_dir, result_name)
-	if os.path.exists(result_path):
+	cache_path = os.path.join(output_dir, "cache_{}.json".format(cache_str))
+	if os.path.exists(result_path) and os.path.exists(cache_path):
 		logger.info("Result already exists for {}, reusing".format(result_path))
-		return result_path, []
+		with open(cache_path) as f:
+			return json.load(f)
 
 	finish_paths = []
-	suspect_starts = []
+	result_info = {
+		"result_path": result_path
+	}
 
 	for racer_index, (racer, time_offset) in enumerate(((racer1, racer1_start), (racer2, racer2_start))):
 		nonce = str(uuid4())
 		racer_number = racer_index + 1
+		racer_info = {"name": racer}
+		result_info.setdefault("racers", []).append(racer_info)
 
 		if time_offset is None:
-			start_path = os.path.join(output_dir, "start-{}-{}.mp4".format(racer_number, nonce))
+			start_path = os.path.join(output_dir, "start-{}-{}-{}.mp4".format(racer_number, cache_str, nonce))
+			racer_info["start_path"] = start_path
 			logger.info("Cutting start for racer {} ({})".format(racer_number, racer))
 			start_start, start_end = add_range(start, start_range)
-			cut_to_file(logger, start_path, base_dir, racer, start_start, start_end)
+			racer_info["start_holes"] = cut_to_file(logger, start_path, base_dir, racer, start_start, start_end)
 
 			logger.info("Running blackdetect")
 			args = [
@@ -161,19 +183,25 @@ def review(
 				line for line in re.split('[\r\n]', err.strip())
 				if line.startswith('[blackdetect @ ')
 			]
-			if len(lines) != 1:
-				found = len(lines)
-				logger.warning("Unable to detect start (expected 1 black interval, but found {}), re-cutting with timestamps".format(found))
-				cut_to_file(logger, start_path, base_dir, racer, start_start, start_end, frame_counter=True)
-				error = CantFindStart(racer, racer_number, found, start_path)
-				if not lines:
-					raise error
-				# try to continue by picking first
-				suspect_starts.append(error)
-			line = lines[0]
-			black_end = line.split(' ')[4]
-			assert black_end.startswith('black_end:')
-			time_offset = float(black_end.split(':')[1])
+			starts = []
+			racer_info["starts"] = starts
+			for line in lines:
+				black_end = line.split(' ')[4]
+				assert black_end.startswith('black_end:')
+				starts.append(float(black_end.split(':')[1]))
+
+			# unconditionally re-cut a start, this time with frame counter.
+			# TODO avoid the repeated work and do cut + blackdetect + frame counter all in one pass
+			cut_to_file(logger, start_path, base_dir, racer, start_start, start_end, frame_counter=True)
+
+			if not starts:
+				raise CantFindStart(racer, racer_number, start_path)
+
+			if len(starts) > 1:
+				logging.warning("Found multiple starts, picking first: {}".format(starts))
+			time_offset = starts[0]
+
+		racer_info["offset"] = time_offset
 		time_offset = datetime.timedelta(seconds=start_range[0] + time_offset)
 
 		# start each racer's finish video at TIME_OFFSET later, so they are the same
@@ -183,7 +211,7 @@ def review(
 		finish_path = os.path.join(output_dir, "finish-{}-{}.mp4".format(racer_number, nonce))
 		finish_paths.append(finish_path)
 		logger.info("Got time offset of {}, cutting finish at finish_base {}".format(time_offset, finish_base))
-		cut_to_file(logger, finish_path, base_dir, racer, finish_start, finish_end)
+		racer_info["finish_holes"] = cut_to_file(logger, finish_path, base_dir, racer, finish_start, finish_end)
 
 	temp_path = "{}.{}.mp4".format(result_path, str(uuid4()))
 	args = ['ffmpeg']
@@ -195,13 +223,14 @@ def review(
 		'-y', temp_path,
 	]
 
+	cache_temp = "{}.{}.json".format(cache_path, str(uuid4()))
+	with open(cache_temp, 'w') as f:
+		f.write(json.dumps(result_info))
+	os.rename(cache_temp, cache_path)
+
 	logger.info("Cutting final result")
 	subprocess.check_call(args)
 	# atomic rename so that if result_path exists at all, we know it is complete and correct
-	# don't do this if we have a suspect start though, as the cached result wouldn't know.
-	if suspect_starts:
-		result_path = temp_path
-	else:
-		os.rename(temp_path, result_path)
-	logger.info("Review done, suspect starts = {}".format(len(suspect_starts)))
-	return result_path, suspect_starts
+	os.rename(temp_path, result_path)
+	logger.info("Review done: {}".format(result_info))
+	return result_info

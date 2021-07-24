@@ -10,7 +10,7 @@ import signal
 import gevent
 import gevent.backdoor
 import prometheus_client as prom
-from flask import Flask, url_for, request, abort, redirect, Response
+from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, smart_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
@@ -373,8 +373,12 @@ def review_race(match_id, race_number):
 	finish_range = map(float, request.args.get('finish_range', '-5,10').split(','))
 	racer1_start = float(request.args['racer1_start']) if 'racer1_start' in request.args else None
 	racer2_start = float(request.args['racer2_start']) if 'racer2_start' in request.args else None
+
+	path_to_url = lambda path: os.path.join(app.static_url_path, os.path.relpath(path, app.static_folder))
+	link = lambda url, text: '<a href="{}">{}</a>'.format(url, text)
+
 	try:
-		review_path, suspect_starts = review(
+		info = review(
 			match_id, race_number, app.static_folder, app.condor_db, start_range, finish_range,
 			racer1_start, racer2_start,
 		)
@@ -389,32 +393,29 @@ def review_race(match_id, race_number):
 			"Please check start video and adjust start_range or set racer{}_start: {}\n"
 			"Note timestamps in that video are only valid for the current start_range.\n"
 		).format(
-			e, e.racer_number, os.path.join(app.static_url_path, os.path.relpath(e.path, app.static_folder))
+			e, e.racer_number, path_to_url(e.path),
 		), 400
 
-	relative_path = os.path.relpath(review_path, app.static_folder)
-	review_url = os.path.join(app.static_url_path, relative_path)
+	body = []
+	for racer_info in info["racers"]:
+		if "start_path" in racer_info:
+			body.append("Detected {info[name]} start at {info[offset]} of {link}".format(
+				info=racer_info,
+				link=link(path_to_url(racer_info["start_path"]), "start video"),
+			))
+			if racer_info["start_holes"]:
+				body.append("WARNING: Start video for {} was missing some data and may be inaccurate".format(racer_info["name"]))
+			if len(racer_info["starts"]) > 1:
+				body.append("WARNING: Detected multiple possible start times for {}: {}".format(
+					racer_info["name"], ", ".join(racer_info["starts"])
+				))
+		else:
+			body.append("Using given start of {info[offset]} for {info[name]}".format(info=racer_info))
+		if racer_info["finish_holes"]:
+			body.append("WARNING: Result video for {} was missing some data and may be inaccurate".format(racer_info["name"]))
+	body.append(link(path_to_url(info["result_path"]), "Result video available here"))
 
-	if suspect_starts:
-		# warn and link via html
-		return "\n".join([
-			"<html>",
-				"<body>",
-					"Review succeeded, but start times are uncertain. Please check start videos:</br>",
-					"\n".join('<a href="{}">{}</a></br>'.format(
-						os.path.join(app.static_url_path, os.path.relpath(e.path, app.static_folder)),
-						e,
-					) for e in suspect_starts),
-					"If all is well, the review is available",
-					'<a href="{}">HERE</a>'.format(review_url),
-				"</body>",
-			"</html>",
-		])
-	else:
-		# happy path, redirect
-		response = redirect(review_url)
-		response.autocorrect_location_header = False
-		return response
+	return "<html><body>{}</body></html>".format("</br>\n".join(body))
 
 
 def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0, condor_db=None):
