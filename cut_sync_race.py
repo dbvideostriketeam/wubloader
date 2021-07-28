@@ -78,10 +78,12 @@ def add_range(base, range):
 	return [base + datetime.timedelta(seconds=n) for n in range]
 
 
+@argh.arg('--time-offset', type=float)
 def main(match_id, race_number, output_path,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
 	base_dir='/srv/wubloader',
 	start_range="0,10", non_interactive=False, racer=0,
+	time_offset=None,
 ):
 	logging.basicConfig(level=logging.INFO)
 
@@ -131,7 +133,7 @@ def main(match_id, race_number, output_path,
 
 	temp_dir = tempfile.mkdtemp()
 	try:
-		cut_race(base_dir, output_path, temp_dir, racer, start, duration, start_range=start_range, non_interactive=non_interactive)
+		cut_race(base_dir, output_path, temp_dir, racer, start, duration, start_range=start_range, non_interactive=non_interactive, time_offset=time_offset)
 	finally:
 		shutil.rmtree(temp_dir, ignore_errors=True)
 
