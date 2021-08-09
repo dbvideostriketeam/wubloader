@@ -31,7 +31,7 @@ INFO_QUERY = """
 def main(
 	output_dir,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
-	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False,
+	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None
 ):
 	logging.basicConfig(level=logging.INFO)
 	start_range = map(int, start_range.split(","))
@@ -54,6 +54,9 @@ def main(
 	for racer1, racer2, cawmentator, league, match_id, race_number, start, duration in data:
 		base_name = "-".join(map(str, [league, match_id, race_number, racer1, racer2]))
 
+		if restrict_league and league != restrict_league:
+			continue
+
 		items = [(racer1, racer1), (racer2, racer2)]
 		if cawmentator:
 			items.append(("caw-{}".format(cawmentator), cawmentator))
@@ -64,16 +67,17 @@ def main(
 			logging.info("Cutting {}, starting at {}".format(output_path, start))
 			output_temp = "{}.tmp{}.mp4".format(output_path, uuid4())
 			temp_dir = tempfile.mkdtemp()
-			caw_kwargs = {
+			# For cawmentary and grudgedor matches where starts don't make sense, just do -5 to +30.
+			no_sync_kwargs = {
 				# bypass start checks, cut a longer range instead
 				"output_range": (-5, 30),
 				"time_offset": 0,
-			} if name.startswith("caw-") else {}
+			} if name.startswith("caw-") or league == "gru" else {}
 			try:
 				cut_sync_race.cut_race(
 					base_dir, output_temp, temp_dir, stream, start, duration,
 					start_range=start_range, non_interactive=non_interactive,
-					**caw_kwargs
+					**no_sync_kwargs
 				)
 			except cut_sync_race.NoSegments as e:
 				logging.warning(e)
