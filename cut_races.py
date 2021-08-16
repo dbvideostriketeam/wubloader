@@ -30,8 +30,9 @@ INFO_QUERY = """
 
 def main(
 	output_dir,
-	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_x2',
-	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None
+	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_xii',
+	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None,
+	only_match_id=0,
 ):
 	logging.basicConfig(level=logging.INFO)
 	start_range = map(int, start_range.split(","))
@@ -55,6 +56,9 @@ def main(
 		base_name = "-".join(map(str, [league, match_id, race_number, racer1, racer2]))
 
 		if restrict_league and league != restrict_league:
+			continue
+
+		if only_match_id and match_id != only_match_id:
 			continue
 
 		items = [(racer1, racer1), (racer2, racer2)]

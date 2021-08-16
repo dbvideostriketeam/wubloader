@@ -407,7 +407,7 @@ def review_race(match_id, race_number):
 				body.append("WARNING: Start video for {} was missing some data and may be inaccurate".format(racer_info["name"]))
 			if len(racer_info["starts"]) > 1:
 				body.append("WARNING: Detected multiple possible start times for {}: {}".format(
-					racer_info["name"], ", ".join(racer_info["starts"])
+					racer_info["name"], ", ".join(map(str, racer_info["starts"]))
 				))
 		else:
 			body.append("Using given start of {info[offset]} for {info[name]}".format(info=racer_info))
