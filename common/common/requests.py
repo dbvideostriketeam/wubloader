@@ -1,9 +1,6 @@
 
 """Code for instrumenting requests calls. Requires requests, obviously."""
 
-# absolute_import prevents "import requests" in this module from just importing itself
-from __future__ import absolute_import
-
 import urlparse
 
 import requests.sessions
@@ -42,7 +39,7 @@ class InstrumentedSession(requests.sessions.Session):
 		start = monotonic() # we only use our own measured latency if an error occurs
 		try:
 			with request_concurrency.labels(name, method, domain).track_inprogress():
-				response = super(InstrumentedSession, self).request(method, url, *args, **kwargs)
+				response = super().request(method, url, *args, **kwargs)
 		except Exception:
 			latency = monotonic() - start
 			request_latency.labels(name, method, domain, "error").observe(latency)
