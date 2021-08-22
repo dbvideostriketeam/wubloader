@@ -4,7 +4,6 @@ import functools
 import logging
 import os
 import signal
-import sys
 
 import gevent.lock
 from monotonic import monotonic
@@ -82,8 +81,9 @@ def timed(name=None,
 		normalized_buckets = buckets
 	# convert constant (non-callable) values into callables for consistency
 	labels = {
-		# there's a pyflakes bug here suggesting that v is undefined, but it isn't
-		k: v if callable(v) else (lambda *a, **k: v)
+		# need to create then call a function to properly bind v as otherwise it will
+		# always return the final label value.
+		k: v if callable(v) else (lambda v: (lambda *a, **k: v))(v)
 		for k, v in labels.items()
 	}
 
@@ -97,13 +97,13 @@ def timed(name=None,
 			latency = prom.Histogram(
 				"{}_latency".format(_name),
 				"Wall clock time taken to execute {}".format(_name),
-				labels.keys() + ['error'],
+				list(labels.keys()) + ['error'],
 				buckets=buckets,
 			)
 			cputime = prom.Histogram(
 				"{}_cputime".format(_name),
 				"Process-wide consumed CPU time during execution of {}".format(_name),
-				labels.keys() + ['error', 'type'],
+				list(labels.keys()) + ['error', 'type'],
 				buckets=buckets,
 			)
 			metrics[_name] = latency, cputime
@@ -115,13 +115,13 @@ def timed(name=None,
 				normal_latency = prom.Histogram(
 					"{}_latency_normalized".format(_name),
 					"Wall clock time taken to execute {} per unit of work".format(_name),
-					labels.keys() + ['error'],
+					list(labels.keys()) + ['error'],
 					buckets=normalized_buckets,
 				)
 				normal_cputime = prom.Histogram(
 					"{}_cputime_normalized".format(_name),
 					"Process-wide consumed CPU time during execution of {} per unit of work".format(_name),
-					labels.keys() + ['error', 'type'],
+					list(labels.keys()) + ['error', 'type'],
 					buckets=normalized_buckets,
 				)
 				metrics[normname] = normal_latency, normal_cputime
@@ -133,9 +133,9 @@ def timed(name=None,
 
 			try:
 				ret = fn(*args, **kwargs)
-			except Exception:
+			except Exception as e:
 				ret = None
-				error_type, error, tb = sys.exc_info()
+				error = e
 			else:
 				error = None
 
@@ -169,7 +169,7 @@ def timed(name=None,
 
 			if error is None:
 				return ret
-			raise error_type, error, tb # re-raise error with original traceback
+			raise error from None # re-raise error with original traceback
 
 		return wrapper
 
@@ -255,6 +255,3 @@ def install_stacksampler(interval=0.005):
 	signal.signal(signal.SIGVTALRM, sample)
 	# deliver the first signal in INTERVAL seconds
 	signal.setitimer(signal.ITIMER_VIRTUAL, interval)
-
-
-

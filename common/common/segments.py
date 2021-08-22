@@ -10,7 +10,6 @@ import json
 import logging
 import os
 import shutil
-import sys
 from collections import namedtuple
 from contextlib import closing
 from tempfile import TemporaryFile
@@ -22,10 +21,11 @@ from .stats import timed
 
 
 def unpadded_b64_decode(s):
-	"""Decode base64-encoded string that has had its padding removed"""
+	"""Decode base64-encoded string that has had its padding removed.
+	Note it takes a unicode and returns a bytes."""
 	# right-pad with '=' to multiple of 4
 	s = s + '=' * (- len(s) % 4)
-	return base64.b64decode(s, "-_")
+	return base64.b64decode(s.encode(), b"-_")
 
 
 class SegmentInfo(
@@ -91,8 +91,7 @@ def parse_segment_path(path):
 		)
 	except ValueError as e:
 		# wrap error but preserve original traceback
-		_, _, tb = sys.exc_info()
-		raise ValueError, ValueError("Bad path {!r}: {}".format(path, e)), tb
+		raise ValueError("Bad path {!r}: {}".format(path, e)).with_traceback(e.__traceback__)
 
 
 class ContainsHoles(Exception):
@@ -242,7 +241,7 @@ def best_segments_by_start(hour):
 	for name in segment_paths:
 		try:
 			parsed.append(parse_segment_path(os.path.join(hour, name)))
-		except ValueError as e:
+		except ValueError:
 			logging.warning("Failed to parse segment {!r}".format(os.path.join(hour, name)), exc_info=True)
 
 	for start_time, segments in itertools.groupby(parsed, key=lambda segment: segment.start):
@@ -282,6 +281,7 @@ def streams_info(segment):
 		'-of', 'json', '-show_streams', # get streams info as json
 		segment.path,
 	])
+	# output here is a bytes, but json.loads will accept it
 	return json.loads(output)['streams']
 
 
@@ -419,15 +419,14 @@ def fast_cut_segments(segments, start, end):
 					for chunk in read_chunks(proc.stdout):
 						yield chunk
 				proc.wait()
-			except Exception:
-				ex, ex_type, tb = sys.exc_info()
+			except Exception as ex:
 				# try to clean up proc, ignoring errors
 				if proc is not None:
 					try:
 						proc.kill()
 					except OSError:
 						pass
-				raise ex, ex_type, tb
+				raise ex
 			else:
 				# check if ffmpeg had errors
 				if proc.returncode != 0:
@@ -445,7 +444,7 @@ def feed_input(segments, pipe):
 	"""Write each segment's data into the given pipe in order.
 	This is used to provide input to ffmpeg in a full cut."""
 	for segment in segments:
-		with open(segment.path) as f:
+		with open(segment.path, 'rb') as f:
 			try:
 				shutil.copyfileobj(f, pipe)
 			except OSError as e:

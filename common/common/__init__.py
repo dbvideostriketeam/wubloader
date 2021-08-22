@@ -95,7 +95,7 @@ def ensure_directory(path):
 	"""Create directory that contains path, as well as any parent directories,
 	if they don't already exist."""
 	dir_path = os.path.dirname(path)
-	os.mkdirs(dir_path, exist_ok=True)
+	os.makedirs(dir_path, exist_ok=True)
 
 
 def jitter(interval):
@@ -103,14 +103,3 @@ def jitter(interval):
 	smooth out patterns and prevent everything from retrying at the same time.
 	"""
 	return interval * (0.9 + 0.2 * random.random())
-
-
-def encode_strings(o):
-	"""Recurvisely handles unicode in json output."""
-	if isinstance(o, list):
-		return [encode_strings(x) for x in o]
-	if isinstance(o, dict):
-		return {k.encode('utf-8'): encode_strings(v) for k, v in o.items()}
-	if isinstance(o, unicode):
-		return o.encode('utf-8')
-	return o
