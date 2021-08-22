@@ -5,7 +5,7 @@ import errno
 import os
 import random
 
-from .segments import get_best_segments, rough_cut_segments, smart_cut_segments, fast_cut_segments, full_cut_segments, parse_segment_path, SegmentInfo
+from .segments import get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, parse_segment_path, SegmentInfo
 from .stats import timed, PromLogCountsHandler, install_stacksampler
 
 

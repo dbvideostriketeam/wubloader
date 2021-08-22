@@ -15,7 +15,7 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import dateutil, get_best_segments, rough_cut_segments, smart_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
+from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
 from common.segments import feed_input
 
@@ -289,8 +289,6 @@ def cut(channel, quality):
 		return Response(rough_cut_segments(segments, start, end), mimetype='video/MP2T')
 	elif type == 'fast':
 		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
-	elif type == 'smart':
-		return Response(smart_cut_segments(segments, start, end), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
 			return "mp4 type has been disabled due to the load it causes", 400
