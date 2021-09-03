@@ -53,7 +53,7 @@ class UploadBackend(object):
 	Should have a method upload_video(title, description, tags, data).
 	Title, description and tags may have backend-specific meaning.
 	Tags is a list of string.
-	Data is an iterator of strings.
+	Data is an iterator of bytes.
 	It should return (video_id, video_link).
 
 	If the video must undergo additional processing before it's available
@@ -241,7 +241,7 @@ class Local(UploadBackend):
 		filepath = os.path.join(self.path, filename)
 		try:
 			if self.write_info:
-				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'wb') as f:
+				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
 					f.write(json.dumps({
 						'title': title,
 						'description': description,
