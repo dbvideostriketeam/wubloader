@@ -226,7 +226,7 @@ class Cutter(object):
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in CUT_JOB_PARAMS)
 		)
-		result = query(self.conn, built_query, name=self.name, upload_locations=self.upload_locations.keys())
+		result = query(self.conn, built_query, name=self.name, upload_locations=list(self.upload_locations.keys()))
 		return result.fetchall()
 
 	# No need to instrument this function, just use get_best_segments() stats
@@ -313,9 +313,7 @@ class Cutter(object):
 
 		# This flag tracks whether we've told requests to finalize the upload,
 		# and serves to detect whether errors from the request call are recoverable.
-		# Wrapping it in a one-element list is a hack that lets us modify it from within
-		# a closure (as py2 lacks the nonlocal keyword).
-		finalize_begun = [False]
+		finalize_begun = False
 
 		# This exception indicates a job we thought was ours somehow disappeared
 		# while we were still trying to cut it. This most likely represents a logic error
@@ -342,7 +340,7 @@ class Cutter(object):
 			if result.rowcount != 1:
 				# If we hadn't yet set finalizing, then this means an operator cancelled the job
 				# while we were cutting it. This isn't a problem.
-				if not finalize_begun[0]:
+				if not finalize_begun:
 					raise JobCancelled()
 				raise JobConsistencyError("No job with id {} and uploader {} when setting: {}".format(
 					job.id, self.name, ", ".join("{} = {!r}".format(k, v) for k, v in kwargs.items())
@@ -352,6 +350,11 @@ class Cutter(object):
 			# This generator wraps the cut_segments generator so we can
 			# do things in between the data being finished and finalizing the request.
 			# This is also where we do the main error handling.
+
+			# Tell python to use the finalize_begun variable from the enclosing scope,
+			# instead of creating a new (shadowing) variable which is the default when
+			# you do "variable = value".
+			nonlocal finalize_begun
 
 			try:
 				for chunk in cut:
@@ -367,7 +370,7 @@ class Cutter(object):
 
 			self.logger.debug("Setting job to finalizing")
 			set_row(state='FINALIZING')
-			finalize_begun[0] = True
+			finalize_begun = True
 
 			# Now we return from this generator, and any unknown errors between now and returning
 			# from the upload backend are not recoverable.
@@ -393,7 +396,7 @@ class Cutter(object):
 				if isinstance(ex, requests.HTTPError):
 					ex = "{}: {}".format(ex, ex.response.content)
 
-				if not finalize_begun[0]:
+				if not finalize_begun:
 					# error before finalizing, assume it's a network issue / retryable.
 					self.logger.exception("Retryable error when uploading job {}".format(format_job(job)))
 					raise UploadError("Unhandled error in upload: {}".format(ex), retryable=True)
@@ -552,7 +555,7 @@ class TranscodeChecker(object):
 			UPDATE events
 			SET state = 'DONE', upload_time = %s
 			WHERE id = ANY (%s::uuid[]) AND state = 'TRANSCODING'
-		""", datetime.datetime.utcnow(), ids.keys())
+		""", datetime.datetime.utcnow(), list(ids.keys()))
 		return result.rowcount
 
 
