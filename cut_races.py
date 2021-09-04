@@ -32,7 +32,7 @@ def main(
 	output_dir,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_xii',
 	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None,
-	only_match_id=0,
+	only_match_id=0, best_effort_no_segments=False,
 ):
 	logging.basicConfig(level=logging.INFO)
 	start_range = map(int, start_range.split(","))
@@ -78,13 +78,22 @@ def main(
 				"time_offset": 0,
 			} if name.startswith("caw-") or league == "gru" else {}
 			try:
-				cut_sync_race.cut_race(
-					base_dir, output_temp, temp_dir, stream, start, duration,
-					start_range=start_range, non_interactive=non_interactive,
-					**no_sync_kwargs
-				)
+				try:
+					cut_sync_race.cut_race(
+						base_dir, output_temp, temp_dir, stream, start, duration,
+						start_range=start_range, non_interactive=non_interactive,
+						**no_sync_kwargs
+					)
+				except cut_sync_race.NoSegments as e:
+					if not best_effort_no_segments:
+						raise
+					logging.warning("{}\nTrying to cut as much of the race as we have, from -5 to +30".format(e))
+					cut_sync_race.cut_race(
+						base_dir, output_temp, temp_dir, stream, start, duration,
+						non_interactive=True, output_range=(-5, 30), time_offset=0,
+					)
 			except cut_sync_race.NoSegments as e:
-				logging.warning(e)
+				logging.error(e)
 			except Exception as e:
 				logging.exception("Failed to cut {}".format(output_path), exc_info=True)
 				if not non_interactive:
