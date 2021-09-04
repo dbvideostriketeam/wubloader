@@ -105,7 +105,7 @@ class SheetSync(object):
 		self.column_parsers = {
 			'event_start': self.parse_bustime,
 			'event_end': self.parse_bustime,
-			'poster_moment': lambda v: v == u'[\u2713]', # check mark
+			'poster_moment': lambda v: v == '[\u2713]', # check mark
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
 			'id': lambda v: uuid.UUID(v) if v.strip() else None,
