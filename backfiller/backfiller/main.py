@@ -9,7 +9,7 @@ import os
 import random
 import signal
 import socket
-import urlparse
+import urllib.parse
 import uuid
 
 import argh
@@ -364,7 +364,7 @@ class BackfillerManager(object):
 		localhost name (given by the --localhost argument) are ignored to try
 		to prevent this node from backfilling from itself."""
 
-		nodes = {urlparse.urlparse(node).hostname:node for node in self.static_nodes}
+		nodes = {urllib.parse.urlparse(node).hostname: node for node in self.static_nodes}
 		
 		if self.node_file is not None:
 			self.logger.info('Fetching list of nodes from {}'.format(self.node_file))
@@ -374,7 +374,7 @@ class BackfillerManager(object):
 					if not len(line) or substrs[0][0] == '#':
 						continue
 					elif len(substrs) == 1:
-						nodes[urlparse.urlparse(substrs[0]).hostname] = substrs[0]
+						nodes[urllib.parse.urlparse(substrs[0]).hostname] = substrs[0]
 					else:
 						nodes[substrs[0]] = substrs[1]
 
@@ -391,7 +391,7 @@ class BackfillerManager(object):
 				nodes[row.name] = row.url
 		nodes.pop(self.localhost, None)
 		self.logger.info('Nodes fetched: {}'.format(nodes.keys()))
-		return nodes.values()
+		return list(nodes.values())
 
 class BackfillerWorker(object):
 	"""Backfills segments from a node.
@@ -470,7 +470,7 @@ class BackfillerWorker(object):
 					try:
 						segment = common.parse_segment_path(path)
 					except ValueError as e:
-						self.logger.warning('File {} invaid: {}'.format(path, e))
+						self.logger.warning('File {} invalid: {}'.format(path, e))
 						continue
 
 					# Ignore temp segments as they may go away by the time we fetch them.
