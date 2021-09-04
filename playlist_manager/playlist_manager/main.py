@@ -211,7 +211,7 @@ class YoutubeAPI(object):
 			metric_name="playlist_list",
 		)
 		if not resp.ok:
-			raise Exception("Failed to list {playlist} (page_token={!r}) with {resp.status_code}: {resp.content}".format(
+			raise Exception("Failed to list {playlist} (page_token={page_token!r}) with {resp.status_code}: {resp.content}".format(
 				playlist=playlist, page_token=page_token, resp=resp,
 			))
 		return resp.json()
