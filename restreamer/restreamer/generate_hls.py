@@ -1,6 +1,6 @@
 import datetime
 import os
-import urllib
+import urllib.parse
 from collections import Counter
 
 
@@ -70,7 +70,7 @@ def generate_media(segments, base_url):
 			path = '/'.join(segment.path.split('/')[-2:])
 			lines.append("#EXT-X-PROGRAM-DATE-TIME:{}".format(segment.start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")))
 			lines.append("#EXTINF:{:.3f},live".format(segment.duration.total_seconds()))
-			lines.append(urllib.quote(os.path.join(base_url, path)))
+			lines.append(urllib.parse.quote(os.path.join(base_url, path)))
 
 	# If stream is complete, add an ENDLIST marker to show this.
 	if not incomplete:
