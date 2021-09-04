@@ -19,7 +19,7 @@ from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_seg
 from common.flask_stats import request_stats, after_request
 from common.segments import feed_input
 
-import generate_hls
+from . import generate_hls
 
 
 app = Flask('restreamer', static_url_path='/segments')
@@ -53,11 +53,10 @@ def listdir(path, error=True):
 
 def has_path_args(fn):
 	"""Decorator to wrap routes which take args which are to be used as parts of a filepath.
-	Disallows hidden folders and path traversal, and converts unicode to bytes.
+	Disallows hidden folders and path traversal.
 	"""
 	@functools.wraps(fn)
 	def _has_path_args(**kwargs):
-		kwargs = {key: value.encode('utf-8') for key, value in kwargs.items()}
 		for key, value in kwargs.items():
 			# Disallowing a leading . prevents both hidden files and path traversal ("..")
 			if value.startswith('.'):
