@@ -47,7 +47,6 @@ def cors(app):
 	return handle
 
 
-
 def authenticate(f):
 	"""Authenticate a token against the database.
 
@@ -81,15 +80,16 @@ def authenticate(f):
 			return 'Unknown user. Access denied.', 403
 	
 		return f(*args, editor=email, **kwargs)
-		
 
 	return auth_wrapper
+
 
 @app.route('/thrimshim/auth-test', methods=['POST'])
 @request_stats
 @authenticate
 def test(editor=None):
 	return json.dumps(editor)
+
 
 # To make nginx proxying simpler, we want to allow /metrics/* to work
 @app.route('/metrics/<trailing>')
@@ -98,11 +98,13 @@ def metrics_with_trailing(trailing):
 	"""Expose Prometheus metrics."""
 	return prometheus_client.generate_latest()
 
+
 @app.route('/metrics')
 @request_stats
 def metrics():
 	"""Expose Prometheus metrics."""
 	return prometheus_client.generate_latest()
+
 
 @app.route('/thrimshim')
 @request_stats
@@ -112,7 +114,8 @@ def get_all_rows():
 	results = database.query(conn, """
 		SELECT *
 		FROM events
-		ORDER BY event_start""")
+		ORDER BY event_start
+	""")
 	rows = []
 	for row in results:
 		row = row._asdict()
@@ -149,7 +152,8 @@ def get_row(ident):
 	results = database.query(conn, """
 		SELECT *
 		FROM events
-		WHERE id = %s""", ident)
+		WHERE id = %s
+	""", ident)
 	row = results.fetchone()
 	if row is None:
 		return 'Row id = {} not found'.format(ident), 404
@@ -187,30 +191,33 @@ def get_row(ident):
 	logging.info('Row {} fetched'.format(ident))
 	return json.dumps(response)
 
+
 @app.route('/thrimshim/<uuid:ident>', methods=['POST'])
 @request_stats
 @authenticate
 def update_row(ident, editor=None):
+	"""Updates row of database with id = ident with the edit columns in new_row."""
 	new_row = flask.request.json
 	override_changes = new_row.get('override_changes', False)
-	"""Updates row of database with id = ident with the edit columns in
-	new_row."""
-
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
-	#these have to be set before a video can be set as 'EDITED'
-	non_null_columns = ['upload_location', 'video_start', 'video_end',
-		'video_channel', 'video_quality', 'video_title', 'video_description', 'video_tags']
+	# These have to be set before a video can be set as 'EDITED'
+	non_null_columns = [
+		'upload_location', 'video_start', 'video_end',
+		'video_channel', 'video_quality', 'video_title',
+		'video_description', 'video_tags',
+	]
 	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
 	sheet_columns = [
-		'sheet_name', 'event_start', 'event_end', 'category', 'description', 'notes', 'tags'
-		]
+		'sheet_name', 'event_start', 'event_end',
+		'category', 'description', 'notes', 'tags',
+	]
 
-	#check vital edit columns are in new_row
+	# Check vital edit columns are in new_row
 	wanted = set(non_null_columns + ['state'] + sheet_columns)
 	missing = wanted - set(new_row)
 	if missing:
 		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
-	#get rid of irrelevant columns
+	# Get rid of irrelevant columns
 	extras = set(new_row) - set(edit_columns + state_columns + sheet_columns)
 	for extra in extras:
 		del new_row[extra]
@@ -221,15 +228,15 @@ def update_row(ident, editor=None):
 	if 'video_description' in new_row:
 		new_row['video_description'] += app.description_footer
 
-	#validate title length
+	# Validate title length
 	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
 		return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
-	#validate start time is less than end time
+	# Validate start time is less than end time
 	if new_row['video_start'] > new_row['video_end']:
 		return 'Video Start must be less than Video End.', 400
 
 	conn = app.db_manager.get_conn()
-	#check a row with id = ident is in the database
+	# Check a row with id = ident is in the database
 	built_query = sql.SQL("""
 		SELECT id, state, {} 
 		FROM events
@@ -299,6 +306,7 @@ def update_row(ident, editor=None):
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
 
+
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
 @request_stats
 @authenticate
@@ -308,7 +316,6 @@ def manual_link(ident, editor=None):
 	link = flask.request.json['link']
 	upload_location = flask.request.json.get('upload_location', 'manual')
 
-	
 	if upload_location == 'youtube-manual':
 		YOUTUBE_URL_RE = r'^https?://(?:youtu\.be/|youtube.com/watch\?v=)([a-zA-Z0-9_-]{11})$'
 		match = re.match(YOUTUBE_URL_RE, link)
@@ -356,9 +363,9 @@ def reset_row(ident, editor=None):
 		UPDATE events 
 		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
 			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL
-		WHERE id = %s{}
+		WHERE id = %s {}
 	""".format(
-		"" if force else " AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
+		"" if force else "AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
 	)
 	results = database.query(conn, query, ident)
 	if results.rowcount != 1:
@@ -370,16 +377,17 @@ def reset_row(ident, editor=None):
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
 @argh.arg('connection-string', help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
-@argh.arg('default-channel', help='The default channel this instance will serve events for')
+@argh.arg('default-channel', help='The default video_channel sent to the editor and assumed if not given on write')
 @argh.arg('bustime-start', help='The start time in UTC for the event, for UTC-Bustime conversion')
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
-@argh.arg('--no-authentication', help='Do not authenticate')
+@argh.arg('--no-authentication', help='Bypass authentication (act as though all calls are authenticated)')
 @argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
 @argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
 @argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
-def main(connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False, title_header=None, description_footer=None, upload_locations=''):
-	"""Thrimshim service."""
+def main(
+	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
+	no_authentication=False, title_header=None, description_footer=None, upload_locations='',
+):
 	server = WSGIServer((host, port), cors(app))
 
 	app.no_authentication = no_authentication
