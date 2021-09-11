@@ -32,7 +32,7 @@ def main(
 	output_dir,
 	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_xii',
 	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None,
-	only_match_id=0, best_effort_no_segments=False,
+	only_match_id=0, best_effort_no_segments=False, no_start_detect=False,
 ):
 	logging.basicConfig(level=logging.INFO)
 	start_range = map(int, start_range.split(","))
@@ -76,7 +76,7 @@ def main(
 				# bypass start checks, cut a longer range instead
 				"output_range": (-5, 30),
 				"time_offset": 0,
-			} if name.startswith("caw-") or league == "gru" else {}
+			} if name.startswith("caw-") or league == "gru" or no_start_detect else {}
 			try:
 				try:
 					cut_sync_race.cut_race(
