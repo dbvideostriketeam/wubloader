@@ -1,0 +1,11 @@
+# Config for auto-formatting of our JS files using prettier
+# https://prettier.io/docs/en/configuration.html
+
+# This is NOT a length limit but a hint to the auto-formatter for how long lines should try to be.
+printWidth: 100
+# Use tabs for indentation, spaces for alignment
+useTabs: true
+# do {foo: bar} not { foo: bar }. personal preference.
+bracketSpacing: false
+# prefer "arg => body" over "(arg) => body" when possible
+arrowParens: avoid
