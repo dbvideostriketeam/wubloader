@@ -67,7 +67,7 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
 	var hlsQS = player.hlsQualitySelector();
 }
 
-mapDiscontinuities = function () {
+function mapDiscontinuities() {
 	var playlist = player.vhs.playlists.master.playlists.filter(
 		playlist => typeof playlist.discontinuityStarts !== "undefined"
 	)[0]; //Only one of the playlists will have the discontinuity or stream start objects, and it's not necessarily the first one or the source one.
@@ -94,7 +94,7 @@ mapDiscontinuities = function () {
 	return discontinuities;
 };
 
-getRealTimeForPlayerTime = function (discontinuities, playbackIndex) {
+function getRealTimeForPlayerTime(discontinuities, playbackIndex) {
 	var streamStart = player.vhs.playlists.master.playlists.filter(
 		playlist => typeof playlist.dateTimeObject !== "undefined"
 	)[0].dateTimeObject; //Only one of the playlists will have the discontinuity or stream start objects, and it's not necessarily the first one or the source one.

@@ -1,7 +1,7 @@
 var desertBusStart = new Date("1970-01-01T00:00:00Z");
 var timeFormat = "AGO";
 
-pageSetup = function (isEditor) {
+function pageSetup(isEditor) {
 	//Get values from ThrimShim
 	if (isEditor && /id=/.test(document.location.search)) {
 		var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
@@ -101,7 +101,7 @@ pageSetup = function (isEditor) {
 
 // Time-formatting functions
 
-parseDuration = function (duration) {
+function parseDuration(duration) {
 	var direction = 1;
 	if (duration.startsWith("-")) {
 		duration = duration.slice(1);
@@ -113,26 +113,26 @@ parseDuration = function (duration) {
 	);
 };
 
-toBustime = function (date) {
+function toBustime(date) {
 	return (
 		(date < desertBusStart ? "-" : "") +
 		videojs.formatTime(Math.abs((date - desertBusStart) / 1000), 600.01).padStart(7, "0:")
 	);
 };
 
-fromBustime = function (bustime) {
+function fromBustime(bustime) {
 	return new Date(desertBusStart.getTime() + 1000 * parseDuration(bustime));
 };
 
-toTimestamp = function (date) {
+function toTimestamp(date) {
 	return date.toISOString().substring(0, 19);
 };
 
-fromTimestamp = function (ts) {
+function fromTimestamp(ts) {
 	return new Date(ts + "Z");
 };
 
-toAgo = function (date) {
+function toAgo(date) {
 	now = new Date();
 	return (
 		(date < now ? "" : "-") +
@@ -140,13 +140,13 @@ toAgo = function (date) {
 	);
 };
 
-fromAgo = function (ago) {
+function fromAgo(ago) {
 	return new Date(new Date().getTime() - 1000 * parseDuration(ago));
 };
 
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
-setTimeRange = function (start, end) {
+function setTimeRange(start, end) {
 	var toFunc = {
 		UTC: toTimestamp,
 		BUSTIME: toBustime,
@@ -159,7 +159,7 @@ setTimeRange = function (start, end) {
 // Get the current start/end range as Dates using the current format
 // Returns an object containing 'start' and 'end' fields.
 // If either is empty / invalid, returns null.
-getTimeRange = function () {
+function getTimeRange() {
 	var fromFunc = {
 		UTC: fromTimestamp,
 		BUSTIME: fromBustime,
@@ -178,7 +178,7 @@ getTimeRange = function () {
 	};
 };
 
-getTimeRangeAsTimestamp = function () {
+function getTimeRangeAsTimestamp() {
 	var range = getTimeRange();
 	return {
 		// if not null, format as timestamp
@@ -187,19 +187,19 @@ getTimeRangeAsTimestamp = function () {
 	};
 };
 
-toggleHiddenPane = function (paneID) {
+function toggleHiddenPane(paneID) {
 	var pane = document.getElementById(paneID);
 	pane.style.display = pane.style.display === "none" ? "block" : "none";
 };
 
-toggleUltrawide = function () {
+function toggleUltrawide() {
 	var body = document.getElementsByTagName("Body")[0];
 	body.classList.contains("ultrawide")
 		? body.classList.remove("ultrawide")
 		: body.classList.add("ultrawide");
 };
 
-toggleTimeInput = function (toggleInput) {
+function toggleTimeInput(toggleInput) {
 	// Get times using current format, then change format, then write them back
 	var range = getTimeRange();
 	timeFormat = toggleInput;
@@ -209,7 +209,7 @@ toggleTimeInput = function (toggleInput) {
 // For a given select input element id, add the given list of options.
 // If selected is given, it should be the name of an option to select.
 // Otherwise the first one is used.
-setOptions = function (element, options, selected) {
+function setOptions(element, options, selected) {
 	if (!selected && options.length > 0) {
 		selected = options[0];
 	}
@@ -225,14 +225,14 @@ setOptions = function (element, options, selected) {
 	});
 };
 
-buildQuery = function (params) {
+function buildQuery(params) {
 	return Object.keys(params)
 		.filter(key => params[key] !== null)
 		.map(key => encodeURIComponent(key) + "=" + encodeURIComponent(params[key]))
 		.join("&");
 };
 
-loadPlaylist = function (isEditor, startTrim, endTrim, defaultQuality) {
+function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
 	var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
 	var range = getTimeRangeAsTimestamp();
@@ -280,7 +280,7 @@ loadPlaylist = function (isEditor, startTrim, endTrim, defaultQuality) {
 		});
 };
 
-thrimbletrimmerSubmit = function (state, override_changes = false) {
+function thrimbletrimmerSubmit(state, override_changes = false) {
 	document.getElementById("SubmitButton").disabled = true;
 	var discontinuities = mapDiscontinuities();
 
@@ -371,7 +371,7 @@ thrimbletrimmerSubmit = function (state, override_changes = false) {
 	);
 };
 
-thrimbletrimmerDownload = function (isEditor) {
+function thrimbletrimmerDownload(isEditor) {
 	var range = getTimeRangeAsTimestamp();
 	if (isEditor) {
 		if (player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
@@ -416,7 +416,7 @@ thrimbletrimmerDownload = function (isEditor) {
 	document.getElementById("DownloadLink").style.display = "";
 };
 
-thrimbletrimmerManualLink = function () {
+function thrimbletrimmerManualLink() {
 	document.getElementById("ManualButton").disabled = true;
 	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
 	var upload_location = document.getElementById("ManualYoutube").checked
@@ -453,7 +453,7 @@ thrimbletrimmerManualLink = function () {
 	);
 };
 
-thrimbletrimmerResetLink = function (force) {
+function thrimbletrimmerResetLink(force) {
 	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
 	if (
 		force &&
@@ -498,18 +498,18 @@ thrimbletrimmerResetLink = function (force) {
 	);
 };
 
-tags_list_to_string = function (tag_list) {
+function tags_list_to_string(tag_list) {
 	return tag_list.join(", ");
 };
 
-tags_string_to_list = function (tag_string) {
+function tags_string_to_list(tag_string) {
 	return tag_string
 		.split(",")
 		.map(tag => tag.trim())
 		.filter(tag => tag.length > 0);
 };
 
-round_trip_tag_string = function () {
+function round_trip_tag_string() {
 	var element = document.getElementById("VideoTags");
 	element.value = tags_list_to_string(tags_string_to_list(element.value));
 };
