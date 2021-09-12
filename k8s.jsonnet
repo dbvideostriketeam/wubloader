@@ -39,10 +39,10 @@
     // Stream qualities to capture
     qualities: ["source", "480p"],
 
-    // The node selector and hostPath to use. All pods must be on the same host
-    // and use this hostpath in order to share the disk.
-    node_selector: {},
-    host_path: "/var/lib/wubloader",
+    // NFS settings for RWX (ReadWriteMany) volume for wubloader pods
+    nfs_server: "192.168.1.121",              # server IP or hostname
+    nfs_path: "/mnt/hubbe/array/wubloader",   # path on server to mount
+    nfs_capacity: "2TiB",                     # storage capacity to report to k8s
 
     // The local port within each container to bind the backdoor server on.
     // You can exec into the container and telnet to this port to get a python shell.
@@ -168,10 +168,9 @@
           volumes: [
             {
               name: "data",
-              hostPath: {path: $.config.host_path},
+              persistentVolumeClaim: {"claimName": "mnt-wubloader"},
             },
-          ],
-          nodeSelector: $.config.node_selector,
+          ]
         },
       },
     },
@@ -265,6 +264,47 @@
     if $.config.enabled.restreamer then $.service("restreamer"),
     if $.config.enabled.segment_coverage then $.service("segment-coverage"),
     if $.config.enabled.thrimshim then $.service("thrimshim"),
+    // PV manifest
+    {
+      apiVersion: "v1",
+      kind: "PersistentVolume",
+      metadata: {
+        name: "mnt-wubloader",
+        labels: {app: "wubloader"},
+      },
+      spec: {
+        accessModes: ["ReadWriteMany"],
+        capacity: {
+          storage: $.config.nfs_capacity
+        },
+        mountOptions: ["fsc"],
+        nfs: {
+          server: $.config.nfs_server,
+          path: $.config.nfs_path,
+          readOnly: false
+        },
+        persistentVolumeReclaimPolicy: "Retain",
+        volumeMode: "Filesystem"
+      },
+    },
+    // PVC manifest
+    {
+      apiVersion: "v1",
+      kind: "PersistentVolumeClaim",
+      metadata: {
+        name: "mnt-wubloader",
+        labels: {app: "wubloader"},
+      },
+      spec: {
+        accessModes: ["ReadWriteMany"],
+        resources: {
+          requests: {
+            storage: $.config.nfs_capacity
+          },
+        },
+        volumeName: "mnt-wubloader"
+      },
+    },
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
