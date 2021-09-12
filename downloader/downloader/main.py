@@ -17,10 +17,11 @@ import prometheus_client as prom
 import requests
 from monotonic import monotonic
 
-import twitch
 import common
 import common.dateutil
 import common.requests
+
+from . import twitch
 
 
 segments_downloaded = prom.Counter(
@@ -328,7 +329,7 @@ class StreamWorker(object):
 		else:
 			self.logger.info("Worker stopped")
 		finally:
-			for getter in self.getters.values():
+			for getter in list(self.getters.values()):
 				getter.done.wait()
 			self.done.set()
 			self.manager.stream_workers[self.quality].remove(self)
@@ -392,8 +393,9 @@ class StreamWorker(object):
 				if date is not None:
 					date += datetime.timedelta(seconds=segment.duration)
 
-			# Clean up any old segment getters
-			for url, getter in self.getters.items():
+			# Clean up any old segment getters.
+			# Note use of list() to make a copy to avoid modification-during-iteration
+			for url, getter in list(self.getters.items()):
 				# If segment is done and wasn't in latest fetch
 				if getter.done.is_set() and not any(
 					segment.uri == url for segment in playlist.segments
@@ -512,7 +514,7 @@ class SegmentGetter(object):
 			partial: Segment is incomplete. Hash is included.
 			temp: Segment has not been downloaded yet. A random uuid is added.
 		"""
-		arg = str(uuid.uuid4()) if type == "temp" else b64encode(hash.digest(), b"-_").encode().rstrip("=")
+		arg = str(uuid.uuid4()) if type == "temp" else b64encode(hash.digest(), b"-_").decode().rstrip("=")
 		return "{}-{}-{}.ts".format(self.prefix, type, arg)
 
 	def exists(self):

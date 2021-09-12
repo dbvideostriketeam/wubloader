@@ -544,7 +544,7 @@ class TranscodeChecker(object):
 	def check_ids(self, ids):
 		# Future work: Set error in DB if video id is not present,
 		# and/or try to get more info from yt about what's wrong.
-		done = self.backend.check_status(ids.values())
+		done = self.backend.check_status(list(ids.values()))
 		return {
 			id: video_id for id, video_id in ids.items()
 			if video_id in done

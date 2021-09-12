@@ -1,7 +1,7 @@
 
 """Code for instrumenting requests calls. Requires requests, obviously."""
 
-import urlparse
+import urllib.parse
 
 import requests.sessions
 import prometheus_client as prom
@@ -33,7 +33,7 @@ class InstrumentedSession(requests.sessions.Session):
 	"""
 
 	def request(self, method, url, *args, **kwargs):
-		_, domain, _, _, _ = urlparse.urlsplit(url)
+		_, domain, _, _, _ = urllib.parse.urlsplit(url)
 		name = kwargs.pop('metric_name', '')
 
 		start = monotonic() # we only use our own measured latency if an error occurs
