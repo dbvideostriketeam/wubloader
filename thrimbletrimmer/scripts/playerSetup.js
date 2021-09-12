@@ -1,9 +1,9 @@
-var player = null;
+let player = null;
 
 function setupPlayer(isEditor, source, startTrim, endTrim) {
 	document.getElementById("my-player").style.display = "";
 	//Make poster of DB logo in correct aspect ratio, to control initial size of fluid container.
-	var options = {
+	const options = {
 		sources: [{src: source}],
 		liveui: true,
 		//fluid:true,
@@ -30,33 +30,22 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
         `;
 	}
 	player = videojs("my-player", options, function onPlayerReady() {
-		videojs.log("Your player is ready!");
+		videojs.log("Video player is ready");
 
 		// Set player volume to 50% by default
-		var defaultVolume = 0.5;
+		const defaultVolume = 0.5;
 		this.volume(defaultVolume);
 
-		// In this context, `this` is the player that was created by Video.js.
-		this.on("ready", function () {
-			//this.play();
-		});
-
 		this.vhs.playlists.on("loadedmetadata", function () {
-			// setTimeout(function() { player.play(); }, 1000);
 			player.hasStarted(true); //So it displays all the controls.
 			if (isEditor) {
-				var stream_start = player.vhs.playlists.master.playlists.filter(
+				const stream_start = player.vhs.playlists.master.playlists.filter(
 					playlist => typeof playlist.discontinuityStarts !== "undefined"
 				)[0].dateTimeObject;
 				startTrim = startTrim ? (new Date(startTrim + "Z") - stream_start) / 1000 : 0;
 				endTrim = endTrim ? (new Date(endTrim + "Z") - stream_start) / 1000 : player.duration();
-				var trimmingControls = player.trimmingControls({startTrim: startTrim, endTrim: endTrim});
+				const trimmingControls = player.trimmingControls({startTrim: startTrim, endTrim: endTrim});
 			}
-		});
-
-		// How about an event listener?
-		this.on("ended", function () {
-			videojs.log("Awww...over so soon?!");
 		});
 
 		this.on("error", function () {
@@ -64,26 +53,25 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
 			alert("No video available for stream.");
 		});
 	});
-	var hlsQS = player.hlsQualitySelector();
+	const hlsQS = player.hlsQualitySelector();
 }
 
 function mapDiscontinuities() {
-	var playlist = player.vhs.playlists.master.playlists.filter(
+	const playlist = player.vhs.playlists.master.playlists.filter(
 		playlist => typeof playlist.discontinuityStarts !== "undefined"
 	)[0]; //Only one of the playlists will have the discontinuity or stream start objects, and it's not necessarily the first one or the source one.
-	var discontinuities = playlist.discontinuityStarts.map(segmentIndex => {
+	const discontinuities = playlist.discontinuityStarts.map(segmentIndex => {
 		return {
 			segmentIndex: segmentIndex,
 			segmentTimestamp: playlist.segments[segmentIndex].dateTimeObject,
 			playbackIndex: null,
 		};
 	});
-	//var lastDiscontinuity = Math.max(...playlist.discontinuityStarts);
-	var lastDiscontinuity = playlist.discontinuityStarts.slice(-1).pop(); //Assumes discontinuities are sorted in ascending order.
+	const lastDiscontinuity = playlist.discontinuityStarts.slice(-1).pop(); //Assumes discontinuities are sorted in ascending order.
 
-	var durationMarker = 0;
-	for (var index = 0; index <= lastDiscontinuity; index++) {
-		let segment = playlist.segments[index];
+	let durationMarker = 0;
+	for (let index = 0; index <= lastDiscontinuity; index++) {
+		const segment = playlist.segments[index];
 		if (segment.discontinuity) {
 			discontinuities.find(discontinuity => discontinuity.segmentIndex == index).playbackIndex =
 				durationMarker;
@@ -95,12 +83,12 @@ function mapDiscontinuities() {
 };
 
 function getRealTimeForPlayerTime(discontinuities, playbackIndex) {
-	var streamStart = player.vhs.playlists.master.playlists.filter(
+	let streamStart = player.vhs.playlists.master.playlists.filter(
 		playlist => typeof playlist.dateTimeObject !== "undefined"
 	)[0].dateTimeObject; //Only one of the playlists will have the discontinuity or stream start objects, and it's not necessarily the first one or the source one.
 
 	//Find last discontinuity before playbackIndex
-	var lastDiscontinuity = discontinuities
+	const lastDiscontinuity = discontinuities
 		.filter(discontinuity => discontinuity.playbackIndex < playbackIndex)
 		.slice(-1)
 		.pop();
@@ -109,7 +97,7 @@ function getRealTimeForPlayerTime(discontinuities, playbackIndex) {
 		playbackIndex -= lastDiscontinuity.playbackIndex;
 	}
 
-	var realTime = streamStart.getTime() + playbackIndex * 1000;
+	const realTime = streamStart.getTime() + playbackIndex * 1000;
 
 	return isFinite(realTime) ? new Date(realTime).toISOString() : null;
 };
