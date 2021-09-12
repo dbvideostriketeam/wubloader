@@ -149,7 +149,7 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 
 		with open(temp_path, 'wb') as f:
 			for chunk in resp.iter_content(8192):
-				f.write(chunk)
+				common.writeall(f.write, chunk)
 				hash.update(chunk)
 
 		filename_hash = common.parse_segment_path(missing_segment).hash

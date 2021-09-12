@@ -6,6 +6,7 @@ import os
 import re
 import uuid
 
+import common
 from common.googleapis import GoogleAPIClient
 
 
@@ -242,14 +243,14 @@ class Local(UploadBackend):
 		try:
 			if self.write_info:
 				with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
-					f.write(json.dumps({
+					common.writeall(f.write, json.dumps({
 						'title': title,
 						'description': description,
 						'tags': tags,
 					}) + '\n')
 			with open(filepath, 'wb') as f:
 				for chunk in data:
-					f.write(chunk)
+					common.writeall(f.write, chunk)
 		except (OSError, IOError) as e:
 			# Because duplicate videos don't actually matter with this backend,
 			# we consider all disk errors retryable.

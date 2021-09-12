@@ -103,3 +103,22 @@ def jitter(interval):
 	smooth out patterns and prevent everything from retrying at the same time.
 	"""
 	return interval * (0.9 + 0.2 * random.random())
+
+
+def writeall(write, value):
+	"""Helper for writing a complete string to a file-like object.
+	Pass the write function and the value to write, and it will loop if needed to ensure
+	all data is written.
+	Works for both text and binary files, as long as you pass the right value type for
+	the write function.
+	"""
+	while value:
+		n = write(value)
+		if n is None:
+			# The write func doesn't return the amount written, assume it always writes everything
+			break
+		if n == 0:
+			# This would cause an infinite loop...blow up instead so it's clear what the problem is
+			raise Exception("Wrote 0 chars while calling {} with {}-char {}".format(write, len(value), type(value).__name__))
+		# remove the first n chars and go again if we have anything left
+		value = value[n:]
