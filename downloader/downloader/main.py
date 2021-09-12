@@ -565,7 +565,7 @@ class SegmentGetter(object):
 					# we may lose part of the last chunk even though we did receive it.
 					# This is a small enough amount of data that we don't really care.
 					for chunk in resp.iter_content(8192):
-						f.write(chunk)
+						common.writeall(f.write, chunk)
 						hash.update(chunk)
 		except Exception as e:
 			if file_created:

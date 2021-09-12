@@ -232,7 +232,7 @@ class CoverageChecker(object):
 		final_path = '{}_coverage.html'.format(path_prefix)
 		common.ensure_directory(temp_path)
 		with open(temp_path, 'w') as f:
-			f.write(html)
+			common.writeall(f.write, html)
 		os.rename(temp_path, final_path)
 		self.logger.info('Coverage page for {} created'.format(quality))
 
