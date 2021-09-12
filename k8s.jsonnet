@@ -62,6 +62,9 @@
     // Set to true to let the ingress handle TLS
     ingress_tls: true,
 
+    // Ingress class for ingress
+    ingress_class_name: "nginx",
+
     // Uncomment and give a secretName for ingress, if required for ingress TLS
     //ingress_secret_name: "wubloader-tls",
 
@@ -308,12 +311,13 @@
     // Ingress to direct requests to the correct services.
     {
       kind: "Ingress",
-      apiVersion: "networking.k8s.io/v1beta1",
+      apiVersion: "networking.k8s.io/v1",
       metadata: {
         name: "wubloader",
         labels: {app: "wubloader"} + $.config.ingress_labels,
       },
       spec: {
+        ingressClassName: $.config.ingress_class_name,
         rules: [
           {
             host: $.config.ingress_host,
@@ -323,8 +327,12 @@
                 path: path,
                 pathType: type,
                 backend: {
-                  serviceName: "wubloader-%s" % std.strReplace(name, "_", "-"),
-                  servicePort: 80,
+                  service: {
+                    name: "wubloader-%s" % std.strReplace(name, "_", "-"),
+                    port: {
+                      number: 80
+                    },
+                  },
                 },
               },
               local metric_rule(name) = rule(name, "/metrics/%s" % name, "Exact"),
