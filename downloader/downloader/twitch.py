@@ -2,9 +2,9 @@
 import logging
 import random
 
-import hls_playlist
-
 from common.requests import InstrumentedSession
+
+from . import hls_playlist
 
 
 logger = logging.getLogger(__name__)

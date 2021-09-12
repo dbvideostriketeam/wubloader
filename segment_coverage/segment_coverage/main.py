@@ -195,7 +195,7 @@ class CoverageChecker(object):
 			self.logger.exception('Getting nodes failed.', exc_info=True)
 			return
 
-		self.logger.info('Nodes fetched: {}'.format(nodes.keys()))
+		self.logger.info('Nodes fetched: {}'.format(list(nodes.keys())))
 
 		html = """<!DOCTYPE html>
 <html>

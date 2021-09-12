@@ -231,7 +231,7 @@ class BackfillerManager(object):
 	def stop(self):
 		"""Shut down all workers and stop backfilling."""
 		self.logger.info('Stopping')
-		for node in self.workers.keys():
+		for node in list(self.workers.keys()):
 			self.stop_worker(node)
 		self.stopping.set()
 
@@ -344,7 +344,7 @@ class BackfillerManager(object):
 			self.stopping.wait(common.jitter(self.NODE_INTERVAL))
 
 		#wait for all workers to finish
-		for worker in self.workers.values():
+		for worker in list(self.workers.values()):
 			worker.done.wait()
 
 	def get_nodes(self):
@@ -390,7 +390,7 @@ class BackfillerManager(object):
 			for row in results:
 				nodes[row.name] = row.url
 		nodes.pop(self.localhost, None)
-		self.logger.info('Nodes fetched: {}'.format(nodes.keys()))
+		self.logger.info('Nodes fetched: {}'.format(list(nodes.keys())))
 		return list(nodes.values())
 
 class BackfillerWorker(object):

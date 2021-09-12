@@ -32,7 +32,7 @@ import re
 from binascii import unhexlify
 from collections import namedtuple
 from itertools import starmap
-from urlparse import urljoin, urlparse
+from urllib.parse import urljoin, urlparse
 
 
 # EXT-X-BYTERANGE
