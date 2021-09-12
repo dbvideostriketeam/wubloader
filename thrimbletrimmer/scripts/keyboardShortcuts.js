@@ -1,11 +1,11 @@
 function changeSpeed(direction) {
-	var speeds = [0.5, 1, 1.25, 1.5, 2];
-	var currentIndex = speeds.indexOf(player.playbackRate());
+	const speeds = [0.5, 1, 1.25, 1.5, 2];
+	const currentIndex = speeds.indexOf(player.playbackRate());
 	if (currentIndex < 0) {
 		// not present
 		return;
 	}
-	var newIndex = currentIndex + direction;
+	const newIndex = currentIndex + direction;
 	if (newIndex < 0 || newIndex >= speeds.length) {
 		// out of range
 		return;

@@ -1,10 +1,10 @@
-var desertBusStart = new Date("1970-01-01T00:00:00Z");
-var timeFormat = "AGO";
+let desertBusStart = new Date("1970-01-01T00:00:00Z");
+let timeFormat = "AGO";
 
 function pageSetup(isEditor) {
 	//Get values from ThrimShim
 	if (isEditor && /id=/.test(document.location.search)) {
-		var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+		const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
 		fetch("/thrimshim/" + rowId)
 			.then(data => data.json())
 			.then(function (data) {
@@ -24,10 +24,10 @@ function pageSetup(isEditor) {
 				// Apply padding - start 1min early, finish 2min late because these times are generally
 				// rounded down to the minute, so if something ends at "00:10" it might actually end
 				// at 00:10:59 so we should pad to 00:12:00.
-				var start = data.event_start
+				const start = data.event_start
 					? new Date(fromTimestamp(data.event_start).getTime() - 60 * 1000)
 					: null;
-				var end = data.event_end
+				const end = data.event_end
 					? new Date(fromTimestamp(data.event_end).getTime() + 2 * 60 * 1000)
 					: null;
 				setTimeRange(start, end);
@@ -102,12 +102,12 @@ function pageSetup(isEditor) {
 // Time-formatting functions
 
 function parseDuration(duration) {
-	var direction = 1;
+	let direction = 1;
 	if (duration.startsWith("-")) {
 		duration = duration.slice(1);
 		direction = -1;
 	}
-	var parts = duration.split(":");
+	const parts = duration.split(":");
 	return (
 		(parseInt(parts[0]) + (parts[1] || "0") / 60 + (parts[2] || "0") / 3600) * 60 * 60 * direction
 	);
@@ -147,7 +147,7 @@ function fromAgo(ago) {
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
 function setTimeRange(start, end) {
-	var toFunc = {
+	const toFunc = {
 		UTC: toTimestamp,
 		BUSTIME: toBustime,
 		AGO: toAgo,
@@ -160,16 +160,16 @@ function setTimeRange(start, end) {
 // Returns an object containing 'start' and 'end' fields.
 // If either is empty / invalid, returns null.
 function getTimeRange() {
-	var fromFunc = {
+	const fromFunc = {
 		UTC: fromTimestamp,
 		BUSTIME: fromBustime,
 		AGO: fromAgo,
 	}[timeFormat];
-	var convert = function (value) {
+	function convert(value) {
 		if (!value) {
 			return null;
 		}
-		var date = fromFunc(value);
+		const date = fromFunc(value);
 		return isNaN(date) ? null : date;
 	};
 	return {
@@ -179,7 +179,7 @@ function getTimeRange() {
 };
 
 function getTimeRangeAsTimestamp() {
-	var range = getTimeRange();
+	const range = getTimeRange();
 	return {
 		// if not null, format as timestamp
 		start: range.start && toTimestamp(range.start),
@@ -188,12 +188,12 @@ function getTimeRangeAsTimestamp() {
 };
 
 function toggleHiddenPane(paneID) {
-	var pane = document.getElementById(paneID);
+	const pane = document.getElementById(paneID);
 	pane.style.display = pane.style.display === "none" ? "block" : "none";
 };
 
 function toggleUltrawide() {
-	var body = document.getElementsByTagName("Body")[0];
+	const body = document.getElementsByTagName("Body")[0];
 	body.classList.contains("ultrawide")
 		? body.classList.remove("ultrawide")
 		: body.classList.add("ultrawide");
@@ -201,7 +201,7 @@ function toggleUltrawide() {
 
 function toggleTimeInput(toggleInput) {
 	// Get times using current format, then change format, then write them back
-	var range = getTimeRange();
+	const range = getTimeRange();
 	timeFormat = toggleInput;
 	setTimeRange(range.start, range.end);
 };
@@ -213,7 +213,7 @@ function setOptions(element, options, selected) {
 	if (!selected && options.length > 0) {
 		selected = options[0];
 	}
-	options.forEach(function (option) {
+	options.forEach(option => {
 		document.getElementById(element).innerHTML +=
 			'<option value="' +
 			option +
@@ -233,14 +233,14 @@ function buildQuery(params) {
 };
 
 function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
-	var playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
+	const playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
 
-	var range = getTimeRangeAsTimestamp();
-	var queryString = buildQuery(range);
+	const range = getTimeRangeAsTimestamp();
+	const queryString = buildQuery(range);
 
 	// Preserve existing edit times
 	if (player && player.trimmingControls && player.vhs.playlists.master) {
-		var discontinuities = mapDiscontinuities();
+		const discontinuities = mapDiscontinuities();
 		if (!startTrim) {
 			startTrim = getRealTimeForPlayerTime(
 				discontinuities,
@@ -282,21 +282,21 @@ function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
 
 function thrimbletrimmerSubmit(state, override_changes = false) {
 	document.getElementById("SubmitButton").disabled = true;
-	var discontinuities = mapDiscontinuities();
+	const discontinuities = mapDiscontinuities();
 
-	var start = getRealTimeForPlayerTime(
+	let start = getRealTimeForPlayerTime(
 		discontinuities,
 		player.trimmingControls().options.startTrim
 	);
 	if (start) {
 		start = start.replace("Z", "");
 	}
-	var end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
+	let end = getRealTimeForPlayerTime(discontinuities, player.trimmingControls().options.endTrim);
 	if (end) {
 		end = end.replace("Z", "");
 	}
 
-	var wubData = {
+	const wubData = {
 		video_start: start,
 		video_end: end,
 		video_title: document.getElementById("VideoTitle").value,
@@ -326,10 +326,9 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 		wubData.token = user.getAuthResponse().id_token;
 	}
 	if (override_changes) {
-		wubData["override_changes"] = true;
+		wubData.override_changes = true;
 	}
-	console.log(wubData);
-	console.log(JSON.stringify(wubData));
+	console.log("Submitting", wubData);
 
 	if (!wubData.video_start) {
 		alert("No start time set");
@@ -341,7 +340,7 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 	}
 
 	//Submit to thrimshim
-	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+	const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
 	fetch("/thrimshim/" + rowId, {
 		method: "POST",
 		headers: {
@@ -352,13 +351,14 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 	}).then(response =>
 		response.text().then(text => {
 			if (!response.ok) {
-				var error = response.statusText + ": " + text;
 				if (response.status == 409) {
 					dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing";
 					if (confirm(dialogue)) {
 						thrimbletrimmerSubmit(state, true);
 					}
 				} else {
+					const error = response.statusText + ": " + text;
+					console.log("Failed to submit:", error);
 					alert(error);
 				}
 			} else if (state == "EDITED") {
@@ -372,13 +372,13 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 };
 
 function thrimbletrimmerDownload(isEditor) {
-	var range = getTimeRangeAsTimestamp();
+	const range = getTimeRangeAsTimestamp();
 	if (isEditor) {
 		if (player.trimmingControls().options.startTrim >= player.trimmingControls().options.endTrim) {
 			alert("End Time must be greater than Start Time");
 			return;
 		}
-		var discontinuities = mapDiscontinuities();
+		const discontinuities = mapDiscontinuities();
 		range.start = getRealTimeForPlayerTime(
 			discontinuities,
 			player.trimmingControls().options.startTrim
@@ -389,7 +389,7 @@ function thrimbletrimmerDownload(isEditor) {
 		);
 	}
 
-	var targetURL =
+	const targetURL =
 		"/cut/" +
 		document.getElementById("StreamName").value +
 		"/" +
@@ -411,18 +411,17 @@ function thrimbletrimmerDownload(isEditor) {
 			// Always allow holes in non-editor, accidentially including holes isn't important
 			allow_holes: isEditor ? String(document.getElementById("AllowHoles").checked) : "true",
 		});
-	console.log(targetURL);
 	document.getElementById("DownloadLink").href = targetURL;
 	document.getElementById("DownloadLink").style.display = "";
 };
 
 function thrimbletrimmerManualLink() {
 	document.getElementById("ManualButton").disabled = true;
-	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-	var upload_location = document.getElementById("ManualYoutube").checked
+	const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+	const upload_location = document.getElementById("ManualYoutube").checked
 		? "youtube-manual"
 		: "manual";
-	var body = {
+	const body = {
 		link: document.getElementById("ManualLink").value,
 		upload_location: upload_location,
 	};
@@ -439,8 +438,8 @@ function thrimbletrimmerManualLink() {
 	}).then(response =>
 		response.text().then(text => {
 			if (!response.ok) {
-				var error = response.statusText + ": " + text;
-				console.log(error);
+				const error = response.statusText + ": " + text;
+				console.log("Failed to set manual link:", error);
 				alert(error);
 				document.getElementById("ManualButton").disabled = false;
 			} else {
@@ -454,7 +453,7 @@ function thrimbletrimmerManualLink() {
 };
 
 function thrimbletrimmerResetLink(force) {
-	var rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
+	const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
 	if (
 		force &&
 		!confirm(
@@ -469,7 +468,7 @@ function thrimbletrimmerResetLink(force) {
 	}
 	document.getElementById("ResetButton").disabled = true;
 	document.getElementById("CancelButton").disabled = true;
-	var body = {};
+	const body = {};
 	if (!!user) {
 		body.token = user.getAuthResponse().id_token;
 	}
@@ -483,8 +482,8 @@ function thrimbletrimmerResetLink(force) {
 	}).then(response =>
 		response.text().then(text => {
 			if (!response.ok) {
-				var error = response.statusText + ": " + text;
-				console.log(error);
+				const error = response.statusText + ": " + text;
+				console.log("Failed to reset:", error);
 				alert(error);
 				document.getElementById("ResetButton").disabled = false;
 				document.getElementById("CancelButton").disabled = true;
@@ -510,6 +509,6 @@ function tags_string_to_list(tag_string) {
 };
 
 function round_trip_tag_string() {
-	var element = document.getElementById("VideoTags");
+	const element = document.getElementById("VideoTags");
 	element.value = tags_list_to_string(tags_string_to_list(element.value));
 };
