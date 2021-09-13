@@ -30,7 +30,7 @@
       sheetsync: false,
       thrimshim: true,
       segment_coverage: true,
-      playlist_manager: false,  // TODO, docker-compose only for now
+      playlist_manager: false,
       nginx: true,
       postgres: false,
     },
@@ -189,7 +189,7 @@
   // with only a different image, CLI args and possibly env vars.
   // The image name is derived from the component name
   // (eg. "downloader" is quay.io/ekimekim/wubloader-downloader)
-  // so we only pass in name, args and env vars (with the latter two optional).
+  // so we only pass in name as a required arg.
   // Optional kwargs work just like python.
   deployment(name, args=[], env=[], volumes=[], volumeMounts=[]):: {
     kind: "Deployment",
@@ -212,6 +212,7 @@
             {
               name: name,
               // segment-coverage is called segment_coverage in the image, so replace - with _
+              // ditto for playlist-manager
               image: "quay.io/ekimekim/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
               args: args,
               volumeMounts: [{name: "data", mountPath: "/mnt"}] + volumeMounts,
@@ -399,6 +400,24 @@
     volumeMounts=[
       {mountPath: "/etc/creds", name: "wubloader-creds"},
     ]),
+    // playlist_manager adds videos to youtube playlists depending on tags
+    if $.config.enabled.playlist_manager then $.deployment("playlist-manager",
+    args=[
+      "--backdoor-port", std.toString($.config.backdoor_port),
+      "--metrics-port", "80",
+      "--upload-location-allowlist", std.join(",", $.youtube_upload_locations),
+      $.config.db_connect,
+      "/etc/creds/cutter_creds.json"
+    ] + [
+        "%s=%s" % [playlist, std.join(",", $.playlists[playlist])]
+        for playlist in std.objectFields($.playlists)
+    ],
+    volumes=[
+      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+    ],
+    volumeMounts=[
+      {mountPath: "/etc/creds", name: "wubloader-creds"},
+    ]),
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
     // static content - segments as well as thrimbletrimmer.
@@ -430,6 +449,7 @@
     if $.config.enabled.segment_coverage then $.service("segment-coverage"),
     if $.config.enabled.thrimshim then $.service("thrimshim"),
     if $.config.enabled.cutter then $.service("cutter"),
+    if $.config.enabled.playlist_manager then $.service("playlist-manager"),
     if $.config.enabled.sheetsync then $.service("sheetsync"),
     if $.config.enabled.postgres then $.service("postgres"),
     // Secret for cutter_creds_file and sheetsync_creds_file
@@ -524,6 +544,7 @@
                 metric_rule("thrimshim"),
                 metric_rule("cutter"),
                 metric_rule("sheetsync"),
+                metric_rule("playlist_manager"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
                 rule("nginx", "/thrimbletrimmer", "Prefix"),
