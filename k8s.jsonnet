@@ -17,6 +17,10 @@
     // you're actually running, and must manually re-pull to get an updated copy.
     image_tag: "latest",
 
+    // image tag for postgres, which changes less
+    // postgres shouldn't be restarted unless absolutely necessary
+    database_tag: "bb05e37",
+
     // For each component, whether to deploy that component.
     enabled: {
       downloader: true,
@@ -28,7 +32,7 @@
       segment_coverage: true,
       playlist_manager: false,  // TODO, docker-compose only for now
       nginx: true,
-      postgres: false,          // TODO, docker-compose only for now
+      postgres: false,
     },
 
     // Twitch channels to capture.
@@ -43,6 +47,9 @@
     nfs_server: "nfs.example.com",            # server IP or hostname
     nfs_path: "/mnt/wubloader",               # path on server to mount
     nfs_capacity: "2TiB",                     # storage capacity to report to k8s
+
+    // PVC template storage class for statefulsets
+    sts_storage_class_name: "longhorn",
 
     // The local port within each container to bind the backdoor server on.
     // You can exec into the container and telnet to this port to get a python shell.
@@ -72,14 +79,23 @@
     ingress_labels: {},
 
     // Connection args for the database.
-    // If database is defined in this config, host and port should be postgres:5432.
+    // If database is defined in this config, host and port should be wubloader-postgres:5432.
     db_args: {
       user: "vst",
       password: "dbfh2019", // don't use default in production. Must not contain ' or \ as these are not escaped.
-      host: "postgres",
+      host: "wubloader-postgres",
       port: 5432,
       dbname: "wubloader",
     },
+
+    // Other database arguments
+    db_super_user: "postgres",          // only accessible from localhost
+    db_super_password: "postgres",      // Must not contain ' or \ as these are not escaped.
+    db_replication_user: "replicate",   // if empty, don't allow replication
+    db_replication_password: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
+    db_readonly_user: "vst-ro",         // if empty, don't have a readonly account
+    db_readonly_password: "volunteer",  // don't use default in production. Must not contain ' or \ as these are not escaped.  
+    db_standby: false,                  // set to true to have this database replicate another server
 
     // The timestamp corresponding to 00:00 in bustime
     bustime_start: "1970-01-01T00:00:00Z",
@@ -179,7 +195,7 @@
     },
   },
 
-  // This function generates a Service object for each service, since they're basically identical.
+  // This function generates a Service object for each service
   service(name):: {
     kind: "Service",
     apiVersion: "v1",
@@ -189,7 +205,67 @@
     },
     spec: {
       selector: {app: "wubloader", component: name},
-      ports: [{name: "http", port: 80, targetPort: 80}],
+      ports: if name == "postgres" then [{name: "postgres", port: 5432, targetPort: 5432},] else [{name: "http", port: 80, targetPort: 80}],
+    },
+  },
+
+  // This function generates a StatefulSet object (for postgres)
+  statefulset(name, args=[], env=[]):: {
+    kind: "StatefulSet",
+    apiVersion: "apps/v1",
+    metadata: {
+      name: "wubloader-%s" % name,
+      labels: {app: "wubloader", component: name},
+    },
+    spec: {
+      replicas: 1,
+      selector: {
+        matchLabels: {app: "wubloader", component: name},
+      },
+      serviceName: "wubloader-%s" % name,
+      template: {
+        metadata: {
+          labels: {app: "wubloader", component: name},
+        },
+        spec: {
+          containers: [
+            {
+              name: name,
+              image: "quay.io/ekimekim/wubloader-%s:%s" % [name, $.config.database_tag],
+              args: args,
+              env: $.env_list + env, // main env list combined with any statefulset-specific ones
+              volumeMounts: [
+                // tell use a subfolder in the newly provisioned PVC to store postgres DB
+                // a newly provisioned ext4 PVC will be non-empty, so postgres fails to start if we don't use a subfolder
+                {name: "database", mountPath: "/mnt/database", subPath: "postgres"},
+                {name: "segments", mountPath: "/mnt/wubloader"}
+              ],
+            },
+          ],
+          volumes: [
+            {
+              name: "segments",
+              persistentVolumeClaim: {"claimName": "mnt-wubloader"},
+            },
+          ],
+        },
+      },
+      volumeClaimTemplates: [
+        {
+          metadata: {
+            name: "database"
+          },
+          spec: {
+            accessModes: ["ReadWriteOnce"],
+            resources: {
+              requests: {
+                storage: "50GiB"
+              },
+            },
+            storageClassName: $.config.sts_storage_class_name
+          },
+        },
+      ],
     },
   },
 
@@ -260,6 +336,22 @@
       {name: "THRIMBLETRIMMER", value: "true"},
       {name: "SEGMENTS", value: "/mnt"},
     ]),
+    // postgres statefulset
+    if $.config.enabled.postgres then $.statefulset("postgres", 
+    args=if $.config.db_standby then ["/standby_setup.sh"] else [],
+    env=[
+      {name: "POSTGRES_USER", value: $.config.db_super_user},
+      {name: "POSTGRES_PASSWORD", value: $.config.db_super_password},
+      {name: "POSTGRES_DB", value: $.config.db_args.dbname},
+      {name: "PGDATA", value: "/mnt/database"},
+      {name: "WUBLOADER_USER", value: $.config.db_args.user},
+      {name: "WUBLOADER_PASSWORD", value: $.config.db_args.password},
+      {name: "REPLICATION_USER", value: $.config.db_replication_user},
+      {name: "REPLICATION_PASSWORD", value: $.config.db_replication_password},
+      {name: "READONLY_USER", value: $.config.db_readonly_user},
+      {name: "READONLY_PASSWORD", value: $.config.db_readonly_password},
+      {name: "MASTER_NODE", value: $.config.db_args.host},
+    ]),
     // Services for all deployments
     if $.config.enabled.downloader then $.service("downloader"),
     if $.config.enabled.backfiller then $.service("backfiller"),
@@ -267,6 +359,7 @@
     if $.config.enabled.restreamer then $.service("restreamer"),
     if $.config.enabled.segment_coverage then $.service("segment-coverage"),
     if $.config.enabled.thrimshim then $.service("thrimshim"),
+    if $.config.enabled.postgres then $.service("postgres"),
     // PV manifest
     {
       apiVersion: "v1",
