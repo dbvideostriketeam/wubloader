@@ -5,7 +5,7 @@ function pageSetup(isEditor) {
 	//Get values from ThrimShim
 	if (isEditor && /id=/.test(document.location.search)) {
 		const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-		fetch("/thrimshim/" + rowId)
+		fetch(`/thrimshim/${rowId}`)
 			.then(data => data.json())
 			.then(function (data) {
 				if (!data) {
@@ -97,7 +97,7 @@ function pageSetup(isEditor) {
 				loadPlaylist(isEditor);
 			});
 	}
-};
+}
 
 // Time-formatting functions
 
@@ -107,30 +107,28 @@ function parseDuration(duration) {
 		duration = duration.slice(1);
 		direction = -1;
 	}
-	const parts = duration.split(":");
-	return (
-		(parseInt(parts[0]) + (parts[1] || "0") / 60 + (parts[2] || "0") / 3600) * 60 * 60 * direction
-	);
-};
+	const [hours, mins, secs] = duration.split(":");
+	return 3600 * parseInt(hours) + 60 * (mins || "0") + (secs || "0") * direction;
+}
 
 function toBustime(date) {
 	return (
 		(date < desertBusStart ? "-" : "") +
 		videojs.formatTime(Math.abs((date - desertBusStart) / 1000), 600.01).padStart(7, "0:")
 	);
-};
+}
 
 function fromBustime(bustime) {
 	return new Date(desertBusStart.getTime() + 1000 * parseDuration(bustime));
-};
+}
 
 function toTimestamp(date) {
 	return date.toISOString().substring(0, 19);
-};
+}
 
 function fromTimestamp(ts) {
 	return new Date(ts + "Z");
-};
+}
 
 function toAgo(date) {
 	now = new Date();
@@ -138,11 +136,11 @@ function toAgo(date) {
 		(date < now ? "" : "-") +
 		videojs.formatTime(Math.abs((date - now) / 1000), 600.01).padStart(7, "0:")
 	);
-};
+}
 
 function fromAgo(ago) {
 	return new Date(new Date().getTime() - 1000 * parseDuration(ago));
-};
+}
 
 // Set the stream start/end range from a pair of Dates using the current format
 // If given null, sets to blank.
@@ -154,7 +152,7 @@ function setTimeRange(start, end) {
 	}[timeFormat];
 	document.getElementById("StreamStart").value = start ? toFunc(start) : "";
 	document.getElementById("StreamEnd").value = end ? toFunc(end) : "";
-};
+}
 
 // Get the current start/end range as Dates using the current format
 // Returns an object containing 'start' and 'end' fields.
@@ -171,12 +169,12 @@ function getTimeRange() {
 		}
 		const date = fromFunc(value);
 		return isNaN(date) ? null : date;
-	};
+	}
 	return {
 		start: convert(document.getElementById("StreamStart").value),
 		end: convert(document.getElementById("StreamEnd").value),
 	};
-};
+}
 
 function getTimeRangeAsTimestamp() {
 	const range = getTimeRange();
@@ -185,26 +183,26 @@ function getTimeRangeAsTimestamp() {
 		start: range.start && toTimestamp(range.start),
 		end: range.end && toTimestamp(range.end),
 	};
-};
+}
 
 function toggleHiddenPane(paneID) {
 	const pane = document.getElementById(paneID);
 	pane.style.display = pane.style.display === "none" ? "block" : "none";
-};
+}
 
 function toggleUltrawide() {
 	const body = document.getElementsByTagName("Body")[0];
 	body.classList.contains("ultrawide")
 		? body.classList.remove("ultrawide")
 		: body.classList.add("ultrawide");
-};
+}
 
 function toggleTimeInput(toggleInput) {
 	// Get times using current format, then change format, then write them back
 	const range = getTimeRange();
 	timeFormat = toggleInput;
 	setTimeRange(range.start, range.end);
-};
+}
 
 // For a given select input element id, add the given list of options.
 // If selected is given, it should be the name of an option to select.
@@ -214,26 +212,22 @@ function setOptions(element, options, selected) {
 		selected = options[0];
 	}
 	options.forEach(option => {
-		document.getElementById(element).innerHTML +=
-			'<option value="' +
-			option +
-			'" ' +
-			(option == selected ? "selected" : "") +
-			">" +
-			option +
-			"</option>";
+		const maybeSelected = option == selected ? "selected" : "";
+		const optionHTML = `<option value="${option}" ${maybeSelected}>${option}</option>`;
+		document.getElementById(element).innerHTML += optionHTML;
 	});
-};
+}
 
 function buildQuery(params) {
 	return Object.keys(params)
 		.filter(key => params[key] !== null)
 		.map(key => encodeURIComponent(key) + "=" + encodeURIComponent(params[key]))
 		.join("&");
-};
+}
 
 function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
-	const playlist = "/playlist/" + document.getElementById("StreamName").value + ".m3u8";
+	const stream = document.getElementById("StreamName").value;
+	const playlist = `/playlist/${stream}.m3u8`;
 
 	const range = getTimeRangeAsTimestamp();
 	const queryString = buildQuery(range);
@@ -265,7 +259,7 @@ function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
 
 	//Get quality levels for advanced properties / download
 	document.getElementById("qualityLevel").innerHTML = "";
-	fetch("/files/" + document.getElementById("StreamName").value)
+	fetch(`/files/${stream}`)
 		.then(data => data.json())
 		.then(function (data) {
 			if (!data.length) {
@@ -278,7 +272,7 @@ function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
 				document.getElementById("wubloaderAdvancedInputTable").style.display = "block";
 			}
 		});
-};
+}
 
 function thrimbletrimmerSubmit(state, override_changes = false) {
 	document.getElementById("SubmitButton").disabled = true;
@@ -341,15 +335,16 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 
 	//Submit to thrimshim
 	const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
-	fetch("/thrimshim/" + rowId, {
+	fetch(`/thrimshim/${rowId}`, {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(wubData),
-	}).then(response =>
-		response.text().then(text => {
+	})
+		.then(response => response.text())
+		.then(text => {
 			if (!response.ok) {
 				if (response.status == 409) {
 					dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing";
@@ -357,7 +352,7 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 						thrimbletrimmerSubmit(state, true);
 					}
 				} else {
-					const error = response.statusText + ": " + text;
+					const error = `${response.statusText}: ${text}`;
 					console.log("Failed to submit:", error);
 					alert(error);
 				}
@@ -367,9 +362,8 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 				alert("Draft saved");
 			}
 			document.getElementById("SubmitButton").disabled = false;
-		})
-	);
-};
+		});
+}
 
 function thrimbletrimmerDownload(isEditor) {
 	const range = getTimeRangeAsTimestamp();
@@ -389,31 +383,28 @@ function thrimbletrimmerDownload(isEditor) {
 		);
 	}
 
-	const targetURL =
-		"/cut/" +
-		document.getElementById("StreamName").value +
-		"/" +
+	const stream = document.getElementById("StreamName").value;
+	const quality =
 		document.getElementById("qualityLevel").options[
 			document.getElementById("qualityLevel").options.selectedIndex
-		].value +
-		".ts" +
-		"?" +
-		buildQuery({
-			start: range.start,
-			end: range.end,
-			// In non-editor, always use rough cut. They don't have the edit controls to do
-			// fine time selection anyway.
-			type: isEditor
-				? document.getElementById("DownloadType").options[
-						document.getElementById("DownloadType").options.selectedIndex
-				  ].value
-				: "rough",
-			// Always allow holes in non-editor, accidentially including holes isn't important
-			allow_holes: isEditor ? String(document.getElementById("AllowHoles").checked) : "true",
-		});
+		].value;
+	const query = buildQuery({
+		start: range.start,
+		end: range.end,
+		// In non-editor, always use rough cut. They don't have the edit controls to do
+		// fine time selection anyway.
+		type: isEditor
+			? document.getElementById("DownloadType").options[
+					document.getElementById("DownloadType").options.selectedIndex
+			  ].value
+			: "rough",
+		// Always allow holes in non-editor, accidentially including holes isn't important
+		allow_holes: isEditor ? String(document.getElementById("AllowHoles").checked) : "true",
+	});
+	const targetURL = `/cut/${stream}/${quality}.ts?${query}`;
 	document.getElementById("DownloadLink").href = targetURL;
 	document.getElementById("DownloadLink").style.display = "";
-};
+}
 
 function thrimbletrimmerManualLink() {
 	document.getElementById("ManualButton").disabled = true;
@@ -428,29 +419,29 @@ function thrimbletrimmerManualLink() {
 	if (!!user) {
 		body.token = user.getAuthResponse().id_token;
 	}
-	fetch("/thrimshim/manual-link/" + rowId, {
+	fetch(`/thrimshim/manual-link/${rowId}`, {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(body),
-	}).then(response =>
-		response.text().then(text => {
+	})
+		.then(response => response.text())
+		.then(text => {
 			if (!response.ok) {
-				const error = response.statusText + ": " + text;
+				const error = `${response.statusText}: ${text}`;
 				console.log("Failed to set manual link:", error);
 				alert(error);
 				document.getElementById("ManualButton").disabled = false;
 			} else {
-				alert("Manual link set to " + body.link);
+				alert(`Manual link set to ${body.link}`);
 				setTimeout(() => {
 					window.location.href = "/thrimbletrimmer/dashboard.html";
 				}, 500);
 			}
-		})
-	);
-};
+		});
+}
 
 function thrimbletrimmerResetLink(force) {
 	const rowId = /id=(.*)(?:&|$)/.exec(document.location.search)[1];
@@ -472,43 +463,43 @@ function thrimbletrimmerResetLink(force) {
 	if (!!user) {
 		body.token = user.getAuthResponse().id_token;
 	}
-	fetch("/thrimshim/reset/" + rowId + "?force=" + force, {
+	fetch(`/thrimshim/reset/${rowId}?force=${force}`, {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(body),
-	}).then(response =>
-		response.text().then(text => {
+	})
+		.then(response => response.text())
+		.then(text => {
 			if (!response.ok) {
-				const error = response.statusText + ": " + text;
+				const error = `${response.statusText}: ${text}`;
 				console.log("Failed to reset:", error);
 				alert(error);
 				document.getElementById("ResetButton").disabled = false;
 				document.getElementById("CancelButton").disabled = true;
 			} else {
-				alert("Row has been " + (force ? "reset" : "cancelled") + ". Reloading...");
+				alert(`Row has been ${force ? "reset" : "cancelled"}. Reloading...`);
 				setTimeout(() => {
 					window.location.reload();
 				}, 500);
 			}
-		})
-	);
-};
+		});
+}
 
 function tags_list_to_string(tag_list) {
 	return tag_list.join(", ");
-};
+}
 
 function tags_string_to_list(tag_string) {
 	return tag_string
 		.split(",")
 		.map(tag => tag.trim())
 		.filter(tag => tag.length > 0);
-};
+}
 
 function round_trip_tag_string() {
 	const element = document.getElementById("VideoTags");
 	element.value = tags_list_to_string(tags_string_to_list(element.value));
-};
+}

@@ -81,10 +81,6 @@ document.addEventListener("keypress", event => {
 				break;
 		}
 	}
-
-	// const keyName = event.key;
-	// console.log('keypress event\n\n' + 'key: ' + keyName);
-	// console.log(event.target.nodeName);
 });
 
 //Arrow keys only detected on keydown, keypress only works in "some" browsers
