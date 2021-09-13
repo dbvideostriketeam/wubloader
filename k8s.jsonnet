@@ -40,8 +40,8 @@
     qualities: ["source", "480p"],
 
     // NFS settings for RWX (ReadWriteMany) volume for wubloader pods
-    nfs_server: "192.168.1.121",              # server IP or hostname
-    nfs_path: "/mnt/hubbe/array/wubloader",   # path on server to mount
+    nfs_server: "nfs.example.com",            # server IP or hostname
+    nfs_path: "/mnt/wubloader",               # path on server to mount
     nfs_capacity: "2TiB",                     # storage capacity to report to k8s
 
     // The local port within each container to bind the backdoor server on.
