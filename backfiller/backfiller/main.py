@@ -107,7 +107,7 @@ def list_remote_hours(node, channel, quality, timeout=TIMEOUT):
 	uri = '{}/files/{}/{}'.format(node, channel, quality)
 	logging.debug('Getting list of hours from {}'.format(uri))
 	resp = requests.get(uri, timeout=timeout, metric_name='list_remote_hours')
-	return common.encode_strings(resp.json())
+	return resp.json()
 
 
 def list_remote_segments(node, channel, quality, hour, timeout=TIMEOUT):
@@ -115,7 +115,7 @@ def list_remote_segments(node, channel, quality, hour, timeout=TIMEOUT):
 	uri = '{}/files/{}/{}/{}'.format(node, channel, quality, hour)
 	logging.debug('Getting list of segments from {}'.format(uri))
 	resp = requests.get(uri, timeout=timeout, metric_name='list_remote_segments')
-	return common.encode_strings(resp.json())
+	return resp.json()
 
 
 def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment, 
