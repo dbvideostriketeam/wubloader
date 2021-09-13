@@ -26,8 +26,8 @@
       downloader: true,
       restreamer: true,
       backfiller: true,
-      cutter: false,            // TODO, docker-compose only for now
-      sheetsync: false,         // TODO, docker-compose only for now
+      cutter: false,
+      sheetsync: false,
       thrimshim: true,
       segment_coverage: true,
       playlist_manager: false,  // TODO, docker-compose only for now
@@ -97,6 +97,34 @@
     db_readonly_password: "volunteer",  // don't use default in production. Must not contain ' or \ as these are not escaped.  
     db_standby: false,                  // set to true to have this database replicate another server
 
+    // path to a JSON file containing google credentials for cutter as keys
+    // 'client_id', 'client_secret', and 'refresh_token'.
+    cutter_creds: import "./google_creds.json",
+
+    // Path to a JSON file containing google credentials for sheetsync as keys
+    // 'client_id', 'client_secret' and 'refresh_token'.
+    // May be the same as cutter_creds_file.
+    sheetsync_creds: import "./google_creds.json",
+
+    // The URL to write to the sheet for edit links, with {} being replaced by the id
+    edit_url: "https://wubloader.example.com/thrimbletrimmer?id={}",
+
+    // The spreadsheet ID and worksheet names for sheetsync to act on
+    sheet_id: "your_id_here",
+    worksheets: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1,7)],
+    
+    // Fixed tags to add to all videos
+    video_tags: ["DB13", "DB2019", "2019", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
+    
+    // A map from youtube playlist IDs to a list of tags.
+    // Playlist manager will populate each playlist with all videos which have all those tags.
+    // For example, tags ["Day 1", "Technical"] will populate the playlist with all Technical
+    // youtube videos from Day 1.
+    // Note that you can make an "all videos" playlist by specifying no tags (ie. []).
+    playlists: {
+      "YOUR-PLAYLIST-ID": ["some tag"],
+    },
+
     // The timestamp corresponding to 00:00 in bustime
     bustime_start: "1970-01-01T00:00:00Z",
 
@@ -117,20 +145,20 @@
       // Uncomment this to enable stacksampling performance monitoring
       // WUBLOADER_ENABLE_STACKSAMPLER: "true",
     },
-    
+
     // Config for cutter upload locations. See cutter docs for full detail.
-    cutter_config:: {
+    cutter_config: {
       desertbus: {type: "youtube"},
       unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
     },
-    default_location:: "desertbus",
-    
+    default_location: "desertbus",
+
     // The header to put at the front of video titles, eg. a video with a title
     // of "hello world" with title header "foo" becomes: "foo - hello world".
-    title_header:: "DB2019",
-    
+    title_header: "DB2021",
+
     // The footer to put at the bottom of descriptions, in its own paragraph
-    description_footer:: "Uploaded by the Desert Bus Video Strike Team",
+    description_footer: "Uploaded by the Desert Bus Video Strike Team",
 
   },
 
@@ -151,13 +179,19 @@
     for key in std.objectFields($.config.env)
   ],
 
+  // Which upload locations have type youtube, needed for playlist_manager
+  youtube_upload_locations:: [
+    location for location in std.objectFields($.config.cutter_config)
+    if $.config.cutter_config[location].type == "youtube"
+  ],
+
   // This function generates deployments for each service, since they only differ slightly,
   // with only a different image, CLI args and possibly env vars.
   // The image name is derived from the component name
   // (eg. "downloader" is quay.io/ekimekim/wubloader-downloader)
   // so we only pass in name, args and env vars (with the latter two optional).
   // Optional kwargs work just like python.
-  deployment(name, args=[], env=[]):: {
+  deployment(name, args=[], env=[], volumes=[], volumeMounts=[]):: {
     kind: "Deployment",
     apiVersion: "apps/v1",
     metadata: {
@@ -180,7 +214,7 @@
               // segment-coverage is called segment_coverage in the image, so replace - with _
               image: "quay.io/ekimekim/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
               args: args,
-              volumeMounts: [{name: "data", mountPath: "/mnt"}],
+              volumeMounts: [{name: "data", mountPath: "/mnt"}] + volumeMounts,
               env: $.env_list + env, // main env list combined with any deployment-specific ones
             },
           ],
@@ -189,7 +223,7 @@
               name: "data",
               persistentVolumeClaim: {"claimName": "mnt-wubloader"},
             },
-          ]
+          ] + volumes
         },
       },
     },
@@ -329,6 +363,42 @@
       $.clean_channels[0],  // use first element as default channel
       $.config.bustime_start,
     ]),
+    // Cutter interacts with the database to perform cutting jobs
+    if $.config.enabled.cutter then $.deployment("cutter",
+    args=[
+      "--base-dir", "/mnt",
+      "--backdoor-port", std.toString($.config.backdoor_port),
+      "--metrics-port", "80",
+      "--name", $.config.localhost,
+      "--tags", std.join(",", $.config.video_tags),
+      $.db_connect,
+      std.manifestJson($.config.cutter_config),
+      "/etc/creds/cutter_creds.json"
+    ],
+    volumes=[
+      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+    ],
+    volumeMounts=[
+      {mountPath: "/etc/creds", name: "wubloader-creds"},
+    ]),
+    // Sheetsync syncs database columns to the google docs sheet which is the primary operator interface
+    if $.config.enabled.sheetsync then $.deployment("sheetsync",
+    args=[
+      "--allocate-ids",
+      "--backdoor-port", std.toString($.config.backdoor_port),
+      "--metrics-port", "80",
+      $.config.db_connect,
+      "/etc/creds/sheetsync_creds.json",
+      $.config.edit_url,
+      $.config.bustime_start,
+      $.config.sheet_id
+    ] + $.config.worksheets,
+    volumes=[
+      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+    ],
+    volumeMounts=[
+      {mountPath: "/etc/creds", name: "wubloader-creds"},
+    ]),
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
     // static content - segments as well as thrimbletrimmer.
@@ -359,8 +429,24 @@
     if $.config.enabled.restreamer then $.service("restreamer"),
     if $.config.enabled.segment_coverage then $.service("segment-coverage"),
     if $.config.enabled.thrimshim then $.service("thrimshim"),
+    if $.config.enabled.cutter then $.service("cutter"),
+    if $.config.enabled.sheetsync then $.service("sheetsync"),
     if $.config.enabled.postgres then $.service("postgres"),
-    // PV manifest
+    // Secret for cutter_creds_file and sheetsync_creds_file
+    {
+      apiVersion: "v1",
+      kind: "Secret",
+      metadata: {
+        name: "wubloader-creds",
+        labels: {app: "wubloader"}
+      },
+      type: "Opaque",
+      stringData: {
+        "cutter_creds.json": std.toString($.config.cutter_creds),
+        "sheetsync_creds.json": std.toString($.config.sheetsync_creds)
+      },
+    },
+    // PV manifest for segments
     {
       apiVersion: "v1",
       kind: "PersistentVolume",
@@ -383,7 +469,7 @@
         volumeMode: "Filesystem"
       },
     },
-    // PVC manifest
+    // PVC manifest for segments
     {
       apiVersion: "v1",
       kind: "PersistentVolumeClaim",
@@ -436,6 +522,8 @@
                 metric_rule("restreamer"),
                 metric_rule("segment_coverage"),
                 metric_rule("thrimshim"),
+                metric_rule("cutter"),
+                metric_rule("sheetsync"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
                 rule("nginx", "/thrimbletrimmer", "Prefix"),
