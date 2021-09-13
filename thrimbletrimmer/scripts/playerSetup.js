@@ -6,7 +6,6 @@ function setupPlayer(isEditor, source, startTrim, endTrim) {
 	const options = {
 		sources: [{src: source}],
 		liveui: true,
-		//fluid:true,
 		controls: true,
 		autoplay: false,
 		width: 1280,
@@ -80,7 +79,7 @@ function mapDiscontinuities() {
 	}
 
 	return discontinuities;
-};
+}
 
 function getRealTimeForPlayerTime(discontinuities, playbackIndex) {
 	let streamStart = player.vhs.playlists.master.playlists.filter(
@@ -100,4 +99,4 @@ function getRealTimeForPlayerTime(discontinuities, playbackIndex) {
 	const realTime = streamStart.getTime() + playbackIndex * 1000;
 
 	return isFinite(realTime) ? new Date(realTime).toISOString() : null;
-};
+}
