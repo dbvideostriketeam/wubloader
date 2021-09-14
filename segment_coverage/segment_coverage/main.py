@@ -138,7 +138,7 @@ class CoverageChecker(object):
 
 		pixel_starts = np.arange(0, 3600, pixel_length) # start times of the pixels in an hour in seconds
 		pixel_ends = np.arange(pixel_length, 3601, pixel_length) # end times of the pixels in an hour in seconds
-		pixel_count = 3600 / pixel_length # number of pixels in an hour
+		pixel_count = 3600 // pixel_length # number of pixels in an hour
 		coverage_mask = np.zeros(len(hours) * pixel_count, dtype=np.bool_)
 		partial_mask = np.zeros(len(hours) * pixel_count, dtype=np.bool_)
 		for i, hour in enumerate(hours):
@@ -162,7 +162,7 @@ class CoverageChecker(object):
 				partial_mask[i * pixel_count:(i + 1) * pixel_count] = hour_partial
 
 		# convert the flat masks into 2-D arrays
-		columns = coverage_mask.size / rows
+		columns = coverage_mask.size // rows
 		coverage_mask = coverage_mask.reshape((columns, rows)).T
 		partial_mask = partial_mask.reshape((columns, rows)).T
 		
