@@ -7,6 +7,7 @@ setup(
     install_requires = [
         "argh",
         "psycopg2",
+        "gevent",
         "greenlet==0.4.16",
         "psycogreen",
         "wubloader-common",
