@@ -28,6 +28,7 @@ app.after_request(after_request)
 
 
 MAX_TITLE_LENGTH = 100 # Youtube only allows 100-character titles
+MAX_DESCRIPTION_LENGTH = 5000 # Youtube only allows 5000-character descriptions
 
 
 def cors(app):
@@ -228,9 +229,16 @@ def update_row(ident, editor=None):
 	if 'video_description' in new_row:
 		new_row['video_description'] += app.description_footer
 
-	# Validate title length
+	# Validate youtube requirements on title and description
 	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
 		return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
+	if len(new_row['video_description']) > MAX_DESCRIPTION_LENGTH:
+		return 'Description must be {} characters or less, including footer'.format(MAX_DESCRIPTION_LENGTH), 400
+	for char in ['<', '>']:
+		if char in new_row['video_title']:
+			return 'Title may not contain a {} character'.format(char), 400
+		if char in new_row['video_description']:
+			return 'Description may not contain a {} character'.format(char), 400
 	# Validate start time is less than end time
 	if new_row['video_start'] > new_row['video_end']:
 		return 'Video Start must be less than Video End.', 400
