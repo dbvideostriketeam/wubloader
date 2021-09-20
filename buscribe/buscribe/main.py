@@ -63,6 +63,7 @@ def main(database="", base_dir=".",
     logging.info('Transcribing from {}'.format(start_time))
 
     # Start priming the recognizer if possible
+    start_of_transcription = start_time
     start_time -= timedelta(minutes=2)
 
     stopping = gevent.event.Event()
@@ -85,8 +86,10 @@ def main(database="", base_dir=".",
 
         if recognizer.segments_start_time is None:
             recognizer.segments_start_time = segments[0].start
+            logging.info(f"Starting from: {segments[0].start}")
 
-        segments_end_time = transcribe_segments(segments, SAMPLE_RATE, recognizer, start_time, db_cursor, stopping)
+        segments_end_time = transcribe_segments(segments, SAMPLE_RATE, recognizer, start_of_transcription, db_cursor,
+                                                stopping)
 
         if end_time is not None and segments_end_time >= end_time \
                 or stopping.is_set():
