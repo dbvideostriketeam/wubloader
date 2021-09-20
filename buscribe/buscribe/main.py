@@ -5,8 +5,10 @@ from time import sleep
 
 import argh
 import common
+import gevent
 from common import dateutil
 from common.database import DBManager
+from gevent import signal
 
 from buscribe.buscribe import get_end_of_transcript, transcribe_segments, finish_off_recognizer
 from buscribe.recognizer import BuscribeRecognizer
@@ -63,6 +65,15 @@ def main(database="", base_dir=".",
     # Start priming the recognizer if possible
     start_time -= timedelta(minutes=2)
 
+    stopping = gevent.event.Event()
+
+    def stop():
+        logging.info("Shutting down")
+
+        stopping.set()
+
+    gevent.signal_handler(signal.SIGTERM, stop)
+
     while True:
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
@@ -75,9 +86,10 @@ def main(database="", base_dir=".",
         if recognizer.segments_start_time is None:
             recognizer.segments_start_time = segments[0].start
 
-        segments_end_time = transcribe_segments(segments, SAMPLE_RATE, recognizer, start_time, db_cursor)
+        segments_end_time = transcribe_segments(segments, SAMPLE_RATE, recognizer, start_time, db_cursor, stopping)
 
-        if end_time is not None and segments_end_time >= end_time:
+        if end_time is not None and segments_end_time >= end_time \
+                or stopping.is_set():
             # Work's done!
             finish_off_recognizer(recognizer, db_cursor)
             db_conn.close()

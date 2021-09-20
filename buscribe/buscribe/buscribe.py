@@ -3,6 +3,7 @@ import logging
 import subprocess
 from datetime import timedelta, datetime
 
+from gevent.event import Event
 from psycopg2._psycopg import cursor
 
 from buscribe.recognizer import BuscribeRecognizer
@@ -13,7 +14,7 @@ class HitMissingSegment(Exception):
 
 
 def transcribe_segments(segments: list, sample_rate: int, recognizer: BuscribeRecognizer, start_of_transcript: datetime,
-                        db_cursor: cursor):
+                        db_cursor: cursor, stopping: Event):
     """Starts transcribing from a list of segments.
 
     Only starts committing new lines to the database after reaching start_of_transcript.
@@ -54,6 +55,9 @@ def transcribe_segments(segments: list, sample_rate: int, recognizer: BuscribeRe
 
                 if line_start_time > start_of_transcript:
                     write_line(result_json, line_start_time, line_end_time, db_cursor)
+
+        if stopping.is_set():
+            return segments_end_time
 
     return segments_end_time
 
