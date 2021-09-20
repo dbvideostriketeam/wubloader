@@ -1,10 +1,13 @@
 import logging
 import os
+from time import sleep
 
 import argh
+import gevent.event
 from common import dateutil
 from common.database import DBManager
 from dateutil.parser import ParserError
+from gevent import signal
 from gevent.pywsgi import WSGIServer
 
 from buscribeapi.buscribeapi import app
@@ -30,6 +33,11 @@ def cors(app):
     return handle
 
 
+def servelet(server):
+    logging.info('Starting WSGI server.')
+    server.serve_forever()
+
+
 @argh.arg('--host',
           help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port',
@@ -40,7 +48,6 @@ def cors(app):
 @argh.arg('--bustime-start',
           help='The start time in UTC for the event, for UTC-Bustime conversion')
 def main(database="", host='0.0.0.0', port=8005, bustime_start=None):
-
     if bustime_start is None:
         logging.error("Missing --bustime-start!")
         exit(1)
@@ -55,6 +62,20 @@ def main(database="", host='0.0.0.0', port=8005, bustime_start=None):
 
     app.db_manager = DBManager(dsn=database)
 
-    logging.info('Starting up')
-    server.serve_forever()
+    stopping = gevent.event.Event()
+
+    def stop():
+        logging.info("Shutting down")
+        stopping.set()
+
+    gevent.signal_handler(signal.SIGTERM, stop)
+
+    serve = gevent.spawn(servelet, server)
+
+    # Wait for either the stop signal or the server to oops out.
+    gevent.wait([serve, stopping], count=1)
+
+    server.stop()
+    serve.get()  # Wait for server to shut down and/or re-raise if serve_forever() errored
+
     logging.info("Gracefully shut down")
