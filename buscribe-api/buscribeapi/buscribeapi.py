@@ -26,15 +26,15 @@ def get_vtt():
         start_time = dateutil.parse(start_time_string)
     except ParserError:
         return "Invalid start time!", 400
-    except ValueError:
+    except KeyError:
         return "Missing start time!", 400
 
     try:
-        end_time_string = request.args.get('end_time')
+        end_time_string = request.args['end_time']
         end_time = dateutil.parse(end_time_string)
     except ParserError:
         return "Invalid end time!", 400
-    except ValueError:
+    except KeyError:
         return "Missing end time!", 400
 
     db_conn = app.db_manager.get_conn()
@@ -55,7 +55,7 @@ def get_json():
     Search is done using PostgreSQL websearch_to_tsquery()
     (https://www.postgresql.org/docs/13/functions-textsearch.html)"""
 
-    start_time_string = request.args.get('start_time', default=None)
+    start_time_string = request.args.get('start_time')
     if start_time_string is not None:
         try:
             start_time = dateutil.parse(start_time_string)
@@ -64,7 +64,7 @@ def get_json():
     else:
         start_time = None
 
-    end_time_string = request.args.get('end_time', default=None)
+    end_time_string = request.args.get('end_time')
     if end_time_string is not None:
         try:
             end_time = dateutil.parse(end_time_string)
