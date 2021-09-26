@@ -7,7 +7,7 @@ setup(
 	install_requires = [
 		"argh",
 		"flask",
-		"gevent==1.5a2",
+		"gevent",
 		"google-auth",
 		"psycogreen",
 		"psycopg2",
