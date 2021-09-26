@@ -17,7 +17,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
 from common.flask_stats import request_stats, after_request
-from common.segments import feed_input
+from common.segments import feed_input, render_segments_waveform
 
 from . import generate_hls
 
@@ -297,6 +297,42 @@ def cut(channel, quality):
 		return Response(full_cut_segments(segments, start, end, encoding_args, stream=stream), mimetype=mimetype)
 	else:
 		return "Unknown type {!r}".format(type), 400
+
+
+@app.route('/waveform/<channel>/<quality>.png')
+@request_stats
+@has_path_args
+def generate_waveform(channel, quality):
+	"""
+	Returns a PNG image showing the audio waveform over the requested time period.
+	Params:
+		start, end: Required. The start and end times.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+			The returned image may extend beyond the requested start and end times by a few seconds.
+		size: The image size to render in form WIDTHxHEIGHT. Default 1024x64.
+	"""
+	start = dateutil.parse_utc_only(request.args['start'])
+	end = dateutil.parse_utc_only(request.args['end'])
+	if end <= start:
+		return "End must be after start", 400
+
+	size = request.args.get('size', '1024x64')
+	try:
+		width, height = map(int, size.split('x'))
+	except ValueError:
+		return "Invalid size", 400
+	if not ((0 < width <= 4096) and (0 < height <= 4096)):
+		return "Image size must be between 1x1 and 4096x4096", 400
+
+	hours_path = os.path.join(app.static_folder, channel, quality)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	segments = get_best_segments(hours_path, start, end)
+	if not any(segment is not None for segment in segments):
+		return "We have no content available within the requested time range.", 406
+
+	return Response(render_segments_waveform(segments, (width, height)), mimetype='image/png')
 
 
 @app.route('/generate_videos/<channel>/<quality>', methods=['POST'])
