@@ -6,7 +6,7 @@ setup(
 	packages = find_packages(),
 	install_requires = [
 		"argh",
-		"gevent==1.5a2",
+		"gevent",
 		"prometheus-client",
 		"psycogreen",
 		"psycopg2",

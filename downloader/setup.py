@@ -7,7 +7,7 @@ setup(
 	install_requires = [
 		"argh",
 		"python-dateutil",
-		"gevent==1.5a2",
+		"gevent",
 		"monotonic",
 		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"requests",
