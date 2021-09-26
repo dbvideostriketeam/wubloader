@@ -326,9 +326,13 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'error', # suppress noisy output
 		'-i', '-',
-		'-ss', cut_start,
-		'-t', duration,
-	] + list(encode_args)
+	]
+	if cut_start is not None:
+		args += ['-ss', cut_start]
+	if duration is not None:
+		args += ['-t', duration]
+	args += list(encode_args)
+
 	if output_file is subprocess.PIPE:
 		args.append('-') # output to stdout
 	else:
@@ -363,6 +367,8 @@ def rough_cut_segments(segments, start, end):
 	This method works by simply concatenating all the segments, without any re-encoding.
 	"""
 	for segment in segments:
+		if segment is None:
+			continue
 		with open(segment.path, 'rb') as f:
 			for chunk in read_chunks(f):
 				yield chunk
@@ -511,3 +517,52 @@ def full_cut_segments(segments, start, end, encode_args, stream=False):
 					action()
 				except (OSError, IOError):
 					pass
+
+
+@timed('waveform')
+def render_segments_waveform(segments, size=(1024, 128), scale='sqrt', color='#000000'):
+	"""
+	Render an audio waveform of given list of segments. Yields chunks of PNG data.
+	Note we do not validate our inputs before passing them into an ffmpeg filtergraph.
+	Do not provide untrusted input without verifying, or else they can run arbitrary filters
+	(this MAY be fine but I wouldn't be shocked if some obscure filter lets them do arbitrary
+	filesystem writes).
+	"""
+	width, height = size
+
+	# Remove holes
+	segments = [segment for segment in segments if segment is not None]
+
+	ffmpeg = None
+	input_feeder = None
+	try:
+		args = [
+			# create waveform from input audio
+			'-filter_complex',
+			f'[0:a]showwavespic=size={width}x{height}:colors={color}:scale={scale}[out]',
+			# use created waveform as our output
+			'-map', '[out]',
+			# output as png
+			'-f', 'image2', '-c', 'png',
+		]
+		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=None, duration=None, encode_args=args)
+		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+
+		for chunk in read_chunks(ffmpeg.stdout):
+			yield chunk
+
+		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+		if ffmpeg.wait() != 0:
+			raise Exception("Error while rendering waveform: ffmpeg exited {}".format(ffmpeg.returncode))
+		input_feeder.get() # re-raise any errors from feed_input()
+	finally:
+		# if something goes wrong, try to clean up ignoring errors
+		if input_feeder is not None:
+			input_feeder.kill()
+		if ffmpeg is not None and ffmpeg.poll() is None:
+			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+				try:
+					action()
+				except (OSError, IOError):
+					pass
+
