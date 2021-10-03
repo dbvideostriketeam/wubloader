@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>VST Restreamer</title>
+
+		<link rel="stylesheet" href="styles/thrimbletrimmer.css" />
+		<link rel="stylesheet" href="videojs/video-js.min.css" />
+
+		<script src="videojs/video.min.js"></script>
+		<script src="scripts/common.js"></script>
+		<script src="scripts/stream.js"></script>
+		<script src="scripts/keyboard-shortcuts.js"></script>
+	</head>
+	<body>
+		<div id="errors"></div>
+		<form id="stream-time-settings">
+			<div>
+				<label for="stream-time-setting-stream" class="field-label">Stream</label>
+				<input type="text" id="stream-time-setting-stream" />
+			</div>
+			<div>
+				<label for="stream-time-setting-start" class="field-label">Start Time</label>
+				<input type="text" id="stream-time-setting-start" value="0:10:00" />
+			</div>
+			<div>
+				<label for="stream-time-setting-end" class="field-label">End Time</label>
+				<input type="text" id="stream-time-setting-end" />
+			</div>
+			<div>
+				<div id="stream-time-frame-of-reference">
+					<input type="radio" name="time-frame-of-reference" id="stream-time-frame-of-reference-utc" value="1" />
+					<label for="stream-time-frame-of-reference-utc">UTC</label>
+					<input type="radio" name="time-frame-of-reference" id="stream-time-frame-of-reference-bus" value="2" />
+					<label for="stream-time-frame-of-reference-bus">Bus Time</label>
+					<input type="radio" name="time-frame-of-reference" id="stream-time-frame-of-reference-ago" value="3" checked />
+					<label for="stream-time-frame-of-reference-ago">Time Ago</label>
+				</div>
+			</div>
+			<div>
+				<button id="stream-time-settings-submit" type="submit">Load Playlist</button>
+			</div>
+		</form>
+
+		<video id="video" class="video-js" controls preload="auto"></video>
+
+		<a href="#" id="keyboard-help">Help</a>
+		<div id="keyboard-help-box" class="hidden">
+			<h2>Keyboard Shortcuts</h2>
+			<ul>
+				<li>Number keys (0-9): Jump to that 10% interval of the video (0% - 90%)</li>
+				<li>K or Space: Toggle pause</li>
+				<li>J: Back 10 seconds</li>
+				<li>L: Forward 10 seconds</li>
+				<li>Left arrow: Back 5 seconds</li>
+				<li>Right arrow: Forward 5 seconds</li>
+				<li>Comma (,): Back 1 frame</li>
+				<li>Period (.): Forward 1 frame</li>
+				<li>Equals (=): Increase playback speed one step</li>
+				<li>Hyphen (-): Decrease playback speed one step</li>
+			</ul>
+		</div>
+		<a href="#" id="download">Download Video</a>
+	</body>
+</html>
