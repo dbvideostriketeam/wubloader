@@ -342,7 +342,7 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 			# permission to "overwrite" it.
 			'-y',
 		]
-	args = map(str, args)
+	args = list(map(str, args))
 	logging.info("Running full cut with args: {}".format(" ".join(args)))
 	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=output_file)
 

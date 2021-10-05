@@ -4,7 +4,7 @@ FROM alpine:3.14
 RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev postgresql-dev file make busybox-extras
 
 # Install gevent so that we don't need to re-install it when common changes
-RUN pip install gevent==1.5a2 greenlet==0.4.16
+RUN pip install gevent
 
 # Install common lib first as it changes less
 COPY common /tmp/common
