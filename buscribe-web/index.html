@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscribe -- Search</title>
+    <link rel="stylesheet" href="style.css">
+    <script type="application/javascript" src="script.js"></script>
+</head>
+<body onload="onSiteLoad()">
+
+<div id="search_tools">
+    <form>
+        <label for="search_text">Search</label> <input id="search_text" oninput="doSearch()" placeholder="Supports quotes, 'or' and -.">
+        <hr>
+        <label for="start_time">Start time</label> <input id="start_time" type="datetime-local">
+        <label for="end_time">End time</label> <input id="end_time" type="datetime-local">
+        <button id="search_button" onclick="doSearch()" type="button">Search</button>
+        <hr>
+    </form>
+</div>
+
+<div id="results">
+
+</div>
+
+<div id="help_box">
+    <hr>
+    <p>Start time and end time specify the time range.</p>
+    <p>Text search supports quotes ("word1 and word2") to search phrases with those words in order. The word "or" works
+        as an <em>or</em> operator. Dash "-" works as a <em>not</em> operator.</p>
+    <hr>
+</div>
+
+</body>
+</html>

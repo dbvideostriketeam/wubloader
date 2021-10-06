@@ -1,0 +1,79 @@
+body {
+  color: aliceblue;
+  background: dimgray;
+}
+
+label {
+  display: inline-block;
+  font-family: sans-serif;
+  width: 5em;
+  text-align: right;
+}
+
+input[type=datetime-local] {
+  width: 13em;
+}
+
+button {
+  padding: 0.25em;
+}
+
+#search_text {
+  width: 50em;
+}
+
+#help_box {
+  display: none;
+  position: fixed;
+  top: 1em;
+  right: 1em;
+  width: 20em;
+  float: right;
+  background: #fff;
+  padding: 1em;
+  color: #000;
+}
+
+.line {
+  display: flex;
+  flex-direction: row;
+
+  margin-bottom: 0.5em;
+  padding: 0.1em;
+  max-width: 50em;
+
+  .line_time {
+
+    text-align: right;
+
+    display: flex;
+    flex-direction: column;
+
+    flex-shrink: 0;
+
+    //padding-top: 0.15em;
+
+    .line_start_time {
+      color: lightgray;
+      font-family: monospace;
+      font-size: smaller;
+    }
+
+    .line_start_bus_time {
+      font-family: sans-serif;
+      font-size: small;
+
+      display: flex;
+      flex-direction: column;
+      margin-bottom: 0.2em;
+      height: 1.36em; // try to align the baselines
+      justify-content: flex-end;
+      align-content: flex-end;
+    }
+  }
+
+  .line_text {
+    display: flex;
+    margin-left: 0.5em;
+  }
+}
