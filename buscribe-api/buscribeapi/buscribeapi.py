@@ -13,6 +13,9 @@ app = flask.Flask('buscribe')
 def convert_vtt_timedelta(delta: timedelta):
     return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}.{delta.microseconds // 1000:03}'
 
+def round_bus_time(delta: timedelta):
+    """Round bus time down to the second."""
+    return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}'
 
 @app.route('/buscribe/vtt')
 def get_vtt():
@@ -81,7 +84,9 @@ def get_json():
     results = fetch_lines(db_conn, start_time, end_time, query)
 
     return jsonify([{"start_time": row.start_time.isoformat(),
+                     "start_bus_time": round_bus_time(row.start_time - app.bustime_start),
                      "end_time": row.end_time.isoformat(),
+                     "end_bus_time": round_bus_time(row.start_time - app.bustime_start),
                      "text": row.transcription_line} for row in results])
 
 
