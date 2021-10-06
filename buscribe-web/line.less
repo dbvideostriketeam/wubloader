@@ -1,0 +1,41 @@
+.line {
+  display: grid;
+
+  grid-template-columns: [times] max-content [text] auto;
+  grid-template-rows: minmax(1.36em, max-content) min-content;
+  align-items: start;
+
+  margin-bottom: 0.1em;
+  padding: 0.1em;
+  max-width: 50em;
+
+  .line_start_time {
+    color: lightgray;
+    font-family: monospace;
+    font-size: smaller;
+
+    grid-column: times;
+    align-self: start;
+  }
+
+  .line_start_bus_time {
+    font-family: sans-serif;
+    //font-size: small;
+
+    text-align: right;
+
+    grid-column: times;
+
+    padding: 0.2em;
+    align-self: start;
+  }
+
+  .line_text {
+    padding: 0.2em;
+
+    margin-left: 0.3em;
+
+    grid-column: text;
+    grid-row: span 2;
+  }
+}

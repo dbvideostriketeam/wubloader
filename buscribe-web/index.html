@@ -10,12 +10,15 @@
 
 <div id="search_tools">
     <form>
-        <label for="search_text">Search</label> <input id="search_text" oninput="doSearch()" placeholder="Supports quotes, 'or' and -.">
-        <hr>
-        <label for="start_time">Start time</label> <input id="start_time" type="datetime-local">
-        <label for="end_time">End time</label> <input id="end_time" type="datetime-local">
-        <button id="search_button" onclick="doSearch()" type="button">Search</button>
-        <hr>
+        <div id="text_search_line" class="form_line">
+            <label for="search_text">Search</label> <input id="search_text" oninput="doSearch()"
+                                                           placeholder="Supports quotes, 'or' and -.">
+        </div>
+        <div id="time_search_line" class="form_line">
+            <label for="start_time">Start time</label> <input id="start_time" type="datetime-local">
+            <label for="end_time">End time</label> <input id="end_time" type="datetime-local">
+            <button id="search_button" onclick="doSearch()" type="button">Search</button>
+        </div>
     </form>
 </div>
 

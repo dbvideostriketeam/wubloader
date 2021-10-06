@@ -1,0 +1,44 @@
+#search_tools {
+  display: flex;
+  flex-direction: column;
+
+  margin-bottom: 1em;
+
+  label {
+    display: inline-block;
+    font-family: sans-serif;
+    width: 5em;
+    text-align: right;
+    padding: 0.2em;
+  }
+
+  #text_search_line{
+    display: flex;
+    flex-direction: row;
+
+    margin-bottom: 0.2em;
+
+    #search_text {
+      flex-grow: 1;
+      min-width: 10em;
+    }
+  }
+
+  #time_search_line {
+    display: flex;
+    flex-direction: row;
+
+    input[type=datetime-local] {
+      width: 13em;
+
+    }
+
+    #search_button {
+      margin-left: auto;
+    }
+  }
+
+  button {
+    padding: 0.25em;
+  }
+}
