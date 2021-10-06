@@ -43,14 +43,6 @@ function fillResults(results) {
 
         line_div.classList.add("line");
 
-        // line_div.innerHTML = `
-        // <div class="line_time">
-        //     <div class="line_start_bus_time">${line.start_bus_time}</div>
-        //     <div class="line_start_time">${line.start_time}</div>
-        // </div>
-        // <div class="line_text">${line.text}</div>
-        // `;
-
         line_div.innerHTML = `  
             <div class="line_start_bus_time">${line.start_bus_time}</div>
             <div class="line_text">${line.text}</div>
