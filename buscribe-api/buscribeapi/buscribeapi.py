@@ -13,9 +13,11 @@ app = flask.Flask('buscribe')
 def convert_vtt_timedelta(delta: timedelta):
     return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}.{delta.microseconds // 1000:03}'
 
+
 def round_bus_time(delta: timedelta):
     """Round bus time down to the second."""
     return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}'
+
 
 @app.route('/buscribe/vtt')
 def get_vtt():
@@ -99,9 +101,11 @@ def fetch_lines(db_conn, start_time, end_time, query=None):
                               end_time if end_time is not None else 'infinity')
     else:
         return database.query(db_conn, "SELECT * FROM buscribe_transcriptions WHERE "
-                                       "start_time > %s AND "
-                                       "end_time < %s AND "
-                                       "to_tsvector(transcription_line) @@ websearch_to_tsquery(%s);",
-                              start_time if start_time is not None else '-infinity',
-                              end_time if end_time is not None else 'infinity',
-                              query)
+                                       "start_time > %(start_time)s AND "
+                                       "end_time < %(end_time)s AND "
+                                       "to_tsvector(transcription_line) @@ websearch_to_tsquery(%(text_query)s) "
+                                       "ORDER BY ts_rank_cd(to_tsvector(transcription_line), websearch_to_tsquery(%(text_query)s)) DESC, "
+                                       "start_time;",
+                              start_time=start_time if start_time is not None else '-infinity',
+                              end_time=end_time if end_time is not None else 'infinity',
+                              text_query=query)
