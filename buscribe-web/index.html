@@ -9,9 +9,9 @@
 <body onload="onSiteLoad()">
 
 <div id="search_tools">
-    <form>
+
         <div id="text_search_line" class="form_line">
-            <label for="search_text">Search</label> <input id="search_text" oninput="doSearch()"
+            <label for="search_text">Search</label> <input type="search" id="search_text" oninput="doSearch()"
                                                            placeholder="Supports quotes, 'or' and -.">
         </div>
         <div id="time_search_line" class="form_line">
@@ -19,7 +19,7 @@
             <label for="end_time">End time</label> <input id="end_time" type="datetime-local">
             <button id="search_button" onclick="doSearch()" type="button">Search</button>
         </div>
-    </form>
+
 </div>
 
 <div id="results">
