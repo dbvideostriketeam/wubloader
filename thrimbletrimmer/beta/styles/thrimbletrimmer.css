@@ -22,7 +22,12 @@
 }
 
 #keyboard-help {
+	z-index: 1;
+}
+
+#keyboard-help-link {
 	float: right;
+	z-index: 5;
 }
 
 #keyboard-help-box {

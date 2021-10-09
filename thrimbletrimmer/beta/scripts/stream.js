@@ -10,7 +10,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	await loadDefaults();
 	updateTimeSettings();
 
-	const helpLink = document.getElementById("keyboard-help");
+	const helpLink = document.getElementById("keyboard-help-link");
 	helpLink.addEventListener("click", toggleHelpDisplay);
 });
 
@@ -54,7 +54,7 @@ function updateSegmentPlaylist() {
 function toggleHelpDisplay() {
 	const helpBox = document.getElementById("keyboard-help-box");
 	if (helpBox.classList.contains("hidden")) {
-		const helpLink = document.getElementById("keyboard-help");
+		const helpLink = document.getElementById("keyboard-help-link");
 		helpBox.style.top = (helpLink.offsetTop + helpLink.offsetHeight) + "px";
 		helpBox.classList.remove("hidden");
 	} else {
