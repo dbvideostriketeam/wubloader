@@ -15,7 +15,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 });
 
 async function loadDefaults() {
-	// TODO: Remove this comment from this file. For a particular video, /thrimshim/<video-id>
 	const defaultDataResponse = await fetch("/thrimshim/defaults");
 	if (!defaultDataResponse.ok) {
 		addError("Failed to load Thrimbletrimmer data. This probably means that everything is broken (or, possibly, just that the Wubloader host is down). Please sound the alarm.");
