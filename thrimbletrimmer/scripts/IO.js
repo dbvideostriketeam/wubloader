@@ -272,6 +272,10 @@ function loadPlaylist(isEditor, startTrim, endTrim, defaultQuality) {
 				document.getElementById("wubloaderAdvancedInputTable").style.display = "block";
 			}
 		});
+
+	// Get audio waveform. Note we assume "source" is a valid quality.
+	const waveformURL = `/waveform/${stream}/source.png?${buildQuery(range)}`;
+	document.getElementById("Waveform").setAttribute("src", waveformURL);
 }
 
 function thrimbletrimmerSubmit(state, override_changes = false) {
