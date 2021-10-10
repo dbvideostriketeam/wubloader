@@ -4,6 +4,16 @@
 	flex-direction: column;
 }
 
+#errors > div {
+	border-bottom: 1px solid #b00;
+	background: #fee;
+	padding: 4px;
+}
+
+.error-dismiss {
+	float: right;
+}
+
 #stream-time-settings {
 	display: flex;
 	align-items: flex-end;
