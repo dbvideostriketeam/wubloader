@@ -342,9 +342,8 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 			"Content-Type": "application/json",
 		},
 		body: JSON.stringify(wubData),
-	})
-		.then(response => response.text())
-		.then(text => {
+	}).then(response =>
+		response.text().then(text => {
 			if (!response.ok) {
 				if (response.status == 409) {
 					dialogue = text + "\nClick Ok to submit anyway; Click Cancel to return to editing";
@@ -362,7 +361,8 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 				alert("Draft saved");
 			}
 			document.getElementById("SubmitButton").disabled = false;
-		});
+		})
+	);
 }
 
 function thrimbletrimmerDownload(isEditor) {
