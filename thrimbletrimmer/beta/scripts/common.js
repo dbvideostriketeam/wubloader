@@ -5,14 +5,26 @@ var globalEndTimeString = 0;
 
 const VIDEO_FRAMES_PER_SECOND = 30;
 
-const TIME_FRAME_UTC = 1;
-const TIME_FRAME_BUS = 2;
-const TIME_FRAME_AGO = 3;
-
 const PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2];
 
+function commonPageSetup() {
+	const helpLink = document.getElementById("editor-help-link");
+	helpLink.addEventListener("click", toggleHelpDisplay);
+}
+
+function toggleHelpDisplay() {
+	const helpBox = document.getElementById("editor-help-box");
+	if (helpBox.classList.contains("hidden")) {
+		const helpLink = document.getElementById("editor-help-link");
+		helpBox.style.top = `${helpLink.offsetTop + helpLink.offsetHeight}px`;
+		helpBox.classList.remove("hidden");
+	} else {
+		helpBox.classList.add("hidden");
+	}
+}
+
 function getVideoJS() {
-	return videojs("video");
+	return videojs.getPlayer("video");
 }
 
 function addError(errorText) {
@@ -32,12 +44,12 @@ function addError(errorText) {
 	errorHost.appendChild(errorElement);
 }
 
-function loadVideoPlayer(playlistURL) {
+async function loadVideoPlayer(playlistURL) {
 	let rangedPlaylistURL = assembleVideoPlaylistURL(playlistURL);
 
 	let defaultOptions = {
 		sources: [{ src: rangedPlaylistURL }],
-		liveui: true,
+		liveui: false,
 		controls: true,
 		autoplay: false,
 		playbackRates: PLAYBACK_RATES,
@@ -51,21 +63,23 @@ function loadVideoPlayer(playlistURL) {
 	};
 
 	const player = videojs("video", defaultOptions);
-	player.ready(() => {
-		player.volume(0.5); // Initialize to half volume
+	return new Promise((resolve, reject) => {
+		player.ready(() => {
+			player.volume(0.5); // Initialize to half volume
+			resolve();
+		});
 	});
+}
+
+async function loadVideoPlayerFromDefaultPlaylist() {
+	const playlistURL = `/playlist/${globalStreamName}.m3u8`;
+	await loadVideoPlayer(playlistURL);
 }
 
 function updateVideoPlayer(newPlaylistURL) {
 	let rangedPlaylistURL = assembleVideoPlaylistURL(newPlaylistURL);
 	const player = getVideoJS();
 	player.src({ src: rangedPlaylistURL });
-}
-
-function updateStoredTimeSettings() {
-	globalStreamName = document.getElementById("stream-time-setting-stream").value;
-	globalStartTimeString = document.getElementById("stream-time-setting-start").value;
-	globalEndTimeString = document.getElementById("stream-time-setting-end").value;
 }
 
 function parseInputTimeAsNumberOfSeconds(inputTime) {
@@ -81,45 +95,6 @@ function parseInputTimeAsNumberOfSeconds(inputTime) {
 	return (parseInt(parts[0]) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600) * 60 * 60 * direction;
 }
 
-function getSelectedTimeConversion() {
-	const radioSelection = document.querySelectorAll("#stream-time-frame-of-reference > input");
-	for (radioItem of radioSelection) {
-		if (radioItem.checked) {
-			return +radioItem.value;
-		}
-	}
-	// This selection shouldn't ever become fully unchecked. We'll return the bus time by default
-	// if it does because why not?
-	return TIME_FRAME_BUS;
-}
-
-// Gets the start time of the video from settings. Returns an invalid date object if the user entered bad data.
-function getStartTime() {
-	switch (getSelectedTimeConversion()) {
-		case 1:
-			return new Date(globalStartTimeString + "Z");
-		case 2:
-			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
-		case 3:
-			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
-	}
-}
-
-// Gets the end time of the video from settings. Returns null if there's no end time. Returns an invalid date object if the user entered bad data.
-function getEndTime() {
-	if (globalEndTimeString === "") {
-		return null;
-	}
-	switch (getSelectedTimeConversion()) {
-		case 1:
-			return new Date(globalEndTimeString + "Z");
-		case 2:
-			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
-		case 3:
-			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
-	}
-}
-
 function getWubloaderTimeFromDate(date) {
 	if (!date) {
 		return null;
@@ -127,31 +102,43 @@ function getWubloaderTimeFromDate(date) {
 	return date.toISOString().substring(0, 19); // Trim milliseconds and "Z" marker
 }
 
+function getWubloaderTimeFromDateWithMilliseconds(date) {
+	if (!date) {
+		return null;
+	}
+	return date.toISOString().substring(0, 23); // Trim "Z" marker and smaller than milliseconds
+}
+
 function assembleVideoPlaylistURL(basePlaylistURL) {
 	let playlistURL = basePlaylistURL;
 	
-	let startTime = getStartTime();
-	let endTime = getEndTime();
-
-	let queryStringParts = [];
-	if (startTime) {
-		queryStringParts.push("start=" + getWubloaderTimeFromDate(startTime));
-	}
-	if (endTime) {
-		queryStringParts.push("end=" + getWubloaderTimeFromDate(endTime));
-	}
+	const queryStringParts = startAndEndTimeQueryStringParts();
 	if (queryStringParts) {
 		playlistURL += "?" + queryStringParts.join("&");
 	}
 	return playlistURL;
 }
 
-function generateDownloadURL(startTime, endTime, downloadType, allowHoles) {
+function startAndEndTimeQueryStringParts() {
+	const startTime = getStartTime();
+	const endTime = getEndTime();
+
+	let queryStringParts = [];
+	if (startTime) {
+		queryStringParts.push(`start=${getWubloaderTimeFromDate(startTime)}`);
+	}
+	if (endTime) {
+		queryStringParts.push(`end=${getWubloaderTimeFromDate(endTime)}`);
+	}
+	return queryStringParts;
+}
+
+function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
 	const startURLTime = getWubloaderTimeFromDate(startTime);
 	const endURLTime = getWubloaderTimeFromDate(endTime);
 
-	const queryParts = ["start=" + startURLTime, "end=" + endURLTime, "type=" + downloadType, "allow_holes=" + allowHoles];
+	const queryParts = [`start=${startURLTime}`, `end=${endURLTime}`, `type=${downloadType}`, `allow_holes=${allowHoles}`];
 
-	const downloadURL = "/cut/" + globalStreamName + "/source.ts?" + queryParts.join("&");
+	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
 	return downloadURL;
 }

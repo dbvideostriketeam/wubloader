@@ -88,6 +88,26 @@ document.addEventListener("keypress", (event) => {
 		case "-":
 			decreaseSpeed(player);
 			break;
+		case "[":
+			if (typeof setCurrentRangeStartToVideoTime === "function") {
+				setCurrentRangeStartToVideoTime();
+			}
+			break;
+		case "]":
+			if (typeof setCurrentRangeEndToVideoTime === "function") {
+				setCurrentRangeEndToVideoTime();
+			}
+			break;
+		case "o":
+			if (typeof moveToPreviousRange === "function") {
+				moveToPreviousRange();
+			}
+			break;
+		case "p":
+			if (typeof moveToNextRange === "function") {
+				moveToNextRange();
+			}
+			break;
 		default:
 			break;
 	}
