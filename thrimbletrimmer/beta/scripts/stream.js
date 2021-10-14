@@ -1,7 +1,12 @@
 var globalLoadedVideoPlayer = false;
+var globalVideoTimeReference = TIME_FRAME_AGO;
 
-// Here's all the stuff that runs immediately when the page is loaded.
+const TIME_FRAME_UTC = 1;
+const TIME_FRAME_BUS = 2;
+const TIME_FRAME_AGO = 3;
+
 window.addEventListener("DOMContentLoaded", async (event) => {
+	commonPageSetup();
 	const timeSettingsForm = document.getElementById("stream-time-settings");
 	timeSettingsForm.addEventListener("submit", (event) => {
 		event.preventDefault();
@@ -9,9 +14,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 	await loadDefaults();
 	updateTimeSettings();
-
-	const helpLink = document.getElementById("keyboard-help-link");
-	helpLink.addEventListener("click", toggleHelpDisplay);
 });
 
 async function loadDefaults() {
@@ -28,6 +30,33 @@ async function loadDefaults() {
 	globalBusStartTime = new Date(defaultData.bustime_start);
 }
 
+// Gets the start time of the video from settings. Returns an invalid date object if the user entered bad data.
+function getStartTime() {
+	switch (globalVideoTimeReference) {
+		case 1:
+			return new Date(globalStartTimeString + "Z");
+		case 2:
+			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
+		case 3:
+			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
+	}
+}
+
+// Gets the end time of the video from settings. Returns null if there's no end time. Returns an invalid date object if the user entered bad data.
+function getEndTime() {
+	if (globalEndTimeString === "") {
+		return null;
+	}
+	switch (globalVideoTimeReference) {
+		case 1:
+			return new Date(globalEndTimeString + "Z");
+		case 2:
+			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
+		case 3:
+			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
+	}
+}
+
 function updateTimeSettings() {
 	updateStoredTimeSettings();
 	if (globalLoadedVideoPlayer) {
@@ -38,31 +67,33 @@ function updateTimeSettings() {
 	}
 
 	updateDownloadLink();
-}
 
-function loadVideoPlayerFromDefaultPlaylist() {
-	const playlistURL = "/playlist/" + globalStreamName + ".m3u8";
-	loadVideoPlayer(playlistURL);
+	if (getEndTime() < getStartTime()) {
+		addError("End time is before the start time. This will prevent video loading and cause other problems.");
+	}
 }
 
 function updateSegmentPlaylist() {
-	const playlistURL = "/playlist/" + globalStreamName + ".m3u8";
+	const playlistURL = `/playlist/${globalStreamName}.m3u8`;
 	updateVideoPlayer(playlistURL);
-}
-
-function toggleHelpDisplay() {
-	const helpBox = document.getElementById("keyboard-help-box");
-	if (helpBox.classList.contains("hidden")) {
-		const helpLink = document.getElementById("keyboard-help-link");
-		helpBox.style.top = (helpLink.offsetTop + helpLink.offsetHeight) + "px";
-		helpBox.classList.remove("hidden");
-	} else {
-		helpBox.classList.add("hidden");
-	}
 }
 
 function updateDownloadLink() {
 	const downloadLink = document.getElementById("download");
-	const downloadURL = generateDownloadURL(getStartTime(), getEndTime(), "rough", true);
+	const downloadURL = generateDownloadURL(getStartTime(), getEndTime(), "rough", true, "source");
 	downloadLink.href = downloadURL;
+}
+
+function updateStoredTimeSettings() {
+	globalStreamName = document.getElementById("stream-time-setting-stream").value;
+	globalStartTimeString = document.getElementById("stream-time-setting-start").value;
+	globalEndTimeString = document.getElementById("stream-time-setting-end").value;
+
+	const radioSelection = document.querySelectorAll("#stream-time-frame-of-reference > input");
+	for (radioItem of radioSelection) {
+		if (radioItem.checked) {
+			globalVideoTimeReference = +radioItem.value;
+			break;
+		}
+	}
 }
