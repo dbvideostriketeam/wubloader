@@ -1,9 +1,9 @@
-var globalLoadedVideoPlayer = false;
-var globalVideoTimeReference = TIME_FRAME_AGO;
-
 const TIME_FRAME_UTC = 1;
 const TIME_FRAME_BUS = 2;
 const TIME_FRAME_AGO = 3;
+
+var globalLoadedVideoPlayer = false;
+var globalVideoTimeReference = TIME_FRAME_AGO;
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
@@ -78,7 +78,9 @@ function updateTimeSettings() {
 
 	updateDownloadLink();
 
-	if (getEndTime() < getStartTime()) {
+	const startTime = getStartTime();
+	const endTime = getEndTime();
+	if (endTime && endTime < startTime) {
 		addError(
 			"End time is before the start time. This will prevent video loading and cause other problems."
 		);
