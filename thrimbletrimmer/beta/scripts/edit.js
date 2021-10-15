@@ -649,6 +649,8 @@ function rangeDefinitionDOM() {
 	rangeStartSet.alt = "Set range start point to current video time";
 	rangeStartSet.classList.add("range-definition-set-start");
 	rangeStartSet.classList.add("click");
+	const rangeTimeGap = document.createElement("div");
+	rangeTimeGap.classList.add("range-definition-between-time-gap");
 	const rangeEnd = document.createElement("input");
 	rangeEnd.type = "text";
 	rangeEnd.classList.add("range-definition-end");
@@ -698,6 +700,7 @@ function rangeDefinitionDOM() {
 
 	rangeContainer.appendChild(rangeStart);
 	rangeContainer.appendChild(rangeStartSet);
+	rangeContainer.appendChild(rangeTimeGap);
 	rangeContainer.appendChild(rangeEnd);
 	rangeContainer.appendChild(rangeEndSet);
 	rangeContainer.appendChild(removeRange);
