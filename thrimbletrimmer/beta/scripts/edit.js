@@ -425,6 +425,8 @@ async function sendVideoData(edited, overrideChanges) {
 			submissionResponseElem.innerHTML = "";
 			submissionResponseElem.appendChild(serverErrorNode);
 			submissionResponseElem.appendChild(submitButton);
+		} else if (submitResponse.status === 401) {
+			submissionResponseElem.innerText = "Unauthorized. Did you remember to sign in?";
 		} else {
 			submissionResponseElem.innerText = `${
 				submitResponse.statusText
