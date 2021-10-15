@@ -137,10 +137,7 @@ function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quali
 	const startURLTime = getWubloaderTimeFromDate(startTime);
 	const endURLTime = getWubloaderTimeFromDate(endTime);
 
-	const queryParts = [
-		`type=${downloadType}`,
-		`allow_holes=${allowHoles}`,
-	];
+	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
 	if (startURLTime) {
 		queryParts.push(`start=${startURLTime}`);
 	}
