@@ -77,10 +77,10 @@ document.addEventListener("keypress", (event) => {
 			player.currentTime(player.currentTime() + 5);
 			break;
 		case ",":
-			player.currentTime(player.currentTime() - (1 / VIDEO_FRAMES_PER_SECOND));
+			player.currentTime(player.currentTime() - 1 / VIDEO_FRAMES_PER_SECOND);
 			break;
 		case ".":
-			player.currentTime(player.currentTime() + (1 / VIDEO_FRAMES_PER_SECOND));
+			player.currentTime(player.currentTime() + 1 / VIDEO_FRAMES_PER_SECOND);
 			break;
 		case "=":
 			increaseSpeed(player);

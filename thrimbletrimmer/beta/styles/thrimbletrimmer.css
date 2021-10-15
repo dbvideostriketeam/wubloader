@@ -1,4 +1,5 @@
-a, .click {
+a,
+.click {
 	cursor: pointer;
 }
 
@@ -46,7 +47,7 @@ a, .click {
 	display: block; /* We want to display these */
 }
 
-#video .vjs-control-bar .vjs-progress-control {  
+#video .vjs-control-bar .vjs-progress-control {
 	position: absolute;
 	bottom: 26px; /* Aligns the bar to the top of the control bar */
 	left: 0;
@@ -118,7 +119,8 @@ a, .click {
 	gap: 4px;
 }
 
-.range-definition-start, .range-definition-end {
+.range-definition-start,
+.range-definition-end {
 	width: 100px;
 }
 

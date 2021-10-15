@@ -13,7 +13,10 @@
 		<script src="scripts/keyboard-shortcuts.js"></script>
 
 		<!-- TODO: Change client ID back to main wubloader one -->
-		<meta name="google-signin-client_id" content="769576855778-phhnmkk2k8h6m1b1sb964ulrq0ulgesm.apps.googleusercontent.com">
+		<meta
+			name="google-signin-client_id"
+			content="769576855778-phhnmkk2k8h6m1b1sb964ulrq0ulgesm.apps.googleusercontent.com"
+		/>
 		<script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
 	</head>
 	<body>
@@ -35,7 +38,7 @@
 
 		<video id="video" class="video-js" controls preload="auto"></video>
 		<div id="clip-bar"></div>
-		<img id="waveform" alt="Waveform for the video">
+		<img id="waveform" alt="Waveform for the video" />
 
 		<div id="editor-help">
 			<a href="#" id="editor-help-link">Help</a>
@@ -52,35 +55,63 @@
 					<li>Period (.): Forward 1 frame</li>
 					<li>Equals (=): Increase playback speed one step</li>
 					<li>Hyphen (-): Decrease playback speed one step</li>
-					<li>Left bracket ([): Set start point for current range (indicated by arrow) to current video time</li>
+					<li>
+						Left bracket ([): Set start point for current range (indicated by arrow) to current
+						video time
+					</li>
 					<li>Right bracket (]): Send end point for current range to current video time</li>
 					<li>O: Switch the current range up one</li>
-					<li>P: Switch the current range down one, adding a new range if the current range was the last one</li>
+					<li>
+						P: Switch the current range down one, adding a new range if the current range was the
+						last one
+					</li>
 				</ul>
 				<h2>Transition Types</h2>
-				<p>A visual explanation of the different transition types can be found <a href="https://trac.ffmpeg.org/wiki/Xfade">on the FFMpeg website</a>.</p>
+				<p>
+					A visual explanation of the different transition types can be found
+					<a href="https://trac.ffmpeg.org/wiki/Xfade">on the FFMpeg website</a>.
+				</p>
 			</div>
 		</div>
 
 		<div id="range-definitions">
 			<div class="range-definition-times">
-				<input type="text" class="range-definition-start">
-				<img src="images/pencil.png" alt="Set range start point to current video time" class="range-definition-set-start click">
+				<input type="text" class="range-definition-start" />
+				<img
+					src="images/pencil.png"
+					alt="Set range start point to current video time"
+					class="range-definition-set-start click"
+				/>
 				<div class="range-definition-between-time-gap"></div>
-				<input type="text" class="range-definition-end">
-				<img src="images/pencil.png" alt="Set range end point to current video time" class="range-definition-set-end click">
+				<input type="text" class="range-definition-end" />
+				<img
+					src="images/pencil.png"
+					alt="Set range end point to current video time"
+					class="range-definition-set-end click"
+				/>
 				<div class="range-definition-icon-gap"></div>
-				<img src="images/arrow.png" alt="Range affected by keyboard shortcuts" title="Range affected by keyboard shortcuts" class="range-definition-current">
+				<img
+					src="images/arrow.png"
+					alt="Range affected by keyboard shortcuts"
+					title="Range affected by keyboard shortcuts"
+					class="range-definition-current"
+				/>
 			</div>
 		</div>
-		<img src="images/plus.png" alt="Add range" id="add-range-definition" class="click" tabindex=0>
+		<img
+			src="images/plus.png"
+			alt="Add range"
+			id="add-range-definition"
+			class="click"
+			tabindex="0"
+		/>
 
 		<div id="video-info">
 			<div>
 				<label for="video-info-title">Title:</label>
 				<div id="video-info-title-full">
 					<span id="video-info-title-prefix"></span>
-					<input type="text" id="video-info-title">
+					<input type="text" id="video-info-title" />
 				</div>
 			</div>
 			<div id="video-info-description-entry">
@@ -89,7 +120,7 @@
 			</div>
 			<div>
 				<label for="video-info-tags">Tags (comma-separated):</label>
-				<input type="text" id="video-info-tags">
+				<input type="text" id="video-info-tags" />
 			</div>
 			<div id="video-info-editor-notes-container" class="hidden">
 				<div id="video-info-editor-notes-header">Editor Notes:</div>
@@ -106,7 +137,7 @@
 			<div id="advanced-submission-options" class="hidden">
 				<div>
 					<label for="advanced-submission-option-allow-holes">Allow holes</label>
-					<input type="checkbox" id="advanced-submission-option-allow-holes">
+					<input type="checkbox" id="advanced-submission-option-allow-holes" />
 				</div>
 
 				<div>
@@ -116,7 +147,7 @@
 
 				<div>
 					<label for="advanced-submission-option-uploader-allow">Uploader allowlist:</label>
-					<input type="text" id="advanced-submission-option-uploader-allow">
+					<input type="text" id="advanced-submission-option-uploader-allow" />
 				</div>
 			</div>
 			<div id="submission-response"></div>
@@ -141,17 +172,29 @@
 				<a id="reset-entire-video" href="#">Force Reset Row</a>
 			</div>
 			<div id="data-correction-manual-link" class="hidden">
-				<input type="text" id="data-correction-manual-link-entry">
-				<label for="data-correction-manual-link-youtube">Is YouTube upload (add to playlists)?</label>
-				<input type="checkbox" id="data-correction-manual-link-youtube">
+				<input type="text" id="data-correction-manual-link-entry" />
+				<label for="data-correction-manual-link-youtube"
+					>Is YouTube upload (add to playlists)?</label
+				>
+				<input type="checkbox" id="data-correction-manual-link-youtube" />
 				<button id="data-correction-manual-link-submit">Set Link</button>
 				<div id="data-correction-manual-link-response"></div>
 			</div>
 			<div id="data-correction-force-reset-confirm" class="hidden">
 				<p>Are you sure you want to reset this event?</p>
-				<p>This will set the row back to Unedited and forget about any video that may already exist.</p>
-				<p>This is intended as a last-ditch effort to clear a malfunctioning cutter, or if a video needs to be reedited and replaced.</p>
-				<p><strong>It is your responsibility to deal with any video that may have already been uploaded.</strong></p>
+				<p>
+					This will set the row back to Unedited and forget about any video that may already exist.
+				</p>
+				<p>
+					This is intended as a last-ditch effort to clear a malfunctioning cutter, or if a video
+					needs to be reedited and replaced.
+				</p>
+				<p>
+					<strong
+						>It is your responsibility to deal with any video that may have already been
+						uploaded.</strong
+					>
+				</p>
 				<p>
 					<button id="data-correction-force-reset-yes">Yes, reset it!</button>
 					<button id="data-correction-force-reset-no">Oh, never mind!</button>

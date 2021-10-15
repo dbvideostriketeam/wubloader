@@ -57,9 +57,9 @@ async function loadVideoPlayer(playlistURL) {
 		controlBar: {
 			fullscreenToggle: true,
 			volumePanel: {
-				inline: false
-			}
-		}
+				inline: false,
+			},
+		},
 	};
 
 	const player = videojs("video", defaultOptions);
@@ -111,7 +111,7 @@ function getWubloaderTimeFromDateWithMilliseconds(date) {
 
 function assembleVideoPlaylistURL(basePlaylistURL) {
 	let playlistURL = basePlaylistURL;
-	
+
 	const queryStringParts = startAndEndTimeQueryStringParts();
 	if (queryStringParts) {
 		playlistURL += "?" + queryStringParts.join("&");
@@ -137,7 +137,12 @@ function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quali
 	const startURLTime = getWubloaderTimeFromDate(startTime);
 	const endURLTime = getWubloaderTimeFromDate(endTime);
 
-	const queryParts = [`start=${startURLTime}`, `end=${endURLTime}`, `type=${downloadType}`, `allow_holes=${allowHoles}`];
+	const queryParts = [
+		`start=${startURLTime}`,
+		`end=${endURLTime}`,
+		`type=${downloadType}`,
+		`allow_holes=${allowHoles}`,
+	];
 
 	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
 	return downloadURL;
