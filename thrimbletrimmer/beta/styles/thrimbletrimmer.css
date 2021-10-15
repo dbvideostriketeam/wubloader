@@ -138,6 +138,10 @@ a, .click {
 	margin-right: 4px;
 }
 
+#add-range-definition {
+	margin-top: 2px;
+}
+
 #video-info > div {
 	margin: 5px 0;
 }
