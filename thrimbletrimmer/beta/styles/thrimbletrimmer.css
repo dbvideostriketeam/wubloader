@@ -85,6 +85,12 @@ a,
 
 #waveform {
 	width: 100%;
+
+	/* With an unbound height, the waveform can appear a bit away from the video.
+	 * The intended effect still works if we scrunch the height a bit, so here's
+	 * a height bound for the waveform image.
+	 */
+	max-height: 100px;
 }
 
 #editor-help {
