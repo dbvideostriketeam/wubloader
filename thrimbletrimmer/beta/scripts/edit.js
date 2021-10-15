@@ -210,9 +210,14 @@ async function initializeVideoInfo() {
 		});
 		if (videoInfo.video_start) {
 			rangeDefinitionStart.value = videoHumanTimeFromWubloaderTime(videoInfo.video_start);
+		} else {
+			rangeDefinitionStart.value = videoHumanTimeFromVideoPlayerTime(0);
 		}
 		if (videoInfo.video_end) {
 			rangeDefinitionEnd.value = videoHumanTimeFromWubloaderTime(videoInfo.video_end);
+		} else {
+			const player = getVideoJS();
+			rangeDefinitionEnd.value = videoHumanTimeFromVideoPlayerTime(player.duration());
 		}
 		if (videoInfo.video_start && videoInfo.video_end) {
 			rangeDataUpdated();
