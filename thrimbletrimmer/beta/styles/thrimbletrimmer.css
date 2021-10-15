@@ -101,6 +101,7 @@ a,
 	right: 0;
 	border: 1px solid #000;
 	padding: 2px;
+	background: #fff;
 }
 
 #editor-help-box h2 {
@@ -170,7 +171,7 @@ a,
 
 #video-info-editor-notes-container {
 	border: 1px solid #666;
-	background-color: #eee;
+	background-color: #bde;
 }
 
 .submission-response-error {
