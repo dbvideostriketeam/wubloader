@@ -9,7 +9,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	updateDownloadLink();
 
 	const addRangeIcon = document.getElementById("add-range-definition");
-	addRangeIcon.addEventListener("click", (_event) => { addRangeDefinition(); });
+	addRangeIcon.addEventListener("click", (_event) => {
+		addRangeDefinition();
+	});
 	addRangeIcon.addEventListener("keypress", (event) => {
 		if (event.key === "Enter") {
 			addRangeDefinition();
@@ -23,42 +25,70 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
 	}
 	for (const rangeStart of document.getElementsByClassName("range-definition-start")) {
-		rangeStart.addEventListener("change", (_event) => { rangeDataUpdated(); });
+		rangeStart.addEventListener("change", (_event) => {
+			rangeDataUpdated();
+		});
 	}
 	for (const rangeEnd of document.getElementsByClassName("range-definition-end")) {
-		rangeEnd.addEventListener("change", (_event) => { rangeDataUpdated(); });
+		rangeEnd.addEventListener("change", (_event) => {
+			rangeDataUpdated();
+		});
 	}
 
-	document.getElementById("submit-button").addEventListener("click", (_event) => { submitVideo(); });
-	document.getElementById("save-button").addEventListener("click", (_event) => { saveVideoDraft(); });
+	document.getElementById("submit-button").addEventListener("click", (_event) => {
+		submitVideo();
+	});
+	document.getElementById("save-button").addEventListener("click", (_event) => {
+		saveVideoDraft();
+	});
 
 	document.getElementById("advanced-submission").addEventListener("click", (_event) => {
 		const advancedOptionsContainer = document.getElementById("advanced-submission-options");
 		advancedOptionsContainer.classList.toggle("hidden");
 	});
 
-	document.getElementById("advanced-submission-option-allow-holes").addEventListener("change", () => { updateDownloadLink(); });
-	document.getElementById("download-type-select").addEventListener("change", () => { updateDownloadLink(); });
+	document
+		.getElementById("advanced-submission-option-allow-holes")
+		.addEventListener("change", () => {
+			updateDownloadLink();
+		});
+	document.getElementById("download-type-select").addEventListener("change", () => {
+		updateDownloadLink();
+	});
 
 	document.getElementById("manual-link-update").addEventListener("click", (_event) => {
 		const manualLinkDataContainer = document.getElementById("data-correction-manual-link");
 		manualLinkDataContainer.classList.toggle("hidden");
 	});
-	document.getElementById("data-correction-manual-link-submit").addEventListener("click", (_event) => { setManualVideoLink(); });
+	document
+		.getElementById("data-correction-manual-link-submit")
+		.addEventListener("click", (_event) => {
+			setManualVideoLink();
+		});
 
-	document.getElementById("cancel-video-upload").addEventListener("click", (_event) => { cancelVideoUpload(); });
+	document.getElementById("cancel-video-upload").addEventListener("click", (_event) => {
+		cancelVideoUpload();
+	});
 
 	document.getElementById("reset-entire-video").addEventListener("click", (_event) => {
-		const forceResetConfirmationContainer = document.getElementById("data-correction-force-reset-confirm");
+		const forceResetConfirmationContainer = document.getElementById(
+			"data-correction-force-reset-confirm"
+		);
 		forceResetConfirmationContainer.classList.remove("hidden");
 	});
-	document.getElementById("data-correction-force-reset-yes").addEventListener("click", (_event) => { resetVideoRow(); });
+	document.getElementById("data-correction-force-reset-yes").addEventListener("click", (_event) => {
+		resetVideoRow();
+	});
 	document.getElementById("data-correction-force-reset-no").addEventListener("click", (_event) => {
-		const forceResetConfirmationContainer = document.getElementById("data-correction-force-reset-confirm");
+		const forceResetConfirmationContainer = document.getElementById(
+			"data-correction-force-reset-confirm"
+		);
 		forceResetConfirmationContainer.classList.add("hidden");
 	});
 
-	document.getElementById("google-auth-sign-out").addEventListener("click", (_event) => { googleSignOut(); });
+	document.getElementById("google-auth-sign-out").addEventListener("click", (_event) => {
+		googleSignOut();
+	});
 });
 
 async function loadVideoInfo() {
@@ -70,7 +100,9 @@ async function loadVideoInfo() {
 	const videoID = queryParams.get("id");
 	const dataResponse = await fetch("/thrimshim/" + videoID);
 	if (!dataResponse.ok) {
-		addError("Failed to load video data. This probably means that the URL is out of date (video ID changed) or that everything is broken (or that the Wubloader host is down).");
+		addError(
+			"Failed to load video data. This probably means that the URL is out of date (video ID changed) or that everything is broken (or that the Wubloader host is down)."
+		);
 		return;
 	}
 	videoInfo = await dataResponse.json();
@@ -84,8 +116,10 @@ async function initializeVideoInfo() {
 	globalBusStartTime = new Date(videoInfo.bustime_start);
 
 	document.getElementById("stream-time-setting-stream").innerText = globalStreamName;
-	document.getElementById("stream-time-setting-start").innerText = getBusTimeFromTimeString(globalStartTimeString);
-	document.getElementById("stream-time-setting-end").innerText = getBusTimeFromTimeString(globalEndTimeString);
+	document.getElementById("stream-time-setting-start").innerText =
+		getBusTimeFromTimeString(globalStartTimeString);
+	document.getElementById("stream-time-setting-end").innerText =
+		getBusTimeFromTimeString(globalEndTimeString);
 
 	updateWaveform();
 
@@ -128,7 +162,9 @@ async function initializeVideoInfo() {
 		modifiedAdvancedOptions = true;
 	}
 
-	const uploadLocationSelection = document.getElementById("advanced-submission-option-upload-location");
+	const uploadLocationSelection = document.getElementById(
+		"advanced-submission-option-upload-location"
+	);
 	for (locationName of videoInfo.upload_locations) {
 		const option = document.createElement("option");
 		option.value = locationName;
@@ -144,7 +180,9 @@ async function initializeVideoInfo() {
 
 	if (videoInfo.uploader_whitelist) {
 		modifiedAdvancedOptions = true;
-		const uploaderAllowlistBox = document.getElementById("advanced-submission-option-uploader-allow");
+		const uploaderAllowlistBox = document.getElementById(
+			"advanced-submission-option-uploader-allow"
+		);
 		uploaderAllowlistBox.value = videoInfo.uploader_whitelist.join(",");
 	}
 
@@ -160,10 +198,16 @@ async function initializeVideoInfo() {
 		// For now, there's only one range in the data we receive from thrimshim, so we'll populate that as-is here.
 		// This will need to be updated when thrimshim supports multiple video ranges.
 		const rangeDefinitionsContainer = document.getElementById("range-definitions");
-		const rangeDefinitionStart = rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
-		const rangeDefinitionEnd = rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
-		rangeDefinitionStart.addEventListener("change", (_event) => { rangeDataUpdated(); });
-		rangeDefinitionEnd.addEventListener("change", (_event) => { rangeDataUpdated(); });
+		const rangeDefinitionStart =
+			rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
+		const rangeDefinitionEnd =
+			rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
+		rangeDefinitionStart.addEventListener("change", (_event) => {
+			rangeDataUpdated();
+		});
+		rangeDefinitionEnd.addEventListener("change", (_event) => {
+			rangeDataUpdated();
+		});
 		if (videoInfo.video_start) {
 			rangeDefinitionStart.value = videoHumanTimeFromWubloaderTime(videoInfo.video_start);
 		}
@@ -283,7 +327,9 @@ async function sendVideoData(edited, overrideChanges) {
 		}
 
 		let transitionType = rangeContainer.getElementsByClassName("range-definition-transition-type");
-		let transitionDuration = rangeContainer.getElementsByClassName("range-definition-transition-duration");
+		let transitionDuration = rangeContainer.getElementsByClassName(
+			"range-definition-transition-duration"
+		);
 		if (transitionType.length > 0 && transitionDuration.length > 0) {
 			transitionType = transitionType[0].value;
 			transitionDuration = transitionDuration[0].value;
@@ -302,7 +348,7 @@ async function sendVideoData(edited, overrideChanges) {
 			start: rangeStartSubmit,
 			end: rangeEndSubmit,
 			transition: transitionType,
-			duration: transitionDuration
+			duration: transitionDuration,
 		});
 	}
 
@@ -313,11 +359,15 @@ async function sendVideoData(edited, overrideChanges) {
 	const videoDescription = document.getElementById("video-info-description").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
-	const uploadLocation = document.getElementById("advanced-submission-option-upload-location").value;
-	const uploaderAllowlistValue = document.getElementById("advanced-submission-option-uploader-allow").value;
-	const uploaderAllowlist = (uploaderAllowlistValue) ? uploaderAllowlistValue.split(",") : null;
-	const state = (edited) ? "EDITED" : "UNEDITED";
-	
+	const uploadLocation = document.getElementById(
+		"advanced-submission-option-upload-location"
+	).value;
+	const uploaderAllowlistValue = document.getElementById(
+		"advanced-submission-option-uploader-allow"
+	).value;
+	const uploaderAllowlist = uploaderAllowlistValue ? uploaderAllowlistValue.split(",") : null;
+	const state = edited ? "EDITED" : "UNEDITED";
+
 	const editData = {
 		video_start: videoStart,
 		video_end: videoEnd,
@@ -338,7 +388,7 @@ async function sendVideoData(edited, overrideChanges) {
 		category: videoInfo.category,
 		description: videoInfo.description,
 		notes: videoInfo.notes,
-		tags: videoInfo.tags
+		tags: videoInfo.tags,
 	};
 	if (googleUser) {
 		editData.token = googleUser.getAuthResponse().id_token;
@@ -351,9 +401,9 @@ async function sendVideoData(edited, overrideChanges) {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
-			"Content-Type": "application/json"
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(editData)
+		body: JSON.stringify(editData),
 	});
 
 	if (submitResponse.ok) {
@@ -369,12 +419,16 @@ async function sendVideoData(edited, overrideChanges) {
 			const serverErrorNode = document.createTextNode(await submitResponse.text());
 			const submitButton = document.createElement("button");
 			submitButton.text = "Submit Anyway";
-			submitButton.addEventListener("click", (_event) => { sendVideoData(edited, true); });
+			submitButton.addEventListener("click", (_event) => {
+				sendVideoData(edited, true);
+			});
 			submissionResponseElem.innerHTML = "";
 			submissionResponseElem.appendChild(serverErrorNode);
 			submissionResponseElem.appendChild(submitButton);
 		} else {
-			submissionResponseElem.innerText = `${submitResponse.statusText}: ${await submitResponse.text()}`;
+			submissionResponseElem.innerText = `${
+				submitResponse.statusText
+			}: ${await submitResponse.text()}`;
 		}
 	}
 }
@@ -383,14 +437,24 @@ function updateDownloadLink() {
 	// Currently this only supports one range. When download links can download multiple ranges, this should be updated.
 	const firstRangeStartField = document.getElementsByClassName("range-definition-start")[0];
 	const firstRangeEndField = document.getElementsByClassName("range-definition-end")[0];
-	
-	const startTime = (firstRangeStartField.value) ? wubloaderTimeFromVideoHumanTime(firstRangeStartField.value) : getStartTime();
-	const endTime = (firstRangeEndField.value) ? wubloaderTimeFromVideoHumanTime(firstRangeEndField.value) : getEndTime();
+
+	const startTime = firstRangeStartField.value
+		? wubloaderTimeFromVideoHumanTime(firstRangeStartField.value)
+		: getStartTime();
+	const endTime = firstRangeEndField.value
+		? wubloaderTimeFromVideoHumanTime(firstRangeEndField.value)
+		: getEndTime();
 
 	const downloadType = document.getElementById("download-type-select").value;
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 
-	const downloadURL = generateDownloadURL(startTime, endTime, downloadType, allowHoles, videoInfo.video_quality);
+	const downloadURL = generateDownloadURL(
+		startTime,
+		endTime,
+		downloadType,
+		allowHoles,
+		videoInfo.video_quality
+	);
 	document.getElementById("download-link").href = downloadURL;
 }
 
@@ -406,7 +470,7 @@ async function setManualVideoLink() {
 
 	const request = {
 		link: link,
-		upload_location: uploadLocation
+		upload_location: uploadLocation,
 	};
 	if (googleUser) {
 		request.token = googleUser.getAuthResponse().id_token;
@@ -419,9 +483,9 @@ async function setManualVideoLink() {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
-			"Content-Type": "application/json"
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(request)
+		body: JSON.stringify(request),
 	});
 
 	if (response.ok) {
@@ -444,14 +508,16 @@ async function cancelVideoUpload() {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
-			"Content-Type": "application/json"
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(request)
+		body: JSON.stringify(request),
 	});
 
 	if (response.ok) {
 		responseElem.innerText = "Row has been cancelled. Reloading...";
-		setTimeout(() => { window.location.reload(); }, 1000);
+		setTimeout(() => {
+			window.location.reload();
+		}, 1000);
 	} else {
 		responseElem.innerText = `${response.statusText}: ${await response.text()}`;
 	}
@@ -470,14 +536,16 @@ async function resetVideoRow() {
 		method: "POST",
 		headers: {
 			Accept: "application/json",
-			"Content-Type": "application/json"
+			"Content-Type": "application/json",
 		},
-		body: JSON.stringify(request)
+		body: JSON.stringify(request),
 	});
 
 	if (response.ok) {
 		responseElem.innerText = "Row has been reset. Reloading...";
-		setTimeout(() => { window.location.reload(); }, 1000);
+		setTimeout(() => {
+			window.location.reload();
+		}, 1000);
 	} else {
 		responseElem.innerText = `${response.statusText}: ${await response.text()}`;
 	}
@@ -532,16 +600,16 @@ const RANGE_TRANSITION_TYPES = [
 	"wipebl",
 	"wipebr",
 	"squeezeh",
-	"squeezev"
+	"squeezev",
 ];
 
 function rangeDefinitionDOM() {
 	const container = document.createElement("div");
 	container.classList.add("range-definition-removable");
-	
+
 	const transitionContainer = document.createElement("div");
 	transitionContainer.classList.add("range-definition-transition");
-	
+
 	const transitionSelection = document.createElement("select");
 	transitionSelection.classList.add("range-definition-transition-type");
 	const noTransitionOption = document.createElement("option");
@@ -554,7 +622,9 @@ function rangeDefinitionDOM() {
 		transitionOption.innerText = transitionType;
 		transitionSelection.appendChild(transitionOption);
 	}
-	transitionSelection.addEventListener("change", (_event) => { rangeDataUpdated(); });
+	transitionSelection.addEventListener("change", (_event) => {
+		rangeDataUpdated();
+	});
 	transitionContainer.appendChild(transitionSelection);
 
 	const transitionDurationInput = document.createElement("input");
@@ -574,7 +644,7 @@ function rangeDefinitionDOM() {
 	rangeStart.classList.add("range-definition-start");
 	const rangeStartSet = document.createElement("img");
 	rangeStartSet.src = "images/pencil.png";
-	rangeStartSet.alt = "Set range start point to current video time"
+	rangeStartSet.alt = "Set range start point to current video time";
 	rangeStartSet.classList.add("range-definition-set-start");
 	rangeStartSet.classList.add("click");
 	const rangeEnd = document.createElement("input");
@@ -604,7 +674,8 @@ function rangeDefinitionDOM() {
 			const rangeParent = rangeContainer.parentNode;
 			for (let rangeNum = 0; rangeNum < rangeParent.children.length; rangeNum++) {
 				if (rangeContainer === rangeParent.children[rangeNum]) {
-					if (rangeNum + 1 <= currentRange) { // currentRange is 1-indexed to index into DOM with querySelector
+					if (rangeNum + 1 <= currentRange) {
+						// currentRange is 1-indexed to index into DOM with querySelector
 						currentRange--;
 						break;
 					}
@@ -636,9 +707,11 @@ function rangeDefinitionDOM() {
 }
 
 function getRangeSetClickHandler(startOrEnd) {
-	return function(event) {
+	return function (event) {
 		const setButton = event.currentTarget;
-		const setField = setButton.parentElement.getElementsByClassName(`range-definition-${startOrEnd}`)[0];
+		const setField = setButton.parentElement.getElementsByClassName(
+			`range-definition-${startOrEnd}`
+		)[0];
 
 		const player = getVideoJS();
 		const videoPlayerTime = player.currentTime();
@@ -668,7 +741,9 @@ function updateCurrentRangeIndicator() {
 	for (let arrowElem of document.getElementsByClassName("range-definition-current")) {
 		arrowElem.classList.add("hidden");
 	}
-	document.querySelector(`#range-definitions > div:nth-child(${currentRange}) .range-definition-current`).classList.remove("hidden");
+	document
+		.querySelector(`#range-definitions > div:nth-child(${currentRange}) .range-definition-current`)
+		.classList.remove("hidden");
 }
 
 function rangeDataUpdated() {
@@ -688,8 +763,8 @@ function rangeDataUpdated() {
 			continue;
 		}
 
-		const rangeStartPercentage = rangeStart / videoDuration * 100;
-		const rangeEndPercentage = rangeEnd / videoDuration * 100;
+		const rangeStartPercentage = (rangeStart / videoDuration) * 100;
+		const rangeEndPercentage = (rangeEnd / videoDuration) * 100;
 		const widthPercentage = rangeEndPercentage - rangeStartPercentage;
 
 		const marker = document.createElement("div");
@@ -701,14 +776,18 @@ function rangeDataUpdated() {
 }
 
 function setCurrentRangeStartToVideoTime() {
-	const rangeStartField = document.querySelector(`#range-definitions > div:nth-child(${currentRange}) .range-definition-start`);
+	const rangeStartField = document.querySelector(
+		`#range-definitions > div:nth-child(${currentRange}) .range-definition-start`
+	);
 	const player = getVideoJS();
 	rangeStartField.value = videoHumanTimeFromVideoPlayerTime(player.currentTime());
 	rangeDataUpdated();
 }
 
 function setCurrentRangeEndToVideoTime() {
-	const rangeEndField = document.querySelector(`#range-definitions > div:nth-child(${currentRange}) .range-definition-end`);
+	const rangeEndField = document.querySelector(
+		`#range-definitions > div:nth-child(${currentRange}) .range-definition-end`
+	);
 	const player = getVideoJS();
 	rangeEndField.value = videoHumanTimeFromVideoPlayerTime(player.currentTime());
 	rangeDataUpdated();
@@ -720,7 +799,11 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	let highestDiscontinuitySegmentBefore = 0;
 	for (start of videoPlaylist.discontinuityStarts) {
 		const discontinuityStartSegment = videoPlaylist.segments[start];
-		if (discontinuityStartSegment.dateTimeObject < wubloaderDateObj && discontinuityStartSegment.dateTimeObject > videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject) {
+		if (
+			discontinuityStartSegment.dateTimeObject < wubloaderDateObj &&
+			discontinuityStartSegment.dateTimeObject >
+				videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject
+		) {
 			highestDiscontinuitySegmentBefore = start;
 		}
 	}
@@ -729,7 +812,13 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	for (let segment = 0; segment < highestDiscontinuitySegmentBefore; segment++) {
 		highestDiscontinuitySegmentStart += videoPlaylist.segments[segment].duration;
 	}
-	return highestDiscontinuitySegmentStart + secondsDifference(videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject, wubloaderDateObj);
+	return (
+		highestDiscontinuitySegmentStart +
+		secondsDifference(
+			videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject,
+			wubloaderDateObj
+		)
+	);
 }
 
 function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
@@ -760,7 +849,7 @@ function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
 	const minutes = Math.floor(videoPlayerTime / 60);
 	let seconds = Math.floor(videoPlayerTime % 60);
 	let milliseconds = Math.floor((videoPlayerTime * 1000) % 1000);
-	
+
 	while (seconds.toString().length < 2) {
 		seconds = `0${seconds}`;
 	}

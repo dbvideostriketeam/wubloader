@@ -19,7 +19,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 async function loadDefaults() {
 	const defaultDataResponse = await fetch("/thrimshim/defaults");
 	if (!defaultDataResponse.ok) {
-		addError("Failed to load Thrimbletrimmer data. This probably means that everything is broken (or, possibly, just that the Wubloader host is down). Please sound the alarm.");
+		addError(
+			"Failed to load Thrimbletrimmer data. This probably means that everything is broken (or, possibly, just that the Wubloader host is down). Please sound the alarm."
+		);
 		return;
 	}
 	const defaultData = await defaultDataResponse.json();
@@ -36,9 +38,13 @@ function getStartTime() {
 		case 1:
 			return new Date(globalStartTimeString + "Z");
 		case 2:
-			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
+			return new Date(
+				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)
+			);
 		case 3:
-			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)));
+			return new Date(
+				new Date().getTime() - 1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)
+			);
 	}
 }
 
@@ -51,9 +57,13 @@ function getEndTime() {
 		case 1:
 			return new Date(globalEndTimeString + "Z");
 		case 2:
-			return new Date(globalBusStartTime.getTime() + (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
+			return new Date(
+				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)
+			);
 		case 3:
-			return new Date(new Date().getTime() - (1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)));
+			return new Date(
+				new Date().getTime() - 1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)
+			);
 	}
 }
 
@@ -69,7 +79,9 @@ function updateTimeSettings() {
 	updateDownloadLink();
 
 	if (getEndTime() < getStartTime()) {
-		addError("End time is before the start time. This will prevent video loading and cause other problems.");
+		addError(
+			"End time is before the start time. This will prevent video loading and cause other problems."
+		);
 	}
 }
 
