@@ -1,164 +1,83 @@
-
-<!-- 
-    TODOs:
-        Move Google sign-in/out buttons, and make it clear when you're not signed in.
-        Move "Reset" and "Manual Link" options in here.
-        Clean up the Options/Input header, move parts of it into a hidden "Advanced" menu.
-        Create a cleaner player-only version of the page, or find a way to make it a version of this one via URL switch.
--->
 <!DOCTYPE html>
-<html lang="en-US">
-<head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <title>Thrimbletrimmer Goes Forth</title>
-    <meta name="description" content="">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="google-signin-client_id" content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com">
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>VST Restreamer</title>
 
-    <link href="/thrimbletrimmer/plugins/video.js/dist/video-js.min.css" rel="stylesheet">
-    <link href="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.css" rel="stylesheet">
-    <link href="/thrimbletrimmer/plugins/videojs-trimming-controls/dist/videojs-trimming-controls.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-    <!-- <script src="https://code.jquery.com/jquery-3.3.1.min.js"  integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="  crossorigin="anonymous"></script> -->
-    <script src="/thrimbletrimmer/plugins/video.js/dist/video.min.js"></script>
-    <script src="/thrimbletrimmer/plugins/videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>
-    <script src="/thrimbletrimmer/plugins/videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>
-    <script src="/thrimbletrimmer/plugins/videojs-trimming-controls/dist/videojs-trimming-controls.js"></script>
+		<link rel="stylesheet" href="styles/thrimbletrimmer.css" />
+		<link rel="stylesheet" href="videojs/video-js.min.css" />
 
-    <script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
-
-    <link href="/thrimbletrimmer/styles/style.css" rel="stylesheet">
-</head>
-<body>
-    <div style="max-width:1280px;margin:auto;padding-top:25px;">
-        <table id="wubloaderInputTable">
-            <tr>
-                <th>Stream</th>
-                <th>Start Time</th>
-                <th>End Time</th>
-                <th></th>
-            </tr>
-            <tr>
-                <td><input id="StreamName" value="desertbus" /></td>
-                <td><input id="StreamStart" value="0:10:00" />
-                <td><input id="StreamEnd" value="" />
-                <td><input type="button" value="Load Playlist" onclick="loadPlaylist(true)" /></td>
-            </tr>
-            <tr>
-                    <td></td>
-                    <td></td>
-                <td>
-                    <input type="radio" id="BusTimeToggleUTC" name="BusTimeToggle" value="UTC" onclick="toggleTimeInput(this.value)"> UTC
-                    <input type="radio" id="BusTimeToggleBus" name="BusTimeToggle" value="BUSTIME" onclick="toggleTimeInput(this.value)" checked="checked"> Bustime
-                    <input type="radio" id="BusTimeToggleDelay" name="BusTimeToggle" value="AGO" onclick="toggleTimeInput(this.value)" > Time Ago
-                </td>
-                <td><a id="AdvancedOptionsButton" href="JavaScript:toggleHiddenPane('wubloaderAdvancedInputTable');">Advanced Submit Options</a></td>
-            </tr>
-        </table>
-        <table id="wubloaderAdvancedInputTable" style="display:none;">
-            <tr>
-                <td><a href="#" onclick="window.open('/files');">Streams</a></td>
-                <td><a href="#" onclick="window.open('/files/' + document.getElementById('StreamName').value + '/source', '_blank');">Hours</a></td>
-            </tr>
-            <tr><td>Allow Holes: </td><td><input id="AllowHoles" type="checkbox" /></td></tr>
-            <tr><td>Quality Level: </td><td><select id="qualityLevel"></select></td></tr>
-            <tr><td>Upload Location: </td><td><select id="uploadLocation"></select></td></tr>
-            <tr><td>Uploader Whitelist: </td><td><input id="uploaderWhitelist" title="Uploader Whitelist" /></td></tr>
-            <tr>
-                <td>ThrimShim ID:</td>
-                <td><input id="hiddenSubmissionID" value="" /></td>
-                <td><input type="button" value="Load Event" onclick="window.location.search = '?id='+document.getElementById('hiddenSubmissionID').value"/></td>
-            </tr>
-        </table>
-
-        <div id="EditorContainer">
-            <video id="my-player" class="video-js" controls preload="auto" style="display:none">
-                <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
-            </video>
-        </div>
-
-        <div id="EditorDetailsPane">
-			<img id="Waveform" style="width: 100%">
-            <div id="EditNotesPane" style="display:none">
-                Edit Notes: <br/>
-                <textarea id="EditNotes" disabled ></textarea>
-            </div>
-            <div>
-                Title: <br />
-                <input type="text" id="VideoTitlePrefix" value="DB2019 - " disabled />
-                <input type="text" id="VideoTitle" value="" maxlength="82" />
-            </div>
-            <div>
-                Description:<br/>
-                <textarea id="VideoDescription" ></textarea>
-            </div>
+		<script src="videojs/video.min.js"></script>
+		<script src="scripts/common.js"></script>
+		<script src="scripts/stream.js"></script>
+		<script src="scripts/keyboard-shortcuts.js"></script>
+	</head>
+	<body>
+		<div id="errors"></div>
+		<form id="stream-time-settings">
 			<div>
-				Tags (comma-seperated):
-				<input type="text" id="VideoTags" onblur="round_trip_tag_string()" />
-				<br/>
-				Note that tag edits made here apply only to the uploaded video. Playlists are populated based on the tags in the sheet.
+				<label for="stream-time-setting-stream" class="field-label">Stream</label>
+				<input type="text" id="stream-time-setting-stream" />
 			</div>
-            <input type="button" id="SubmitButton" value="Submit" onclick="thrimbletrimmerSubmit('EDITED')"/>
-            <input type="button" id="DraftButton" value="Save Draft" onclick="thrimbletrimmerSubmit('UNEDITED')"/>
-            <input type="button" id="DownloadButton" value="Create download link" onclick="thrimbletrimmerDownload(true)"/>
-            <a href="/thrimbletrimmer/dashboard.html">Go To Dashboard</a> | 
-            <a href="/thrimbletrimmer/stream.html">Go to Re-stream View</a> |
-            <a id="ManualLinkButton" href="JavaScript:toggleHiddenPane('ManualLinkPane');">Manual Link</a> | 
-            <a id="CancelButton" href="JavaScript:thrimbletrimmerResetLink(false);">Cancel Upload</a> |
-            <a id="ResetButton" href="JavaScript:thrimbletrimmerResetLink(true);">Force Reset Row</a>
-            <a id="HelpButton" style="float:right;" href="JavaScript:toggleHiddenPane('HelpPane');">Help</a>
-            <a id="UltrawideButton" style="float:right;margin-right:10px;" href="JavaScript:toggleUltrawide();">Ultrawide</a>
-			<br/>
-			Download type:
-			<select id="DownloadType">
-				<option value="rough" selected>Rough (fastest, pads start and end by a few seconds)</option>
-				<option value="fast">Fast (may have artifacts a few seconds in from start and end)</option>
-				<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
-			</select>
-			<a id="DownloadLink" href="" style="display:none">Right click here and Save Link As to Download</a>
-        </div>
-        <div id="ManualLinkPane" style="display:none">
-            <input id="ManualLink" /> <input type="button" id="ManualButton" onclick="thrimbletrimmerManualLink()" value="Set Link" />
-            Is Youtube Upload (add to playlists)? <input id="ManualYoutube" type="checkbox" />
-        <div id="HelpPane" style="display:none;">
-            <ul>
-                <li>J/K/L - Back 10 seconds, Play/Pause, Advance 10 seconds</li>
-                <li>LeftArrow/RightArrow - Back 5 seconds, Advance 5 seconds</li>
-                <li>,/. - Back 0.1 seconds, Advance 0.1 seconds</li>
-                <li>I/O - Set start of trim at playhead, set end of trim at playhead</li>
-                <li>0-9 - Jump to 0% - 90% through the video.</li>
-				<li>-/+ - Slow Down, Speed Up</li>
-            </ul>
-        </div>
-    </div>
+			<div>
+				<label for="stream-time-setting-start" class="field-label">Start Time</label>
+				<input type="text" id="stream-time-setting-start" value="0:10:00" />
+			</div>
+			<div>
+				<label for="stream-time-setting-end" class="field-label">End Time</label>
+				<input type="text" id="stream-time-setting-end" />
+			</div>
+			<div>
+				<div id="stream-time-frame-of-reference">
+					<input
+						type="radio"
+						name="time-frame-of-reference"
+						id="stream-time-frame-of-reference-utc"
+						value="1"
+					/>
+					<label for="stream-time-frame-of-reference-utc">UTC</label>
+					<input
+						type="radio"
+						name="time-frame-of-reference"
+						id="stream-time-frame-of-reference-bus"
+						value="2"
+					/>
+					<label for="stream-time-frame-of-reference-bus">Bus Time</label>
+					<input
+						type="radio"
+						name="time-frame-of-reference"
+						id="stream-time-frame-of-reference-ago"
+						value="3"
+						checked
+					/>
+					<label for="stream-time-frame-of-reference-ago">Time Ago</label>
+				</div>
+			</div>
+			<div>
+				<button id="stream-time-settings-submit" type="submit">Load Playlist</button>
+			</div>
+		</form>
 
-    <script src="/thrimbletrimmer/scripts/playerSetup.js"></script>
-    <script src="/thrimbletrimmer/scripts/keyboardShortcuts.js"></script>
-    <script src="/thrimbletrimmer/scripts/IO.js"></script>
+		<video id="video" class="video-js" controls preload="auto"></video>
 
-    <script>pageSetup(true);</script>
-
-<div class="g-signin2" data-onsuccess="onSignIn"></div>
-<a href="#" onclick="signOut();">Sign out</a>
-<script>
-    var user;
-    function onSignIn(googleUser) {
-        user = googleUser;
-        var profile = googleUser.getBasicProfile();
-        console.log('ID: ' + profile.getId()); // Do not send to your backend! Use an ID token instead.
-        console.log('Name: ' + profile.getName());
-        console.log('Image URL: ' + profile.getImageUrl());
-        console.log('Email: ' + profile.getEmail()); // This is null if the 'email' scope is not present.
-        console.log('ID Token: ' + googleUser.getAuthResponse().id_token);
-    }
-    function signOut() {
-        user = null;
-        var auth2 = gapi.auth2.getAuthInstance();
-        auth2.signOut().then(function () {
-        console.log('User signed out.');
-        });
-    }
-</script>
-</body>
+		<div id="editor-help">
+			<a href="#" id="editor-help-link">Help</a>
+			<div id="editor-help-box" class="hidden">
+				<h2>Keyboard Shortcuts</h2>
+				<ul>
+					<li>Number keys (0-9): Jump to that 10% interval of the video (0% - 90%)</li>
+					<li>K or Space: Toggle pause</li>
+					<li>J: Back 10 seconds</li>
+					<li>L: Forward 10 seconds</li>
+					<li>Left arrow: Back 5 seconds</li>
+					<li>Right arrow: Forward 5 seconds</li>
+					<li>Comma (,): Back 1 frame</li>
+					<li>Period (.): Forward 1 frame</li>
+					<li>Equals (=): Increase playback speed one step</li>
+					<li>Hyphen (-): Decrease playback speed one step</li>
+				</ul>
+			</div>
+		</div>
+		<a href="#" id="download">Download Video</a>
+	</body>
 </html>
