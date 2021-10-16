@@ -70,6 +70,13 @@ a,
 }
 /* END BLOCK */
 
+/* Separately from that, it'd also be nice for the video controls not to cover the video,
+ * so the size of the video is reduced by the progress bar height here.
+ */
+#video .vjs-tech {
+	height: calc(50vh - 33px);
+}
+
 #clip-bar {
 	width: 100%;
 	height: 5px;
