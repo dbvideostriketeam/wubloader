@@ -38,6 +38,10 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v2
 
+      - name: Generate image tag
+        id: tag
+        run: echo "::set-output name=sha8::$(git rev-parse --short HEAD)"
+
       - name: Log into ghcr.io
         uses: docker/login-action@v1
         with:
@@ -50,7 +54,7 @@ jobs:
         with:
           context: ./${{ matrix.component }}
           file: Dockerfile
-          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:${GITHUB_SHA::8}
+          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:${{ steps.tag.outputs.sha8 }}
           push: true
 
       - name: Build ${{ matrix.component }} latest
