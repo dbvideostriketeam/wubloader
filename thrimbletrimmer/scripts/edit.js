@@ -304,12 +304,21 @@ function getBusTimeFromTimeString(timeString) {
 	remainingBusTimeSeconds %= 3600;
 	let minutes = Math.floor(remainingBusTimeSeconds / 60);
 	let seconds = remainingBusTimeSeconds % 60;
+	let milliseconds = Math.round(seconds % 1 * 1000);
+	seconds = Math.trunc(seconds);
 
 	while (minutes.toString().length < 2) {
 		minutes = `0${minutes}`;
 	}
 	while (seconds.toString().length < 2) {
 		seconds = `0${seconds}`;
+	}
+
+	if (milliseconds > 0) {
+		while (milliseconds.toString().length < 3) {
+			milliseconds = `0${milliseconds}`;
+		}
+		return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 	}
 
 	return `${hours}:${minutes}:${seconds}`;
