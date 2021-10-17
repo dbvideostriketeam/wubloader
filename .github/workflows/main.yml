@@ -11,6 +11,11 @@ on:
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
+# set token permissions for job so we can push to ghcr.io
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build:
     # The type of runner that the job will run on
@@ -18,16 +23,20 @@ jobs:
     steps:
       # Checks out repository under $GITHUB_WORKSPACE, so we can access it
       - uses: actions/checkout@v2
-
-      # Runs build script
+      
+      - name: Log into ghcr.io
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
       - name: Run build script
         run: |
-          # always push
-          export PUSH=true
-          # if this is a push to master and not a PR, also push latest - GITHUB_HEAD_REF is only set for PRs
-          if [ -z ${GITHUB_HEAD_REF+x} ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
-          # log into quay.io so we can push
-          echo "$QUAY_PASSWORD" | docker login quay.io -u "$QUAY_USER" --password-stdin
-          # build and push all components. try to pull and re-use layers from images for all parent commits.
-          'CACHE_FROM=$(git rev-list HEAD -n1 --parents | cut -d" " -f 2-) ./build'
-          
+            # always push
+            export PUSH=true
+            # if this is a push to master and not a PR, also push latest - GITHUB_HEAD_REF is only set for PRs
+            if [ -z ${GITHUB_HEAD_REF+x} ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
+            # build and push all components. try to pull and re-use layers from images for all parent commits.
+            'CACHE_FROM=$(git rev-list HEAD -n1 --parents | cut -d" " -f 2-) ./build'
+  
