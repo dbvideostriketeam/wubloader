@@ -172,6 +172,16 @@ a,
 	grid-column-end: span 2;
 }
 
+/* In order to maintain the grid dimensions, when we hide the editors notes (for there not being them),
+ * they still need to take up a grid slot. As such, we replace `display: none` in this context with
+ * an effective equivalent that doesn't remove its rendering entirely.
+ */
+#video-info-editor-notes-container.hidden {
+	display: block;
+	visibility: hidden;
+	height: 0;
+}
+
 #video-info-title-full {
 	display: flex;
 	align-items: center;
