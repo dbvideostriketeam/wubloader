@@ -111,9 +111,27 @@ async function loadVideoInfo() {
 
 async function initializeVideoInfo() {
 	globalStreamName = videoInfo.video_channel;
+	globalBusStartTime = new Date(videoInfo.bustime_start);
+
 	globalStartTimeString = videoInfo.event_start;
 	globalEndTimeString = videoInfo.event_end;
-	globalBusStartTime = new Date(videoInfo.bustime_start);
+
+	// If a video was previously edited to points outside the video range, we should expand the loaded video to include the edited range
+	if (videoInfo.video_start) {
+		const eventStartTime = dateObjFromWubloaderTime(videoInfo.event_start);
+		const videoStartTime = dateObjFromWubloaderTime(videoInfo.video_start);
+		if (videoStartTime < eventStartTime) {
+			globalStartTimeString = videoInfo.video_start;
+		}
+	}
+
+	if (videoInfo.video_end) {
+		const eventEndTime = dateObjFromWubloaderTime(videoInfo.event_end);
+		const videoEndTime = dateObjFromWubloaderTime(videoInfo.video_end);
+		if (videoEndTime > eventEndTime) {
+			globalEndTimeString = videoInfo.video_end;
+		}
+	}
 
 	document.getElementById("stream-time-setting-stream").innerText = globalStreamName;
 	document.getElementById("stream-time-setting-start").innerText =
@@ -259,7 +277,7 @@ function getStartTime() {
 		return null;
 	}
 
-	const date = new Date(globalStartTimeString + "Z");
+	const date = dateObjFromWubloaderTime(globalStartTimeString);
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the start time by one minute
 	date.setMinutes(date.getMinutes() - 1);
 	return date;
@@ -270,7 +288,7 @@ function getEndTime() {
 		return null;
 	}
 
-	const date = new Date(globalEndTimeString + "Z");
+	const date = dateObjFromWubloaderTime(globalEndTimeString);
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the end time by one minute.
 	// To account for the fact that we don't record seconds, but the event could've ended any time in the recorded minute, we pad by an additional minute.
 	date.setMinutes(date.getMinutes() + 2);
@@ -278,7 +296,7 @@ function getEndTime() {
 }
 
 function getBusTimeFromTimeString(timeString) {
-	const time = new Date(timeString + "Z");
+	const time = dateObjFromWubloaderTime(timeString);
 	const busTimeMilliseconds = time - globalBusStartTime;
 	let remainingBusTimeSeconds = busTimeMilliseconds / 1000;
 
@@ -805,7 +823,7 @@ function setCurrentRangeEndToVideoTime() {
 
 function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	const videoPlaylist = getPlaylistData();
-	const wubloaderDateObj = new Date(`${wubloaderTime}Z`);
+	const wubloaderDateObj = dateObjFromWubloaderTime(wubloaderTime);
 	let highestDiscontinuitySegmentBefore = 0;
 	for (start of videoPlaylist.discontinuityStarts) {
 		const discontinuityStartSegment = videoPlaylist.segments[start];
@@ -900,6 +918,10 @@ function wubloaderTimeFromVideoHumanTime(videoHumanTime) {
 		return null;
 	}
 	return wubloaderTimeFromVideoPlayerTime(videoPlayerTime);
+}
+
+function dateObjFromWubloaderTime(wubloaderTime) {
+	return new Date(`${wubloaderTime}Z`);
 }
 
 function getPlaylistData() {
