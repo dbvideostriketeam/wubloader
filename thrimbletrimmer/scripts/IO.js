@@ -108,7 +108,7 @@ function parseDuration(duration) {
 		direction = -1;
 	}
 	const [hours, mins, secs] = duration.split(":");
-	return 3600 * parseInt(hours) + 60 * (mins || "0") + (secs || "0") * direction;
+	return (3600 * parseInt(hours) + 60 * (mins || "0") + (secs || "0")) * direction;
 }
 
 function toBustime(date) {
