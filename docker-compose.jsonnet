@@ -183,10 +183,10 @@
   clean_channels:: [std.split(c, '!')[0] for c in $.channels],
 
   // Image format helper
-  get_image(name):: "%s/wubloader-%s:%s" % [
+  get_image(name, tag=$.image_tag):: "%s/wubloader-%s:%s" % [
     $.image_base,
     name,
-    $.image_tag,
+    tag,
   ],
 
   // docker-compose version
@@ -411,7 +411,7 @@
     },
 
     [if $.enabled.postgres then "postgres"]: {
-      image: $.get_image("postgres"),
+      image: $.get_image("postgres", $.database_tag),
       restart: "on-failure",
       [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
       environment: $.env + {
