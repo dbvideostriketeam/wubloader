@@ -13,6 +13,7 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
+  image_base:: "ghcr.io/ekimekim", // Change this to use images from a different source than the main one
 
   // For each service, whether to deploy that service.
   enabled:: {
@@ -181,6 +182,12 @@
   // Cleaned up version of $.channels without importance markers
   clean_channels:: [std.split(c, '!')[0] for c in $.channels],
 
+  // Image format helper
+  get_image(name):: "%s/wubloader-%s:%s" % [
+    $.image_base,
+    name,
+    $.image_tag,
+  ],
 
   // docker-compose version
   version: "3",
@@ -188,7 +195,7 @@
   services: {
 
     [if $.enabled.downloader then "downloader"]: {
-      image: "quay.io/ekimekim/wubloader-downloader:%s" % $.image_tag,
+      image: $.get_image("downloader"),
       // Args for the downloader: set channel and qualities
       command: $.channels +
       [  
@@ -207,7 +214,7 @@
     },
 
     [if $.enabled.restreamer then "restreamer"]: {
-      image: "quay.io/ekimekim/wubloader-restreamer:%s" % $.image_tag,
+      image: $.get_image("restreamer"),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
@@ -223,7 +230,7 @@
     },
 
     [if $.enabled.backfiller then "backfiller"]: {
-      image: "quay.io/ekimekim/wubloader-backfiller:%s" % $.image_tag,
+      image: $.get_image("backfiller"),
       // Args for the backfiller: set channel and qualities
       command: $.clean_channels +
       [
@@ -247,7 +254,7 @@
     },
 
     [if $.enabled.cutter then "cutter"]: {
-      image: "quay.io/ekimekim/wubloader-cutter:%s" % $.image_tag,
+      image: $.get_image("cutter"),
       // Args for the cutter: DB and creds
       command: [
         "--base-dir", "/mnt",
@@ -274,7 +281,7 @@
     },
 
     [if $.enabled.thrimshim then "thrimshim"]: {
-      image: "quay.io/ekimekim/wubloader-thrimshim:%s" % $.image_tag,
+      image: $.get_image("thrimshim"),
       // Args for the thrimshim: database connection string 
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
@@ -299,7 +306,7 @@
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {
-      image: "quay.io/ekimekim/wubloader-sheetsync:%s" % $.image_tag,
+      image: $.get_image("sheetsync"),
       // Args for the sheetsync
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
@@ -323,7 +330,7 @@
     },
 
     [if $.enabled.segment_coverage then "segment_coverage"]: {
-      image: "quay.io/ekimekim/wubloader-segment_coverage:%s" % $.image_tag,
+      image: $.get_image("segment_coverage"),
       // Args for the segment_coverage
       command: $.clean_channels +
       [
@@ -346,7 +353,7 @@
     },
 
     [if $.enabled.playlist_manager then "playlist_manager"]: {
-      image: "quay.io/ekimekim/wubloader-playlist_manager:%s" % $.image_tag,
+      image: $.get_image("playlist_manager"),
       // Args for the playlist_manager
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
@@ -381,7 +388,7 @@
         segment_coverage: 8006,
         playlist_manager: 8007,
       },
-      image: "quay.io/ekimekim/wubloader-nginx:%s" % $.image_tag,
+      image: $.get_image("nginx"),
       restart: "on-failure",
       ports: std.prune([
         if "nginx" in $.ports then "%s:80" % $.ports.nginx,
@@ -404,7 +411,7 @@
     },
 
     [if $.enabled.postgres then "postgres"]: {
-      image: "quay.io/ekimekim/wubloader-postgres:%s" % $.database_tag,
+      image: $.get_image("postgres"),
       restart: "on-failure",
       [if "postgres" in $.ports then "ports"]: ["%s:5432" % $.ports.postgres],
       environment: $.env + {
