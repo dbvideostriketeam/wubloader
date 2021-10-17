@@ -20,8 +20,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-20.04
-    env:
-      TAG: ${GITHUB_SHA::8}
     strategy:
       fail-fast: true  # cancel all in-progress jobs if any matrix job fails
       matrix:
@@ -52,7 +50,7 @@ jobs:
         with:
           context: ./${{ matrix.component }}
           file: Dockerfile
-          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:${{ env.TAG }}
+          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:${GITHUB_SHA::8}
           push: true
 
       - name: Build ${{ matrix.component }} latest
