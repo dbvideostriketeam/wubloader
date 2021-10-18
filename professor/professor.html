@@ -6,10 +6,15 @@
 
     <link href="video.js/dist/video-js.min.css" rel="stylesheet">
     <link href="videojs-hls-quality-selector/dist/videojs-hls-quality-selector.css" rel="stylesheet">
+    <link href="jquery-ui-1.13.0.custom/jquery-ui.css" rel="stylesheet">
 
     <link href="style.css" rel="stylesheet">
 
+    <script src="jquery-ui-1.13.0.custom/external/jquery/jquery.js"></script>
+    <script src="jquery-ui-1.13.0.custom/jquery-ui.js"></script>
+
     <script src="script.js"></script>
+
 
     <!--    <script src="videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>-->
     <!--    <script src="videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>-->
@@ -31,12 +36,15 @@
 </div>
 
 <div id="speakers">
-
+    <label for="speaker_input">Speakers</label><input id="speaker_input">
 </div>
 
 <div id="transcription">
     <p id="original_transcription"></p>
+    <label for="new_transcription">New transcription</label><textarea id="new_transcription" rows="3" placeholder=""></textarea>
 </div>
+
+<button id="submit_button" onclick="submit()" type="button">Submit</button>
 
 <script src="video.js/dist/video.min.js"></script>
 

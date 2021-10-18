@@ -38,6 +38,7 @@ def get_playlist(line_id):
         end_time_iso = line.end_time.isoformat()
         duration = line.end_time - line.start_time
         return f"""#EXTM3U
+#EXT-X-PLAYLIST-TYPE:vod
 #EXT-X-TARGETDURATION:{duration.total_seconds()}
 #EXT-X-PROGRAM-DATE-TIME:{start_time_iso}
 #EXTINF:{duration.total_seconds()}
@@ -78,7 +79,7 @@ def update_line(line_id):
 def get_speakers():
     db_conn = app.db_manager.get_conn()
 
-    speakers = database.query(db_conn, "SELECT name FROM buscribe_speakers;")
+    speakers = database.query(db_conn, "SELECT id, name FROM buscribe_speakers;")
 
     return jsonify([{"id": speaker.id, "name": speaker.name} for speaker in speakers])
 

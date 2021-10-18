@@ -15,8 +15,9 @@ def cors(app):
     HEADERS = [
         ("Access-Control-Allow-Credentials", "false"),
         ("Access-Control-Allow-Headers", "*"),
-        ("Access-Control-Allow-Methods", "GET,HEAD"),
+        ("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT"),
         ("Access-Control-Allow-Origin", "*"),
+        ("Access-Control-Expose-Headers", "*"),
         ("Access-Control-Max-Age", "86400"),
     ]
 

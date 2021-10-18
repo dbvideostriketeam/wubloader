@@ -1,6 +1,51 @@
+@import "constants";
+
 body {
   color: aliceblue;
   background: dimgray;
 
   max-width: 900px;
+}
+
+#PlayerContainer {
+
+}
+
+label {
+  font-family: @sans-serif;
+  margin-top: 5px;
+  margin-bottom: 5px;
+}
+
+#speakers {
+  margin-top: 1em;
+
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+#transcription {
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+
+  p {
+    font-family: @serif;
+    text-indent: 1.5em;
+    padding-top: 1ex;
+    padding-bottom: 1ex;
+  }
+
+  #new_transcription {
+    width: 894px;
+    height: 5em;
+  }
+}
+
+button {
+  margin-top: 5px;
+  margin-bottom: 5px;
 }
