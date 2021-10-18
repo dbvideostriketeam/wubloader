@@ -1,8 +1,9 @@
 import re
+import urllib.parse
 
 import flask
 from common import database
-from flask import jsonify, request
+from flask import jsonify, request, copy_current_request_context
 from psycopg2.extras import execute_values
 
 app = flask.Flask('buscribe')
@@ -20,6 +21,26 @@ def get_line(line_id):
         return {"start_time": line.start_time.isoformat(),
                 "end_time": line.end_time.isoformat(),
                 "line_data": line.transcription_json}
+
+
+@app.route('/professor/line/<int:line_id>/playlist.m3u8', methods=["GET"])
+def get_playlist(line_id):
+    db_conn = app.db_manager.get_conn()
+
+    line = database.query(db_conn, "SELECT * FROM buscribe_transcriptions WHERE id = %(id)s;", id=line_id).fetchone()
+
+    if line is None:
+        return "Line not found.", 404
+    else:
+        start_time_iso = line.start_time.isoformat()
+        end_time_iso = line.end_time.isoformat()
+        duration = line.end_time - line.start_time
+        return f"""#EXTM3U
+#EXT-X-TARGETDURATION:{duration.total_seconds()}
+#EXT-X-PROGRAM-DATE-TIME:{start_time_iso}
+#EXTINF:{duration.total_seconds()}
+//localhost/cut/desertbus/source.ts?start={urllib.parse.quote_plus(start_time_iso)}&end={urllib.parse.quote_plus(end_time_iso)}&type=rough&allow_holes=true
+#EXT-X-ENDLIST"""
 
 
 @app.route('/professor/line/<int:line_id>', methods=["POST"])

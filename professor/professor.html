@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Buscribe -- Professor</title>
+
+    <link href="video.js/dist/video-js.min.css" rel="stylesheet">
+    <link href="videojs-hls-quality-selector/dist/videojs-hls-quality-selector.css" rel="stylesheet">
+
+    <link href="style.css" rel="stylesheet">
+
+    <script src="script.js"></script>
+
+    <!--    <script src="videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>-->
+    <!--    <script src="videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>-->
+
+</head>
+<body onload="pageReady()">
+
+<div id="PlayerContainer">
+    <video id="player"
+           class="video-js"
+           controls
+           preload="auto"
+           width="900"
+           height="420"
+    >
+        <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that
+            <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+    </video>
+</div>
+
+<div id="speakers">
+
+</div>
+
+<div id="transcription">
+    <p id="original_transcription"></p>
+</div>
+
+<script src="video.js/dist/video.min.js"></script>
+
+</body>
+</html>
