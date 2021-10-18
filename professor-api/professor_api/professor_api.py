@@ -2,8 +2,10 @@ import re
 import urllib.parse
 
 import flask
+import gevent
 from common import database
 from flask import jsonify, request, copy_current_request_context
+from gevent import sleep
 from psycopg2.extras import execute_values
 
 app = flask.Flask('buscribe')
