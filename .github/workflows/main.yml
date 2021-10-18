@@ -38,10 +38,6 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v2
 
-      - name: Generate image tag
-        id: tag
-        run: echo "::set-output name=sha8::$(git rev-parse --short HEAD)"
-
       - name: Log into ghcr.io
         uses: docker/login-action@v1
         with:
@@ -50,18 +46,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build ${{ matrix.component }}
-        uses: docker/build-push-action@v2.7.0
-        with:
-          context: ./${{ matrix.component }}
-          file: Dockerfile
-          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:${{ steps.tag.outputs.sha8 }}
-          push: true
-
-      - name: Build ${{ matrix.component }} latest
-        uses: docker/build-push-action@v2.7.0
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
-        with:
-          context: ./${{ matrix.component }}
-          file: Dockerfile
-          tags: ghcr.io/ekimekim/wubloader-${{ matrix.component }}:latest
-          push: true
+        # always push
+        # if not a pull request and a push to master, also push "latest" tag
+        # try to cache from previous build and then build component using build script
+        run: |
+          export PUSH=true
+          if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
+          CACHE_FROM=$(git rev-list HEAD -n1 --parents | cut -d" " -f 2-) ./build ${{ matrix.component }}
