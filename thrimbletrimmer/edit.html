@@ -20,20 +20,25 @@
 	</head>
 	<body>
 		<div id="errors"></div>
-		<div id="stream-time-settings">
+		<form id="stream-time-settings">
 			<div>
 				<span class="field-label">Stream</span>
 				<span id="stream-time-setting-stream"></span>
 			</div>
 			<div>
-				<span class="field-label">Start Time</span>
-				<span id="stream-time-setting-start"></span>
+				<label for="stream-time-setting-start" class="field-label">Start Time</label>
+				<input type="text" id="stream-time-setting-start" />
+				<button id="stream-time-setting-start-pad" type="button">Pad 1 minute</button>
 			</div>
 			<div>
-				<span class="field-label">End Time</span>
-				<span id="stream-time-setting-end"></span>
+				<label for="stream-time-setting-end" class="field-label">End Time</label>
+				<input type="text" id="stream-time-setting-end" />
+				<button id="stream-time-setting-end-pad" type="button">Pad 1 minute</button>
 			</div>
-		</div>
+			<div>
+				<button type="submit" id="stream-time-settings-submit">Update Time Range</button>
+			</div>
+		</form>
 
 		<video id="video" class="video-js" controls preload="auto"></video>
 		<div id="clip-bar"></div>

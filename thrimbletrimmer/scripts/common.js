@@ -76,6 +76,11 @@ async function loadVideoPlayerFromDefaultPlaylist() {
 	await loadVideoPlayer(playlistURL);
 }
 
+function updateSegmentPlaylist() {
+	const playlistURL = `/playlist/${globalStreamName}.m3u8`;
+	updateVideoPlayer(playlistURL);
+}
+
 function updateVideoPlayer(newPlaylistURL) {
 	let rangedPlaylistURL = assembleVideoPlaylistURL(newPlaylistURL);
 	const player = getVideoJS();
@@ -93,6 +98,10 @@ function parseInputTimeAsNumberOfSeconds(inputTime) {
 
 	const parts = inputTime.split(":", 3);
 	return (parseInt(parts[0]) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600) * 60 * 60 * direction;
+}
+
+function dateObjFromWubloaderTime(wubloaderTime) {
+	return new Date(`${wubloaderTime}Z`);
 }
 
 function getWubloaderTimeFromDate(date) {

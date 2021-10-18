@@ -36,7 +36,7 @@ async function loadDefaults() {
 function getStartTime() {
 	switch (globalVideoTimeReference) {
 		case 1:
-			return new Date(globalStartTimeString + "Z");
+			return dateObjFromWubloaderTime(globalStartTimeString);
 		case 2:
 			return new Date(
 				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)
@@ -55,7 +55,7 @@ function getEndTime() {
 	}
 	switch (globalVideoTimeReference) {
 		case 1:
-			return new Date(globalEndTimeString + "Z");
+			return dateObjFromWubloaderTime(globalEndTimeString);
 		case 2:
 			return new Date(
 				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)
@@ -85,11 +85,6 @@ function updateTimeSettings() {
 			"End time is before the start time. This will prevent video loading and cause other problems."
 		);
 	}
-}
-
-function updateSegmentPlaylist() {
-	const playlistURL = `/playlist/${globalStreamName}.m3u8`;
-	updateVideoPlayer(playlistURL);
 }
 
 function updateDownloadLink() {
