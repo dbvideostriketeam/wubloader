@@ -37,7 +37,6 @@ function fillLineInfo(line_json) {
 async function submit() {
     const new_transcription = document.getElementById("new_transcription").value;
     const new_speakers = await Promise.all(document.getElementById("speaker_input").value
-        .trim()
         .split(",")
         .filter(x => x !== "")
         .map(speaker_raw => speaker_raw.trim())
