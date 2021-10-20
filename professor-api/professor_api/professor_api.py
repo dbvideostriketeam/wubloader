@@ -50,7 +50,9 @@ def get_playlist(line_id):
 def update_line(line_id):
     db_conn = app.db_manager.get_conn()
 
-    if "speakers" in request.json and isinstance(request.json["speakers"], list):
+    if "speakers" in request.json and \
+            isinstance(request.json["speakers"], list) and \
+            request.json["speakers"] != []:
         # Simpler than dealing with uniqueness
         database.query(db_conn,
                        "DELETE FROM buscribe_line_speakers WHERE line = %(line_id)s AND verifier = %(verifier)s;",
@@ -60,7 +62,9 @@ def update_line(line_id):
                        "VALUES %s;",
                        [(line_id, speaker, "placeholder@example.com") for speaker in
                         request.json["speakers"]])
-    if "transcription" in request.json and isinstance(request.json["transcription"], str):
+    if "transcription" in request.json and \
+            isinstance(request.json["transcription"], str) and \
+            request.json["transcription"] != "":
         verified_line = request.json["transcription"].lower()
         verified_line = re.sub(r"[^[a-z]\s']]", "", verified_line)
 
