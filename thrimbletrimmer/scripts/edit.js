@@ -424,6 +424,12 @@ function getBusTimeFromDateObj(time) {
 	const busTimeMilliseconds = time - globalBusStartTime;
 	let remainingBusTimeSeconds = busTimeMilliseconds / 1000;
 
+	let sign = "";
+	if (remainingBusTimeSeconds < 0) {
+		sign = "-";
+		remainingBusTimeSeconds = Math.abs(remainingBusTimeSeconds);
+	}
+
 	const hours = Math.floor(remainingBusTimeSeconds / 3600);
 	remainingBusTimeSeconds %= 3600;
 	let minutes = Math.floor(remainingBusTimeSeconds / 60);
@@ -442,10 +448,10 @@ function getBusTimeFromDateObj(time) {
 		while (milliseconds.toString().length < 3) {
 			milliseconds = `0${milliseconds}`;
 		}
-		return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+		return `${sign}${hours}:${minutes}:${seconds}.${milliseconds}`;
 	}
 
-	return `${hours}:${minutes}:${seconds}`;
+	return `${sign}${hours}:${minutes}:${seconds}`;
 }
 
 async function submitVideo() {
