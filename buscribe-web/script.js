@@ -4,6 +4,8 @@ function onSiteLoad(e) {
         function (event) {
             if (event.key === 'Enter') doSearch()
         });
+
+    doSearch();
 }
 
 function query(text, start_time, end_time) {
@@ -18,6 +20,8 @@ function query(text, start_time, end_time) {
     if (text !== "") {
         query_string += `&query=${text}`
     }
+
+    query_string += "&limit=30";
 
     fetch(`http://localhost:8010/buscribe/json?${query_string}`)
         .then(response => response.json())
