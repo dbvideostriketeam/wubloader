@@ -90,6 +90,10 @@ a,
 	height: 100%;
 }
 
+#waveform-container {
+	position: relative;
+}
+
 #waveform {
 	width: 100%;
 
@@ -98,6 +102,14 @@ a,
 	 * a height bound for the waveform image.
 	 */
 	max-height: 100px;
+}
+
+#waveform-marker {
+	width: 1px;
+	height: 100%;
+	background: #dd8800a0;
+	position: absolute;
+	top: 0;
 }
 
 #editor-help {
