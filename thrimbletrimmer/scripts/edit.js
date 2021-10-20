@@ -223,17 +223,23 @@ async function initializeVideoInfo() {
 	globalBusStartTime = new Date(videoInfo.bustime_start);
 
 	const eventStartTime = dateObjFromWubloaderTime(videoInfo.event_start);
-	const eventEndTime = dateObjFromWubloaderTime(videoInfo.event_end);
+	const eventEndTime = videoInfo.event_end ? dateObjFromWubloaderTime(videoInfo.event_end) : null;
 
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the start time by one minute
 	eventStartTime.setMinutes(eventStartTime.getMinutes() - 1);
 
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the end time by one minute.
 	// To account for the fact that we don't record seconds, but the event could've ended any time in the recorded minute, we pad by an additional minute.
-	eventEndTime.setMinutes(eventEndTime.getMinutes() + 2);
+	if (eventEndTime) {
+		eventEndTime.setMinutes(eventEndTime.getMinutes() + 2);
+	}
 
 	globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(eventStartTime);
-	globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(eventEndTime);
+	if (eventEndTime) {
+		globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(eventEndTime);
+	} else {
+		document.getElementById("waveform").classList.add("hidden");
+	}
 
 	// If a video was previously edited to points outside the video range, we should expand the loaded video to include the edited range
 	if (videoInfo.video_start) {
@@ -246,7 +252,7 @@ async function initializeVideoInfo() {
 
 	if (videoInfo.video_end) {
 		const videoEndTime = dateObjFromWubloaderTime(videoInfo.video_end);
-		if (videoEndTime > eventEndTime) {
+		if (eventEndTime && videoEndTime > eventEndTime) {
 			// If we're getting the time from a previous draft edit, we don't need to pad as hard on the end
 			videoEndTime.setMinutes(videoEndTime.getMinutes() + 1);
 			globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(videoEndTime);
@@ -353,11 +359,11 @@ async function initializeVideoInfo() {
 		}
 		if (videoInfo.video_end) {
 			rangeDefinitionEnd.value = videoHumanTimeFromWubloaderTime(videoInfo.video_end);
-		} else {
+		} else if (videoInfo.event_end) {
 			const player = getVideoJS();
 			rangeDefinitionEnd.value = videoHumanTimeFromVideoPlayerTime(player.duration());
 		}
-		if (videoInfo.video_start && videoInfo.video_end) {
+		if (videoInfo.video_end || videoInfo.event_end) {
 			rangeDataUpdated();
 		}
 	});
@@ -407,6 +413,9 @@ function getEndTime() {
 }
 
 function getBusTimeFromTimeString(timeString) {
+	if (timeString === "") {
+		return "";
+	}
 	const time = dateObjFromWubloaderTime(timeString);
 	return getBusTimeFromDateObj(time);
 }

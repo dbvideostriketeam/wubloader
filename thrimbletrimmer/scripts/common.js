@@ -1,7 +1,7 @@
 var globalBusStartTime = new Date("1970-01-01T00:00:00Z");
 var globalStreamName = "";
-var globalStartTimeString = 0;
-var globalEndTimeString = 0;
+var globalStartTimeString = "";
+var globalEndTimeString = "";
 
 const VIDEO_FRAMES_PER_SECOND = 30;
 
