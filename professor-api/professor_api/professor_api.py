@@ -54,11 +54,11 @@ def update_line(line_id):
         # Simpler than dealing with uniqueness
         database.query(db_conn,
                        "DELETE FROM buscribe_line_speakers WHERE line = %(line_id)s AND verifier = %(verifier)s;",
-                       line_id=line_id, verifier=1)
+                       line_id=line_id, verifier="placeholder@example.com")
         execute_values(db_conn.cursor(),
                        "INSERT INTO buscribe_line_speakers(line, speaker, verifier) "
                        "VALUES %s;",
-                       [(line_id, speaker, 1) for speaker in
+                       [(line_id, speaker, "placeholder@example.com") for speaker in
                         request.json["speakers"]])
     if "transcription" in request.json and isinstance(request.json["transcription"], str):
         verified_line = request.json["transcription"].lower()
@@ -66,11 +66,11 @@ def update_line(line_id):
 
         database.query(db_conn,
                        "DELETE FROM buscribe_verified_lines WHERE line = %(line_id)s AND verifier = %(verifier)s;",
-                       line_id=line_id, verifier=1)
+                       line_id=line_id, verifier="placeholder@example.com")
         database.query(db_conn,
                        "INSERT INTO buscribe_verified_lines(line, verified_line, verifier) "
                        "VALUES (%(line)s, %(verified_line)s, %(verifier)s)",
-                       line=line_id, verified_line=verified_line, verifier=1)
+                       line=line_id, verified_line=verified_line, verifier="placeholder@example.com")
 
     return "", 204
 

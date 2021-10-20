@@ -43,8 +43,8 @@ CREATE TABLE buscribe_speakers
 
 CREATE TABLE buscribe_verifiers
 (
-    id    SERIAL PRIMARY KEY,
-    email TEXT NOT NULL,
+--     id    SERIAL PRIMARY KEY,
+    email TEXT PRIMARY KEY,
     name  TEXT NOT NULL
 );
 
@@ -57,7 +57,7 @@ CREATE TABLE buscribe_line_speakers
 --     id       BIGSERIAL PRIMARY KEY,
     line     BIGINT NOT NULL REFERENCES buscribe_transcriptions,
     speaker  BIGINT NOT NULL REFERENCES buscribe_speakers,
-    verifier INT    NOT NULL REFERENCES buscribe_verifiers,
+    verifier text   NOT NULL REFERENCES buscribe_verifiers,
     PRIMARY KEY (line, speaker, verifier)
 );
 
@@ -66,6 +66,6 @@ CREATE TABLE buscribe_verified_lines
 --     id            BIGSERIAL PRIMARY KEY,
     line          BIGINT NOT NULL REFERENCES buscribe_transcriptions,
     verified_line TEXT   NOT NULL,
-    verifier      INT REFERENCES buscribe_verifiers,
+    verifier      text REFERENCES buscribe_verifiers,
     PRIMARY KEY (line, verifier)
 );
