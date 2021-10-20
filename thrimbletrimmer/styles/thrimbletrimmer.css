@@ -227,3 +227,15 @@ a,
 #data-correction-force-reset-confirm p {
 	margin: 5px 0;
 }
+
+.submission-response-pending {
+	color: #990;
+}
+
+.submission-response-error {
+	color: #900;
+}
+
+.submission-response-success {
+	color: #060;
+}
