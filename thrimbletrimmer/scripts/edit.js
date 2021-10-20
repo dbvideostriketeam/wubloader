@@ -370,6 +370,13 @@ async function initializeVideoInfo() {
 			rangeDataUpdated();
 		}
 	});
+	player.on("timeupdate", () => {
+		const player = getVideoJS();
+		const currentTime = player.currentTime();
+		const duration = player.duration();
+		const timePercent = (currentTime / duration) * 100;
+		document.getElementById("waveform-marker").style.left = `${timePercent}%`;
+	});
 }
 
 function updateWaveform() {
