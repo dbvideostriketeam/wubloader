@@ -94,6 +94,7 @@ def get_json():
                      "end_time": row.end_time.isoformat(),
                      "end_bus_time": round_bus_time(row.start_time - app.bustime_start),
                      "verifier": row.verifier,
+                     "speakers": row.names,
                      "text": row.transcription_line if row.transcription_line is not None else ""} for row in results])
 
 
