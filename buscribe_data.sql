@@ -38,7 +38,7 @@ CREATE INDEX buscribe_end_time_idx ON buscribe_transcriptions (end_time);
 CREATE TABLE buscribe_speakers
 (
     id   BIGSERIAL PRIMARY KEY,
-    name text NOT NULL UNIQUE
+    name text NOT NULL UNIQUE CHECK ( name != '' )
 );
 
 CREATE TABLE buscribe_verifiers
@@ -50,7 +50,8 @@ CREATE TABLE buscribe_verifiers
 
 -- For testing
 INSERT INTO buscribe_verifiers(email, name)
-VALUES ('placeholder@example.com', 'Place Holder');
+VALUES ('placeholder@example.com', 'Place Holder'),
+       ('aguy@example.com', 'Arnold Guyana');
 
 CREATE TABLE buscribe_line_speakers
 (
@@ -75,24 +76,37 @@ CREATE INDEX buscribe_verified_lines_idx ON buscribe_verified_lines USING
     GIN (setweight(to_tsvector('english', verified_line), 'C'));
 
 BEGIN;
+
 DROP VIEW buscribe_all_transcriptions;
+
 CREATE VIEW buscribe_all_transcriptions AS
-SELECT "id",
+SELECT buscribe_transcriptions.id,
        start_time,
        end_time,
-       null                            AS verifier,
+       coalesce(buscribe_verified_lines.verifier, speakers.verifier) AS verifier,
+       names,
+       verified_line                                                 AS transcription_line,
+       setweight(to_tsvector('english', verified_line), 'C')         AS transcription_line_ts
+FROM buscribe_transcriptions
+         LEFT OUTER JOIN buscribe_verified_lines ON buscribe_transcriptions.id = buscribe_verified_lines.line
+         LEFT OUTER JOIN (
+    SELECT line, verifier, array_agg(name) AS names
+    FROM buscribe_line_speakers
+             INNER JOIN buscribe_speakers ON buscribe_line_speakers.speaker = buscribe_speakers.id
+    GROUP BY line, verifier
+) AS speakers ON buscribe_transcriptions.id = speakers.line AND (
+            speakers.verifier = buscribe_verified_lines.verifier OR
+            buscribe_verified_lines.verifier IS NULL
+    )
+WHERE coalesce(buscribe_verified_lines.verifier, speakers.verifier) IS NOT NULL
+UNION
+SELECT id,
+       start_time,
+       end_time,
+       null                                       AS verifier,
+       null                                       AS names,
        transcription_line,
        to_tsvector('english', transcription_line) AS transcription_line_ts
-FROM buscribe_transcriptions
-UNION
-SELECT "id",
-       start_time,
-       end_time,
-       verifier,
-       verified_line                                         AS transcription_line,
-       setweight(to_tsvector('english', verified_line), 'C') AS transcription_line_ts
-FROM buscribe_verified_lines
-         INNER JOIN buscribe_transcriptions ON (line = "id")
-ORDER BY "id";
+FROM buscribe_transcriptions;
 
 ROLLBACK;
