@@ -47,7 +47,7 @@ def servelet(server):
                'postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--bustime-start',
           help='The start time in UTC for the event, for UTC-Bustime conversion')
-def main(database="", host='0.0.0.0', port=8005, bustime_start=None):
+def main(database="", host='0.0.0.0', port=8010, bustime_start=None):
     if bustime_start is None:
         logging.error("Missing --bustime-start!")
         exit(1)

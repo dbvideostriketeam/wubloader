@@ -19,7 +19,7 @@ function query(text, start_time, end_time) {
         query_string += `&query=${text}`
     }
 
-    fetch(`http://localhost:8005/buscribe/json?${query_string}`)
+    fetch(`http://localhost:8010/buscribe/json?${query_string}`)
         .then(response => response.json())
         // .then(response => console.log(response.error()))
         .then(fillResults)
@@ -42,6 +42,9 @@ function fillResults(results) {
         const line_div = document.createElement("div");
 
         line_div.classList.add("line");
+        if (line.verifier) {
+            line_div.classList.add("verified");
+        }
 
         line_div.innerHTML = `  
             <div class="line_start_bus_time">${line.start_bus_time}</div>

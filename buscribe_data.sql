@@ -69,3 +69,30 @@ CREATE TABLE buscribe_verified_lines
     verifier      text REFERENCES buscribe_verifiers,
     PRIMARY KEY (line, verifier)
 );
+
+-- Indexed with C weight (0.2 vs default 0.1)
+CREATE INDEX buscribe_verified_lines_idx ON buscribe_verified_lines USING
+    GIN (setweight(to_tsvector('english', verified_line), 'C'));
+
+BEGIN;
+DROP VIEW buscribe_all_transcriptions;
+CREATE VIEW buscribe_all_transcriptions AS
+SELECT "id",
+       start_time,
+       end_time,
+       null                            AS verifier,
+       transcription_line,
+       to_tsvector('english', transcription_line) AS transcription_line_ts
+FROM buscribe_transcriptions
+UNION
+SELECT "id",
+       start_time,
+       end_time,
+       verifier,
+       verified_line                                         AS transcription_line,
+       setweight(to_tsvector('english', verified_line), 'C') AS transcription_line_ts
+FROM buscribe_verified_lines
+         INNER JOIN buscribe_transcriptions ON (line = "id")
+ORDER BY "id";
+
+ROLLBACK;

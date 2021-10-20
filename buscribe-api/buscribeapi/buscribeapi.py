@@ -88,20 +88,24 @@ def get_json():
 
     results = fetch_lines(db_conn, start_time, end_time, query, limit, offset)
 
-    return jsonify([{"start_time": row.start_time.isoformat(),
+    return jsonify([{"id": row.id,
+                     "start_time": row.start_time.isoformat(),
                      "start_bus_time": round_bus_time(row.start_time - app.bustime_start),
                      "end_time": row.end_time.isoformat(),
                      "end_bus_time": round_bus_time(row.start_time - app.bustime_start),
+                     "verifier": row.verifier,
                      "text": row.transcription_line} for row in results])
 
 
 def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset=None):
-    query = "SELECT * FROM buscribe_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
+    query = "SELECT * FROM buscribe_all_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
 
     if ts_query is not None:
-        query += "AND to_tsvector(transcription_line) @@ websearch_to_tsquery(%(text_query)s) " \
-                 "ORDER BY ts_rank_cd(to_tsvector(transcription_line), websearch_to_tsquery(%(text_query)s)) DESC, " \
+        query += "AND transcription_line_ts @@ (websearch_to_tsquery(%(text_query)s)::text ||':*')::tsquery " \
+                 "ORDER BY ts_rank_cd(transcription_line_ts, (websearch_to_tsquery(%(text_query)s)::text ||':*')::tsquery) DESC, " \
                  "start_time"
+    else:
+        query += "ORDER BY start_time"
 
     if limit is not None:
         query += "LIMIT %(limit)s"
@@ -110,8 +114,6 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
         query += "OFFSET %(limit)s"
 
     query += ";"
-
-    print(query)
 
     return database.query(db_conn, query,
                           start_time=start_time if start_time is not None else '-infinity',
