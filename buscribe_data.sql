@@ -86,7 +86,8 @@ SELECT buscribe_transcriptions.id,
        coalesce(buscribe_verified_lines.verifier, speakers.verifier) AS verifier,
        names,
        verified_line                                                 AS transcription_line,
-       setweight(to_tsvector('english', verified_line), 'C')         AS transcription_line_ts
+       setweight(to_tsvector('english', verified_line), 'C')         AS transcription_line_ts,
+       setweight(to_tsvector(array_to_string(names, ' ')), 'C')      AS names_ts
 FROM buscribe_transcriptions
          LEFT OUTER JOIN buscribe_verified_lines ON buscribe_transcriptions.id = buscribe_verified_lines.line
          LEFT OUTER JOIN (
@@ -106,7 +107,8 @@ SELECT id,
        null                                       AS verifier,
        null                                       AS names,
        transcription_line,
-       to_tsvector('english', transcription_line) AS transcription_line_ts
+       to_tsvector('english', transcription_line) AS transcription_line_ts,
+       null                                       AS names_ts
 FROM buscribe_transcriptions;
 
 ROLLBACK;

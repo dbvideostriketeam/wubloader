@@ -102,9 +102,9 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
     query = "SELECT * FROM buscribe_all_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
 
     if ts_query is not None:
-        query += "AND transcription_line_ts @@ " \
+        query += "AND (coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector)) @@ " \
                  "(CASE WHEN websearch_to_tsquery(%(text_query)s)::text != '' THEN websearch_to_tsquery(%(text_query)s)::text || ':*' ELSE '' END)::tsquery " \
-                 "ORDER BY ts_rank_cd(transcription_line_ts, (CASE WHEN websearch_to_tsquery(%(text_query)s)::text != '' THEN websearch_to_tsquery(%(text_query)s)::text || ':*' ELSE '' END)::tsquery) DESC, " \
+                 "ORDER BY ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector), (CASE WHEN websearch_to_tsquery(%(text_query)s)::text != '' THEN websearch_to_tsquery(%(text_query)s)::text || ':*' ELSE '' END)::tsquery) DESC, " \
                  "start_time "
     else:
         query += "ORDER BY start_time "
