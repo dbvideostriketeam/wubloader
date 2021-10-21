@@ -35,6 +35,9 @@ function fillLineInfo(line_json) {
 }
 
 async function submit() {
+    document.getElementById("update_indicator").innerText = "⭯"
+
+
     const new_transcription = document.getElementById("new_transcription").value;
     const new_speakers = await Promise.all(document.getElementById("speaker_input").value
         .trim()
@@ -68,7 +71,13 @@ async function submit() {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({transcription: new_transcription, speakers: new_speakers})
-        })
+        }).then(response => {
+        if (response.ok) {
+            document.getElementById("update_indicator").innerText = "\u2714\ufe0f"
+        } else {
+            document.getElementById("update_indicator").innerText = "\u2716\ufe0f️"
+        }
+    })
 }
 
 $(function () {
