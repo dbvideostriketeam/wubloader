@@ -59,19 +59,27 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 		updateSegmentPlaylist();
 
+		let rangeErrorCount = 0;
 		for (const rangeContainer of document.getElementById("range-definitions").children) {
 			const rangeStartField = rangeContainer.getElementsByClassName("range-definition-start")[0];
 			const rangeEndField = rangeContainer.getElementsByClassName("range-definition-end")[0];
 
 			const rangeStart = videoPlayerTimeFromVideoHumanTime(rangeStartField.value);
-			if (rangeStart !== null) {
+			if (rangeStart === null) {
+				rangeErrorCount++;
+			} else {
 				rangeStartField.value = videoHumanTimeFromVideoPlayerTime(startAdjustment + rangeStart);
 			}
 
 			const rangeEnd = videoPlayerTimeFromVideoHumanTime(rangeEndField.value);
-			if (rangeEnd !== null) {
+			if (rangeEnd === null) {
+				rangeErrorCount++;
+			} else {
 				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(startAdjustment + rangeEnd);
 			}
+		}
+		if (rangeErrorCount > 0) {
+			addError("Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values.");
 		}
 
 		const waveformImage = document.getElementById("waveform");
