@@ -79,7 +79,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 		}
 		if (rangeErrorCount > 0) {
-			addError("Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values.");
+			addError(
+				"Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values."
+			);
 		}
 
 		const waveformImage = document.getElementById("waveform");
@@ -506,29 +508,9 @@ async function sendVideoData(edited, overrideChanges) {
 			return;
 		}
 
-		let transitionType = rangeContainer.getElementsByClassName("range-definition-transition-type");
-		let transitionDuration = rangeContainer.getElementsByClassName(
-			"range-definition-transition-duration"
-		);
-		if (transitionType.length > 0 && transitionDuration.length > 0) {
-			transitionType = transitionType[0].value;
-			transitionDuration = transitionDuration[0].value;
-
-			if (edited && transitionType !== "" && transitionDuration === "") {
-				submissionResponseElem.classList.value = ["submission-response-error"];
-				submissionResponseElem.innerText = "A non-cut transition was specified with no duration";
-				return;
-			}
-		} else {
-			transitionType = null;
-			transitionDuration = null;
-		}
-
 		rangesData.push({
 			start: rangeStartSubmit,
 			end: rangeEndSubmit,
-			transition: transitionType,
-			duration: transitionDuration,
 		});
 	}
 
@@ -739,87 +721,9 @@ function addRangeDefinition() {
 	rangeContainer.appendChild(newRangeDOM);
 }
 
-const RANGE_TRANSITION_TYPES = [
-	"fade",
-	"wipeleft",
-	"wiperight",
-	"wipeup",
-	"wipedown",
-	"slideleft",
-	"slideright",
-	"slideup",
-	"slidedown",
-	"circlecrop",
-	"rectcrop",
-	"distance",
-	"fadeblack",
-	"fadewhite",
-	"radial",
-	"smoothleft",
-	"smoothright",
-	"smoothup",
-	"smoothdown",
-	"circleopen",
-	"circleclose",
-	"vertopen",
-	"vertclose",
-	"horzopen",
-	"horzclose",
-	"dissolve",
-	"pixelize",
-	"diagtl",
-	"diagtr",
-	"diagbl",
-	"diagbr",
-	"hlslice",
-	"hrslice",
-	"vuslice",
-	"vdslice",
-	"hblur",
-	"fadegrays",
-	"wipetl",
-	"wipetr",
-	"wipebl",
-	"wipebr",
-	"squeezeh",
-	"squeezev",
-];
-
 function rangeDefinitionDOM() {
-	const container = document.createElement("div");
-	container.classList.add("range-definition-removable");
-
-	const transitionContainer = document.createElement("div");
-	transitionContainer.classList.add("range-definition-transition");
-
-	const transitionSelection = document.createElement("select");
-	transitionSelection.classList.add("range-definition-transition-type");
-	const noTransitionOption = document.createElement("option");
-	noTransitionOption.value = "";
-	noTransitionOption.innerText = "No transition (hard cut)";
-	transitionSelection.appendChild(noTransitionOption);
-	for (transitionType of RANGE_TRANSITION_TYPES) {
-		const transitionOption = document.createElement("option");
-		transitionOption.value = transitionType;
-		transitionOption.innerText = transitionType;
-		transitionSelection.appendChild(transitionOption);
-	}
-	transitionSelection.addEventListener("change", (_event) => {
-		rangeDataUpdated();
-	});
-	transitionContainer.appendChild(transitionSelection);
-
-	const transitionDurationInput = document.createElement("input");
-	transitionDurationInput.type = "number";
-	transitionDurationInput.min = 0;
-	transitionDurationInput.step = "any";
-	transitionDurationInput.placeholder = "Duration (seconds)";
-	transitionDurationInput.classList.add("range-definition-transition-duration");
-	transitionContainer.appendChild(transitionDurationInput);
-
-	container.appendChild(transitionContainer);
-
 	const rangeContainer = document.createElement("div");
+	rangeContainer.classList.add("range-definition-removable");
 	rangeContainer.classList.add("range-definition-times");
 	const rangeStart = document.createElement("input");
 	rangeStart.type = "text";
@@ -892,9 +796,7 @@ function rangeDefinitionDOM() {
 	rangeContainer.appendChild(removeRange);
 	rangeContainer.appendChild(currentRangeMarker);
 
-	container.appendChild(rangeContainer);
-
-	return container;
+	return rangeContainer;
 }
 
 function getRangeSetClickHandler(startOrEnd) {
