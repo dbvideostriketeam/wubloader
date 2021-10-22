@@ -238,12 +238,19 @@ def generate_media_playlist(channel, quality):
 def cut(channel, quality):
 	"""Return a MPEGTS video file covering the exact timestamp range.
 	Params:
-		start, end: Required. The start and end times, down to the millisecond.
+		start, end: The start and end times, down to the millisecond.
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+			If not given (and ranges not given), will use the earliest/latest data available.
+		range: A pair "START,END" which are formatted as per start and end args.
+			Overrides "start" and "end" options.
+			This option may be given multiple times.
+			The final video will consist of all the ranges cut back to back,
+			in the order given, with hard cuts between each range.
 		allow_holes: Optional, default false. If false, errors out with a 406 Not Acceptable
 			if any holes are detected, rather than producing a video with missing parts.
 			Set to true by passing "true" (case insensitive).
-			Even if holes are allowed, a 406 may result if the resulting video would be empty.
+			Even if holes are allowed, a 406 may result if the resulting video (or any individual
+			range) would be empty.
 		type: One of:
 			"rough": A direct concat, like a fast cut but without any ffmpeg.
 				It may extend beyond the requested start and end times by a few seconds.
@@ -251,21 +258,28 @@ def cut(channel, quality):
 				the other segments.
 			"mpegts": A full cut to a streamable mpegts format. This consumes signifigant server
 				resources, so please use sparingly.
-			"mp4": As mpegts, but encodes as MP4. This format must be buffered to disk before
-				sending so it's a bit slower.
 	"""
-	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
-	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
-	if start is None or end is None:
-		# If start or end are not given, use the earliest/latest time available
-		first, last = time_range_for_quality(channel, quality)
-		if start is None:
-			start = first
-		if end is None:
-			end = last
+	if 'range' in request.args:
+		parts = [part.split(',') for part in request.args.getlist('range')]
+		ranges = [
+			(dateutil.parse_utc_only(start), dateutil.parse_utc_only(end))
+			for start, end in parts
+		]
+	else:
+		start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
+		end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
+		if start is None or end is None:
+			# If start or end are not given, use the earliest/latest time available
+			first, last = time_range_for_quality(channel, quality)
+			if start is None:
+				start = first
+			if end is None:
+				end = last
+		ranges = [(start, end)]
 
-	if end <= start:
-		return "End must be after start", 400
+	for start, end in ranges:
+		if end <= start:
+			return "Ends must be after starts", 400
 
 	allow_holes = request.args.get('allow_holes', 'false').lower()
 	if allow_holes not in ["true", "false"]:
@@ -276,25 +290,30 @@ def cut(channel, quality):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	segments = get_best_segments(hours_path, start, end)
-	if not allow_holes and None in segments:
-		return "Requested time range contains holes or is incomplete.", 406
-
-	if not any(segment is not None for segment in segments):
-		return "We have no content available within the requested time range.", 406
+	segment_ranges = []
+	for start, end in ranges:
+		segments = get_best_segments(hours_path, start, end)
+		if not allow_holes and None in segments:
+			return "Requested time range contains holes or is incomplete.", 406
+		if not any(segment is not None for segment in segments):
+			return "We have no content available within the requested time range.", 406
+		segment_ranges.append(segments)
 
 	type = request.args.get('type', 'fast')
 	if type == 'rough':
-		return Response(rough_cut_segments(segments, start, end), mimetype='video/MP2T')
+		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'fast':
-		return Response(fast_cut_segments(segments, start, end), mimetype='video/MP2T')
+		return Response(fast_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
 			return "mp4 type has been disabled due to the load it causes", 400
 		# encode as high-quality, without wasting too much cpu on encoding
 		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
-		return Response(full_cut_segments(segments, start, end, encoding_args, stream=stream), mimetype=mimetype)
+		if len(ranges) > 1:
+			return "full cut does not support multiple ranges at this time", 400
+		start, end = ranges[0]
+		return Response(full_cut_segments(segment_ranges[0], start, end, encoding_args, stream=stream), mimetype=mimetype)
 	else:
 		return "Unknown type {!r}".format(type), 400
 

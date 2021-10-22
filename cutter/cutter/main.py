@@ -15,7 +15,7 @@ import requests
 from psycopg2 import sql
 
 import common
-from common.database import DBManager, query
+from common.database import DBManager, query, get_column_placeholder
 from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, ContainsHoles
 from common.stats import timed
 
@@ -58,8 +58,8 @@ CUT_JOB_PARAMS = [
 	"allow_holes",
 	"uploader_whitelist",
 	"upload_location",
-	"video_start",
-	"video_end",
+	"video_ranges",
+	"video_transitions",
 	"video_title",
 	"video_description",
 	"video_tags",
@@ -68,18 +68,35 @@ CUT_JOB_PARAMS = [
 ]
 CutJob = namedtuple('CutJob', [
 	"id",
-	# the list of segments as returned by get_best_segments()
-	"segments",
+	# for each range, the list of segments as returned by get_best_segments()
+	"segment_ranges",
 	# params which map directly from DB columns
 ] + CUT_JOB_PARAMS)
+
+
+def get_duration(job):
+	"""Get total video duration of a job, in seconds"""
+	# Due to ranges and transitions, this is actually non-trivial to calculate.
+	# Each range overlaps the previous by duration, so we add all the ranges
+	# then subtract all the durations.
+	without_transitions = sum([
+		range.end - range.start
+		for range in job.video_ranges
+	], datetime.timedelta())
+	overlap = sum([
+		transition.duration
+		for transition in job.video_transitions
+		if transition is not None
+	], datetime.timedelta())
+	return (without_transitions - overlap).total_seconds()
 
 
 def format_job(job):
 	"""Convert candidate row or CutJob to human-readable string"""
 	return "{job.id}({start}/{duration}s {job.video_title!r})".format(
 		job=job,
-		start=job.video_start.isoformat(),
-		duration=(job.video_end - job.video_start).total_seconds(),
+		start=job.video_ranges[0].start.isoformat(),
+		duration=get_duration(job),
 	)
 
 
@@ -180,7 +197,7 @@ class Cutter(object):
 							self.logger.info("Set error for candidate {}".format(format_job(candidate)))
 
 				try:
-					segments = self.check_candidate(candidate)
+					segment_ranges = self.check_candidate(candidate)
 				except ContainsHoles:
 					self.logger.info("Ignoring candidate {} due to holes".format(format_job(candidate)))
 					set_error(
@@ -188,7 +205,8 @@ class Cutter(object):
 						"This may just be because it's too recent and the video hasn't been downloaded yet. "
 						"However, it might also mean that there is a 'hole' of missing video, perhaps "
 						"because the stream went down or due to downloader issues. If you know why this "
-						"is happening and want to cut the video anyway, re-edit with the 'Allow Holes' option set."
+						"is happening and want to cut the video anyway, re-edit with the 'Allow Holes' option set. "
+						"However, even with 'Allow Holes', this will still fail if any range of video is missing entirely."
 					.format(self.name))
 					continue # bad candidate, let someone else take it or just try again later
 				except Exception as e:
@@ -202,11 +220,7 @@ class Cutter(object):
 					self.wait(self.ERROR_RETRY_INTERVAL)
 					continue
 
-				if all(segment is None for segment in segments):
-					self.logger.info("Ignoring candidate {} as we have no segments".format(format_job(candidate)))
-					continue
-
-				return CutJob(segments=segments, **candidate._asdict())
+				return CutJob(segment_ranges=segment_ranges, **candidate._asdict())
 
 			# No candidates
 			no_candidates.inc()
@@ -229,18 +243,31 @@ class Cutter(object):
 		result = query(self.conn, built_query, name=self.name, upload_locations=list(self.upload_locations.keys()))
 		return result.fetchall()
 
-	# No need to instrument this function, just use get_best_segments() stats
+	@timed(
+		video_channel = lambda ret, self, job: job.video_channel,
+		video_quality = lambda ret, self, job: job.video_quality,
+		range_count = lambda ret, self, job: len(job.video_ranges),
+		normalize = lambda ret, self, job: get_duration(job),
+	)
 	def check_candidate(self, candidate):
-		return get_best_segments(
-			os.path.join(self.segments_path, candidate.video_channel, candidate.video_quality),
-			candidate.video_start,
-			candidate.video_end,
-			allow_holes=candidate.allow_holes,
-		)
+		# Gather segment lists. Abort early if we find a range for which we have no segments at all.
+		hours_path = os.path.join(self.segments_path, candidate.video_channel, candidate.video_quality)
+		segment_ranges = []
+		for range in candidate.video_ranges:
+			segments = get_best_segments(
+				hours_path,
+				range.start,
+				range.end,
+				allow_holes=candidate.allow_holes,
+			)
+			if segments == [None]:
+				raise ContainsHoles
+			segment_ranges.append(segments)
+		return segment_ranges
 
 	@timed(
-		video_channel = lambda self, job: job.video_channel,
-		video_quality = lambda self, job: job.video_quality,
+		video_channel = lambda ret, self, job: job.video_channel,
+		video_quality = lambda ret, self, job: job.video_quality,
 	)
 	def claim_job(self, job):
 		"""Update event in DB to say we're working on it.
@@ -257,7 +284,7 @@ class Cutter(object):
 			# A built AND over all CUT_JOB_PARAMS to check key = %(key)s.
 			# Note the use of IS NOT DISTINCT FROM because key = NULL is false if key is NULL.
 			sql.SQL(' AND ').join(
-				sql.SQL("{} IS NOT DISTINCT FROM {}").format(sql.Identifier(key), sql.Placeholder(key))
+				sql.SQL("{} IS NOT DISTINCT FROM {}").format(sql.Identifier(key), get_column_placeholder(key))
 				for key in CUT_JOB_PARAMS
 			)
 		)
@@ -300,14 +327,19 @@ class Cutter(object):
 
 		if upload_backend.encoding_settings is None:
 			self.logger.debug("No encoding settings, using fast cut")
-			cut = fast_cut_segments(job.segments, job.video_start, job.video_end)
+			if any(transition is not None for transition in job.video_transitions):
+				raise ValueError("Fast cuts do not support complex transitions")
+			cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
 		else:
 			self.logger.debug("Using encoding settings for {} cut: {}".format(
 				"streamable" if upload_backend.encoding_streamable else "non-streamable",
 				upload_backend.encoding_settings,
 			))
+			if len(job.video_ranges) > 1:
+				raise ValueError("Full cuts do not support multiple ranges")
+			range = job.video_ranges[0]
 			cut = full_cut_segments(
-				job.segments, job.video_start, job.video_end,
+				job.segment_ranges[0], range.start, range.end,
 				upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
 			)
 
@@ -333,7 +365,7 @@ class Cutter(object):
 				WHERE id = %(id)s AND uploader = %(name)s
 			""").format(sql.SQL(", ").join(
 				sql.SQL("{} = {}").format(
-					sql.Identifier(key), sql.Placeholder(key),
+					sql.Identifier(key), get_column_placeholder(key),
 				) for key in kwargs
 			))
 			result = query(self.conn, built_query, id=job.id, name=self.name, **kwargs)
@@ -583,7 +615,7 @@ def main(
 			same place just with different settings, and you only want one of them
 			to actually do the check.
 		cut_type:
-			One of 'fast' or 'full'. Default 'fast'. This indicates whether to use
+			One of 'fast' or 'full'. Default 'full'. This indicates whether to use
 			fast_cut_segments() or full_cut_segments() for this location.
 	along with any additional config options defined for that backend type.
 

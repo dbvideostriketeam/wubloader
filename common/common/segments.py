@@ -360,28 +360,49 @@ def read_chunks(fileobj, chunk_size=16*1024):
 		yield chunk
 
 
-@timed('cut', cut_type='rough', normalize=lambda _, segments, start, end: (end - start).total_seconds())
-def rough_cut_segments(segments, start, end):
-	"""Yields chunks of a MPEGTS video file covering at least the timestamp range,
-	likely with a few extra seconds on either side.
+def range_total(ranges):
+	return sum([
+		end - start for start, end in ranges
+	], datetime.timedelta()).total_seconds()
+
+
+@timed('cut', cut_type='rough', normalize=lambda ret, sr, ranges: range_total(ranges))
+def rough_cut_segments(segment_ranges, ranges):
+	"""Yields chunks of a MPEGTS video file covering at least the timestamp ranges,
+	likely with a few extra seconds on either side of each range. Ranges are cut between
+	with no transitions.
 	This method works by simply concatenating all the segments, without any re-encoding.
 	"""
-	for segment in segments:
-		if segment is None:
-			continue
-		with open(segment.path, 'rb') as f:
-			for chunk in read_chunks(f):
-				yield chunk
+	for segments in segment_ranges:
+		for segment in segments:
+			if segment is None:
+				continue
+			with open(segment.path, 'rb') as f:
+				for chunk in read_chunks(f):
+					yield chunk
 
 
-@timed('cut', cut_type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
-def fast_cut_segments(segments, start, end):
-	"""Yields chunks of a MPEGTS video file covering the exact timestamp range.
-	segments should be a list of segments as returned by get_best_segments().
-	This method works by only cutting the first and last segments, and concatenating the rest.
+@timed('cut', cut_type='fast', normalize=lambda ret, sr, ranges: range_total(ranges))
+def fast_cut_segments(segment_ranges, ranges):
+	"""Yields chunks of a MPEGTS video file covering the exact timestamp ranges.
+	segments should be a list of segment lists as returned by get_best_segments() for each range.
+	This method works by only cutting the first and last segments of each range,
+	and concatenating everything together. Ranges are cut between with no transitions.
 	This only works if the same codec settings etc are used across all segments.
 	This should almost always be true but may cause weird results if not.
 	"""
+	if len(segment_ranges) != len(ranges):
+		raise ValueError("You need to provide one segment list for each range")
+	for segments, (start, end) in zip(segment_ranges, ranges):
+		# We could potentially optimize here by cutting all firsts/lasts in parallel
+		# instead of doing them in order, but that's probably not that helpful and would
+		# greatly complicate things.
+		yield from fast_cut_range(segments, start, end)
+
+
+@timed('cut_range', cut_type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
+def fast_cut_range(segments, start, end):
+	"""Does a fast cut for an individual range of segments"""
 
 	# how far into the first segment to begin (if no hole at start)
 	cut_start = None

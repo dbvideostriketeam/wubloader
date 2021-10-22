@@ -203,7 +203,7 @@ def update_row(ident, editor=None):
 	state_columns = ['state', 'uploader', 'error', 'video_link'] 
 	# These have to be set before a video can be set as 'EDITED'
 	non_null_columns = [
-		'upload_location', 'video_start', 'video_end',
+		'upload_location', 'video_ranges', 'video_transitions',
 		'video_channel', 'video_quality', 'video_title',
 		'video_description', 'video_tags',
 	]
@@ -239,9 +239,24 @@ def update_row(ident, editor=None):
 			return 'Title may not contain a {} character'.format(char), 400
 		if char in new_row['video_description']:
 			return 'Description may not contain a {} character'.format(char), 400
-	# Validate start time is less than end time
-	if new_row['video_start'] > new_row['video_end']:
-		return 'Video Start must be less than Video End.', 400
+	# Validate and convert video ranges and transitions.
+	num_ranges = len(new_row['video_ranges'])
+	if num_ranges == 0:
+		return 'Ranges must contain at least one range', 400
+	if len(new_row['video_transitions']) != num_ranges - 1:
+		return 'There must be exactly {} transitions for {} ranges'.format(
+			num_ranges - 1, num_ranges,
+		)
+	for start, end in new_row['video_ranges']:
+		if start > end:
+			return 'Range start must be less than end', 400
+	# We need these to be tuples not lists for psycopg2 to do the right thing,
+	# but since they come in as JSON they are currently lists.
+	new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
+	new_row['video_transitions'] = [
+		None if transition is None else tuple(transition)
+		for transition in new_row['video_transitions']
+	]
 
 	conn = app.db_manager.get_conn()
 	# Check a row with id = ident is in the database
@@ -281,7 +296,7 @@ def update_row(ident, editor=None):
 	if new_row['state'] == 'EDITED':
 		missing = []
 		for column in non_null_columns:
-			if not new_row[column]:
+			if new_row[column] is None:
 				missing.append(column)
 		if missing:
 			return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
@@ -304,7 +319,7 @@ def update_row(ident, editor=None):
 		AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
 		).format(sql.SQL(", ").join(
 			sql.SQL("{} = {}").format(
-				sql.Identifier(column), sql.Placeholder(column),
+				sql.Identifier(column), database.get_column_placeholder(column),
 			) for column in new_row.keys() if column not in sheet_columns
 	))
 	result = database.query(conn, build_query, id=ident, **new_row)
