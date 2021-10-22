@@ -16,7 +16,7 @@ from requests import HTTPError
 
 import common
 import common.dateutil
-from common.database import DBManager, query
+from common.database import DBManager, query, get_column_placeholder
 
 from .sheets import Sheets
 
@@ -276,7 +276,7 @@ class SheetSync(object):
 				ON CONFLICT DO NOTHING
 			""").format(
 				sql.SQL(", ").join(sql.Identifier(col) for col in insert_cols),
-				sql.SQL(", ").join(sql.Placeholder(col) for col in insert_cols),
+				sql.SQL(", ").join(get_column_placeholder(col) for col in insert_cols),
 			)
 			query(self.conn, built_query, sheet_name=worksheet, **row)
 			rows_found.labels(worksheet).inc()
@@ -302,7 +302,7 @@ class SheetSync(object):
 				WHERE id = %(id)s
 			""").format(sql.SQL(", ").join(
 				sql.SQL("{} = {}").format(
-					sql.Identifier(col), sql.Placeholder(col)
+					sql.Identifier(col), get_column_placeholder(col)
 				) for col in changed
 			))
 			query(self.conn, built_query, **row)

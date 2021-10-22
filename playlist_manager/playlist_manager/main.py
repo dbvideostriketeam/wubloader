@@ -72,7 +72,7 @@ class PlaylistManager(object):
 		# the next time.
 		conn = self.dbmanager.get_conn()
 		videos = query(conn, """
-			SELECT video_id, tags, COALESCE(video_start, event_start) AS start_time
+			SELECT video_id, tags, COALESCE((video_ranges[1]).start, event_start) AS start_time
 			FROM events
 			WHERE state = 'DONE' AND upload_location = ANY (%s)
 		""", self.upload_locations)

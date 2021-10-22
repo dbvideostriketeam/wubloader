@@ -65,7 +65,8 @@ function pageSetup(isEditor) {
 					document.getElementById("wubloaderAdvancedInputTable").style.display = "block";
 				}
 
-				loadPlaylist(isEditor, data.video_start, data.video_end, data.video_quality);
+				const [ video_start, video_end ] = data.video_ranges === null ? [] : data.video_ranges[0];
+				loadPlaylist(isEditor, video_start, video_end, data.video_quality);
 			});
 	} else {
 		if (isEditor) {
@@ -295,8 +296,8 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 	}
 
 	const wubData = {
-		video_start: start,
-		video_end: end,
+		video_ranges: [[start, end]],
+		video_transitions: [],
 		video_title: document.getElementById("VideoTitle").value,
 		video_description: document.getElementById("VideoDescription").value,
 		video_tags: tags_string_to_list(document.getElementById("VideoTags").value),
@@ -328,11 +329,11 @@ function thrimbletrimmerSubmit(state, override_changes = false) {
 	}
 	console.log("Submitting", wubData);
 
-	if (!wubData.video_start) {
+	if (!wubData.video_ranges[0][0]) {
 		alert("No start time set");
 		return;
 	}
-	if (!wubData.video_end) {
+	if (!wubData.video_ranges[0][1]) {
 		alert("No end time set");
 		return;
 	}

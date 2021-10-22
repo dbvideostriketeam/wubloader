@@ -8,9 +8,31 @@ as a whole does not to avoid needing to install them for components that don't n
 from contextlib import contextmanager
 
 import psycopg2
+import psycopg2.sql
 import psycopg2.extensions
 import psycopg2.extras
 from psycogreen.gevent import patch_psycopg
+
+
+COMPOSITE_TYPES = [
+	"video_range",
+	"video_transition",
+]
+COLUMN_CASTS = {
+	"video_ranges": "video_range[]",
+	"video_transitions": "video_transition[]",
+}
+
+def get_column_placeholder(column):
+	"""Get a placeholder (like "%(COLUMN)s") to use in constructed SQL queries
+	for a given column in the events table. This function is needed because
+	some columns have types that require explicit casts to be included."""
+	placeholder = psycopg2.sql.Placeholder(column)
+	if column in COLUMN_CASTS:
+		placeholder = psycopg2.sql.SQL("{}::{}").format(
+			placeholder, psycopg2.sql.SQL(COLUMN_CASTS[column])
+		)
+	return placeholder
 
 
 class DBManager(object):
@@ -44,6 +66,8 @@ class DBManager(object):
 		# searches or targetted single-row updates.
 		conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 		conn.autocommit = True
+		for composite in COMPOSITE_TYPES:
+			psycopg2.extras.register_composite(composite, conn)
 		return conn
 
 
