@@ -120,8 +120,6 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
 
     query += ";"
 
-    print(query)
-
     return database.query(db_conn, query,
                           start_time=start_time if start_time is not None else '-infinity',
                           end_time=end_time if end_time is not None else 'infinity',
