@@ -112,3 +112,13 @@ SELECT id,
 FROM buscribe_transcriptions;
 
 ROLLBACK;
+
+-- Convert last lexeme in a query to prefix query.
+CREATE FUNCTION convert_query(query_text text) RETURNS tsquery AS
+$$
+DECLARE
+    ws_query text := websearch_to_tsquery(query_text)::text;
+BEGIN
+    RETURN (CASE WHEN ws_query != '' THEN ws_query || ':*' ELSE '' END)::tsquery;
+END;
+$$ LANGUAGE plpgsql;

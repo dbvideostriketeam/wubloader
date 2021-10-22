@@ -95,16 +95,19 @@ def get_json():
                      "end_bus_time": round_bus_time(row.start_time - app.bustime_start),
                      "verifier": row.verifier,
                      "speakers": row.names,
-                     "text": row.transcription_line if row.transcription_line is not None else ""} for row in results])
+                     "text": row.highlighted_text if row.highlighted_text is not None else ""} for row in results])
 
 
 def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset=None):
-    query = "SELECT * FROM buscribe_all_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
+    query = "SELECT *" + \
+            (
+                ",ts_headline(transcription_line, convert_query(%(text_query)s), 'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text" if ts_query is not None else ",transcription_line AS highlighted_text") + \
+            " FROM buscribe_all_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
 
     if ts_query is not None:
         query += "AND (coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector)) @@ " \
-                 "(CASE WHEN websearch_to_tsquery(%(text_query)s)::text != '' THEN websearch_to_tsquery(%(text_query)s)::text || ':*' ELSE '' END)::tsquery " \
-                 "ORDER BY ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector), (CASE WHEN websearch_to_tsquery(%(text_query)s)::text != '' THEN websearch_to_tsquery(%(text_query)s)::text || ':*' ELSE '' END)::tsquery) DESC, " \
+                 "convert_query(%(text_query)s) " \
+                 "ORDER BY ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector), convert_query(%(text_query)s)) DESC, " \
                  "start_time "
     else:
         query += "ORDER BY start_time "
@@ -116,6 +119,8 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
         query += "OFFSET %(limit)s "
 
     query += ";"
+
+    print(query)
 
     return database.query(db_conn, query,
                           start_time=start_time if start_time is not None else '-infinity',
