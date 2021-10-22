@@ -49,7 +49,7 @@ async function loadVideoPlayer(playlistURL) {
 
 	let defaultOptions = {
 		sources: [{ src: rangedPlaylistURL }],
-		liveui: false,
+		liveui: true,
 		controls: true,
 		autoplay: false,
 		playbackRates: PLAYBACK_RATES,
