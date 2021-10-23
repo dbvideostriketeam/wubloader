@@ -47,7 +47,9 @@ def servelet(server):
                'postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--bustime-start',
           help='The start time in UTC for the event, for UTC-Bustime conversion')
-def main(database="", host='0.0.0.0', port=8010, bustime_start=None):
+@argh.arg('--base-dir',
+          help='Directory from which segments will be grabbed. Default is current working directory.')
+def main(database="", host='0.0.0.0', port=8010, bustime_start=None, base_dir=None):
     if bustime_start is None:
         logging.error("Missing --bustime-start!")
         exit(1)
@@ -59,6 +61,8 @@ def main(database="", host='0.0.0.0', port=8010, bustime_start=None):
     except ParserError:
         logging.error("Invalid --bustime-start!")
         exit(1)
+
+    app.segments_dir = base_dir
 
     app.db_manager = DBManager(dsn=database)
 

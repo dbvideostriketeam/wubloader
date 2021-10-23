@@ -1,2 +1,10 @@
-{{ (row.start_time - bustime_start - duration_extend)|convert_vtt_timedelta }} --> {{ (row.end_time - bustime_start + duration_extend)|convert_vtt_timedelta }}
-- {{ row.transcription_line }}
+{{ (row.start_time - start_time)|convert_vtt_timedelta }} --> {{ (row.end_time - start_time + duration_extend)|convert_vtt_timedelta }}
+<c.{%- if row.verifier is not none -%}verified_cc{%- else -%}machine_cc{%- endif -%}>
+    {%- if row.transcription_json is none -%}
+        {{ row.transcription_line }}
+    {%- else -%}
+        {%- set line_start_time = row.transcription_json["result"][0]["start"] -%}
+        {%- for word in row.transcription_json["result"] -%}
+             <{{ ((row.start_time - start_time) + (word["start"] - line_start_time)|create_seconds_timedelta)|convert_vtt_timedelta }}>{{ word["word"] + " " }}
+        {%- endfor -%}
+    {%- endif -%}</c>

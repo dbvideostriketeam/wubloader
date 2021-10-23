@@ -8,7 +8,7 @@ function pageReady() {
         controls: true,
         autoplay: false,
         width: 900,
-        height: 420,
+        height: 900 / 16 * 9,
         playbackRates: [0.5, 1, 1.25, 1.5, 2],
         inactivityTimeout: 0,
         controlBar: {
@@ -16,22 +16,44 @@ function pageReady() {
             volumePanel: {
                 inline: false,
             },
-        },
-        sources: [{src: `//localhost:8005/professor/line/${line_id}/playlist.m3u8`}]
+        }
     });
+
+    // this changes the background color to red
+    const bgColorSelector = document.querySelector('.vjs-bg-color > select');
+    bgColorSelector.value = "#000";
+
+    // this changes the background opacity to 0.5
+    const bgOpacitySelector = document.querySelector('.vjs-bg-opacity > select');
+    bgOpacitySelector.value = "0.5"
 
     fetch(`//localhost:8005/professor/line/${line_id}`)
         .then(response => response.json())
-        .then(fillLineInfo);
+        .then(fillLineInfo)
+        .then(initializePlayer);
 
 }
 
 function fillLineInfo(line_json) {
     // document.getElementById("original_transcription").innerText = line_json.line_data.text;
+    line = line_json
     document.getElementById("original_transcription").innerHTML = line_json.line_data.result
         .map(word => `<span style="opacity: ${word.conf}">${word.word}</span>`).join(" ");
     document.getElementById("new_transcription")
         .attributes.getNamedItem("placeholder").value = line_json.line_data.text;
+}
+
+function initializePlayer() {
+    videojs.getPlayer("player").src([
+        {src: `//localhost:8005/professor/line/${line_id}/playlist.m3u8`}
+    ]);
+    videojs.getPlayer("player").addRemoteTextTrack({
+        kind: "captions",
+        src: `//localhost:8010/buscribe/vtt?start_time=${line.start_time}&end_time=${line.end_time}`,
+        srclang: "en",
+        label: "English",
+        default: true
+    }, false);
 }
 
 async function submit() {

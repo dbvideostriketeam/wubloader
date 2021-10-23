@@ -2,6 +2,7 @@ import json
 from datetime import timedelta
 
 import flask as flask
+import common
 from common import dateutil, database
 from dateutil.parser import ParserError
 from flask import request, jsonify, Response, render_template
@@ -11,7 +12,14 @@ app = flask.Flask('buscribe')
 
 @app.template_filter()
 def convert_vtt_timedelta(delta: timedelta):
+    """Converts a timedelta to a VTT compatible format."""
     return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}.{delta.microseconds // 1000:03}'
+
+
+@app.template_filter()
+def create_seconds_timedelta(seconds):
+    """Converts a float of seconds to a timedelta."""
+    return timedelta(seconds=seconds)
 
 
 def round_bus_time(delta: timedelta):
@@ -44,10 +52,15 @@ def get_vtt():
 
     db_conn = app.db_manager.get_conn()
 
+    segments = common.get_best_segments(app.segments_dir,
+                                        start_time,
+                                        end_time)
+    segments_start_time = segments[0].start
+
     results = fetch_lines(db_conn, start_time, end_time)
 
     return Response(
-        render_template("busubs.jinja", results=results, bustime_start=app.bustime_start,
+        render_template("busubs.jinja", results=results, start_time=segments_start_time,
                         duration_extend=timedelta(seconds=0.3)),
         mimetype="text/vtt"
     )
@@ -102,7 +115,7 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
     query = "SELECT *" + \
             (
                 ",ts_headline(transcription_line, convert_query(%(text_query)s), 'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text" if ts_query is not None else ",transcription_line AS highlighted_text") + \
-            " FROM buscribe_all_transcriptions WHERE start_time > %(start_time)s AND end_time < %(end_time)s "
+            " FROM buscribe_all_transcriptions WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s "
 
     if ts_query is not None:
         query += "AND (coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector)) @@ " \

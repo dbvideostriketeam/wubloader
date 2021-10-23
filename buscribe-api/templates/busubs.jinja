@@ -1,5 +1,7 @@
 WEBVTT
 
 {% for row in results %}
-{% include "busub.jinja" %}
+    {%- if row.transcription_line is not none %}
+        {%- include "busub.jinja" %}
+    {%- endif %}
 {% endfor %}
