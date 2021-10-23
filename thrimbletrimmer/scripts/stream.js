@@ -87,6 +87,22 @@ function updateTimeSettings() {
 	}
 }
 
+function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
+	const startURLTime = getWubloaderTimeFromDate(startTime);
+	const endURLTime = getWubloaderTimeFromDate(endTime);
+
+	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
+	if (startURLTime) {
+		queryParts.push(`start=${startURLTime}`);
+	}
+	if (endURLTime) {
+		queryParts.push(`end=${endURLTime}`);
+	}
+
+	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
+	return downloadURL;
+}
+
 function updateDownloadLink() {
 	const downloadLink = document.getElementById("download");
 	const downloadURL = generateDownloadURL(getStartTime(), getEndTime(), "rough", true, "source");
