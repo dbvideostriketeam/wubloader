@@ -95,8 +95,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	await loadVideoInfo();
 
-	updateDownloadLink();
-
 	document.getElementById("stream-time-setting-start-pad").addEventListener("click", (_event) => {
 		const startTimeField = document.getElementById("stream-time-setting-start");
 		let startTime = startTimeField.value;
@@ -352,33 +350,41 @@ async function initializeVideoInfo() {
 
 	const player = getVideoJS();
 	player.on("loadedmetadata", () => {
-		// For now, there's only one range in the data we receive from thrimshim, so we'll populate that as-is here.
-		// This will need to be updated when thrimshim supports multiple video ranges.
 		const rangeDefinitionsContainer = document.getElementById("range-definitions");
-		const rangeDefinitionStart =
-			rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
-		const rangeDefinitionEnd =
-			rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
-		rangeDefinitionStart.addEventListener("change", (_event) => {
-			rangeDataUpdated();
-		});
-		rangeDefinitionEnd.addEventListener("change", (_event) => {
-			rangeDataUpdated();
-		});
-		if (videoInfo.video_start) {
-			rangeDefinitionStart.value = videoHumanTimeFromWubloaderTime(videoInfo.video_start);
+		if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
+			for (const rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
+				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
+					addRangeDefinition();
+				}
+				const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
+				const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
+				if (startWubloaderTime) {
+					const startField =
+						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
+							"range-definition-start"
+						)[0];
+					startField.value = videoHumanTimeFromWubloaderTime(startWubloaderTime);
+				}
+				if (endWubloaderTime) {
+					const endField =
+						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
+							"range-definition-end"
+						)[0];
+					endField.value = videoHumanTimeFromWubloaderTime(endWubloaderTime);
+				}
+			}
 		} else {
-			rangeDefinitionStart.value = videoHumanTimeFromVideoPlayerTime(0);
+			const rangeStartField =
+				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
+			rangeStartField.value = videoHumanTimeFromVideoPlayerTime(0);
+			if (videoInfo.video_end) {
+				const player = getVideoJS();
+				const rangeEndField =
+					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
+				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(player.duration());
+			}
 		}
-		if (videoInfo.video_end) {
-			rangeDefinitionEnd.value = videoHumanTimeFromWubloaderTime(videoInfo.video_end);
-		} else if (videoInfo.event_end) {
-			const player = getVideoJS();
-			rangeDefinitionEnd.value = videoHumanTimeFromVideoPlayerTime(player.duration());
-		}
-		if (videoInfo.video_end || videoInfo.event_end) {
-			rangeDataUpdated();
-		}
+		rangeDataUpdated();
 	});
 	player.on("timeupdate", () => {
 		const player = getVideoJS();
@@ -514,9 +520,16 @@ async function sendVideoData(edited, overrideChanges) {
 		});
 	}
 
-	// Currently this only supports one range. When multiple ranges are supported, expand this.
-	const videoStart = rangesData[0].start;
-	const videoEnd = rangesData[0].end;
+	const ranges = [];
+	const transitions = [];
+	for (const range of rangesData) {
+		ranges.push([range.start, range.end]);
+		// In the future, handle transitions
+		transitions.push(null);
+	}
+	// The first range will never have a transition defined, so remove that one
+	transitions.shift();
+
 	const videoTitle = document.getElementById("video-info-title").value;
 	const videoDescription = document.getElementById("video-info-description").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
@@ -531,8 +544,8 @@ async function sendVideoData(edited, overrideChanges) {
 	const state = edited ? "EDITED" : "UNEDITED";
 
 	const editData = {
-		video_start: videoStart,
-		video_end: videoEnd,
+		video_ranges: ranges,
+		video_transitions: transitions,
 		video_title: videoTitle,
 		video_description: videoDescription,
 		video_tags: videoTags,
@@ -597,24 +610,46 @@ async function sendVideoData(edited, overrideChanges) {
 	}
 }
 
+function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
+	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
+	for (const range of timeRanges) {
+		let timeRangeString = "";
+		if (range.hasOwnProperty("start")) {
+			timeRangeString += getWubloaderTimeFromDateWithMilliseconds(range.start);
+		}
+		timeRangeString += ",";
+		if (range.hasOwnProperty("end")) {
+			timeRangeString += getWubloaderTimeFromDateWithMilliseconds(range.end);
+		}
+		queryParts.push(`range=${timeRangeString}`);
+	}
+
+	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
+	return downloadURL;
+}
+
 function updateDownloadLink() {
-	// Currently this only supports one range. When download links can download multiple ranges, this should be updated.
-	const firstRangeStartField = document.getElementsByClassName("range-definition-start")[0];
-	const firstRangeEndField = document.getElementsByClassName("range-definition-end")[0];
-
-	const startTime = firstRangeStartField.value
-		? wubloaderTimeFromVideoHumanTime(firstRangeStartField.value)
-		: getStartTime();
-	const endTime = firstRangeEndField.value
-		? wubloaderTimeFromVideoHumanTime(firstRangeEndField.value)
-		: getEndTime();
-
 	const downloadType = document.getElementById("download-type-select").value;
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 
+	const timeRanges = [];
+	for (const rangeContainer of document.getElementById("range-definitions").children) {
+		const startField = rangeContainer.getElementsByClassName("range-definition-start")[0];
+		const endField = rangeContainer.getElementsByClassName("range-definition-end")[0];
+		const timeRangeData = {};
+		const startTime = wubloaderTimeFromVideoHumanTime(startField.value);
+		if (startTime) {
+			timeRangeData.start = startTime;
+		}
+		const endTime = wubloaderTimeFromVideoHumanTime(endField.value);
+		if (endTime) {
+			timeRangeData.end = endTime;
+		}
+		timeRanges.push(timeRangeData);
+	}
+
 	const downloadURL = generateDownloadURL(
-		startTime,
-		endTime,
+		timeRanges,
 		downloadType,
 		allowHoles,
 		videoInfo.video_quality
@@ -810,6 +845,7 @@ function getRangeSetClickHandler(startOrEnd) {
 		const videoPlayerTime = player.currentTime();
 
 		setField.value = videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
+		setField.dispatchEvent(new Event("change"));
 	};
 }
 
