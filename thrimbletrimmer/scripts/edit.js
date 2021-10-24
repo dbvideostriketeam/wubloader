@@ -264,7 +264,7 @@ async function initializeVideoInfo() {
 	if (videoInfo.video_end) {
 		const videoEndTime = dateObjFromWubloaderTime(videoInfo.video_end);
 		if (eventEndTime && videoEndTime > eventEndTime) {
-			// If we're getting the time from a previous draft edit, we don't need to pad as hard on the end
+			// If we're getting the time from a previous draft edit, we don't need to pad as hard on the end (because the time range will have seconds)
 			videoEndTime.setMinutes(videoEndTime.getMinutes() + 1);
 			globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(videoEndTime);
 		}
@@ -377,11 +377,12 @@ async function initializeVideoInfo() {
 			const rangeStartField =
 				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
 			rangeStartField.value = videoHumanTimeFromVideoPlayerTime(0);
-			if (videoInfo.video_end) {
-				const player = getVideoJS();
+			const player = getVideoJS();
+			const videoDuration = player.duration();
+			if (isFinite(videoDuration)) {
 				const rangeEndField =
 					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
-				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(player.duration());
+				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(videoDuration);
 			}
 		}
 		rangeDataUpdated();
