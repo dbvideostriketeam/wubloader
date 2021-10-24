@@ -971,7 +971,7 @@ function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
 	// This is not the case before the video is loaded for the first time, or outside the video's buffer if it hasn't played that far/part.
 	for (segment of videoPlaylist.segments) {
 		const segmentEndTime = segmentStartTime + segment.duration;
-		if (segmentStartTime <= videoPlayerTime && segmentEndTime > videoPlayerTime) {
+		if (segmentStartTime <= videoPlayerTime && segmentEndTime >= videoPlayerTime) {
 			segmentDateObj = segment.dateTimeObject;
 			break;
 		}
