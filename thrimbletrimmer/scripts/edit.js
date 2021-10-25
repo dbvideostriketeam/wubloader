@@ -352,7 +352,7 @@ async function initializeVideoInfo() {
 	player.on("loadedmetadata", () => {
 		const rangeDefinitionsContainer = document.getElementById("range-definitions");
 		if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
-			for (const rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
+			for (let rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
 				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
 					addRangeDefinition();
 				}
