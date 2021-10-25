@@ -259,7 +259,7 @@ async function initializeVideoInfo() {
 		for (const range of videoInfo.video_ranges) {
 			let startTime = range[0];
 			let endTime = range[1];
-			
+
 			if (startTime) {
 				startTime = dateObjFromWubloaderTime(startTime);
 			} else {
@@ -868,7 +868,7 @@ function getRangeSetClickHandler(startOrEnd) {
 		const videoPlayerTime = player.currentTime();
 
 		setField.value = videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
-		setField.dispatchEvent(new Event("change"));
+		rangeDataUpdated();
 	};
 }
 
