@@ -252,21 +252,43 @@ async function initializeVideoInfo() {
 		document.getElementById("waveform").classList.add("hidden");
 	}
 
-	// If a video was previously edited to points outside the video range, we should expand the loaded video to include the edited range
-	if (videoInfo.video_start) {
-		const videoStartTime = dateObjFromWubloaderTime(videoInfo.video_start);
-		if (videoStartTime < eventStartTime) {
-			videoStartTime.setMinutes(videoStartTime.getMinutes() - 1);
-			globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(videoStartTime);
-		}
-	}
+	// If a video was previously edited to points outside the event range, we should expand the loaded video to include the edited range
+	if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
+		let earliestStartTime = null;
+		let latestEndTime = null;
+		for (const range of videoInfo.video_ranges) {
+			let startTime = range[0];
+			let endTime = range[1];
+			
+			if (startTime) {
+				startTime = dateObjFromWubloaderTime(startTime);
+			} else {
+				startTime = null;
+			}
 
-	if (videoInfo.video_end) {
-		const videoEndTime = dateObjFromWubloaderTime(videoInfo.video_end);
-		if (eventEndTime && videoEndTime > eventEndTime) {
-			// If we're getting the time from a previous draft edit, we don't need to pad as hard on the end (because the time range will have seconds)
-			videoEndTime.setMinutes(videoEndTime.getMinutes() + 1);
-			globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(videoEndTime);
+			if (endTime) {
+				endTime = dateObjFromWubloaderTime(endTime);
+			} else {
+				endTime = null;
+			}
+
+			if (!earliestStartTime || (startTime && startTime < earliestStartTime)) {
+				earliestStartTime = startTime;
+			}
+			if (!latestEndTime || (endTime && endTime > latestEndTime)) {
+				latestEndTime = endTime;
+			}
+		}
+
+		if (earliestStartTime && earliestStartTime < eventStartTime) {
+			earliestStartTime.setMinutes(earliestStartTime.getMinutes() - 1);
+			globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(earliestStartTime);
+		}
+
+		if (latestEndTime && latestEndTime > eventEndTime) {
+			// If we're getting the time from a previous draft edit, we have seconds, so one minute is enough
+			latestEndTime.setMinutes(latestEndTime.getMinutes() + 1);
+			globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(latestEndTime);
 		}
 	}
 
