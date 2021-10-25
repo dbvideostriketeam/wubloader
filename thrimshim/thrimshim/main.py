@@ -162,12 +162,6 @@ def get_row(ident):
 	response = row._asdict()
 
 	response['id'] = str(response['id'])	
-	response = {
-		key: (
-			value.isoformat() if isinstance(value, datetime.datetime)
-			else value
-		) for key, value in response.items()
-	}
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
 	response["title_prefix"] = app.title_header
@@ -190,7 +184,14 @@ def get_row(ident):
 		response["video_description"] = response["video_description"][:-len(app.description_footer)]
 
 	logging.info('Row {} fetched'.format(ident))
-	return json.dumps(response)
+
+	def convert(value):
+		if isinstance(value, datetime.datetime):
+			return value.isoformat()
+		if isinstance(value, datetime.timedelta):
+			return value.total_seconds()
+		raise TypeError(f"Can't convert object of type {value.__class__.__name__} to JSON: {value}")
+	return json.dumps(response, default=convert)
 
 
 @app.route('/thrimshim/<uuid:ident>', methods=['POST'])
