@@ -1,3 +1,10 @@
+body {
+	/* Firefox has a weird default font, which is a different size from the one in Chrome
+	 * and makes some renderings bad.
+	 */
+	font-family: "Arial", sans-serif;
+}
+
 a,
 .click {
 	cursor: pointer;
@@ -165,7 +172,7 @@ a,
 #video-info {
 	margin: 5px 0;
 	display: grid;
-	grid-template-columns: 175px 1fr;
+	grid-template-columns: 200px 1fr;
 	grid-template-rows: 1fr 1.25em 3em 1.25em;
 	gap: 2px;
 }
