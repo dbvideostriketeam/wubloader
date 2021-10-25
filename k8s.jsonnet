@@ -188,7 +188,7 @@
   // This function generates deployments for each service, since they only differ slightly,
   // with only a different image, CLI args and possibly env vars.
   // The image name is derived from the component name
-  // (eg. "downloader" is quay.io/ekimekim/wubloader-downloader)
+  // (eg. "downloader" is ghcr.io/ekimekim/wubloader-downloader)
   // so we only pass in name as a required arg.
   // Optional kwargs work just like python.
   deployment(name, args=[], env=[], volumes=[], volumeMounts=[]):: {
@@ -213,7 +213,7 @@
               name: name,
               // segment-coverage is called segment_coverage in the image, so replace - with _
               // ditto for playlist-manager
-              image: "quay.io/ekimekim/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
+              image: "ghcr.io/ekimekim/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
               args: args,
               volumeMounts: [{name: "data", mountPath: "/mnt"}] + volumeMounts,
               env: $.env_list + env, // main env list combined with any deployment-specific ones
@@ -266,7 +266,7 @@
           containers: [
             {
               name: name,
-              image: "quay.io/ekimekim/wubloader-%s:%s" % [name, $.config.database_tag],
+              image: "ghcr.io/ekimekim/wubloader-%s:%s" % [name, $.config.database_tag],
               args: args,
               env: $.env_list + env, // main env list combined with any statefulset-specific ones
               volumeMounts: [
