@@ -48,6 +48,13 @@
   // On OSX you need to change this to /private/var/lib/wubloader_postgres/
   database_path:: "/var/lib/wubloader_postgres/",
 
+  // Local path to Thrimbletrimmer files. Useful if you're doing development on
+  // Thrimbletrimmer (and probably not useful otherwise) to enable live updates
+  // to Thrimbletrimmer without restarting/rebuilding Wubloader.
+  // If you wish to use this, set this to the path containing the Thrimbletrimmer
+  // web (HTML, CSS, JavaScript) files to serve (e.g. "/path/to/wubloader/thrimbletrimmer/").
+  thrimbletrimmer_web_dev_path:: null,
+
   // The host's port to expose each service on.
   // Only nginx (and postgres if that is being deployed) needs to be externally accessible - the other non-database ports are routed through nginx.
   ports:: {
@@ -407,6 +414,7 @@
       volumes: std.prune([
         if $.nginx_serve_segments then "%s:/mnt" % $.segments_path,
         if $.ssl_certificate_path != null then "%s:/certs.pem" % $.ssl_certificate_path,
+        if $.thrimbletrimmer_web_dev_path != null then "%s:/etc/nginx/html/thrimbletrimmer" % $.thrimbletrimmer_web_dev_path,
       ]),
     },
 
