@@ -15,4 +15,5 @@ RUN apk add postgresql-dev postgresql-libs
 COPY thrimshim /tmp/thrimshim
 RUN pip install /tmp/thrimshim && rm -r /tmp/thrimshim
 
+LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
 ENTRYPOINT ["python3", "-m", "thrimshim"]

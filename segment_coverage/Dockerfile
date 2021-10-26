@@ -21,4 +21,5 @@ RUN ln -s /usr/include/locale.h /usr/include/xlocale.h \
 COPY segment_coverage /tmp/segment_coverage
 RUN pip install /tmp/segment_coverage && rm -r /tmp/segment_coverage
 
+LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
 ENTRYPOINT ["python3", "-m", "segment_coverage"]

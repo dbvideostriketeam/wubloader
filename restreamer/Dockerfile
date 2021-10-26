@@ -15,4 +15,5 @@ RUN apk add ffmpeg
 COPY restreamer /tmp/restreamer
 RUN pip install /tmp/restreamer && rm -r /tmp/restreamer
 
+LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
 ENTRYPOINT ["python3", "-m", "restreamer", "--base-dir", "/mnt"]

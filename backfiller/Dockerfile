@@ -15,4 +15,5 @@ RUN apk add postgresql-dev postgresql-libs
 COPY backfiller /tmp/backfiller
 RUN pip install /tmp/backfiller && rm -r /tmp/backfiller
 
+LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
 ENTRYPOINT ["python3", "-m", "backfiller", "--base-dir", "/mnt"]

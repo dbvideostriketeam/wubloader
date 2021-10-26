@@ -14,4 +14,5 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY downloader /tmp/downloader
 RUN pip install /tmp/downloader && rm -r /tmp/downloader
 
+LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
 ENTRYPOINT ["python3", "-m", "downloader", "--base-dir", "/mnt"]
