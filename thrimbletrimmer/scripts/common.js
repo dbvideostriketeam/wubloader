@@ -1,4 +1,7 @@
-var globalBusStartTime = new Date("1970-01-01T00:00:00Z");
+var DateTime = luxon.DateTime;
+var Interval = luxon.Interval;
+
+var globalBusStartTime = DateTime.fromISO("1970-01-01T00:00:00", { zone: "utc" });
 var globalStreamName = "";
 var globalStartTimeString = "";
 var globalEndTimeString = "";
@@ -87,35 +90,54 @@ function updateVideoPlayer(newPlaylistURL) {
 	player.src({ src: rangedPlaylistURL });
 }
 
-function dateObjFromBusTime(busTime) {
+function parseHumanTimeStringAsDateTimeMathObject(inputTime) {
 	// We need to handle inputs like "-0:10:15" in a way that consistently makes the time negative.
 	// Since we can't assign the negative sign to any particular part, we'll check for the whole thing here.
 	let direction = 1;
-	if (busTime.startsWith("-")) {
-		busTime = busTime.slice(1);
+	if (inputTime.startsWith("-")) {
+		inputTime = inputTime.slice(1);
 		direction = -1;
 	}
 
-	const parts = busTime.split(":", 3);
-	const hours = (parts[0] || 0) * direction;
+	const parts = inputTime.split(":", 3);
+	const hours = parseInt(parts[0]) * direction;
 	const minutes = (parts[1] || 0) * direction;
 	const seconds = (parts[2] || 0) * direction;
-	const time = new Date(globalBusStartTime);
-	time.setHours(time.getHours() + hours);
-	time.setMinutes(time.getMinutes() + minutes);
-	time.setSeconds(time.getSeconds() + seconds);
-	return time;
+	return { hours: hours, minutes: minutes, seconds: seconds };
 }
 
-function dateObjFromWubloaderTime(wubloaderTime) {
-	return new Date(`${wubloaderTime}Z`);
+function dateTimeFromBusTime(busTime) {
+	return globalBusStartTime.plus(parseHumanTimeStringAsDateTimeMathObject(busTime));
 }
 
-function wubloaderTimeFromDateObj(date) {
-	if (!date) {
+function busTimeFromDateTime(dateTime) {
+	const diff = dateTime.diff(globalBusStartTime);
+	return formatIntervalForDisplay(diff);
+}
+
+function formatIntervalForDisplay(interval) {
+	if (interval.milliseconds < 0) {
+		const negativeInterval = interval.negate();
+		return `-${negativeInterval.toFormat("hh:mm:ss.SSS")}`;
+	}
+	return interval.toFormat("hh:mm:ss.SSS");
+}
+
+function dateTimeFromWubloaderTime(wubloaderTime) {
+	return DateTime.fromISO(wubloaderTime, { zone: "utc" });
+}
+
+function wubloaderTimeFromDateTime(dateTime) {
+	if (!dateTime) {
 		return null;
 	}
-	return date.toISOString().substring(0, 23); // Trim "Z" marker and smaller than milliseconds
+	// Not using ISO here because Luxon doesn't give us a quick way to print an ISO8601 string with no offset.
+	return dateTime.toFormat("yyyy-LL-dd'T'HH:mm:ss.SSS");
+}
+
+function busTimeFromWubloaderTime(wubloaderTime) {
+	const dt = dateTimeFromWubloaderTime(wubloaderTime);
+	return busTimeFromDateTime(dt);
 }
 
 function assembleVideoPlaylistURL(basePlaylistURL) {
@@ -134,10 +156,10 @@ function startAndEndTimeQueryStringParts() {
 
 	let queryStringParts = [];
 	if (startTime) {
-		queryStringParts.push(`start=${wubloaderTimeFromDateObj(startTime)}`);
+		queryStringParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
 	}
 	if (endTime) {
-		queryStringParts.push(`end=${wubloaderTimeFromDateObj(endTime)}`);
+		queryStringParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
 	}
 	return queryStringParts;
 }

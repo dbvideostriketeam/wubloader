@@ -1,2 +1,4 @@
-videojs/
+styles/video-js.min.css
+scripts/video.min.js
+scripts/luxon.min.js
 dashboard.html
