@@ -87,31 +87,31 @@ function updateVideoPlayer(newPlaylistURL) {
 	player.src({ src: rangedPlaylistURL });
 }
 
-function parseInputTimeAsNumberOfSeconds(inputTime) {
+function dateObjFromBusTime(busTime) {
 	// We need to handle inputs like "-0:10:15" in a way that consistently makes the time negative.
 	// Since we can't assign the negative sign to any particular part, we'll check for the whole thing here.
 	let direction = 1;
-	if (inputTime.startsWith("-")) {
-		inputTime = inputTime.slice(1);
+	if (busTime.startsWith("-")) {
+		busTime = busTime.slice(1);
 		direction = -1;
 	}
 
-	const parts = inputTime.split(":", 3);
-	return (parseInt(parts[0]) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600) * 60 * 60 * direction;
+	const parts = busTime.split(":", 3);
+	const hours = (parts[0] || 0) * direction;
+	const minutes = (parts[1] || 0) * direction;
+	const seconds = (parts[2] || 0) * direction;
+	const time = new Date(globalBusStartTime);
+	time.setHours(time.getHours() + hours);
+	time.setMinutes(time.getMinutes() + minutes);
+	time.setSeconds(time.getSeconds() + seconds);
+	return time;
 }
 
 function dateObjFromWubloaderTime(wubloaderTime) {
 	return new Date(`${wubloaderTime}Z`);
 }
 
-function getWubloaderTimeFromDate(date) {
-	if (!date) {
-		return null;
-	}
-	return date.toISOString().substring(0, 19); // Trim milliseconds and "Z" marker
-}
-
-function getWubloaderTimeFromDateWithMilliseconds(date) {
+function wubloaderTimeFromDateObj(date) {
 	if (!date) {
 		return null;
 	}
@@ -134,10 +134,10 @@ function startAndEndTimeQueryStringParts() {
 
 	let queryStringParts = [];
 	if (startTime) {
-		queryStringParts.push(`start=${getWubloaderTimeFromDate(startTime)}`);
+		queryStringParts.push(`start=${wubloaderTimeFromDateObj(startTime)}`);
 	}
 	if (endTime) {
-		queryStringParts.push(`end=${getWubloaderTimeFromDate(endTime)}`);
+		queryStringParts.push(`end=${wubloaderTimeFromDateObj(endTime)}`);
 	}
 	return queryStringParts;
 }

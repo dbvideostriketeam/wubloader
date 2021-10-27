@@ -38,9 +38,7 @@ function getStartTime() {
 		case 1:
 			return dateObjFromWubloaderTime(globalStartTimeString);
 		case 2:
-			return new Date(
-				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)
-			);
+			return dateObjFromBusTime(globalStartTimeString);
 		case 3:
 			return new Date(
 				new Date().getTime() - 1000 * parseInputTimeAsNumberOfSeconds(globalStartTimeString)
@@ -57,14 +55,25 @@ function getEndTime() {
 		case 1:
 			return dateObjFromWubloaderTime(globalEndTimeString);
 		case 2:
-			return new Date(
-				globalBusStartTime.getTime() + 1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)
-			);
+			return dateObjFromBusTime(globalEndTimeString);
 		case 3:
 			return new Date(
 				new Date().getTime() - 1000 * parseInputTimeAsNumberOfSeconds(globalEndTimeString)
 			);
 	}
+}
+
+function parseInputTimeAsNumberOfSeconds(inputTime) {
+	// We need to handle inputs like "-0:10:15" in a way that consistently makes the time negative.
+	// Since we can't assign the negative sign to any particular part, we'll check for the whole thing here.
+	let direction = 1;
+	if (inputTime.startsWith("-")) {
+		inputTime = inputTime.slice(1);
+		direction = -1;
+	}
+
+	const parts = inputTime.split(":", 3);
+	return (parseInt(parts[0]) + (parts[1] || 0) / 60 + (parts[2] || 0) / 3600) * 60 * 60 * direction;
 }
 
 function updateTimeSettings() {
@@ -88,8 +97,8 @@ function updateTimeSettings() {
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
-	const startURLTime = getWubloaderTimeFromDate(startTime);
-	const endURLTime = getWubloaderTimeFromDate(endTime);
+	const startURLTime = wubloaderTimeFromDateObj(startTime);
+	const endURLTime = wubloaderTimeFromDateObj(endTime);
 
 	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
 	if (startURLTime) {
