@@ -17,7 +17,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 
 		const newStartField = document.getElementById("stream-time-setting-start");
-		const newStart = dateObjFromInputTime(newStartField.value);
+		const newStart = dateObjFromBusTime(newStartField.value);
 		if (!newStart) {
 			addError("Failed to parse start time");
 			return;
@@ -26,7 +26,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		const newEndField = document.getElementById("stream-time-setting-end");
 		let newEnd = null;
 		if (newEndField.value !== "") {
-			newEnd = dateObjFromInputTime(newEndField.value);
+			newEnd = dateObjFromBusTime(newEndField.value);
 			if (!newEnd) {
 				addError("Failed to parse end time");
 				return;
@@ -54,8 +54,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 		}
 
-		globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(newStart);
-		globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(newEnd);
+		globalStartTimeString = wubloaderTimeFromDateObj(newStart);
+		globalEndTimeString = wubloaderTimeFromDateObj(newEnd);
 
 		updateSegmentPlaylist();
 
@@ -98,31 +98,25 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("stream-time-setting-start-pad").addEventListener("click", (_event) => {
 		const startTimeField = document.getElementById("stream-time-setting-start");
 		let startTime = startTimeField.value;
-		startTime = parseInputTimeAsNumberOfSeconds(startTime);
+		startTime = dateObjFromBusTime(startTime);
 		if (isNaN(startTime)) {
 			addError("Couldn't parse entered start time for padding");
 			return;
 		}
-		startTime -= 60;
-		const startTimeDate = new Date(globalBusStartTime);
-		startTimeDate.setSeconds(startTimeDate.getSeconds() + startTime);
-		startTime = getBusTimeFromDateObj(startTimeDate);
-		startTimeField.value = startTime;
+		startTime.setMinutes(startTime.getMinutes() - 1);
+		startTimeField.value = busTimeFromDateObj(startTime);
 	});
 
 	document.getElementById("stream-time-setting-end-pad").addEventListener("click", (_event) => {
 		const endTimeField = document.getElementById("stream-time-setting-end");
 		let endTime = endTimeField.value;
-		endTime = parseInputTimeAsNumberOfSeconds(endTime);
+		endTime = dateObjFromBusTime(endTime);
 		if (isNaN(endTime)) {
 			addError("Couldn't parse entered end time for padding");
 			return;
 		}
-		endTime += 60;
-		const endTimeDate = new Date(globalBusStartTime);
-		endTimeDate.setSeconds(endTimeDate.getSeconds() + endTime);
-		endTime = getBusTimeFromDateObj(endTimeDate);
-		endTimeField.value = endTime;
+		endTime.setMinutes(endTime.getMinutes() + 1);
+		endTimeField.value = busTimeFromDateObj(endTime);
 	});
 
 	const addRangeIcon = document.getElementById("add-range-definition");
@@ -245,9 +239,9 @@ async function initializeVideoInfo() {
 		eventEndTime.setMinutes(eventEndTime.getMinutes() + 2);
 	}
 
-	globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(eventStartTime);
+	globalStartTimeString = wubloaderTimeFromDateObj(eventStartTime);
 	if (eventEndTime) {
-		globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(eventEndTime);
+		globalEndTimeString = wubloaderTimeFromDateObj(eventEndTime);
 	} else {
 		document.getElementById("waveform").classList.add("hidden");
 	}
@@ -282,13 +276,13 @@ async function initializeVideoInfo() {
 
 		if (earliestStartTime && earliestStartTime < eventStartTime) {
 			earliestStartTime.setMinutes(earliestStartTime.getMinutes() - 1);
-			globalStartTimeString = getWubloaderTimeFromDateWithMilliseconds(earliestStartTime);
+			globalStartTimeString = wubloaderTimeFromDateObj(earliestStartTime);
 		}
 
 		if (latestEndTime && latestEndTime > eventEndTime) {
 			// If we're getting the time from a previous draft edit, we have seconds, so one minute is enough
 			latestEndTime.setMinutes(latestEndTime.getMinutes() + 1);
-			globalEndTimeString = getWubloaderTimeFromDateWithMilliseconds(latestEndTime);
+			globalEndTimeString = wubloaderTimeFromDateObj(latestEndTime);
 		}
 	}
 
@@ -466,10 +460,10 @@ function getBusTimeFromTimeString(timeString) {
 		return "";
 	}
 	const time = dateObjFromWubloaderTime(timeString);
-	return getBusTimeFromDateObj(time);
+	return busTimeFromDateObj(time);
 }
 
-function getBusTimeFromDateObj(time) {
+function busTimeFromDateObj(time) {
 	const busTimeMilliseconds = time - globalBusStartTime;
 	let remainingBusTimeSeconds = busTimeMilliseconds / 1000;
 
@@ -638,11 +632,11 @@ function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
 	for (const range of timeRanges) {
 		let timeRangeString = "";
 		if (range.hasOwnProperty("start")) {
-			timeRangeString += getWubloaderTimeFromDateWithMilliseconds(range.start);
+			timeRangeString += wubloaderTimeFromDateObj(range.start);
 		}
 		timeRangeString += ",";
 		if (range.hasOwnProperty("end")) {
-			timeRangeString += getWubloaderTimeFromDateWithMilliseconds(range.end);
+			timeRangeString += wubloaderTimeFromDateObj(range.end);
 		}
 		queryParts.push(`range=${timeRangeString}`);
 	}
@@ -1055,14 +1049,6 @@ function wubloaderTimeFromVideoHumanTime(videoHumanTime) {
 		return null;
 	}
 	return wubloaderTimeFromVideoPlayerTime(videoPlayerTime);
-}
-
-function dateObjFromInputTime(inputTime) {
-	const inputSeconds = parseInputTimeAsNumberOfSeconds(inputTime);
-	if (isNaN(inputSeconds)) {
-		return null;
-	}
-	return new Date(globalBusStartTime.getTime() + 1000 * inputSeconds);
 }
 
 function getPlaylistData() {
