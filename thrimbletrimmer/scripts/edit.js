@@ -17,7 +17,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 
 		const newStartField = document.getElementById("stream-time-setting-start");
-		const newStart = dateObjFromBusTime(newStartField.value);
+		const newStart = dateTimeFromBusTime(newStartField.value);
 		if (!newStart) {
 			addError("Failed to parse start time");
 			return;
@@ -26,7 +26,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		const newEndField = document.getElementById("stream-time-setting-end");
 		let newEnd = null;
 		if (newEndField.value !== "") {
-			newEnd = dateObjFromBusTime(newEndField.value);
+			newEnd = dateTimeFromBusTime(newEndField.value);
 			if (!newEnd) {
 				addError("Failed to parse end time");
 				return;
@@ -34,8 +34,14 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 
 		const oldStart = getStartTime();
-		const startAdjustment = newStart - oldStart;
-		const newDuration = newEnd === null ? Infinity : newEnd - newStart;
+		const startAdjustment = newStart.diff(oldStart, "seconds").seconds;
+		let newDuration = newEnd === null ? Infinity : newEnd.diff(newStart, "seconds").seconds;
+
+		// The video duration isn't precisely the video times, but can be padded by up to the
+		// segment length on either side.
+		// This makes the assumption that all segments have the same length.
+		const segmentLength = getPlaylistData().segments[0].duration;
+		newDuration += segmentLength * 2;
 
 		// Abort for ranges that exceed new times
 		for (const rangeContainer of document.getElementById("range-definitions").children) {
@@ -54,8 +60,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 		}
 
-		globalStartTimeString = wubloaderTimeFromDateObj(newStart);
-		globalEndTimeString = wubloaderTimeFromDateObj(newEnd);
+		globalStartTimeString = wubloaderTimeFromDateTime(newStart);
+		globalEndTimeString = wubloaderTimeFromDateTime(newEnd);
 
 		updateSegmentPlaylist();
 
@@ -98,25 +104,17 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("stream-time-setting-start-pad").addEventListener("click", (_event) => {
 		const startTimeField = document.getElementById("stream-time-setting-start");
 		let startTime = startTimeField.value;
-		startTime = dateObjFromBusTime(startTime);
-		if (isNaN(startTime)) {
-			addError("Couldn't parse entered start time for padding");
-			return;
-		}
-		startTime.setMinutes(startTime.getMinutes() - 1);
-		startTimeField.value = busTimeFromDateObj(startTime);
+		startTime = dateTimeFromBusTime(startTime);
+		startTime = startTime.minus({ minutes: 1 });
+		startTimeField.value = busTimeFromDateTime(startTime);
 	});
 
 	document.getElementById("stream-time-setting-end-pad").addEventListener("click", (_event) => {
 		const endTimeField = document.getElementById("stream-time-setting-end");
 		let endTime = endTimeField.value;
-		endTime = dateObjFromBusTime(endTime);
-		if (isNaN(endTime)) {
-			addError("Couldn't parse entered end time for padding");
-			return;
-		}
-		endTime.setMinutes(endTime.getMinutes() + 1);
-		endTimeField.value = busTimeFromDateObj(endTime);
+		endTime = dateTimeFromBusTime(endTime);
+		endTime = endTime.plus({ minutes: 1 });
+		endTimeField.value = busTimeFromDateTime(endTime);
 	});
 
 	const addRangeIcon = document.getElementById("add-range-definition");
@@ -225,23 +223,23 @@ async function loadVideoInfo() {
 
 async function initializeVideoInfo() {
 	globalStreamName = videoInfo.video_channel;
-	globalBusStartTime = new Date(videoInfo.bustime_start);
+	globalBusStartTime = DateTime.fromISO(videoInfo.bustime_start, { zone: "utc" });
 
-	const eventStartTime = dateObjFromWubloaderTime(videoInfo.event_start);
-	const eventEndTime = videoInfo.event_end ? dateObjFromWubloaderTime(videoInfo.event_end) : null;
+	let eventStartTime = dateTimeFromWubloaderTime(videoInfo.event_start);
+	let eventEndTime = videoInfo.event_end ? dateTimeFromWubloaderTime(videoInfo.event_end) : null;
 
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the start time by one minute
-	eventStartTime.setMinutes(eventStartTime.getMinutes() - 1);
+	eventStartTime = eventStartTime.minus({ minutes: 1 });
 
 	// To account for various things (stream delay, just slightly off logging, etc.), we pad the end time by one minute.
 	// To account for the fact that we don't record seconds, but the event could've ended any time in the recorded minute, we pad by an additional minute.
 	if (eventEndTime) {
-		eventEndTime.setMinutes(eventEndTime.getMinutes() + 2);
+		eventEndTime = eventEndTime.plus({ minutes: 2 });
 	}
 
-	globalStartTimeString = wubloaderTimeFromDateObj(eventStartTime);
+	globalStartTimeString = wubloaderTimeFromDateTime(eventStartTime);
 	if (eventEndTime) {
-		globalEndTimeString = wubloaderTimeFromDateObj(eventEndTime);
+		globalEndTimeString = wubloaderTimeFromDateTime(eventEndTime);
 	} else {
 		document.getElementById("waveform").classList.add("hidden");
 	}
@@ -255,42 +253,42 @@ async function initializeVideoInfo() {
 			let endTime = range[1];
 
 			if (startTime) {
-				startTime = dateObjFromWubloaderTime(startTime);
+				startTime = dateTimeFromWubloaderTime(startTime);
 			} else {
 				startTime = null;
 			}
 
 			if (endTime) {
-				endTime = dateObjFromWubloaderTime(endTime);
+				endTime = dateTimeFromWubloaderTime(endTime);
 			} else {
 				endTime = null;
 			}
 
-			if (!earliestStartTime || (startTime && startTime < earliestStartTime)) {
+			if (!earliestStartTime || (startTime && startTime.diff(earliestStartTime).milliseconds < 0)) {
 				earliestStartTime = startTime;
 			}
-			if (!latestEndTime || (endTime && endTime > latestEndTime)) {
+			if (!latestEndTime || (endTime && endTime.diff(latestEndTime).milliseconds > 0)) {
 				latestEndTime = endTime;
 			}
 		}
 
-		if (earliestStartTime && earliestStartTime < eventStartTime) {
-			earliestStartTime.setMinutes(earliestStartTime.getMinutes() - 1);
-			globalStartTimeString = wubloaderTimeFromDateObj(earliestStartTime);
+		if (earliestStartTime && earliestStartTime.diff(eventStartTime).milliseconds < 0) {
+			earliestStartTime = earliestStartTime.minus({ minutes: 1 });
+			globalStartTimeString = wubloaderTimeFromDateTime(earliestStartTime);
 		}
 
-		if (latestEndTime && latestEndTime > eventEndTime) {
+		if (latestEndTime && latestEndTime.diff(eventEndTime).milliseconds > 0) {
 			// If we're getting the time from a previous draft edit, we have seconds, so one minute is enough
-			latestEndTime.setMinutes(latestEndTime.getMinutes() + 1);
-			globalEndTimeString = wubloaderTimeFromDateObj(latestEndTime);
+			latestEndTime = latestEndTime.plus({ minutes: 1 });
+			globalEndTimeString = wubloaderTimeFromDateTime(latestEndTime);
 		}
 	}
 
 	document.getElementById("stream-time-setting-stream").innerText = globalStreamName;
 	document.getElementById("stream-time-setting-start").value =
-		getBusTimeFromTimeString(globalStartTimeString);
+		busTimeFromWubloaderTime(globalStartTimeString);
 	document.getElementById("stream-time-setting-end").value =
-		getBusTimeFromTimeString(globalEndTimeString);
+		busTimeFromWubloaderTime(globalEndTimeString);
 
 	updateWaveform();
 
@@ -392,13 +390,11 @@ async function initializeVideoInfo() {
 		} else {
 			const rangeStartField =
 				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
-			rangeStartField.value = videoHumanTimeFromVideoPlayerTime(0);
-			const player = getVideoJS();
-			const videoDuration = player.duration();
-			if (isFinite(videoDuration)) {
+			rangeStartField.value = videoHumanTimeFromWubloaderTime(globalStartTimeString);
+			if (globalEndTimeString) {
 				const rangeEndField =
 					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
-				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(videoDuration);
+				rangeEndField.value = videoHumanTimeFromWubloaderTime(globalEndTimeString);
 			}
 		}
 		rangeDataUpdated();
@@ -445,56 +441,14 @@ function getStartTime() {
 	if (!globalStartTimeString) {
 		return null;
 	}
-	return dateObjFromWubloaderTime(globalStartTimeString);
+	return dateTimeFromWubloaderTime(globalStartTimeString);
 }
 
 function getEndTime() {
 	if (!globalEndTimeString) {
 		return null;
 	}
-	return dateObjFromWubloaderTime(globalEndTimeString);
-}
-
-function getBusTimeFromTimeString(timeString) {
-	if (timeString === "") {
-		return "";
-	}
-	const time = dateObjFromWubloaderTime(timeString);
-	return busTimeFromDateObj(time);
-}
-
-function busTimeFromDateObj(time) {
-	const busTimeMilliseconds = time - globalBusStartTime;
-	let remainingBusTimeSeconds = busTimeMilliseconds / 1000;
-
-	let sign = "";
-	if (remainingBusTimeSeconds < 0) {
-		sign = "-";
-		remainingBusTimeSeconds = Math.abs(remainingBusTimeSeconds);
-	}
-
-	const hours = Math.floor(remainingBusTimeSeconds / 3600);
-	remainingBusTimeSeconds %= 3600;
-	let minutes = Math.floor(remainingBusTimeSeconds / 60);
-	let seconds = remainingBusTimeSeconds % 60;
-	let milliseconds = Math.round((seconds % 1) * 1000);
-	seconds = Math.trunc(seconds);
-
-	while (minutes.toString().length < 2) {
-		minutes = `0${minutes}`;
-	}
-	while (seconds.toString().length < 2) {
-		seconds = `0${seconds}`;
-	}
-
-	if (milliseconds > 0) {
-		while (milliseconds.toString().length < 3) {
-			milliseconds = `0${milliseconds}`;
-		}
-		return `${sign}${hours}:${minutes}:${seconds}.${milliseconds}`;
-	}
-
-	return `${sign}${hours}:${minutes}:${seconds}`;
+	return dateTimeFromWubloaderTime(globalEndTimeString);
 }
 
 async function submitVideo() {
@@ -632,11 +586,11 @@ function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
 	for (const range of timeRanges) {
 		let timeRangeString = "";
 		if (range.hasOwnProperty("start")) {
-			timeRangeString += wubloaderTimeFromDateObj(range.start);
+			timeRangeString += range.start;
 		}
 		timeRangeString += ",";
 		if (range.hasOwnProperty("end")) {
-			timeRangeString += wubloaderTimeFromDateObj(range.end);
+			timeRangeString += range.end;
 		}
 		queryParts.push(`range=${timeRangeString}`);
 	}
@@ -954,14 +908,21 @@ function setCurrentRangeEndToVideoTime() {
 
 function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	const videoPlaylist = getPlaylistData();
-	const wubloaderDateObj = dateObjFromWubloaderTime(wubloaderTime);
+	const wubloaderDateTime = dateTimeFromWubloaderTime(wubloaderTime);
 	let highestDiscontinuitySegmentBefore = 0;
 	for (start of videoPlaylist.discontinuityStarts) {
 		const discontinuityStartSegment = videoPlaylist.segments[start];
+		const discontinuityStartDateTime = DateTime.fromJSDate(
+			discontinuityStartSegment.dateTimeObject,
+			{ zone: "utc" }
+		);
+		const highestDiscontinuitySegmentDateTime = DateTime.fromJSDate(
+			videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject,
+			{ zone: "utc" }
+		);
 		if (
-			discontinuityStartSegment.dateTimeObject < wubloaderDateObj &&
-			discontinuityStartSegment.dateTimeObject >
-				videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject
+			discontinuityStartDateTime.diff(wubloaderDateTime).milliseconds < 0 && // Discontinuity starts before the provided time
+			discontinuityStartDateTime.diff(highestDiscontinuitySegmentDateTime).milliseconds > 0 // Discontinuity starts after the latest found discontinuity
 		) {
 			highestDiscontinuitySegmentBefore = start;
 		}
@@ -971,16 +932,17 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	for (let segment = 0; segment < highestDiscontinuitySegmentBefore; segment++) {
 		highestDiscontinuitySegmentStart += videoPlaylist.segments[segment].duration;
 	}
+	const highestDiscontinuitySegmentDateTime = DateTime.fromJSDate(
+		videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject,
+		{ zone: "utc" }
+	);
 	return (
 		highestDiscontinuitySegmentStart +
-		secondsDifference(
-			videoPlaylist.segments[highestDiscontinuitySegmentBefore].dateTimeObject,
-			wubloaderDateObj
-		)
+		wubloaderDateTime.diff(highestDiscontinuitySegmentDateTime, "seconds").seconds
 	);
 }
 
-function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
+function dateTimeFromVideoPlayerTime(videoPlayerTime) {
 	const videoPlaylist = getPlaylistData();
 	let segmentStartTime = 0;
 	let segmentDateObj;
@@ -997,11 +959,14 @@ function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
 	if (segmentDateObj === undefined) {
 		return null;
 	}
-	let wubloaderDateObj = new Date(segmentDateObj);
+	let wubloaderDateTime = DateTime.fromJSDate(segmentDateObj, { zone: "utc" });
 	const offset = videoPlayerTime - segmentStartTime;
-	const offsetMilliseconds = offset * 1000;
-	wubloaderDateObj.setMilliseconds(wubloaderDateObj.getMilliseconds() + offsetMilliseconds);
-	return wubloaderDateObj;
+	return wubloaderDateTime.plus({ seconds: offset });
+}
+
+function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
+	const dt = dateTimeFromVideoPlayerTime(videoPlayerTime);
+	return wubloaderTimeFromDateTime(dt);
 }
 
 function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
@@ -1057,11 +1022,4 @@ function getPlaylistData() {
 	// so this should be fine for now. If we need to support multiple playlists in the future (varying quality levels,
 	// etc.), this and all callers will need to be updated.
 	return player.tech("OK").vhs.playlists.master.playlists[0];
-}
-
-function secondsDifference(date1, date2) {
-	if (date2 > date1) {
-		return (date2 - date1) / 1000;
-	}
-	return (date1 - date2) / 1000;
 }
