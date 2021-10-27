@@ -136,7 +136,7 @@
   sheetsync_creds_file:: "./google_creds.json",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
-  edit_url:: "http://thrimbletrimmer.codegunner.com/?id={}",
+  edit_url:: "http://thrimbletrimmer.codegunner.com/edit.html?id={}",
 
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
