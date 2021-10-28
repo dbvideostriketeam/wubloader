@@ -186,6 +186,7 @@ a,
 .range-definition-start,
 .range-definition-end {
 	width: 100px;
+	text-align: right;
 }
 
 .range-definition-between-time-gap {
