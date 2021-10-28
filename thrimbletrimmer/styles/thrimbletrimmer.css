@@ -150,13 +150,8 @@ a,
 	top: 0;
 }
 
-#editor-help {
-	z-index: 1;
-}
-
 #editor-help-link {
 	float: right;
-	z-index: 5;
 }
 
 #editor-help-box {
@@ -169,6 +164,10 @@ a,
 
 #editor-help-box h2 {
 	margin: 3px 0;
+}
+
+#editor-help-box-close {
+	float: right;
 }
 
 #range-definitions {
