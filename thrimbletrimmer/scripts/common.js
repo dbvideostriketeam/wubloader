@@ -13,6 +13,12 @@ const PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2];
 function commonPageSetup() {
 	const helpLink = document.getElementById("editor-help-link");
 	helpLink.addEventListener("click", toggleHelpDisplay);
+
+	const closeHelp = document.getElementById("editor-help-box-close");
+	closeHelp.addEventListener("click", (_event) => {
+		const helpBox = document.getElementById("editor-help-box");
+		helpBox.classList.add("hidden");
+	});
 }
 
 function toggleHelpDisplay() {
