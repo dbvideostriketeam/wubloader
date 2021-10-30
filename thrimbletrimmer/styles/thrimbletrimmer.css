@@ -204,7 +204,7 @@ a,
 	margin: 5px 0;
 	display: grid;
 	grid-template-columns: 200px 1fr;
-	grid-template-rows: 1fr 1.25em 3em 1.25em;
+	grid-template-rows: minmax(min-content, max-content) 1.25em minmax(4em, max-content) 1.25em;
 	gap: 2px;
 }
 
