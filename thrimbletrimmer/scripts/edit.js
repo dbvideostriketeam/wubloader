@@ -136,6 +136,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	for (const rangeStartPlay of document.getElementsByClassName("range-definition-play-start")) {
 		rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
 	}
+	for (const rangeEndPlay of document.getElementsByClassName("range-definition-play-end")) {
+		rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
+	}
 	for (const rangeStart of document.getElementsByClassName("range-definition-start")) {
 		rangeStart.addEventListener("change", (_event) => {
 			rangeDataUpdated();
@@ -765,6 +768,11 @@ function rangeDefinitionDOM() {
 	rangeEndSet.alt = "Set range end point to current video time";
 	rangeEndSet.classList.add("range-definition-set-end");
 	rangeEndSet.classList.add("click");
+	const rangeEndPlay = document.createElement("img");
+	rangeEndPlay.src = "images/play_to.png";
+	rangeEndPlay.alt = "Play from end point";
+	rangeEndPlay.classList.add("range-definition-play-end");
+	rangeEndPlay.classList.add("click");
 	const removeRange = document.createElement("img");
 	removeRange.alt = "Remove range";
 	removeRange.src = "images/minus.png";
@@ -774,6 +782,7 @@ function rangeDefinitionDOM() {
 	rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
 	rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
 	rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
+	rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
 
 	removeRange.addEventListener("click", (event) => {
 		let rangeContainer = event.currentTarget;
@@ -810,6 +819,7 @@ function rangeDefinitionDOM() {
 	rangeContainer.appendChild(rangeTimeGap);
 	rangeContainer.appendChild(rangeEnd);
 	rangeContainer.appendChild(rangeEndSet);
+	rangeContainer.appendChild(rangeEndPlay);
 	rangeContainer.appendChild(removeRange);
 	rangeContainer.appendChild(currentRangeMarker);
 
@@ -868,6 +878,19 @@ function rangePlayFromStartHandler(event) {
 
 	const player = getVideoJS();
 	player.currentTime(startTime);
+}
+
+function rangePlayFromEndHandler(event) {
+	const playButton = event.currentTarget;
+	const endField = playButton.parentElement.getElementsByClassName("range-definition-end")[0];
+	const endTime = videoPlayerTimeFromVideoHumanTime(endField.value);
+	if (endTime === null) {
+		addError("Couldn't play from range end; failed to parse time");
+		return;
+	}
+
+	const player = getVideoJS();
+	player.currentTime(endTime);
 }
 
 function rangeDataUpdated() {
