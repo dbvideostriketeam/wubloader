@@ -259,13 +259,13 @@ a,
 }
 
 .submission-response-pending {
-	color: #990;
+	color: #cc0;
 }
 
 .submission-response-error {
-	color: #900;
+	color: #c00;
 }
 
 .submission-response-success {
-	color: #060;
+	color: #0c0;
 }
