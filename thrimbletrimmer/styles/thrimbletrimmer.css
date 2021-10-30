@@ -41,14 +41,14 @@ a,
 }
 
 #errors {
-	color: #b00;
+	color: #f33;
 	display: flex;
 	flex-direction: column;
 }
 
 #errors > div {
-	border-bottom: 1px solid #b00;
-	background: #fee;
+	border-bottom: 1px solid #f33;
+	background: #300;
 	padding: 4px;
 }
 
