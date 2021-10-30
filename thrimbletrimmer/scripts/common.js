@@ -72,9 +72,23 @@ async function loadVideoPlayer(playlistURL) {
 	};
 
 	const player = videojs("video", defaultOptions);
-	return new Promise((resolve, reject) => {
+	return new Promise((resolve, _reject) => {
 		player.ready(() => {
-			player.volume(0.5); // Initialize to half volume
+			const volume = +(localStorage.getItem("volume") ?? 0.5);
+			if (isNaN(volume)) {
+				volume = 0.5;
+			} else if (volume < 0) {
+				volume = 0;
+			} else if (volume > 1) {
+				volume = 1;
+			}
+			player.volume(volume);
+
+			player.on("volumechange", () => {
+				const player = getVideoJS();
+				const volume = player.volume();
+				localStorage.setItem("volume", volume);
+			});
 			resolve();
 		});
 	});
