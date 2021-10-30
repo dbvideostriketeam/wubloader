@@ -40,6 +40,14 @@ a,
 	cursor: pointer;
 }
 
+.input-error {
+	border-color: #b00;
+}
+
+.input-error:focus {
+	outline: #d00 solid 1px;
+}
+
 #errors {
 	color: #f33;
 	display: flex;

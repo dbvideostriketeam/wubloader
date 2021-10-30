@@ -150,6 +150,36 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		});
 	}
 
+	document.getElementById("video-info-title").addEventListener("input", (_event) => {
+		const videoTitleField = document.getElementById("video-info-title");
+		const videoTitle = videoTitleField.value;
+		if (videoTitle.length > videoInfo.title_max_length) {
+			videoTitleField.classList.add("input-error");
+			videoTitleField.title = "Title is too long";
+		} else if (videoTitle.indexOf("<") !== -1 || videoTitle.indexOf(">") !== -1) {
+			videoTitleField.classList.add("input-error");
+			videoTitleField.title = "Title contains invalid characters";
+		} else {
+			videoTitleField.classList.remove("input-error");
+			videoTitleField.title = "";
+		}
+	});
+
+	document.getElementById("video-info-description").addEventListener("input", (_event) => {
+		const videoDescField = document.getElementById("video-info-description");
+		const videoDesc = videoDescField.value;
+		if (videoDesc.length > 5000) {
+			videoDescField.classList.add("input-error");
+			videoDescField.title = "Description is too long";
+		} else if (videoDesc.indexOf("<") !== -1 || videoDesc.indexOf(">") !== -1) {
+			videoDescField.classList.add("input-error");
+			videoDescField.title = "Description contains invalid characters";
+		} else {
+			videoDescField.classList.remove("input-error");
+			videoDescField.title = "";
+		}
+	});
+
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
 		submitVideo();
 	});
