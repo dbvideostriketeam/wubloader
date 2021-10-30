@@ -540,7 +540,7 @@ async function sendVideoData(edited, overrideChanges) {
 		editData.token = googleUser.getAuthResponse().id_token;
 	}
 	if (overrideChanges) {
-		editData.overrideChanges = true;
+		editData.override_changes = true;
 	}
 
 	const submitResponse = await fetch(`/thrimshim/${videoInfo.id}`, {
@@ -564,7 +564,7 @@ async function sendVideoData(edited, overrideChanges) {
 		if (submitResponse.status === 409) {
 			const serverErrorNode = document.createTextNode(await submitResponse.text());
 			const submitButton = document.createElement("button");
-			submitButton.text = "Submit Anyway";
+			submitButton.innerText = "Submit Anyway";
 			submitButton.addEventListener("click", (_event) => {
 				sendVideoData(edited, true);
 			});
