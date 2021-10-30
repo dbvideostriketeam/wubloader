@@ -555,7 +555,18 @@ async function sendVideoData(edited, overrideChanges) {
 	if (submitResponse.ok) {
 		submissionResponseElem.classList.value = ["submission-response-success"];
 		if (edited) {
-			submissionResponseElem.innerText = `Submitted edit from ${videoStart} to ${videoEnd}`;
+			submissionResponseElem.innerText = "Submitted edit";
+			const submissionTimesListContainer = document.createElement("ul");
+			for (const range of rangesData) {
+				const submissionTimeResponse = document.createElement("li");
+				const rangeStartWubloader = range.start;
+				const rangeStartVideoHuman = videoHumanTimeFromWubloaderTime(rangeStartWubloader);
+				const rangeEndWubloader = range.end;
+				const rangeEndVideoHuman = videoHumanTimeFromWubloaderTime(rangeEndWubloader);
+				submissionTimeResponse.innerText = `from ${rangeStartVideoHuman} (${rangeStartWubloader}) to ${rangeEndVideoHuman} (${rangeEndWubloader})`;
+				submissionTimesListContainer.appendChild(submissionTimeResponse);
+			}
+			submissionResponseElem.appendChild(submissionTimesListContainer);
 		} else {
 			submissionResponseElem.innerText = "Saved draft";
 		}
