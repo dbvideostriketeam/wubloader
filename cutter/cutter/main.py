@@ -325,24 +325,6 @@ class Cutter(object):
 		upload_backend = self.upload_locations[job.upload_location]
 		self.logger.info("Cutting and uploading job {} to {}".format(format_job(job), upload_backend))
 
-		if upload_backend.encoding_settings is None:
-			self.logger.debug("No encoding settings, using fast cut")
-			if any(transition is not None for transition in job.video_transitions):
-				raise ValueError("Fast cuts do not support complex transitions")
-			cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
-		else:
-			self.logger.debug("Using encoding settings for {} cut: {}".format(
-				"streamable" if upload_backend.encoding_streamable else "non-streamable",
-				upload_backend.encoding_settings,
-			))
-			if len(job.video_ranges) > 1:
-				raise ValueError("Full cuts do not support multiple ranges")
-			range = job.video_ranges[0]
-			cut = full_cut_segments(
-				job.segment_ranges[0], range.start, range.end,
-				upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
-			)
-
 		# This flag tracks whether we've told requests to finalize the upload,
 		# and serves to detect whether errors from the request call are recoverable.
 		finalize_begun = False
@@ -389,6 +371,24 @@ class Cutter(object):
 			nonlocal finalize_begun
 
 			try:
+				if upload_backend.encoding_settings is None:
+					self.logger.debug("No encoding settings, using fast cut")
+					if any(transition is not None for transition in job.video_transitions):
+						raise ValueError("Fast cuts do not support complex transitions")
+					cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
+				else:
+					self.logger.debug("Using encoding settings for {} cut: {}".format(
+						"streamable" if upload_backend.encoding_streamable else "non-streamable",
+						upload_backend.encoding_settings,
+					))
+					if len(job.video_ranges) > 1:
+						raise ValueError("Full cuts do not support multiple ranges")
+					range = job.video_ranges[0]
+					cut = full_cut_segments(
+						job.segment_ranges[0], range.start, range.end,
+						upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
+					)
+
 				for chunk in cut:
 					yield chunk
 			except Exception as ex:
