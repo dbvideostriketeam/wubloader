@@ -278,3 +278,8 @@ a,
 .submission-response-success {
 	color: #0c0;
 }
+
+.time-converter-time {
+	display: block;
+	width: 200px;
+}
