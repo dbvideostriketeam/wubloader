@@ -151,33 +151,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	}
 
 	document.getElementById("video-info-title").addEventListener("input", (_event) => {
-		const videoTitleField = document.getElementById("video-info-title");
-		const videoTitle = videoTitleField.value;
-		if (videoTitle.length > videoInfo.title_max_length) {
-			videoTitleField.classList.add("input-error");
-			videoTitleField.title = "Title is too long";
-		} else if (videoTitle.indexOf("<") !== -1 || videoTitle.indexOf(">") !== -1) {
-			videoTitleField.classList.add("input-error");
-			videoTitleField.title = "Title contains invalid characters";
-		} else {
-			videoTitleField.classList.remove("input-error");
-			videoTitleField.title = "";
-		}
+		validateVideoTitle();
 	});
-
 	document.getElementById("video-info-description").addEventListener("input", (_event) => {
-		const videoDescField = document.getElementById("video-info-description");
-		const videoDesc = videoDescField.value;
-		if (videoDesc.length > 5000) {
-			videoDescField.classList.add("input-error");
-			videoDescField.title = "Description is too long";
-		} else if (videoDesc.indexOf("<") !== -1 || videoDesc.indexOf(">") !== -1) {
-			videoDescField.classList.add("input-error");
-			videoDescField.title = "Description contains invalid characters";
-		} else {
-			videoDescField.classList.remove("input-error");
-			videoDescField.title = "";
-		}
+		validateVideoDescription();
 	});
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
@@ -334,6 +311,7 @@ async function initializeVideoInfo() {
 	} else {
 		titleElem.value = videoInfo.description;
 	}
+	validateVideoTitle();
 
 	const descriptionElem = document.getElementById("video-info-description");
 	if (videoInfo.video_description) {
@@ -341,6 +319,7 @@ async function initializeVideoInfo() {
 	} else {
 		descriptionElem.value = videoInfo.description;
 	}
+	validateVideoDescription();
 
 	const tagsElem = document.getElementById("video-info-tags");
 	if (videoInfo.video_tags) {
@@ -482,6 +461,36 @@ function getEndTime() {
 		return null;
 	}
 	return dateTimeFromWubloaderTime(globalEndTimeString);
+}
+
+function validateVideoTitle() {
+	const videoTitleField = document.getElementById("video-info-title");
+	const videoTitle = videoTitleField.value;
+	if (videoTitle.length > videoInfo.title_max_length) {
+		videoTitleField.classList.add("input-error");
+		videoTitleField.title = "Title is too long";
+	} else if (videoTitle.indexOf("<") !== -1 || videoTitle.indexOf(">") !== -1) {
+		videoTitleField.classList.add("input-error");
+		videoTitleField.title = "Title contains invalid characters";
+	} else {
+		videoTitleField.classList.remove("input-error");
+		videoTitleField.title = "";
+	}
+}
+
+function validateVideoDescription() {
+	const videoDescField = document.getElementById("video-info-description");
+	const videoDesc = videoDescField.value;
+	if (videoDesc.length > 5000) {
+		videoDescField.classList.add("input-error");
+		videoDescField.title = "Description is too long";
+	} else if (videoDesc.indexOf("<") !== -1 || videoDesc.indexOf(">") !== -1) {
+		videoDescField.classList.add("input-error");
+		videoDescField.title = "Description contains invalid characters";
+	} else {
+		videoDescField.classList.remove("input-error");
+		videoDescField.title = "";
+	}
 }
 
 async function submitVideo() {
