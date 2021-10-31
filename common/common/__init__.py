@@ -2,8 +2,12 @@
 """A place for common utilities between wubloader components"""
 import datetime
 import errno
+import logging
 import os
 import random
+from signal import SIGTERM
+
+import gevent.event
 
 from .segments import get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, parse_segment_path, SegmentInfo
 from .stats import timed, PromLogCountsHandler, install_stacksampler
@@ -122,3 +126,27 @@ def writeall(write, value):
 			raise Exception("Wrote 0 chars while calling {} with {}-char {}".format(write, len(value), type(value).__name__))
 		# remove the first n chars and go again if we have anything left
 		value = value[n:]
+
+
+def serve_with_graceful_shutdown(server, stop_timeout=20):
+	"""Takes a gevent.WSGIServer and serves forever until SIGTERM is received,
+	or the server errors. This is slightly tricky to do due to race conditions
+	between server.stop() and server.start().
+	In particular if start() is called after stop(), then the server will not be stopped.
+	To be safe, we must set up our own flag indicating we should stop, and ensure that
+	start() has fully completed before we call stop().
+	"""
+	stopping = gevent.event.Event()
+	def stop():
+		logging.debug("Stop flag set")
+		stopping.set()
+	gevent.signal_handler(SIGTERM, stop)
+
+	logging.info("Starting up")
+	server.start()
+	logging.debug("Started")
+
+	stopping.wait()
+	logging.info("Shutting down")
+	server.stop(stop_timeout)
+	logging.info("Gracefully shut down")
