@@ -81,5 +81,38 @@
 			</div>
 		</div>
 		<a href="#" id="download">Download Video</a>
+		<a href="#" id="time-converter-link">Convert Times</a>
+		<form id="time-converter" class="hidden">
+			<h2>Time Converter</h2>
+			<div id="time-converter-time-container">
+				<input class="time-converter-time" type="text" placeholder="Time to convert" />
+			</div>
+			<img
+				src="images/plus.png"
+				id="time-converter-add-time"
+				tooltip="Add time conversion field"
+				class="click"
+				tabindex="0"
+			/>
+			<div>
+				From:
+				<input name="time-converter-from" id="time-converter-from-utc" type="radio" value="1" />
+				<label for="time-converter-from-utc">UTC</label>
+				<input name="time-converter-from" id="time-converter-from-bus" type="radio" value="2" />
+				<label for="time-converter-from-bus">Bus Time</label>
+				<input name="time-converter-from" id="time-converter-from-ago" type="radio" value="3" />
+				<label for="time-converter-from-ago">Time Ago</label>
+			</div>
+			<div>
+				To:
+				<input name="time-converter-to" id="time-converter-to-utc" type="radio" value="1" />
+				<label for="time-converter-to-utc">UTC</label>
+				<input name="time-converter-to" id="time-converter-to-bus" type="radio" value="2" />
+				<label for="time-converter-to-bus">Bus Time</label>
+				<input name="time-converter-to" id="time-converter-to-ago" type="radio" value="3" />
+				<label for="time-converter-to-ago">Time Ago</label>
+			</div>
+			<button type="submit">Convert Times</button>
+		</form>
 	</body>
 </html>

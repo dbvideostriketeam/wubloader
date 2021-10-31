@@ -110,7 +110,7 @@ function updateVideoPlayer(newPlaylistURL) {
 	player.src({ src: rangedPlaylistURL });
 }
 
-function parseHumanTimeStringAsDateTimeMathObject(inputTime) {
+function parseHumanTimeStringAsDateTime(inputTime) {
 	// We need to handle inputs like "-0:10:15" in a way that consistently makes the time negative.
 	// Since we can't assign the negative sign to any particular part, we'll check for the whole thing here.
 	let direction = 1;
@@ -127,7 +127,7 @@ function parseHumanTimeStringAsDateTimeMathObject(inputTime) {
 }
 
 function dateTimeFromBusTime(busTime) {
-	return globalBusStartTime.plus(parseHumanTimeStringAsDateTimeMathObject(busTime));
+	return globalBusStartTime.plus(parseHumanTimeStringAsDateTime(busTime));
 }
 
 function busTimeFromDateTime(dateTime) {
