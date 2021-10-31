@@ -5,7 +5,6 @@ import functools
 import json
 import logging
 import os
-import signal
 import subprocess
 from uuid import uuid4
 
@@ -15,7 +14,7 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler
+from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
 from common.segments import feed_input, render_segments_waveform
 
@@ -432,17 +431,10 @@ def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
 	app.static_folder = base_dir
 	server = WSGIServer((host, port), cors(app))
 
-	def stop():
-		logging.info("Shutting down")
-		server.stop()
-	gevent.signal_handler(signal.SIGTERM, stop)
-
 	PromLogCountsHandler.install()
 	install_stacksampler()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
-	logging.info("Starting up")
-	server.serve_forever()
-	logging.info("Gracefully shut down")
+	serve_with_graceful_shutdown(server)

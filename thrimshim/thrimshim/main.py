@@ -420,19 +420,6 @@ def main(
 	app.title_header = "" if title_header is None else "{} - ".format(title_header)
 	app.description_footer = "" if description_footer is None else "\n\n{}".format(description_footer)
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
-
-	stopping = gevent.event.Event()
-	def stop():
-		logging.info("Shutting down")
-		stopping.set()
-		# handle when the server is running
-		if hasattr(server, 'socket'):
-			server.stop()
-		# and when not
-		else:
-			sys.exit()
-	gevent.signal_handler(signal.SIGTERM, stop)
-
 	app.db_manager = database.DBManager(dsn=connection_string)
 
 	common.PromLogCountsHandler.install()
@@ -441,8 +428,7 @@ def main(
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
 
-	logging.info('Starting up')
 	if app.no_authentication:
 		logging.warning('Not authenticating POST requests')
-	server.serve_forever()
-	logging.info("Gracefully shut down")
+
+	common.serve_with_graceful_shutdown(server)
