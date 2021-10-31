@@ -1,6 +1,7 @@
 var googleUser = null;
 var videoInfo;
 var currentRange = 1;
+var globalLoadedRangeData = false;
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
@@ -39,9 +40,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 		// The video duration isn't precisely the video times, but can be padded by up to the
 		// segment length on either side.
-		// This makes the assumption that all segments have the same length.
-		const segmentLength = getPlaylistData().segments[0].duration;
-		newDuration += segmentLength * 2;
+		const segmentList = getPlaylistData().segments;
+		newDuration += segmentList[0].duration;
+		newDuration += segmentList[segmentList.length - 1].duration;
 
 		// Abort for ranges that exceed new times
 		for (const rangeContainer of document.getElementById("range-definitions").children) {
@@ -74,14 +75,14 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			if (rangeStart === null) {
 				rangeErrorCount++;
 			} else {
-				rangeStartField.value = videoHumanTimeFromVideoPlayerTime(startAdjustment + rangeStart);
+				rangeStartField.value = videoHumanTimeFromVideoPlayerTime(rangeStart - startAdjustment);
 			}
 
 			const rangeEnd = videoPlayerTimeFromVideoHumanTime(rangeEndField.value);
 			if (rangeEnd === null) {
 				rangeErrorCount++;
 			} else {
-				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(startAdjustment + rangeEnd);
+				rangeEndField.value = videoHumanTimeFromVideoPlayerTime(rangeEnd - startAdjustment);
 			}
 		}
 		if (rangeErrorCount > 0) {
@@ -89,6 +90,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				"Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values."
 			);
 		}
+		rangeDataUpdated();
 
 		const waveformImage = document.getElementById("waveform");
 		if (newEnd === null) {
@@ -376,40 +378,43 @@ async function initializeVideoInfo() {
 
 	const player = getVideoJS();
 	player.on("loadedmetadata", () => {
-		const rangeDefinitionsContainer = document.getElementById("range-definitions");
-		if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
-			for (let rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
-				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
-					addRangeDefinition();
+		if (!globalLoadedRangeData) {
+			const rangeDefinitionsContainer = document.getElementById("range-definitions");
+			if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
+				for (let rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
+					if (rangeIndex >= rangeDefinitionsContainer.children.length) {
+						addRangeDefinition();
+					}
+					const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
+					const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
+					if (startWubloaderTime) {
+						const startField =
+							rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
+								"range-definition-start"
+							)[0];
+						startField.value = videoHumanTimeFromWubloaderTime(startWubloaderTime);
+					}
+					if (endWubloaderTime) {
+						const endField =
+							rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
+								"range-definition-end"
+							)[0];
+						endField.value = videoHumanTimeFromWubloaderTime(endWubloaderTime);
+					}
 				}
-				const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
-				const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
-				if (startWubloaderTime) {
-					const startField =
-						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
-							"range-definition-start"
-						)[0];
-					startField.value = videoHumanTimeFromWubloaderTime(startWubloaderTime);
-				}
-				if (endWubloaderTime) {
-					const endField =
-						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
-							"range-definition-end"
-						)[0];
-					endField.value = videoHumanTimeFromWubloaderTime(endWubloaderTime);
+			} else {
+				const rangeStartField =
+					rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
+				rangeStartField.value = videoHumanTimeFromWubloaderTime(globalStartTimeString);
+				if (globalEndTimeString) {
+					const rangeEndField =
+						rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
+					rangeEndField.value = videoHumanTimeFromWubloaderTime(globalEndTimeString);
 				}
 			}
-		} else {
-			const rangeStartField =
-				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
-			rangeStartField.value = videoHumanTimeFromWubloaderTime(globalStartTimeString);
-			if (globalEndTimeString) {
-				const rangeEndField =
-					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
-				rangeEndField.value = videoHumanTimeFromWubloaderTime(globalEndTimeString);
-			}
+			rangeDataUpdated();
+			globalLoadedRangeData = true;
 		}
-		rangeDataUpdated();
 	});
 	player.on("timeupdate", () => {
 		const player = getVideoJS();
