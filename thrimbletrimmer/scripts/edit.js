@@ -412,9 +412,12 @@ async function initializeVideoInfo() {
 					rangeEndField.value = videoHumanTimeFromWubloaderTime(globalEndTimeString);
 				}
 			}
-			rangeDataUpdated();
 			globalLoadedRangeData = true;
 		}
+		// Although we may or may not have updated the range data here, this is where we know the new video duration.
+		// Because of this, we need to run this to properly update range-dependent things like the clip bar UI,
+		// which require a location.
+		rangeDataUpdated();
 	});
 	player.on("timeupdate", () => {
 		const player = getVideoJS();
