@@ -46,7 +46,7 @@
     // NFS settings for RWX (ReadWriteMany) volume for wubloader pods
     nfs_server: "nfs.example.com",            # server IP or hostname
     nfs_path: "/mnt/wubloader",               # path on server to mount
-    nfs_capacity: "2TiB",                     # storage capacity to report to k8s
+    nfs_capacity: "2T",                       # storage capacity to report to k8s
 
     // PVC template storage class for statefulsets
     sts_storage_class_name: "longhorn",
