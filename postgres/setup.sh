@@ -106,6 +106,13 @@ CREATE TABLE editors (
 	email TEXT PRIMARY KEY,
 	name TEXT NOT NULL
 );
+
+-- Playlists are communicated to playlist manager via this table.
+-- Sheetsync will wipe and re-populate this table periodically to match what is in the sheet
+CREATE TABLE playlists (
+	tags TEXT[] NOT NULL,
+	playlist_id TEXT PRIMARY KEY,
+);
 EOSQL
 
 if [ -a /mnt/wubloader/nodes.csv ]; then
