@@ -20,7 +20,7 @@ class PlaylistManager(object):
 		self.dbmanager = dbmanager
 		self.api = YoutubeAPI(api_client)
 		self.upload_locations = upload_locations
-		self.playlist_tags = playlist_tags
+		self.static_playlist_tags = playlist_tags
 		self.reset()
 
 	def reset(self, playlist=None):
@@ -53,9 +53,13 @@ class PlaylistManager(object):
 		videos = self.get_videos()
 		logging.debug("Found {} eligible videos".format(len(videos)))
 
+		logging.info("Getting dynamic playlists")
+		playlist_tags = self.get_playlist_tags()
+		logging.debug("Found {} playlists".format(len(playlist_tags)))
+
 		# start all workers
 		workers = {}
-		for playlist, tags in self.playlist_tags.items():
+		for playlist, tags in playlist_tags.items():
 			workers[playlist] = gevent.spawn(self.update_playlist, playlist, tags, videos)
 
 		# check each one for success, reset on failure
@@ -78,6 +82,19 @@ class PlaylistManager(object):
 		""", self.upload_locations)
 		self.dbmanager.put_conn(conn)
 		return {video.video_id: video for video in videos}
+
+	def get_playlist_tags(self):
+		conn = self.dbmanager.get_conn()
+		playlist_tags = {
+			row.playlist_id: [tag.lower() for tag in row.tags]
+			for row in query(conn, "SELECT playlist_id, tags FROM playlists")
+		}
+		self.dbmanager.put_conn(conn)
+		duplicates = set(playlist_tags) & set(self.static_playlist_tags)
+		if duplicates:
+			raise ValueError("Some playlists are listed in both static and dynamic playlist sources: {}".format(", ".join(duplicates)))
+		playlist_tags.update(self.static_playlist_tags)
+		return playlist_tags
 
 	def update_playlist(self, playlist, tags, videos):
 		# Filter the video list for videos with matching tags
@@ -255,7 +272,8 @@ def parse_playlist_arg(arg):
 	"Events will be added to the playlist if that event has all the tags. For example, "
 	"some_playlist_id=Day 1,Technical would populate that playlist with all Technical events "
 	"from Day 1. Note that having no tags (ie. 'id=') is allowed and all events will be added to it. "
-	"Note playlist ids must be unique (can't specify the same one twice)."
+	"Note playlist ids must be unique (can't specify the same one twice). "
+	"These playlists will be added to ones listed in the database."
 )
 def main(
 	dbconnect,
