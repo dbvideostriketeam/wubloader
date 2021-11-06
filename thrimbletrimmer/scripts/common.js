@@ -1,7 +1,8 @@
 var DateTime = luxon.DateTime;
 var Interval = luxon.Interval;
+luxon.Settings.defaultZone = "utc";
 
-var globalBusStartTime = DateTime.fromISO("1970-01-01T00:00:00", { zone: "utc" });
+var globalBusStartTime = DateTime.fromISO("1970-01-01T00:00:00");
 var globalStreamName = "";
 var globalStartTimeString = "";
 var globalEndTimeString = "";
@@ -131,7 +132,7 @@ function formatIntervalForDisplay(interval) {
 }
 
 function dateTimeFromWubloaderTime(wubloaderTime) {
-	return DateTime.fromISO(wubloaderTime, { zone: "utc" });
+	return DateTime.fromISO(wubloaderTime);
 }
 
 function wubloaderTimeFromDateTime(dateTime) {

@@ -234,7 +234,7 @@ async function loadVideoInfo() {
 
 async function initializeVideoInfo() {
 	globalStreamName = videoInfo.video_channel;
-	globalBusStartTime = DateTime.fromISO(videoInfo.bustime_start, { zone: "utc" });
+	globalBusStartTime = DateTime.fromISO(videoInfo.bustime_start);
 
 	let eventStartTime = dateTimeFromWubloaderTime(videoInfo.event_start);
 	let eventEndTime = videoInfo.event_end ? dateTimeFromWubloaderTime(videoInfo.event_end) : null;
@@ -1011,7 +1011,7 @@ function dateTimeFromVideoPlayerTime(videoPlayerTime) {
 	if (segmentStartISOTime === undefined) {
 		return null;
 	}
-	const wubloaderDateTime = DateTime.fromISO(segmentStartISOTime, { zone: "utc" });
+	const wubloaderDateTime = DateTime.fromISO(segmentStartISOTime);
 	const offset = videoPlayerTime - segmentStartTime;
 	return wubloaderDateTime.plus({ seconds: offset });
 }

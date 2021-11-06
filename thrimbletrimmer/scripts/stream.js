@@ -53,7 +53,7 @@ async function loadDefaults() {
 	const streamNameField = document.getElementById("stream-time-setting-stream");
 	streamNameField.value = defaultData.video_channel;
 
-	globalBusStartTime = DateTime.fromISO(defaultData.bustime_start, { zone: "utc" });
+	globalBusStartTime = DateTime.fromISO(defaultData.bustime_start);
 }
 
 // Gets the start time of the video from settings. Returns an invalid date object if the user entered bad data.
