@@ -410,9 +410,10 @@ async function initializeVideoInfo() {
 				rangeEndField.value = videoHumanTimeFromWubloaderTime(globalEndTimeString);
 			}
 		}
-		videoElement.removeEventListener("durationchange", handleInitialSetupForDuration);
+		rangeDataUpdated();
+		videoElement.removeEventListener("loadedmetadata", handleInitialSetupForDuration);
 	};
-	videoElement.addEventListener("durationchange", handleInitialSetupForDuration);
+	videoElement.addEventListener("loadedmetadata", handleInitialSetupForDuration);
 	videoElement.addEventListener("durationchange", (_event) => {
 		// Every time this is updated, we need to update based on the new video duration
 		rangeDataUpdated();
@@ -986,12 +987,26 @@ function setCurrentRangeEndToVideoTime() {
 function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	const wubloaderDateTime = dateTimeFromWubloaderTime(wubloaderTime);
 	const segmentList = getSegmentList();
-	for (const segment of segmentList) {
-		const segmentStart = DateTime.fromISO(segment.rawProgramDateTime, { zone: "utc" });
-		const segmentEnd = segmentStart.plus({ seconds: segment.duration });
-		if (segmentStart <= wubloaderDateTime && segmentEnd > wubloaderDateTime) {
-			return segment.start + wubloaderDateTime.diff(segmentStart).as("seconds");
+	for (let segmentIndex = 0; segmentIndex < segmentList.length - 1; segmentIndex++) {
+		const thisSegment = segmentList[segmentIndex];
+		const nextSegment = segmentList[segmentIndex + 1];
+		const segmentStartTime = DateTime.fromISO(thisSegment.rawProgramDateTime);
+		const nextSegmentStartTime = DateTime.fromISO(nextSegment.rawProgramDateTime);
+		if (segmentStartTime <= wubloaderDateTime && nextSegmentStartTime > wubloaderDateTime) {
+			let offset = wubloaderDateTime.diff(segmentStartTime).as("seconds");
+			// If there's a hole in the video and this wubloader time is in the hole, this will end up
+			// at a random point. We can fix that by capping the offset at the segment duration.
+			if (offset > thisSegment.duration) {
+				offset = thisSegment.duration;
+			}
+			return thisSegment.start + offset;
 		}
+	}
+	const lastSegment = segmentList[segmentList.length - 1];
+	const lastSegmentStartTime = DateTime.fromISO(lastSegment.rawProgramDateTime);
+	const lastSegmentEndTime = lastSegmentStartTime.plus({ seconds: lastSegment.duration });
+	if (lastSegmentStartTime <= wubloaderDateTime && wubloaderDateTime <= lastSegmentEndTime) {
+		return segment.start + wubloaderDateTime.diff(lastSegmentStartTime).as("seconds");
 	}
 	return null;
 }
