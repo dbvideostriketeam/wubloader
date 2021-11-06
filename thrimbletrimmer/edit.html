@@ -5,9 +5,8 @@
 		<title>VST Video Editor</title>
 
 		<link rel="stylesheet" href="styles/thrimbletrimmer.css" />
-		<link rel="stylesheet" href="styles/video-js.min.css" />
 
-		<script src="scripts/video.min.js"></script>
+		<script src="scripts/hls.min.js"></script>
 		<script src="scripts/luxon.min.js"></script>
 		<script src="scripts/common.js"></script>
 		<script src="scripts/edit.js"></script>
@@ -41,7 +40,7 @@
 			</div>
 		</form>
 
-		<video id="video" class="video-js" controls preload="auto"></video>
+		<video id="video" controls preload="auto"></video>
 		<div id="clip-bar"></div>
 		<div id="waveform-container">
 			<img id="waveform" alt="Waveform for the video" />

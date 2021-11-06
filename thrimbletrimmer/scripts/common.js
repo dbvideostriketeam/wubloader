@@ -6,11 +6,21 @@ var globalStreamName = "";
 var globalStartTimeString = "";
 var globalEndTimeString = "";
 
+var globalPlayer = null;
+
+Hls.DefaultConfig.maxBufferHole = 600;
+
 const VIDEO_FRAMES_PER_SECOND = 30;
 
-const PLAYBACK_RATES = [0.5, 1, 1.25, 1.5, 2];
+const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 function commonPageSetup() {
+	if (!Hls.isSupported()) {
+		addError(
+			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work."
+		);
+	}
+
 	const helpLink = document.getElementById("editor-help-link");
 	helpLink.addEventListener("click", toggleHelpDisplay);
 
@@ -32,10 +42,6 @@ function toggleHelpDisplay() {
 	}
 }
 
-function getVideoJS() {
-	return videojs.getPlayer("video");
-}
-
 function addError(errorText) {
 	const errorElement = document.createElement("div");
 	errorElement.innerText = errorText;
@@ -55,40 +61,27 @@ function addError(errorText) {
 
 async function loadVideoPlayer(playlistURL) {
 	let rangedPlaylistURL = assembleVideoPlaylistURL(playlistURL);
+	const videoElement = document.getElementById("video");
 
-	let defaultOptions = {
-		sources: [{ src: rangedPlaylistURL }],
-		liveui: true,
-		controls: true,
-		autoplay: false,
-		playbackRates: PLAYBACK_RATES,
-		inactivityTimeout: 0,
-		controlBar: {
-			fullscreenToggle: true,
-			volumePanel: {
-				inline: false,
-			},
-		},
-	};
+	const volume = +(localStorage.getItem("volume") ?? 0.5);
+	if (isNaN(volume)) {
+		volume = 0.5;
+	} else if (volume < 0) {
+		volume = 0;
+	} else if (volume > 1) {
+		volume = 1;
+	}
+	videoElement.volume = volume;
+	videoElement.addEventListener("volumechange", (_event) => {
+		const newVolume = videoElement.volume;
+		localStorage.setItem("volume", newVolume);
+	});
 
-	const player = videojs("video", defaultOptions);
+	globalPlayer = new Hls();
+	globalPlayer.attachMedia(video);
 	return new Promise((resolve, _reject) => {
-		player.ready(() => {
-			const volume = +(localStorage.getItem("volume") ?? 0.5);
-			if (isNaN(volume)) {
-				volume = 0.5;
-			} else if (volume < 0) {
-				volume = 0;
-			} else if (volume > 1) {
-				volume = 1;
-			}
-			player.volume(volume);
-
-			player.on("volumechange", () => {
-				const player = getVideoJS();
-				const volume = player.volume();
-				localStorage.setItem("volume", volume);
-			});
+		globalPlayer.on(Hls.Events.MEDIA_ATTACHED, () => {
+			globalPlayer.loadSource(rangedPlaylistURL);
 			resolve();
 		});
 	});
@@ -100,14 +93,8 @@ async function loadVideoPlayerFromDefaultPlaylist() {
 }
 
 function updateSegmentPlaylist() {
-	const playlistURL = `/playlist/${globalStreamName}.m3u8`;
-	updateVideoPlayer(playlistURL);
-}
-
-function updateVideoPlayer(newPlaylistURL) {
-	let rangedPlaylistURL = assembleVideoPlaylistURL(newPlaylistURL);
-	const player = getVideoJS();
-	player.src({ src: rangedPlaylistURL });
+	globalPlayer.destroy();
+	loadVideoPlayerFromDefaultPlaylist();
 }
 
 function parseHumanTimeStringAsDateTime(inputTime) {

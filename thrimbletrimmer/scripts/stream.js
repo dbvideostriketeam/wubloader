@@ -93,7 +93,7 @@ function updateTimeSettings() {
 
 	const startTime = getStartTime();
 	const endTime = getEndTime();
-	if (endTime && endTime.diff(startTime) < 0) {
+	if (endTime && endTime.diff(startTime).milliseconds < 0) {
 		addError(
 			"End time is before the start time. This will prevent video loading and cause other problems."
 		);
