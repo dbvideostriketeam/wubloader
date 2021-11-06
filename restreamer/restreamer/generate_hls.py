@@ -14,7 +14,7 @@ def generate_master(playlists):
 		lines += [
 			# We name each variant with a VIDEO rendition with no url
 			'#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="{name}",NAME="{name}",AUTOSELECT=YES,DEFAULT=YES'.format(name=name),
-			'#EXT-X-STREAM-INF:VIDEO="{name}"'.format(name=name),
+			'#EXT-X-STREAM-INF:VIDEO="{name}",NAME="{name}"'.format(name=name),
 			url,
 		]
 	return "\n".join(lines) + '\n'
