@@ -10,6 +10,7 @@ var globalEndTimeString = "";
 var globalPlayer = null;
 
 Hls.DefaultConfig.maxBufferHole = 600;
+Hls.DefaultConfig.debug = true;
 
 const VIDEO_FRAMES_PER_SECOND = 30;
 
