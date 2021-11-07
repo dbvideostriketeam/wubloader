@@ -44,19 +44,21 @@ def main(channel, database="", base_dir=".",
     logging.debug("Got database cursor.")
 
     logging.info("Figuring out starting time...")
-    if start_time is not None:
+    db_start_time = get_end_of_transcript(db_cursor)
+
+    # Database start time takes priority
+    if db_start_time is not None:
+        start_time = db_start_time
+    elif start_time is not None:
         start_time = dateutil.parse(start_time)
     else:
-        start_time = get_end_of_transcript(db_cursor)
-
-    if end_time is not None:
-        end_time = dateutil.parse(end_time)
-
-    # No start time argument AND no end of transcript (empty database)
-    if start_time is None:
+        # No start time argument AND no end of transcript (empty database)
         logging.error("Couldn't figure out start time!")
         db_conn.close()
         exit(1)
+
+    if end_time is not None:
+        end_time = dateutil.parse(end_time)
 
     logging.info("Loading models...")
     recognizer = BuscribeRecognizer(SAMPLE_RATE, model, spk_model)
@@ -77,7 +79,7 @@ def main(channel, database="", base_dir=".",
 
     gevent.signal_handler(signal.SIGTERM, stop)
 
-    while True:
+    while start_time < end_time:
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
                                             start_time,
