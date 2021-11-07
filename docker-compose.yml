@@ -1,4 +1,4 @@
-version: 3
+version: "3"
 services:
   buscribenginx:
     image: buscribe-web:0.0.0

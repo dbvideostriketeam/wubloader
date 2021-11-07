@@ -23,7 +23,7 @@ function query(text, start_time, end_time) {
 
     query_string += "&limit=30";
 
-    fetch(`http://localhost:8010/buscribe/json?${query_string}`)
+    fetch(`/buscribelrr/json?${query_string}`)
         .then(response => response.json())
         // .then(response => console.log(response.error()))
         .then(fillResults)
