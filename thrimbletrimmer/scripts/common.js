@@ -8,9 +8,9 @@ var globalStartTimeString = "";
 var globalEndTimeString = "";
 
 var globalPlayer = null;
+var globalSetUpControls = false;
 
 Hls.DefaultConfig.maxBufferHole = 600;
-Hls.DefaultConfig.debug = true;
 
 const VIDEO_FRAMES_PER_SECOND = 30;
 
@@ -65,18 +65,8 @@ async function loadVideoPlayer(playlistURL) {
 	let rangedPlaylistURL = assembleVideoPlaylistURL(playlistURL);
 	const videoElement = document.getElementById("video");
 
-	const volume = +(localStorage.getItem("volume") ?? 0.5);
-	if (isNaN(volume)) {
-		volume = 0.5;
-	} else if (volume < 0) {
-		volume = 0;
-	} else if (volume > 1) {
-		volume = 1;
-	}
-	videoElement.volume = volume;
-	videoElement.addEventListener("volumechange", (_event) => {
-		const newVolume = videoElement.volume;
-		localStorage.setItem("volume", newVolume);
+	videoElement.addEventListener("loadedmetadata", (_event) => {
+		setUpVideoControls();
 	});
 
 	globalPlayer = new Hls();
@@ -84,6 +74,34 @@ async function loadVideoPlayer(playlistURL) {
 	return new Promise((resolve, _reject) => {
 		globalPlayer.on(Hls.Events.MEDIA_ATTACHED, () => {
 			globalPlayer.loadSource(rangedPlaylistURL);
+
+			globalPlayer.on(Hls.Events.ERROR, (_event, data) => {
+				if (data.fatal) {
+					switch (data.type) {
+						case Hls.ErrorTypes.NETWORK_ERROR:
+							console.log("A fatal network error occurred; retrying");
+							console.log(data);
+							globalPlayer.startLoad();
+							break;
+						case Hls.ErrorTypes.MEDIA_ERROR:
+							console.log("A fatal media error occurred; retrying");
+							console.log(data);
+							globalPlayer.recoverMediaError();
+							break;
+						default:
+							console.log("A fatal error occurred; resetting video player");
+							console.log(data);
+							addError(
+								"Some sort of video player error occurred. Thrimbletrimmer is resetting the video player."
+							);
+							resetVideoPlayer();
+					}
+				} else {
+					console.log("A non-fatal video player error occurred; HLS.js will retry");
+					console.log(data);
+				}
+			});
+
 			resolve();
 		});
 	});
@@ -94,21 +112,149 @@ async function loadVideoPlayerFromDefaultPlaylist() {
 	await loadVideoPlayer(playlistURL);
 }
 
+function resetVideoPlayer() {
+	updateSegmentPlaylist();
+}
+
 function updateSegmentPlaylist() {
 	globalPlayer.destroy();
 	loadVideoPlayerFromDefaultPlaylist();
 }
 
-function parseHumanTimeStringAsDateTime(inputTime) {
+function setUpVideoControls() {
+	// Setting this up so it's removed from the event doesn't work; loadedmetadata fires twice anyway.
+	// We still need to prevent double-setup, so here we are.
+	if (globalSetUpControls) {
+		return;
+	}
+	globalSetUpControls = true;
+
+	const videoElement = document.getElementById("video");
+
+	const playPauseButton = document.getElementById("video-controls-play-pause");
+	if (videoElement.paused) {
+		playPauseButton.src = "images/video-controls/play.png";
+	} else {
+		playPauseButton.src = "images/video-controls/pause.png";
+	}
+
+	const togglePlayState = (_event) => {
+		if (videoElement.paused) {
+			videoElement.play();
+		} else {
+			videoElement.pause();
+		}
+	};
+	playPauseButton.addEventListener("click", togglePlayState);
+	videoElement.addEventListener("click", togglePlayState);
+
+	videoElement.addEventListener("play", (_event) => {
+		playPauseButton.src = "images/video-controls/pause.png";
+	});
+	videoElement.addEventListener("pause", (_event) => {
+		playPauseButton.src = "images/video-controls/play.png";
+	});
+
+	const currentTime = document.getElementById("video-controls-current-time");
+	currentTime.innerText = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
+	videoElement.addEventListener("timeupdate", (_event) => {
+		currentTime.innerText = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
+	});
+
+	const duration = document.getElementById("video-controls-duration");
+	duration.innerText = videoHumanTimeFromVideoPlayerTime(videoElement.duration);
+	videoElement.addEventListener("durationchange", (_event) => {
+		duration.innerText = videoHumanTimeFromVideoPlayerTime(videoElement.duration);
+	});
+
+	const volumeMuted = document.getElementById("video-controls-volume-mute");
+	if (videoElement.muted) {
+		volumeMuted.src = "images/video-controls/volume-mute.png";
+	} else {
+		volumeMuted.src = "images/video-controls/volume.png";
+	}
+	const volumeLevel = document.getElementById("video-controls-volume-level");
+	const defaultVolume = +(localStorage.getItem("volume") ?? 0.5);
+	if (isNaN(defaultVolume)) {
+		defaultVolume = 0.5;
+	} else if (defaultVolume < 0) {
+		defaultVolume = 0;
+	} else if (defaultVolume > 1) {
+		defaultVolume = 1;
+	}
+	videoElement.volume = defaultVolume;
+	volumeLevel.value = videoElement.volume;
+	volumeLevel.addEventListener("click", (event) => {
+		videoElement.volume = event.offsetX / event.target.offsetWidth;
+		videoElement.muted = false;
+	});
+	videoElement.addEventListener("volumechange", (_event) => {
+		if (videoElement.muted) {
+			volumeMuted.src = "images/video-controls/volume-mute.png";
+		} else {
+			volumeMuted.src = "images/video-controls/volume.png";
+		}
+		volumeLevel.value = videoElement.volume;
+		localStorage.setItem("volume", videoElement.volume);
+	});
+
+	const playbackSpeed = document.getElementById("video-controls-playback-speed");
+	for (const speed of PLAYBACK_RATES) {
+		const speedOption = document.createElement("option");
+		speedOption.value = speed;
+		speedOption.innerText = `${speed}x`;
+		if (speed === 1) {
+			speedOption.selected = true;
+		}
+		playbackSpeed.appendChild(speedOption);
+	}
+	playbackSpeed.addEventListener("change", (_event) => {
+		const speed = +playbackSpeed.value;
+		videoElement.playbackRate = speed;
+	});
+
+	const quality = document.getElementById("video-controls-quality");
+	const defaultQuality = localStorage.getItem("quality");
+	for (const [qualityIndex, qualityLevel] of globalPlayer.levels.entries()) {
+		const qualityOption = document.createElement("option");
+		qualityOption.value = qualityIndex;
+		qualityOption.innerText = qualityLevel.name;
+		if (qualityLevel.name === defaultQuality) {
+			qualityOption.selected = true;
+		}
+		quality.appendChild(qualityOption);
+	}
+	localStorage.setItem("quality", quality.options[quality.options.selectedIndex].innerText);
+	quality.addEventListener("change", (_event) => {
+		globalPlayer.currentLevel = +quality.value;
+	});
+
+	const playbackPosition = document.getElementById("video-controls-playback-position");
+	playbackPosition.max = videoElement.duration;
+	playbackPosition.value = videoElement.currentTime;
+	videoElement.addEventListener("durationchange", (_event) => {
+		playbackPosition.max = videoElement.duration;
+	});
+	videoElement.addEventListener("timeupdate", (_event) => {
+		playbackPosition.value = videoElement.currentTime;
+	});
+	playbackPosition.addEventListener("click", (event) => {
+		const newPosition = (event.offsetX / event.target.offsetWidth) * videoElement.duration;
+		videoElement.currentTime = newPosition;
+		playbackPosition.value = newPosition;
+	});
+}
+
+function dateTimeMathObjectFromBusTime(busTime) {
 	// We need to handle inputs like "-0:10:15" in a way that consistently makes the time negative.
 	// Since we can't assign the negative sign to any particular part, we'll check for the whole thing here.
 	let direction = 1;
-	if (inputTime.startsWith("-")) {
-		inputTime = inputTime.slice(1);
+	if (busTime.startsWith("-")) {
+		busTime = busTime.slice(1);
 		direction = -1;
 	}
 
-	const parts = inputTime.split(":", 3);
+	const parts = busTime.split(":", 3);
 	const hours = parseInt(parts[0]) * direction;
 	const minutes = (parts[1] || 0) * direction;
 	const seconds = (parts[2] || 0) * direction;
@@ -116,7 +262,7 @@ function parseHumanTimeStringAsDateTime(inputTime) {
 }
 
 function dateTimeFromBusTime(busTime) {
-	return globalBusStartTime.plus(parseHumanTimeStringAsDateTime(busTime));
+	return globalBusStartTime.plus(dateTimeMathObjectFromBusTime(busTime));
 }
 
 function busTimeFromDateTime(dateTime) {
@@ -171,4 +317,52 @@ function startAndEndTimeQueryStringParts() {
 		queryStringParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
 	}
 	return queryStringParts;
+}
+
+function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
+	const hours = Math.floor(videoPlayerTime / 3600);
+	let minutes = Math.floor((videoPlayerTime % 3600) / 60);
+	let seconds = Math.floor(videoPlayerTime % 60);
+	let milliseconds = Math.floor((videoPlayerTime * 1000) % 1000);
+
+	while (minutes.toString().length < 2) {
+		minutes = `0${minutes}`;
+	}
+	while (seconds.toString().length < 2) {
+		seconds = `0${seconds}`;
+	}
+	while (milliseconds.toString().length < 3) {
+		milliseconds = `0${milliseconds}`;
+	}
+
+	if (hours > 0) {
+		return `${hours}:${minutes}:${seconds}.${milliseconds}`;
+	}
+	return `${minutes}:${seconds}.${milliseconds}`;
+}
+
+function videoPlayerTimeFromVideoHumanTime(videoHumanTime) {
+	let timeParts = videoHumanTime.split(":", 2);
+	let hours;
+	let minutes;
+	let seconds;
+
+	if (timeParts.length < 2) {
+		hours = 0;
+		minutes = 0;
+		seconds = +timeParts[0];
+	} else if (timeParts.length < 3) {
+		hours = 0;
+		minutes = parseInt(timeParts[0]);
+		seconds = +timeParts[1];
+	} else {
+		hours = parseInt(timeParts[0]);
+		minutes = parseInt(timeParts[1]);
+		seconds = +timeParts[2];
+	}
+	if (isNaN(hours) || isNaN(minutes) || isNaN(seconds)) {
+		return null;
+	}
+
+	return hours * 3600 + minutes * 60 + seconds;
 }

@@ -40,7 +40,37 @@
 			</div>
 		</form>
 
-		<video id="video" controls preload="auto"></video>
+		<video id="video" preload="auto"></video>
+
+		<div id="video-controls">
+			<div id="video-controls-bar">
+				<div>
+					<img id="video-controls-play-pause" src="images/video-controls/play.png" class="click" />
+				</div>
+				<div id="video-controls-time">
+					<span id="video-controls-current-time"></span>
+					/
+					<span id="video-controls-duration"></span>
+				</div>
+				<div id="video-controls-spacer"></div>
+				<div id="video-controls-volume">
+					<img
+						id="video-controls-volume-mute"
+						src="images/video-controls/volume.png"
+						class="click"
+					/>
+					<progress id="video-controls-volume-level" value="0.5" class="click"></progress>
+				</div>
+				<div>
+					<select id="video-controls-playback-speed"></select>
+				</div>
+				<div>
+					<select id="video-controls-quality"></select>
+				</div>
+			</div>
+			<progress id="video-controls-playback-position" value="0" class="click"></progress>
+		</div>
+
 		<div id="clip-bar"></div>
 		<div id="waveform-container">
 			<img id="waveform" alt="Waveform for the video" />

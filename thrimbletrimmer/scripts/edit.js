@@ -1036,40 +1036,6 @@ function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {
 	return wubloaderTimeFromDateTime(dt);
 }
 
-function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
-	const minutes = Math.floor(videoPlayerTime / 60);
-	let seconds = Math.floor(videoPlayerTime % 60);
-	let milliseconds = Math.floor((videoPlayerTime * 1000) % 1000);
-
-	while (seconds.toString().length < 2) {
-		seconds = `0${seconds}`;
-	}
-	while (milliseconds.toString().length < 3) {
-		milliseconds = `0${milliseconds}`;
-	}
-
-	return `${minutes}:${seconds}.${milliseconds}`;
-}
-
-function videoPlayerTimeFromVideoHumanTime(videoHumanTime) {
-	let timeParts = videoHumanTime.split(":", 2);
-	let minutes;
-	let seconds;
-
-	if (timeParts.length < 2) {
-		minutes = 0;
-		seconds = +timeParts[0];
-	} else {
-		minutes = parseInt(timeParts[0]);
-		seconds = +timeParts[1];
-	}
-	if (isNaN(minutes) || isNaN(seconds)) {
-		return null;
-	}
-
-	return minutes * 60 + seconds;
-}
-
 function videoHumanTimeFromWubloaderTime(wubloaderTime) {
 	const videoPlayerTime = videoPlayerTimeFromWubloaderTime(wubloaderTime);
 	return videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
