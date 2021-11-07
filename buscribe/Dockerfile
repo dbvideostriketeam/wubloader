@@ -8,12 +8,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 
 COPY buscribe /tmp/buscribe
 RUN pip install /tmp/buscribe && rm -r /tmp/buscribe && \
-    mkdir /usr/share/buscribe && cd /usr/share/buscribe && \
-    curl -LO http://alphacephei.com/vosk/models/vosk-model-en-us-0.22.zip && \
-    unzip vosk-model-en-us-0.22.zip && rm vosk-model-en-us-0.22.zip && \
-    curl -LO http://alphacephei.com/vosk/models/vosk-model-small-en-us-0.15.zip && \
-    unzip vosk-model-small-en-us-0.15.zip && rm vosk-model-small-en-us-0.15.zip && \
-    curl -LO https://alphacephei.com/vosk/models/vosk-model-spk-0.4.zip && \
-    unzip vosk-model-spk-0.4.zip && rm vosk-model-spk-0.4.zip
+    mkdir /usr/share/buscribe && cd /usr/share/buscribe
+
+COPY models/extracted /usr/share/buscribe
 
 ENTRYPOINT ["python3", "-m", "buscribe", "--base-dir", "/mnt"]

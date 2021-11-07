@@ -65,7 +65,7 @@ def transcribe_segments(segments: list, sample_rate: int, recognizer: BuscribeRe
 def write_line(line_json: dict, line_start_time: datetime, line_end_time: datetime, db_cursor):
     """Commits line to the database"""
     db_cursor.execute(
-        "INSERT INTO buscribe.public.buscribe_transcriptions("
+        "INSERT INTO buscribe_transcriptions("
         "start_time, "
         "end_time, "
         "transcription_line, "
