@@ -84,7 +84,7 @@ def get_end_of_transcript(db_cursor):
     """Grab the end timestamp of the current transcript.
 
     If there is no existing transcript returns default; used for cold starts."""
-    db_cursor.execute("SELECT end_time FROM buscribe.public.buscribe_transcriptions ORDER BY end_time DESC LIMIT 1")
+    db_cursor.execute("SELECT end_time FROM buscribe_transcriptions ORDER BY end_time DESC LIMIT 1")
     end_of_transcript_row = db_cursor.fetchone()
 
     return end_of_transcript_row.end_time if end_of_transcript_row is not None else None
