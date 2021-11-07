@@ -9,6 +9,7 @@ var globalEndTimeString = "";
 
 var globalPlayer = null;
 var globalSetUpControls = false;
+var globalSeekTimer = null;
 
 Hls.DefaultConfig.maxBufferHole = 600;
 
@@ -242,6 +243,32 @@ function setUpVideoControls() {
 		const newPosition = (event.offsetX / event.target.offsetWidth) * videoElement.duration;
 		videoElement.currentTime = newPosition;
 		playbackPosition.value = newPosition;
+	});
+
+	/* Sometimes a mysterious issue occurs loading segments of the video when seeking.
+	 * When this happens, twiddling the qualities tends to fix it. Here, we attempt to
+	 * detect this situation and fix it automatically.
+	 */
+	videoElement.addEventListener("seeking", (_event) => {
+		// If we don't get a "seeked" event soon after the "seeking" event, we assume there's
+		// a loading error.
+		// To handle this, we set up a timed handler to pick this up.
+		if (globalSeekTimer !== null) {
+			clearTimeout(globalSeekTimer);
+			globalSeekTimer = null;
+		}
+		globalSeekTimer = setTimeout(() => {
+			const currentLevel = globalPlayer.currentLevel;
+			globalPlayer.currentLevel = -1;
+			globalPlayer.currentLevel = currentLevel;
+		}, 500);
+	});
+	videoElement.addEventListener("seeked", (_event) => {
+		// Since we got the seek, cancel the timed twiddling of qualities
+		if (globalSeekTimer !== null) {
+			clearTimeout(globalSeekTimer);
+			globalSeekTimer = null;
+		}
 	});
 }
 
