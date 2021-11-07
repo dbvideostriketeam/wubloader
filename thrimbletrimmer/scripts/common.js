@@ -80,8 +80,14 @@ async function loadVideoPlayer(playlistURL) {
 				if (data.fatal) {
 					switch (data.type) {
 						case Hls.ErrorTypes.NETWORK_ERROR:
-							console.log("A fatal network error occurred; retrying", data);
-							globalPlayer.startLoad();
+							if (data.reason === "no level found in manifest") {
+								addError(
+									"There is no video data between the specified start and end times. Change the times so that there is video content to play."
+								);
+							} else {
+								console.log("A fatal network error occurred; retrying", data);
+								globalPlayer.startLoad();
+							}
 							break;
 						case Hls.ErrorTypes.MEDIA_ERROR:
 							console.log("A fatal media error occurred; retrying", data);
