@@ -15,4 +15,4 @@ RUN apk add postgresql-dev postgresql-libs
 COPY buscribe-api /tmp/buscribe-api
 RUN pip install /tmp/buscribe-api && rm -r /tmp/buscribe-api
 
-ENTRYPOINT ["python3", "-m", "buscribeapi"]
+ENTRYPOINT ["python3", "-m", "buscribeapi", "--base-dir", "/mnt"]
