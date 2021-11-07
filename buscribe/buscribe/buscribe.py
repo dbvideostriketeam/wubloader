@@ -94,9 +94,10 @@ def finish_off_recognizer(recognizer: BuscribeRecognizer, db_cursor):
     """Flush the recognizer, commit the final line to the database and reset it."""
     final_result_json = json.loads(recognizer.final_result())  # Flush the tubes
 
-    line_start_time = recognizer.segments_start_time + timedelta(seconds=final_result_json["result"][0]["start"])
-    line_end_time = recognizer.segments_start_time + timedelta(seconds=final_result_json["result"][-1]["end"])
+    if "result" in final_result_json:
+        line_start_time = recognizer.segments_start_time + timedelta(seconds=final_result_json["result"][0]["start"])
+        line_end_time = recognizer.segments_start_time + timedelta(seconds=final_result_json["result"][-1]["end"])
 
-    write_line(final_result_json, line_start_time, line_end_time, db_cursor)
+        write_line(final_result_json, line_start_time, line_end_time, db_cursor)
 
     recognizer.reset()
