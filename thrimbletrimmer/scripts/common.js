@@ -80,26 +80,22 @@ async function loadVideoPlayer(playlistURL) {
 				if (data.fatal) {
 					switch (data.type) {
 						case Hls.ErrorTypes.NETWORK_ERROR:
-							console.log("A fatal network error occurred; retrying");
-							console.log(data);
+							console.log("A fatal network error occurred; retrying", data);
 							globalPlayer.startLoad();
 							break;
 						case Hls.ErrorTypes.MEDIA_ERROR:
-							console.log("A fatal media error occurred; retrying");
-							console.log(data);
+							console.log("A fatal media error occurred; retrying", data);
 							globalPlayer.recoverMediaError();
 							break;
 						default:
-							console.log("A fatal error occurred; resetting video player");
-							console.log(data);
+							console.log("A fatal error occurred; resetting video player", data);
 							addError(
 								"Some sort of video player error occurred. Thrimbletrimmer is resetting the video player."
 							);
 							resetVideoPlayer();
 					}
 				} else {
-					console.log("A non-fatal video player error occurred; HLS.js will retry");
-					console.log(data);
+					console.log("A non-fatal video player error occurred; HLS.js will retry", data);
 				}
 			});
 
@@ -185,6 +181,10 @@ function setUpVideoControls() {
 	}
 	videoElement.volume = defaultVolume;
 	volumeLevel.value = videoElement.volume;
+
+	volumeMuted.addEventListener("click", (_event) => {
+		videoElement.muted = !videoElement.muted;
+	});
 	volumeLevel.addEventListener("click", (event) => {
 		videoElement.volume = event.offsetX / event.target.offsetWidth;
 		videoElement.muted = false;
