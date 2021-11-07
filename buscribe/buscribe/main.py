@@ -91,6 +91,8 @@ def main(channel, database="", base_dir=".",
         if not segments:
             # We reached end of segments and are waiting for some new ones
             sleep(30)
+            logging.info("Waiting for new segments.")
+            continue
 
         if recognizer.segments_start_time is None:
             recognizer.segments_start_time = segments[0].start
@@ -114,5 +116,6 @@ def main(channel, database="", base_dir=".",
             # Give it a bit of time and continue.
             # Note: if the gap is not filled within 30s, we jump to the next available segment.
             sleep(30)
+            logging.info("Waiting for new segments.")
 
         start_time = segments_end_time
