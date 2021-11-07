@@ -88,6 +88,10 @@ def main(channel, database="", base_dir=".",
         if segments[0] is None:
             segments = segments[1:]
 
+        if not segments:
+            # We reached end of segments and are waiting for some new ones
+            sleep(30)
+
         if recognizer.segments_start_time is None:
             recognizer.segments_start_time = segments[0].start
             logging.info(f"Starting from: {segments[0].start}")
