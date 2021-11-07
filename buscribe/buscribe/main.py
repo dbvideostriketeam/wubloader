@@ -14,6 +14,8 @@ from buscribe.buscribe import get_end_of_transcript, transcribe_segments, finish
 from buscribe.recognizer import BuscribeRecognizer
 
 
+@argh.arg('channel',
+          help="Twitch channel to transcribe.")
 @argh.arg('--database',
           help='Postgres conection string for database to write transcribed lines to. Either a space-separated list of '
                'key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE .')
@@ -29,11 +31,11 @@ from buscribe.recognizer import BuscribeRecognizer
           help='End of transcript. If not given continues to transcribe live.')
 @argh.arg('--base-dir',
           help='Directory from which segments will be grabbed. Default is current working directory.')
-def main(database="", base_dir=".",
+def main(channel, database="", base_dir=".",
          model="/usr/share/buscribe/vosk-model-en-us-0.21/", spk_model="/usr/share/buscribe/vosk-model-spk-0.4/",
          start_time=None, end_time=None):
     SAMPLE_RATE = 48000
-    segments_dir = os.path.join(base_dir, "desertbus", "source")
+    segments_dir = os.path.join(base_dir, channel, "source")
 
     logging.debug("Grabbing database...")
     db_manager = DBManager(dsn=database)
@@ -91,8 +93,8 @@ def main(database="", base_dir=".",
         segments_end_time = transcribe_segments(segments, SAMPLE_RATE, recognizer, start_of_transcription, db_cursor,
                                                 stopping)
 
-        if end_time is not None and segments_end_time >= end_time \
-                or stopping.is_set():
+        if end_time is not None and segments_end_time >= end_time or \
+                stopping.is_set():
             # Work's done!
             finish_off_recognizer(recognizer, db_cursor)
             db_conn.close()
