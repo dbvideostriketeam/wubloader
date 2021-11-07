@@ -84,6 +84,97 @@ a,
 	max-height: 50vh;
 }
 
+#video-controls {
+	font-size: 125%;
+}
+
+#video-controls select {
+	appearance: none;
+	font-size: inherit;
+	background: inherit;
+	border: none;
+	text-align: center;
+}
+
+#video-controls option {
+	background: #222;
+	padding: 2px;
+}
+
+#video-controls-bar {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+#video-controls-spacer {
+	flex-grow: 1;
+}
+
+#video-controls-volume {
+	display: flex;
+	align-items: center;
+}
+
+#video-controls-volume-level {
+	width: 100px;
+	height: 8px;
+	border-radius: 0;
+	border: 0;
+}
+
+#video-controls-playback-position {
+	height: 10px;
+	border-radius: 0;
+	border: 0;
+}
+
+/* For some reason, there's not a cross-browser way to style <progress> elements.
+ * This should be replaced with a cross-browser way of doing this when possible.
+ * I only implemented WebKit/Blink and Firefox here because if you still use IE,
+ * I quite frankly don't care about you.
+ */
+
+/* WEBKIT/BLINK SECTION */
+#video-controls-volume-level::-webkit-progress-bar {
+	background: #ffffff30;
+}
+
+#video-controls-volume-level::-webkit-progress-value {
+	background: #ffffffc0;
+}
+
+#video-controls-playback-position::-webkit-progress-bar {
+	background: #ffffff30;
+}
+
+#video-controls-playback-position::-webkit-progress-value {
+	background: #ffffffc0;
+}
+/* END WEBKIT/BLINK */
+
+/* FIREFOX SECTION */
+#video-controls-volume-level {
+	background: #ffffff30;
+}
+
+#video-controls-volume-level::-moz-progress-bar {
+	background: #ffffffc0;
+}
+
+#video-controls-playback-position {
+	background: #ffffff30;
+}
+
+#video-controls-playback-position::-moz-progress-bar {
+	background: #ffffffc0;
+}
+/* END FIREFOX */
+
+#video-controls-playback-position {
+	width: 100%;
+}
+
 #clip-bar {
 	width: 100%;
 	height: 7px;

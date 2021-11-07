@@ -76,7 +76,7 @@ function dateTimeFromTimeString(timeString, timeStringFormat) {
 		case 2:
 			return dateTimeFromBusTime(timeString);
 		case 3:
-			return DateTime.now().setZone("utc").minus(parseHumanTimeStringAsDateTime(timeString));
+			return DateTime.now().setZone("utc").minus(dateTimeMathObjectFromBusTime(timeString));
 	}
 }
 
