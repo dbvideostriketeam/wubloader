@@ -2,7 +2,7 @@ from datetime import timedelta
 
 import common
 import flask as flask
-from common import dateutil, database, format_bustime, dt_to_bustime
+from common import dateutil, database, format_bustime, dt_to_bustime, bustime_to_dt, parse_bustime
 from dateutil.parser import ParserError
 from flask import request, jsonify, Response, render_template
 
@@ -68,20 +68,32 @@ def get_json():
     (https://www.postgresql.org/docs/13/functions-textsearch.html)"""
 
     start_time_string = request.args.get('start_time')
+    bus_start_time_string = request.args.get('bus_start_time')
     if start_time_string is not None:
         try:
             start_time = dateutil.parse(start_time_string)
         except ParserError:
             return "Invalid start time!", 400
+    elif bus_start_time_string is not None:
+        try:
+            start_time = bustime_to_dt(app.bustime_start, parse_bustime(bus_start_time_string))
+        except ValueError:
+            return "Invalid bus end time!", 400
     else:
         start_time = None
 
     end_time_string = request.args.get('end_time')
+    bus_end_time_string = request.args.get('bus_end_time')
     if end_time_string is not None:
         try:
             end_time = dateutil.parse(end_time_string)
         except ParserError:
             return "Invalid end time!", 400
+    elif bus_end_time_string is not None:
+        try:
+            end_time = bustime_to_dt(app.bustime_start, parse_bustime(bus_end_time_string))
+        except ValueError:
+            return "Invalid bus end time!", 400
     else:
         end_time = None
 

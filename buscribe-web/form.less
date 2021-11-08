@@ -6,6 +6,12 @@
 
   margin-bottom: 1em;
 
+  div {
+    margin: 0;
+    padding: 0;
+    display: flex;
+  }
+
   label {
     display: inline-block;
     font-family: @sans-serif;
@@ -29,6 +35,7 @@
   #time_search_line {
     display: flex;
     flex-direction: row;
+    flex-wrap: wrap;
 
     input[type=datetime-local] {
       width: 13em;

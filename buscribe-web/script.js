@@ -11,11 +11,13 @@ function onSiteLoad(e) {
 function query(text, start_time, end_time) {
     let query_string = ""
 
+    const time_type = document.getElementById("UTC_time_radio").checked ? "" : "bus_";
+
     if (start_time !== "") {
-        query_string += `start_time=${start_time}`;
+        query_string += `${time_type}start_time=${start_time}`;
     }
     if (end_time !== "") {
-        query_string += `&end_time=${end_time}`;
+        query_string += `&${time_type}end_time=${end_time}`;
     }
     if (text !== "") {
         query_string += `&query=${text}`
@@ -62,4 +64,14 @@ function fillResults(results) {
 
         results_element.append(line_div)
     }
+}
+
+function switchToUTC() {
+    document.getElementById("start_time").type = "datetime-local";
+    document.getElementById("end_time").type = "datetime-local";
+}
+
+function switchToBus() {
+    document.getElementById("start_time").type = "text";
+    document.getElementById("end_time").type = "text";
 }
