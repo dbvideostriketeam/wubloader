@@ -111,7 +111,7 @@ CREATE TABLE editors (
 -- Sheetsync will wipe and re-populate this table periodically to match what is in the sheet
 CREATE TABLE playlists (
 	tags TEXT[] NOT NULL,
-	playlist_id TEXT PRIMARY KEY,
+	playlist_id TEXT PRIMARY KEY
 );
 EOSQL
 
