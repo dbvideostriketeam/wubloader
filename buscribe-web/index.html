@@ -14,8 +14,8 @@
                                                        placeholder="Supports quotes, 'or' and -.">
     </div>
     <div id="time_search_line" class="form_line">
-        <div><label for="start_time">Start time</label> <input id="start_time" type="datetime-local"></div>
-        <div><label for="end_time">End time</label> <input id="end_time" type="datetime-local"></div>
+        <div><label for="start_time">Start time</label> <input id="start_time" type="datetime-local" autocomplete="off"></div>
+        <div><label for="end_time">End time</label> <input id="end_time" type="datetime-local" autocomplete="off"></div>
         <div>
             <label for="channel_select">Channel</label><select id="channel_select">
             <option value="loadingreadyrun">loadingreadyrun</option>
@@ -23,8 +23,8 @@
         </div>
         <div>
             <label>Time type</label>
-            <input type="radio" name="time_type" id="UTC_time_radio" oninput="switchToUTC()" checked><label for="UTC_time_radio">UTC Time</label>
-            <input type="radio" name="time_type" id="bus_time_radio" oninput="switchToBus()"><label for="bus_time_radio">Bus Time</label>
+            <input type="radio" name="time_type" id="UTC_time_radio" oninput="switchToUTC()" checked autocomplete="off"><label for="UTC_time_radio">UTC Time</label>
+            <input type="radio" name="time_type" id="bus_time_radio" oninput="switchToBus()" autocomplete="off"><label for="bus_time_radio">Bus Time</label>
         </div>
         <button id="search_button" onclick="doSearch()" type="button">Search</button>
 
