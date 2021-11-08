@@ -23,9 +23,10 @@ function query(text, start_time, end_time) {
 
     query_string += "&limit=30";
 
-    fetch(`/buscribelrr/json?${query_string}`)
+    const channel = document.getElementById("channel_select").value;
+
+    fetch(`https://wubloader.raptorpond.com/buscribe/${channel}/json?${query_string}`)
         .then(response => response.json())
-        // .then(response => console.log(response.error()))
         .then(fillResults)
 
 }
