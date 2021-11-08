@@ -1,9 +1,8 @@
-import json
 from datetime import timedelta
 
-import flask as flask
 import common
-from common import dateutil, database
+import flask as flask
+from common import dateutil, database, format_bustime, dt_to_bustime
 from dateutil.parser import ParserError
 from flask import request, jsonify, Response, render_template
 
@@ -20,11 +19,6 @@ def convert_vtt_timedelta(delta: timedelta):
 def create_seconds_timedelta(seconds):
     """Converts a float of seconds to a timedelta."""
     return timedelta(seconds=seconds)
-
-
-def round_bus_time(delta: timedelta):
-    """Round bus time down to the second."""
-    return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}'
 
 
 @app.route('/buscribe/vtt')
@@ -103,9 +97,9 @@ def get_json():
 
     return jsonify([{"id": row.id,
                      "start_time": row.start_time.isoformat(),
-                     "start_bus_time": round_bus_time(row.start_time - app.bustime_start),
+                     "start_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.start_time), "second"),
                      "end_time": row.end_time.isoformat(),
-                     "end_bus_time": round_bus_time(row.start_time - app.bustime_start),
+                     "end_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.end_time), "second"),
                      "verifier": row.verifier,
                      "speakers": row.names,
                      "text": row.highlighted_text if row.highlighted_text is not None else ""} for row in results])
