@@ -1,0 +1,53 @@
+Chat archiver records messages from TMI (the twitch messaging system)
+in a way that preserves as much context as possible, and allows multiple independently-recorded
+streams to be combined to ensure nothing was missed.
+
+We store messages in newline-delimited JSON files, in timestamp order.
+Each file covers one minute of messages.
+These files are named by their timestamp + hash and merged with other files via a CRDT model.
+	CRDT means you have a merge operation (.) such that
+		(A.B).C == A.(B.C) (associative)
+		A.B == B.A (commutitive)
+		A.A == A (reflexive)
+
+We have a few different kinds of messages to deal with:
+	Messages with a unique id and timestamp
+		eg. PRIVMSG, USERNOTICE.
+		These are easy, as they have a canonical timestamp and can be trivially deduplicated by id.
+	Messages with an implied ordering
+		eg. ROOMSTATE, NOTICE, CLEARCHAT.
+		These messages arrive in what we assume is a consistent order on all clients,
+		but have no direct associated timestamp. We thus set a timestamp *range* for when
+		the message could have occurred from the server's perspective, between the last known
+		server timestamp (since it must be after that message) and the next received server timestamp
+		(since it must be before that message). We can set some reasonable timeout here in case
+		we don't receive another message within a short time window.
+		Messages with a timestamp range are ordered by their timestamp start.
+		This also governs which file they are in if their range overlaps two files.
+	Messages known to be out of order
+		This is specific to JOINs and PARTs.
+		Twitch documents that these may be delayed by up to 10sec.
+		So we follow the rules as per messages with implied ordering,
+		except we pad the possible start time by 10 seconds.
+
+How to merge two files
+	In general, if the same message (all non-receiver fields identical) is present in both files,
+		it is included once in the output. For messages with unique ids, this is all that's needed.
+	For messages without unique ids, we face the question of "is this the same message".
+	All the following must be true:
+		* All non-timestamp, non-receiver fields match
+		* Timestamp ranges overlap
+	If a message may match multiple messages on the other side with these rules, then
+	we pick one arbitrarily.
+	We then merge these messages, setting the timestamp range to the intersection of the inputs.
+	Literal edge cases: Timestamp ranges that span two files
+		It may be the case that we can match a message whose timestamp range overhangs file A
+		with a message near the start of file B. So whenever we are merging files, we need to
+		also consider the file before and the file after on our side.
+	In all cases when we merge two messages, we should merge the receiver timestamp field which maps
+		the receiver id to the timestamp it received the message. This preserves message provedence.
+
+All files are stored in newline-delimited, canonicalised JSON so we can use hashes to compare them.
+It should always be true that merging B into A and merging A into B should produce identical files
+with the same hash (effects of neighboring files notwithstanding - that just means more merges will
+be needed in order to stabilize).

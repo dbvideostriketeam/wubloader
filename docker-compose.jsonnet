@@ -170,6 +170,14 @@
     "youtube-manual",
   ],
 
+  chat_archiver:: {
+    image: "ghcr.io/ekimekim/wubloader-downloader:chat-archiver-hack-1",
+    channel: "desertbus",
+    user: "dbvideostriketeam",
+    logs_path: "%s/chat_logs" % $.segments_path,
+    token_path: "./chat_token.txt".
+  },
+
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
   env:: {
@@ -439,6 +447,14 @@
       },
       volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
       [if $.db_standby then "command"]: ["/standby_setup.sh"],
+    },
+
+    [if $.chat_archiver != "null" then "chat_archiver"]: {
+      local c = $.chat_archiver,
+      image: c.image,
+      restart: "always",
+      command: [c.channel, c.user, "/token"],
+      volumes: ["%s:/mnt" % c.logs_path, "%s:/token" % c.token_path],
     },
 
   },
