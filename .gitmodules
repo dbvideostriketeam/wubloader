@@ -1,0 +1,3 @@
+[submodule "chat_archiver/girc"]
+	path = chat_archiver/girc
+	url = https://github.com/ekimekim/girc
