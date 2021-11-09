@@ -426,7 +426,7 @@ async function initializeVideoInfo() {
 }
 
 function updateWaveform() {
-	let waveformURL = "/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?";
+	let waveformURL = "/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?size=1920x125&";
 
 	const queryStringParts = startAndEndTimeQueryStringParts();
 	waveformURL += queryStringParts.join("&");
