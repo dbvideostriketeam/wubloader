@@ -79,8 +79,6 @@ def main(channel, database="", base_dir=".",
 
     gevent.signal_handler(signal.SIGTERM, stop)
 
-    segments_end_time = None
-
     while start_time < end_time:
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
@@ -98,7 +96,7 @@ def main(channel, database="", base_dir=".",
 
             # If the hole is less than a minute old, or if we don't have new segments: wait for segments
             if datetime.utcnow() - start_time <= timedelta(minutes=1) or \
-                    len(segments) < 2:
+                    segments == [None]:
                 logging.info("Waiting for new or backfilled segments.")
                 sleep(30)
 
