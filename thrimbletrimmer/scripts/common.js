@@ -120,8 +120,12 @@ function resetVideoPlayer() {
 }
 
 function updateSegmentPlaylist() {
+	const videoElement = document.getElementById("video");
+	const currentPlaybackRate = videoElement.playbackRate;
 	globalPlayer.destroy();
 	loadVideoPlayerFromDefaultPlaylist();
+	// The playback rate isn't maintained when destroying and reattaching hls.js
+	videoElement.playbackRate = currentPlaybackRate;
 }
 
 function setUpVideoControls() {
