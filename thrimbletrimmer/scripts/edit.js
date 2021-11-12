@@ -426,7 +426,8 @@ async function initializeVideoInfo() {
 }
 
 function updateWaveform() {
-	let waveformURL = "/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?size=1920x125&";
+	let waveformURL =
+		"/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?size=1920x125&";
 
 	const queryStringParts = startAndEndTimeQueryStringParts();
 	waveformURL += queryStringParts.join("&");
@@ -1006,7 +1007,7 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	const lastSegmentStartTime = DateTime.fromISO(lastSegment.rawProgramDateTime);
 	const lastSegmentEndTime = lastSegmentStartTime.plus({ seconds: lastSegment.duration });
 	if (lastSegmentStartTime <= wubloaderDateTime && wubloaderDateTime <= lastSegmentEndTime) {
-		return segment.start + wubloaderDateTime.diff(lastSegmentStartTime).as("seconds");
+		return lastSegment.start + wubloaderDateTime.diff(lastSegmentStartTime).as("seconds");
 	}
 	return null;
 }
