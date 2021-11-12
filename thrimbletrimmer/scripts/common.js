@@ -240,6 +240,22 @@ function setUpVideoControls() {
 		globalPlayer.currentLevel = +quality.value;
 	});
 
+	const fullscreen = document.getElementById("video-controls-fullscreen");
+	fullscreen.addEventListener("click", (_event) => {
+		if (document.fullscreenElement) {
+			document.exitFullscreen();
+		} else {
+			videoElement.requestFullscreen();
+		}
+	});
+	videoElement.addEventListener("fullscreenchange", (_event) => {
+		if (document.fullscreenElement) {
+			videoElement.controls = true;
+		} else {
+			videoElement.controls = false;
+		}
+	});
+
 	const playbackPosition = document.getElementById("video-controls-playback-position");
 	playbackPosition.max = videoElement.duration;
 	playbackPosition.value = videoElement.currentTime;
