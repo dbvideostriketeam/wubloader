@@ -153,7 +153,11 @@ function setUpVideoControls() {
 		}
 	};
 	playPauseButton.addEventListener("click", togglePlayState);
-	videoElement.addEventListener("click", togglePlayState);
+	videoElement.addEventListener("click", (event) => {
+		if (!videoElement.controls) {
+			togglePlayState(event);
+		}
+	});
 
 	videoElement.addEventListener("play", (_event) => {
 		playPauseButton.src = "images/video-controls/pause.png";
@@ -238,6 +242,22 @@ function setUpVideoControls() {
 	localStorage.setItem("quality", quality.options[quality.options.selectedIndex].innerText);
 	quality.addEventListener("change", (_event) => {
 		globalPlayer.currentLevel = +quality.value;
+	});
+
+	const fullscreen = document.getElementById("video-controls-fullscreen");
+	fullscreen.addEventListener("click", (_event) => {
+		if (document.fullscreenElement) {
+			document.exitFullscreen();
+		} else {
+			videoElement.requestFullscreen();
+		}
+	});
+	videoElement.addEventListener("fullscreenchange", (_event) => {
+		if (document.fullscreenElement) {
+			videoElement.controls = true;
+		} else {
+			videoElement.controls = false;
+		}
 	});
 
 	const playbackPosition = document.getElementById("video-controls-playback-position");
