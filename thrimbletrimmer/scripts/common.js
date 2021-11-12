@@ -153,7 +153,11 @@ function setUpVideoControls() {
 		}
 	};
 	playPauseButton.addEventListener("click", togglePlayState);
-	videoElement.addEventListener("click", togglePlayState);
+	videoElement.addEventListener("click", (event) => {
+		if (!videoElement.controls) {
+			togglePlayState(event);
+		}
+	});
 
 	videoElement.addEventListener("play", (_event) => {
 		playPauseButton.src = "images/video-controls/pause.png";
