@@ -89,7 +89,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				"Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values."
 			);
 		}
-		rangeDataUpdated();
+		globalPlayer.once(Hls.Events.LEVEL_LOADED, (_data) => {
+			rangeDataUpdated();
+		});
 
 		const waveformImage = document.getElementById("waveform");
 		if (newEnd === null) {
