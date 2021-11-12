@@ -176,7 +176,7 @@ def get_best_segments(hours_path, start, end, allow_holes=True):
 					# Overlap! This shouldn't happen, though it might be possible due to weirdness
 					# if the stream drops then starts again quickly. We simply ignore the overlapping
 					# segment and let the algorithm continue.
-					logging.warning("Overlapping segments: {} overlaps end of {}".format(segment, result[-1]))
+					logging.info("Overlapping segments: {} overlaps end of {}".format(segment, result[-1]))
 					continue
 				if result[-1].is_partial or prev_end < segment.start:
 					# there's a gap between prev end and this start, so add a None
