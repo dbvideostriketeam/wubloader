@@ -10,6 +10,8 @@ function moveSpeed(amount) {
 		return; // We've reached/exceeded the edge
 	}
 	videoElement.playbackRate = PLAYBACK_RATES[currentIndex];
+	const playbackSelector = document.getElementById("video-controls-playback-speed");
+	playbackSelector.value = videoElement.playbackRate;
 }
 
 function increaseSpeed() {
