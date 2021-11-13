@@ -32,6 +32,16 @@ function pageReady() {
         .then(fillLineInfo)
         .then(initializePlayer);
 
+    handleLoginState();
+}
+
+function handleLoginState() {
+    if (document.cookie.split('; ').find(row => row.startsWith('credentials='))) {
+        document.getElementById("logout").style.display = "";
+    } else {
+        document.getElementById("googleLoginButton").style.display = "";
+    }
+
 }
 
 function doGoogle() {
@@ -47,13 +57,20 @@ function doGoogle() {
     google.accounts.id.prompt(); // also display the One Tap dialog
 }
 
+function doLogout() {
+    document.cookie = `credentials=;expires=Thu, 01 Jan 1970 00:00:01 GMT`;
+    document.getElementById("googleLoginButton").style.display = "";
+    document.getElementById("logout").style.display = "none";
+}
+
 function loggedIn(response) {
 
     // credentials = parseJwt(response.credential)
-    // TODO: add specifiers
+    // TODO: add cookie storage specifiers
     document.cookie = `credentials=${response.credential}`;
 
     document.getElementById("googleLoginButton").style.display = "none";
+    document.getElementById("logout").style.display = "";
 
     console.log(response);
 }
