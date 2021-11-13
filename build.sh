@@ -9,5 +9,6 @@ docker build -f buscribe-api/Dockerfile -t buscribe-api:$VERSION .
 
 docker build -f docker-less/Dockerfile -t lessc .
 docker run --rm -v "$(pwd)"/buscribe-web:/buscribe-web lessc /buscribe-web/style.less > buscribe-web/style.css
+docker run --rm -v "$(pwd)"/professor:/professor lessc /professor/style.less > professor/style.css
 
 docker build -f nginx/Dockerfile -t buscribe-web:$VERSION .

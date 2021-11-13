@@ -27,11 +27,35 @@ function pageReady() {
     const bgOpacitySelector = document.querySelector('.vjs-bg-opacity > select');
     bgOpacitySelector.value = "0.5"
 
-    fetch(`//localhost:8005/professor/line/${line_id}`)
+    fetch(`//localhost:8011/professor/line/${line_id}`)
         .then(response => response.json())
         .then(fillLineInfo)
         .then(initializePlayer);
 
+}
+
+function doGoogle() {
+    google.accounts.id.initialize({
+        client_id: "164084252563-kaks3no7muqb82suvbubg7r0o87aip7n.apps.googleusercontent.com",
+        callback: loggedIn,
+        auto_select: true
+    });
+    google.accounts.id.renderButton(
+        document.getElementById("googleLoginButton"),
+        {theme: "outline", size: "large"}  // customization attributes
+    );
+    google.accounts.id.prompt(); // also display the One Tap dialog
+}
+
+function loggedIn(response) {
+
+    // credentials = parseJwt(response.credential)
+    // TODO: add specifiers
+    document.cookie = `credentials=${response.credential}`;
+
+    document.getElementById("googleLoginButton").style.display = "none";
+
+    console.log(response);
 }
 
 function fillLineInfo(line_json) {
@@ -45,7 +69,7 @@ function fillLineInfo(line_json) {
 
 function initializePlayer() {
     videojs.getPlayer("player").src([
-        {src: `//localhost:8005/professor/line/${line_id}/playlist.m3u8`}
+        {src: `//localhost:8011/professor/line/${line_id}/playlist.m3u8`}
     ]);
     videojs.getPlayer("player").addRemoteTextTrack({
         kind: "captions",
@@ -73,7 +97,7 @@ async function submit() {
                 }
             }
 
-            return await fetch("//localhost:8005/professor/speaker",
+            return await fetch("//localhost:8011/professor/speaker",
                 {
                     method: "PUT",
                     headers: {
@@ -86,7 +110,7 @@ async function submit() {
                     .pop(), 10));
         }));
 
-    fetch(`//localhost:8005/professor/line/${line_id}`,
+    fetch(`//localhost:8011/professor/line/${line_id}`,
         {
             method: "POST",
             headers: {
@@ -103,7 +127,7 @@ async function submit() {
 }
 
 $(function () {
-    fetch("//localhost:8005/professor/speaker")
+    fetch("//localhost:8011/professor/speaker")
         .then(response => response.json())
         .then(function (speakers_json) {
             speakers = speakers_json;
@@ -153,3 +177,16 @@ $(function () {
         )
 
 });
+
+function parseJwt(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+        atob(base64)
+            .split('')
+            .map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+
+    return JSON.parse(jsonPayload);
+}

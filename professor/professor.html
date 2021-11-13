@@ -15,7 +15,7 @@
 
     <script src="script.js"></script>
 
-
+<!--    <script src="jsrsasign-all-min.js" type="application/javascript"></script>-->
     <!--    <script src="videojs-contrib-quality-levels/dist/videojs-contrib-quality-levels.min.js"></script>-->
     <!--    <script src="videojs-hls-quality-selector/dist/videojs-hls-quality-selector.min.js"></script>-->
 
@@ -35,6 +35,24 @@
     </video>
 </div>
 
+<!--<div id="g_id_onload"-->
+<!--     data-client_id="164084252563-kaks3no7muqb82suvbubg7r0o87aip7n.apps.googleusercontent.com"-->
+<!--     data-context="signin"-->
+<!--     data-ux_mode="popup"-->
+<!--     data-callback="loggedIn">-->
+<!--</div>-->
+
+<!--<div class="g_id_signin"-->
+<!--     data-type="standard"-->
+<!--     data-shape="rectangular"-->
+<!--     data-theme="outline"-->
+<!--     data-text="signin_with"-->
+<!--     data-size="large"-->
+<!--     data-logo_alignment="left">-->
+<!--</div>-->
+
+<div id="googleLoginButton"></div>
+
 <div id="speakers">
     <label for="speaker_input">Speakers</label><input id="speaker_input">
 </div>
@@ -47,6 +65,9 @@
 <button id="submit_button" onclick="submit()" type="button">Submit</button><span id="update_indicator"></span>
 
 <script src="video.js/dist/video.min.js"></script>
-
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+    window.onGoogleLibraryLoad = doGoogle
+</script>
 </body>
 </html>
