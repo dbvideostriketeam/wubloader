@@ -59,6 +59,7 @@ function fillResults(results) {
             <div class="line_speakers">${line.speakers == null ? "" : line.speakers.join(", ")}</div>
             <div class="line_start_time">${line.start_time}</div>
             <div class="line_text">${line.text}</div>
+            <a href="javascript:showContext('${line.start_time}');">Show context</a>
         `;
 
 
@@ -74,4 +75,23 @@ function switchToUTC() {
 function switchToBus() {
     document.getElementById("start_time").type = "text";
     document.getElementById("end_time").type = "text";
+}
+
+function showContext(time) {
+
+    let start_time = new Date(time + "Z");
+    start_time.setMinutes(start_time.getMinutes() - 3);
+    let start_time_string = start_time.toISOString();
+    start_time_string = start_time_string.substring(0, start_time_string.length - 1)
+
+    let end_time = new Date(time + "Z");
+    end_time.setMinutes(end_time.getMinutes() + 3);
+    let end_time_string = end_time.toISOString();
+    end_time_string = end_time_string.substring(0, end_time_string.length - 1)
+
+    document.getElementById("start_time").value = start_time_string;
+    document.getElementById("end_time").value = end_time_string;
+    document.getElementById("search_text").value = "";
+
+    doSearch();
 }
