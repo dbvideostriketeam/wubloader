@@ -185,9 +185,9 @@ class Cutter(object):
 						# Any successful claim will clear its error.
 						result = query(self.conn, """
 							UPDATE events
-							SET error = %s
-							WHERE id = %s AND state = 'EDITED' AND error IS NULL
-						""", candidate.id, error)
+							SET error = %(error)s
+							WHERE id = %(id)s AND state = 'EDITED' AND error IS NULL
+						""", id=candidate.id, error=error)
 					except Exception:
 						self.logger.exception("Failed to set error for candidate {}, ignoring".format(format_job(candidate)))
 						self.refresh_conn()
