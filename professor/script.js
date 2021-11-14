@@ -27,7 +27,7 @@ function pageReady() {
     const bgOpacitySelector = document.querySelector('.vjs-bg-opacity > select');
     bgOpacitySelector.value = "0.5"
 
-    fetch(`//localhost:8011/professor/line/${line_id}`)
+    fetch(`/professor/desertbus/line/${line_id}`)
         .then(response => response.json())
         .then(fillLineInfo)
         .then(initializePlayer);
@@ -84,11 +84,11 @@ function fillLineInfo(line_json) {
 
 function initializePlayer() {
     videojs.getPlayer("player").src([
-        {src: `//localhost:8011/professor/line/${line_id}/playlist.m3u8`}
+        {src: `/professor/desertbus/line/${line_id}/playlist.m3u8`}
     ]);
     videojs.getPlayer("player").addRemoteTextTrack({
         kind: "captions",
-        src: `//localhost:8010/buscribe/vtt?start_time=${line.start_time}&end_time=${line.end_time}`,
+        src: `/buscribe/desertbus/vtt?start_time=${line.start_time}&end_time=${line.end_time}`,
         srclang: "en",
         label: "English",
         default: true
@@ -112,7 +112,7 @@ async function submit() {
                 }
             }
 
-            return await fetch("//localhost:8011/professor/speaker",
+            return await fetch("/professor/desertbus/speaker",
                 {
                     method: "PUT",
                     headers: {
@@ -126,7 +126,7 @@ async function submit() {
                     .pop(), 10));
         }));
 
-    fetch(`//localhost:8011/professor/line/${line_id}`,
+    fetch(`/professor/desertbus/line/${line_id}`,
         {
             method: "POST",
             headers: {
@@ -144,7 +144,7 @@ async function submit() {
 }
 
 $(function () {
-    fetch("//localhost:8011/professor/speaker")
+    fetch("/professor/desertbus/speaker")
         .then(response => response.json())
         .then(function (speakers_json) {
             speakers = speakers_json;
