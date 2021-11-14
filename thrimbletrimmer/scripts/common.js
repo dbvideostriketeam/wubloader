@@ -399,7 +399,7 @@ function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
 }
 
 function videoPlayerTimeFromVideoHumanTime(videoHumanTime) {
-	let timeParts = videoHumanTime.split(":", 2);
+	let timeParts = videoHumanTime.split(":", 3);
 	let hours;
 	let minutes;
 	let seconds;
