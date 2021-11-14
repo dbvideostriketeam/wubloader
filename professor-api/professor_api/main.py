@@ -13,10 +13,10 @@ from professor_api.professor_api import app
 def cors(app):
     """WSGI middleware that sets CORS headers"""
     HEADERS = [
-        ("Access-Control-Allow-Credentials", "false"),
-        ("Access-Control-Allow-Headers", "*"),
+        ("Access-Control-Allow-Credentials", "true"),
+        ("Access-Control-Allow-Headers", "content-type"),
         ("Access-Control-Allow-Methods", "GET,HEAD,POST,PUT"),
-        ("Access-Control-Allow-Origin", "*"),
+        ("Access-Control-Allow-Origin", "http://localhost:63342,https://wubloader.raptorpond.com"),
         ("Access-Control-Expose-Headers", "*"),
         ("Access-Control-Max-Age", "86400"),
     ]

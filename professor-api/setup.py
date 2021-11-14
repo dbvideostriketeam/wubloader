@@ -11,6 +11,7 @@ setup(
         "psycogreen",
         "wubloader-common",
         "python-dateutil",
-        "flask"
+        "flask",
+        "google-auth"
     ],
 )

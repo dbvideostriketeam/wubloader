@@ -65,8 +65,6 @@ function doLogout() {
 
 function loggedIn(response) {
 
-    // credentials = parseJwt(response.credential)
-    // TODO: add cookie storage specifiers
     document.cookie = `credentials=${response.credential}`;
 
     document.getElementById("googleLoginButton").style.display = "none";
@@ -120,7 +118,8 @@ async function submit() {
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(speaker)
+                    body: JSON.stringify(speaker),
+                    credentials: "include"
                 }).then(response =>
                 parseInt(response.headers.get("Content-Location")
                     .split("/")
@@ -133,7 +132,8 @@ async function submit() {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({transcription: new_transcription, speakers: new_speakers})
+            body: JSON.stringify({transcription: new_transcription, speakers: new_speakers}),
+            credentials: "include"
         }).then(response => {
         if (response.ok) {
             document.getElementById("update_indicator").innerText = "\u2714\ufe0f"

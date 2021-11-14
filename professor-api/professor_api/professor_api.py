@@ -1,5 +1,6 @@
 import re
 import urllib.parse
+from functools import wraps
 
 import flask
 import gevent
@@ -8,7 +9,49 @@ from flask import jsonify, request, copy_current_request_context
 from gevent import sleep
 from psycopg2.extras import execute_values
 
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
 app = flask.Flask('buscribe')
+
+
+def authenticate(f):
+    """Authenticate a token against the database.
+
+    Reference: https://developers.google.com/identity/sign-in/web/backend-auth
+    https://developers.google.com/identity/gsi/web/guides/verify-google-id-token#using-a-google-api-client-library"""
+
+    @wraps(f)
+    def auth_wrapper(*args, **kwargs):
+
+        try:
+            user_token = request.cookies.get("credentials")
+            print(user_token)
+        except (KeyError, TypeError):
+            return 'User token required', 401
+
+        try:
+            idinfo = id_token.verify_oauth2_token(user_token, requests.Request(),
+                                                  "164084252563-kaks3no7muqb82suvbubg7r0o87aip7n.apps.googleusercontent.com")
+            if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+                raise ValueError('Wrong issuer.')
+        except ValueError:
+            return 'Invalid token. Access denied.', 403
+
+        # check whether user is in the database
+        email = idinfo['email'].lower()
+        conn = app.db_manager.get_conn()
+        results = database.query(conn, """
+                    SELECT email
+                    FROM buscribe_verifiers
+                    WHERE lower(email) = %s""", email)
+        row = results.fetchone()
+        if row is None:
+            return 'Unknown user. Access denied.', 403
+
+        return f(*args, editor=email, **kwargs)
+
+    return auth_wrapper
 
 
 @app.route('/professor/line/<int:line_id>', methods=["GET"])
@@ -47,7 +90,8 @@ def get_playlist(line_id):
 
 
 @app.route('/professor/line/<int:line_id>', methods=["POST"])
-def update_line(line_id):
+@authenticate
+def update_line(line_id, editor):
     db_conn = app.db_manager.get_conn()
 
     if "speakers" in request.json and \
@@ -56,11 +100,11 @@ def update_line(line_id):
         # Simpler than dealing with uniqueness
         database.query(db_conn,
                        "DELETE FROM buscribe_line_speakers WHERE line = %(line_id)s AND verifier = %(verifier)s;",
-                       line_id=line_id, verifier="placeholder@example.com")
+                       line_id=line_id, verifier=editor)
         execute_values(db_conn.cursor(),
                        "INSERT INTO buscribe_line_speakers(line, speaker, verifier) "
                        "VALUES %s;",
-                       [(line_id, speaker, "placeholder@example.com") for speaker in
+                       [(line_id, speaker, editor) for speaker in
                         request.json["speakers"]])
     if "transcription" in request.json and \
             isinstance(request.json["transcription"], str) and \
@@ -70,11 +114,11 @@ def update_line(line_id):
 
         database.query(db_conn,
                        "DELETE FROM buscribe_verified_lines WHERE line = %(line_id)s AND verifier = %(verifier)s;",
-                       line_id=line_id, verifier="placeholder@example.com")
+                       line_id=line_id, verifier=editor)
         database.query(db_conn,
                        "INSERT INTO buscribe_verified_lines(line, verified_line, verifier) "
                        "VALUES (%(line)s, %(verified_line)s, %(verifier)s)",
-                       line=line_id, verified_line=verified_line, verifier="placeholder@example.com")
+                       line=line_id, verified_line=verified_line, verifier=editor)
 
     return "", 204
 
@@ -101,7 +145,8 @@ def get_speaker(speaker_id):
 
 
 @app.route('/professor/speaker', methods=["PUT"])
-def new_speaker():
+@authenticate
+def new_speaker(editor=None):
     name = request.json
 
     if not isinstance(name, str):

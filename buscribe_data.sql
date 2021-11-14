@@ -49,9 +49,9 @@ CREATE TABLE buscribe_verifiers
 );
 
 -- For testing
-INSERT INTO buscribe_verifiers(email, name)
-VALUES ('placeholder@example.com', 'Place Holder'),
-       ('aguy@example.com', 'Arnold Guyana');
+-- INSERT INTO buscribe_verifiers(email, name)
+-- VALUES ('placeholder@example.com', 'Place Holder'),
+--        ('aguy@example.com', 'Arnold Guyana');
 
 CREATE TABLE buscribe_line_speakers
 (
