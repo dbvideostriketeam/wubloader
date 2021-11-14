@@ -85,7 +85,7 @@ def get_playlist(line_id):
 #EXT-X-TARGETDURATION:{duration.total_seconds()}
 #EXT-X-PROGRAM-DATE-TIME:{start_time_iso}
 #EXTINF:{duration.total_seconds()}
-//localhost/cut/desertbus/source.ts?start={urllib.parse.quote_plus(start_time_iso)}&end={urllib.parse.quote_plus(end_time_iso)}&type=rough&allow_holes=true
+/cut/desertbus/source.ts?start={urllib.parse.quote_plus(start_time_iso)}&end={urllib.parse.quote_plus(end_time_iso)}&type=rough&allow_holes=true
 #EXT-X-ENDLIST"""
 
 
