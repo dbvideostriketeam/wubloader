@@ -45,6 +45,8 @@ function fillResults(results) {
     const results_element = document.getElementById("results")
     results_element.innerHTML = ""
 
+    const channel = document.getElementById("channel_select").value;
+
     for (const line of results) {
         const line_div = document.createElement("div");
 
@@ -59,7 +61,10 @@ function fillResults(results) {
             <div class="line_speakers">${line.speakers == null ? "" : line.speakers.join(", ")}</div>
             <div class="line_start_time">${line.start_time}</div>
             <div class="line_text">${line.text}</div>
-            <a href="javascript:showContext('${line.start_time}');">Show context</a>
+            <div class="line_links">
+                <a href="/professor/professor.html?line=${line.id}">Edit</a>
+                <a href="javascript:showContext('${line.start_time}');">Show context</a>
+            </div>            
         `;
 
 
