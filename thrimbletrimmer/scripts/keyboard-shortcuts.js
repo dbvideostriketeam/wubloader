@@ -73,12 +73,6 @@ document.addEventListener("keypress", (event) => {
 		case "l":
 			videoElement.currentTime += 10;
 			break;
-		case "ArrowLeft":
-			videoElement.currentTime -= 5;
-			break;
-		case "ArrowRight":
-			videoElement.currentTime += 5;
-			break;
 		case ",":
 			videoElement.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
 			break;
@@ -129,6 +123,11 @@ document.addEventListener("keydown", (event) => {
 			break;
 		case "ArrowRight":
 			videoElement.currentTime += 5;
+			break;
+		case "Backspace":
+			event.preventDefault();
+			videoElement.playbackRate = 1;
+			document.getElementById("video-controls-playback-speed").value = 1;
 			break;
 		default:
 			break;
