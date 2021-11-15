@@ -513,6 +513,7 @@ async function sendVideoData(edited, overrideChanges) {
 	const submissionResponseElem = document.getElementById("submission-response");
 	submissionResponseElem.classList.value = ["submission-response-pending"];
 	submissionResponseElem.innerText = "Submitting video...";
+	window.addEventListener("beforeunload", handleLeavePageWhilePending);
 
 	const rangesData = [];
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
@@ -602,6 +603,8 @@ async function sendVideoData(edited, overrideChanges) {
 		body: JSON.stringify(editData),
 	});
 
+	window.removeEventListener("beforeunload", handleLeavePageWhilePending);
+
 	if (submitResponse.ok) {
 		submissionResponseElem.classList.value = ["submission-response-success"];
 		if (edited) {
@@ -640,6 +643,13 @@ async function sendVideoData(edited, overrideChanges) {
 			}: ${await submitResponse.text()}`;
 		}
 	}
+}
+
+function handleLeavePageWhilePending(event) {
+	event.preventDefault();
+	event.returnValue =
+		"The video submission is still pending. Are you sure you want to exit? You may lose your edits.";
+	return event.returnValue;
 }
 
 function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
