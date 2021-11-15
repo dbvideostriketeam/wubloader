@@ -334,6 +334,9 @@ def generate_waveform(channel, quality):
 	if end <= start:
 		return "End must be after start", 400
 
+	if end - start > datetime.timedelta(hours=6):
+		return "Range may not be longer than 6 hours", 400
+
 	size = request.args.get('size', '1024x64')
 	try:
 		width, height = map(int, size.split('x'))
