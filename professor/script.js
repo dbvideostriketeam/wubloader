@@ -41,6 +41,13 @@ function pageReady() {
     handleLoginState();
 }
 
+
+hotkeys('ctrl+enter', function (event, handler){
+    console.log(event);
+    document.getElementById("submit_button").click();
+});
+
+
 function handleLoginState() {
     if (document.cookie.split('; ').find(row => row.startsWith('credentials='))) {
         document.getElementById("logout").style.display = "";
