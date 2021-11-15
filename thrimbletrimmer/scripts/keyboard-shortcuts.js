@@ -73,6 +73,12 @@ document.addEventListener("keypress", (event) => {
 		case "l":
 			videoElement.currentTime += 10;
 			break;
+		case "J":
+			videoElement.currentTime -= 1;
+			break;
+		case "L":
+			videoElement.currentTime += 1;
+			break;
 		case ",":
 			videoElement.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
 			break;
