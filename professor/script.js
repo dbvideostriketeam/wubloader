@@ -1,7 +1,13 @@
 function pageReady() {
 
     const params = new URLSearchParams(document.location.search.substring(1));
-    line_id = parseInt(params.get("line"), 10);
+    let line_id;
+    if (params.get("line") !== "random") {
+        line_id = parseInt(params.get("line"), 10);
+    } else {
+        line_id = "random"
+    }
+
 
     videojs("player", {
         // src: "test.m3u8",
@@ -74,7 +80,8 @@ function loggedIn(response) {
 }
 
 function fillLineInfo(line_json) {
-    // document.getElementById("original_transcription").innerText = line_json.line_data.text;
+    line_id = line_json.id
+
     line = line_json
     document.getElementById("original_transcription").innerHTML = line_json.line_data.result
         .map(word => `<span style="opacity: ${word.conf}">${word.word}</span>`).join(" ");

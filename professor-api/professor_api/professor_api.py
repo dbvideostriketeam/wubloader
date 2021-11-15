@@ -1,6 +1,7 @@
 import re
 import urllib.parse
 from functools import wraps
+from random import randrange
 
 import flask
 import gevent
@@ -63,7 +64,27 @@ def get_line(line_id):
     if line is None:
         return "Line not found.", 404
     else:
-        return {"start_time": line.start_time.isoformat(),
+        return {"id": line.id,
+                "start_time": line.start_time.isoformat(),
+                "end_time": line.end_time.isoformat(),
+                "line_data": line.transcription_json}
+
+
+@app.route('/professor/line/random', methods=["GET"])
+def get_random_line():
+    db_conn = app.db_manager.get_conn()
+
+    n_lines = database.query(db_conn, "SELECT count(*) AS n_lines FROM buscribe_transcriptions;").fetchone().n_lines
+
+    row = randrange(n_lines)
+
+    line = database.query(db_conn, "SELECT * FROM buscribe_transcriptions OFFSET %(row)s LIMIT 1;", row=row).fetchone()
+
+    if line is None:
+        return "Line not found.", 404
+    else:
+        return {"id": line.id,
+                "start_time": line.start_time.isoformat(),
                 "end_time": line.end_time.isoformat(),
                 "line_data": line.transcription_json}
 

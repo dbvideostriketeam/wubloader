@@ -62,6 +62,13 @@ CREATE TABLE buscribe_line_speakers
     PRIMARY KEY (line, speaker, verifier)
 );
 
+CREATE TABLE buscribe_line_inferred_speakers
+(
+    line    BIGINT NOT NULL REFERENCES buscribe_transcriptions,
+    speaker BIGINT NOT NULL REFERENCES buscribe_speakers,
+    PRIMARY KEY (line, speaker)
+);
+
 CREATE TABLE buscribe_verified_lines
 (
 --     id            BIGSERIAL PRIMARY KEY,
@@ -107,12 +114,18 @@ SELECT id,
        start_time,
        end_time,
        null                                       AS verifier,
-       null                                       AS names,
+       names,
        transcription_line,
        to_tsvector('english', transcription_line) AS transcription_line_ts,
        null                                       AS names_ts,
        transcription_json
-FROM buscribe_transcriptions;
+FROM buscribe_transcriptions
+         LEFT OUTER JOIN (
+    SELECT line, array_agg(name) AS names
+    FROM buscribe_line_inferred_speakers
+             INNER JOIN buscribe_speakers ON buscribe_line_inferred_speakers.speaker = buscribe_speakers.id
+    GROUP BY line
+) AS speakers ON id = speakers.line;
 
 ROLLBACK;
 
