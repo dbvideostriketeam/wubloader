@@ -290,7 +290,7 @@ async function initializeVideoInfo() {
 			globalStartTimeString = wubloaderTimeFromDateTime(earliestStartTime);
 		}
 
-		if (latestEndTime && latestEndTime.diff(eventEndTime).milliseconds > 0) {
+		if (latestEndTime && eventEndTime && latestEndTime.diff(eventEndTime).milliseconds > 0) {
 			// If we're getting the time from a previous draft edit, we have seconds, so one minute is enough
 			latestEndTime = latestEndTime.plus({ minutes: 1 });
 			globalEndTimeString = wubloaderTimeFromDateTime(latestEndTime);
