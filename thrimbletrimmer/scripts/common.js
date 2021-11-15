@@ -348,6 +348,9 @@ function wubloaderTimeFromDateTime(dateTime) {
 }
 
 function busTimeFromWubloaderTime(wubloaderTime) {
+	if (wubloaderTime === "") {
+		return "";
+	}
 	const dt = dateTimeFromWubloaderTime(wubloaderTime);
 	return busTimeFromDateTime(dt);
 }
