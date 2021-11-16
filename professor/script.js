@@ -43,7 +43,6 @@ function pageReady() {
 
 
 hotkeys('ctrl+enter', function (event, handler){
-    console.log(event);
     document.getElementById("submit_button").click();
 });
 
