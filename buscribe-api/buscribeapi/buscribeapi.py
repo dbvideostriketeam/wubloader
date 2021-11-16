@@ -141,14 +141,14 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
 
     query = f"""
     WITH q AS (
-        SELECT convert_query(${"%(text_query)s" if ts_query is not None else ""})
+        SELECT convert_query({"%(text_query)s" if ts_query is not None else "NULL"})
     )
     (SELECT *, ts_headline(transcription_line, (SELECT * FROM q),
      'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text
             FROM buscribe_all_transcriptions2 
             WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s 
-            ${"AND verified_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""}
-            ORDER BY ${"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
+            {"AND verified_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""}
+            ORDER BY {"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
                        "coalesce(names_ts, ''::tsvector), (SELECT * FROM q)) DESC," if ts_query is not None else ""} 
             start_time)
     UNION
@@ -156,8 +156,8 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
      'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text
             FROM buscribe_all_transcriptions2 
             WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s 
-            ${"AND machine_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""} 
-            ORDER BY ${"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
+            {"AND machine_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""} 
+            ORDER BY {"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
                       "coalesce(names_ts, ''::tsvector), (SELECT * FROM q)) DESC," if ts_query is not None else ""} 
             start_time)
            """
