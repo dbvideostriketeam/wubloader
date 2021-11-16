@@ -118,27 +118,6 @@ def get_json():
 
 
 def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset=None):
-    query = "SELECT *" + \
-            (
-                ",ts_headline(transcription_line, convert_query(%(text_query)s), 'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text" if ts_query is not None else ",transcription_line AS highlighted_text") + \
-            " FROM buscribe_all_transcriptions WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s "
-
-    if ts_query is not None:
-        query += "AND (coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector)) @@ " \
-                 "convert_query(%(text_query)s) " \
-                 "ORDER BY ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) || coalesce(names_ts, ''::tsvector), convert_query(%(text_query)s)) DESC, " \
-                 "start_time "
-    else:
-        query += "ORDER BY start_time "
-
-    if limit is not None:
-        query += "LIMIT %(limit)s "
-
-    if offset is not None:
-        query += "OFFSET %(limit)s "
-
-    query += ";"
-
     query = f"""
     WITH q AS (
         SELECT convert_query({"%(text_query)s" if ts_query is not None else "NULL"})
@@ -161,6 +140,14 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
                       "coalesce(names_ts, ''::tsvector), (SELECT * FROM q)) DESC," if ts_query is not None else ""} 
             start_time)
            """
+
+    if limit is not None:
+        query += "LIMIT %(limit)s "
+
+    if offset is not None:
+        query += "OFFSET %(limit)s "
+
+    query += ";"
 
     return database.query(db_conn, query,
                           start_time=start_time if start_time is not None else '-infinity',
