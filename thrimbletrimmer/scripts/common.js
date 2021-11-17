@@ -249,6 +249,7 @@ function setUpVideoControls() {
 	localStorage.setItem("quality", quality.options[quality.options.selectedIndex].innerText);
 	quality.addEventListener("change", (_event) => {
 		globalPlayer.currentLevel = +quality.value;
+		localStorage.setItem("quality", quality.options[quality.options.selectedIndex].innerText);
 	});
 
 	const fullscreen = document.getElementById("video-controls-fullscreen");
