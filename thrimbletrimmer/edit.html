@@ -117,37 +117,51 @@
 			</div>
 		</div>
 
+		<div>
+			<input type="checkbox" id="enable-chapter-markers" />
+			<label for="enable-chapter-markers">Add chapter markers to video description</label>
+		</div>
 		<div id="range-definitions">
-			<div class="range-definition-times">
-				<input type="text" class="range-definition-start" />
+			<div>
+				<div class="range-definition-times">
+					<input type="text" class="range-definition-start" />
+					<img
+						src="images/pencil.png"
+						alt="Set range start point to current video time"
+						class="range-definition-set-start click"
+					/>
+					<img
+						src="images/play_to.png"
+						alt="Play from start point"
+						class="range-definition-play-start click"
+					/>
+					<div class="range-definition-between-time-gap"></div>
+					<input type="text" class="range-definition-end" />
+					<img
+						src="images/pencil.png"
+						alt="Set range end point to current video time"
+						class="range-definition-set-end click"
+					/>
+					<img
+						src="images/play_to.png"
+						alt="Play from end point"
+						class="range-definition-play-end click"
+					/>
+					<div class="range-definition-icon-gap"></div>
+					<img
+						src="images/arrow.png"
+						alt="Range affected by keyboard shortcuts"
+						title="Range affected by keyboard shortcuts"
+						class="range-definition-current"
+					/>
+				</div>
+				<div class="range-definition-chapter-markers hidden"></div>
 				<img
-					src="images/pencil.png"
-					alt="Set range start point to current video time"
-					class="range-definition-set-start click"
-				/>
-				<img
-					src="images/play_to.png"
-					alt="Play from start point"
-					class="range-definition-play-start click"
-				/>
-				<div class="range-definition-between-time-gap"></div>
-				<input type="text" class="range-definition-end" />
-				<img
-					src="images/pencil.png"
-					alt="Set range end point to current video time"
-					class="range-definition-set-end click"
-				/>
-				<img
-					src="images/play_to.png"
-					alt="Play from end point"
-					class="range-definition-play-end click"
-				/>
-				<div class="range-definition-icon-gap"></div>
-				<img
-					src="images/arrow.png"
-					alt="Range affected by keyboard shortcuts"
-					title="Range affected by keyboard shortcuts"
-					class="range-definition-current"
+					src="images/plus.png"
+					alt="Add chapter marker"
+					title="Add chapter marker"
+					class="add-range-definition-chapter-marker click hidden"
+					tabindex="0"
 				/>
 			</div>
 		</div>

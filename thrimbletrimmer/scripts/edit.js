@@ -2,6 +2,9 @@ var googleUser = null;
 var videoInfo;
 var currentRange = 1;
 
+const CHAPTER_MARKER_DELIMITER = "\n==========\n";
+const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
+
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
 
@@ -145,6 +148,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	});
 
+	const enableChaptersElem = document.getElementById("enable-chapter-markers");
+	enableChaptersElem.addEventListener("change", (_event) => {
+		changeEnableChaptersHandler();
+	});
+
 	for (const rangeStartSet of document.getElementsByClassName("range-definition-set-start")) {
 		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
 	}
@@ -166,6 +174,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		rangeEnd.addEventListener("change", (_event) => {
 			rangeDataUpdated();
 		});
+	}
+	for (const addChapterMarker of document.getElementsByClassName(
+		"add-range-definition-chapter-marker"
+	)) {
+		addChapterMarker.addEventListener("click", addChapterMarkerHandler);
 	}
 
 	document.getElementById("video-info-title").addEventListener("input", (_event) => {
@@ -396,31 +409,87 @@ async function initializeVideoInfo() {
 	const handleInitialSetupForDuration = (_event) => {
 		const rangeDefinitionsContainer = document.getElementById("range-definitions");
 		if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
+			const chapterData = [];
+			const descriptionField = document.getElementById("video-info-description");
+			let description = descriptionField.value;
+			if (description.indexOf(CHAPTER_MARKER_DELIMITER) !== -1) {
+				enableChapterMarkers(true);
+				const descriptionParts = description.split(CHAPTER_MARKER_DELIMITER, 2);
+				description = descriptionParts[0];
+				const chapterLines = descriptionParts[1].split("\n");
+				for (const chapterLine of chapterLines) {
+					const chapterLineData = chapterLine.split(" - ");
+					const chapterTime = unformatChapterTime(chapterLineData.shift());
+					const chapterDescription = chapterLineData.join(" - ");
+					chapterData.push({ start: chapterTime, description: chapterDescription });
+				}
+			}
+
+			let currentChapterIndex = 0;
+			let canAddChapters = true;
+			let rangeStartOffset = 0;
 			for (let rangeIndex = 0; rangeIndex < videoInfo.video_ranges.length; rangeIndex++) {
 				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
 					addRangeDefinition();
 				}
 				const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
 				const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
+				const startPlayerTime = videoPlayerTimeFromWubloaderTime(startWubloaderTime);
+				const endPlayerTime = videoPlayerTimeFromWubloaderTime(endWubloaderTime);
 				if (startWubloaderTime) {
 					const startField =
 						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
 							"range-definition-start"
 						)[0];
-					startField.value = videoHumanTimeFromWubloaderTime(startWubloaderTime);
+					startField.value = videoHumanTimeFromVideoPlayerTime(startPlayerTime);
 				}
 				if (endWubloaderTime) {
 					const endField =
 						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
 							"range-definition-end"
 						)[0];
-					endField.value = videoHumanTimeFromWubloaderTime(endWubloaderTime);
+					endField.value = videoHumanTimeFromVideoPlayerTime(endPlayerTime);
 				}
+
+				const rangeDuration = endPlayerTime - startPlayerTime;
+				const rangeEndVideoTime = rangeStartOffset + rangeDuration;
+				if (canAddChapters && startWubloaderTime && endWubloaderTime) {
+					const chapterContainer = rangeDefinitionsContainer.children[
+						rangeIndex
+					].getElementsByClassName("range-definition-chapter-markers")[0];
+					while (
+						currentChapterIndex < chapterData.length &&
+						chapterData[currentChapterIndex].start < rangeEndVideoTime
+					) {
+						const chapterMarker = chapterMarkerDefinitionDOM();
+						const chapterStartField = chapterMarker.getElementsByClassName(
+							"range-definition-chapter-marker-start"
+						)[0];
+						chapterStartField.value = videoHumanTimeFromVideoPlayerTime(
+							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime
+						);
+						const chapterDescField = chapterMarker.getElementsByClassName(
+							"range-definition-chapter-marker-description"
+						)[0];
+						chapterDescField.value = chapterData[currentChapterIndex].description;
+						chapterContainer.appendChild(chapterMarker);
+						currentChapterIndex++;
+					}
+				} else {
+					canAddChapters = false;
+				}
+				rangeStartOffset = rangeEndVideoTime;
+			}
+			if (canAddChapters) {
+				descriptionField.value = description;
+				validateVideoDescription();
+				enableChapterMarkers(true);
 			}
 		} else {
 			const rangeStartField =
 				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
 			rangeStartField.value = videoHumanTimeFromWubloaderTime(globalStartTimeString);
+			rangeStartField.dataset.oldTime = rangeStartField.value;
 			if (globalEndTimeString) {
 				const rangeEndField =
 					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
@@ -510,6 +579,9 @@ function validateVideoDescription() {
 	} else if (videoDesc.indexOf("<") !== -1 || videoDesc.indexOf(">") !== -1) {
 		videoDescField.classList.add("input-error");
 		videoDescField.title = "Description contains invalid characters";
+	} else if (videoDesc.indexOf(CHAPTER_MARKER_DELIMITER) !== -1) {
+		videoDescField.classList.add("input-error");
+		videoDescField.title = "Description contains a manual chapter marker";
 	} else {
 		videoDescField.classList.remove("input-error");
 		videoDescField.title = "";
@@ -517,6 +589,21 @@ function validateVideoDescription() {
 }
 
 async function submitVideo() {
+	const enableChaptersElem = document.getElementById("enable-chapter-markers");
+	const chapterStartFieldList = document.getElementsByClassName("range-definition-chapter-time");
+	if (enableChaptersElem.checked && chapterStartFieldList.length > 0) {
+		const firstRangeStartElem = document.getElementsByClassName("range-definition-start")[0];
+		const firstRangeStart = videoPlayerTimeFromMVideoHumanTime(firstRangeStartElem.value);
+
+		const firstChapterStartField = chapterStartFieldList[0];
+		const firstChapterStart = videoPlayerTimeFromVideoHumanTime(firstChapterStartField.value);
+
+		if (firstRangeStart !== firstChapterStart) {
+			addError("The first chapter marker must be at the beginning of the video");
+			return;
+		}
+	}
+
 	return sendVideoData(true, false);
 }
 
@@ -525,17 +612,31 @@ async function saveVideoDraft() {
 }
 
 async function sendVideoData(edited, overrideChanges) {
+	let videoDescription = document.getElementById("video-info-description").value;
+	if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
+		addError(
+			"Couldn't submit edits: Description contains manually entered chapter marker delimiter"
+		);
+		return;
+	}
+
 	const submissionResponseElem = document.getElementById("submission-response");
 	submissionResponseElem.classList.value = ["submission-response-pending"];
 	submissionResponseElem.innerText = "Submitting video...";
 	window.addEventListener("beforeunload", handleLeavePageWhilePending);
 
 	const rangesData = [];
+	const chaptersData = [];
+	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
+	let rangeStartInFinalVideo = 0;
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
-		const rangeStart = rangeContainer.getElementsByClassName("range-definition-start")[0].value;
-		const rangeEnd = rangeContainer.getElementsByClassName("range-definition-end")[0].value;
-		const rangeStartSubmit = wubloaderTimeFromVideoHumanTime(rangeStart);
-		const rangeEndSubmit = wubloaderTimeFromVideoHumanTime(rangeEnd);
+		const rangeStartHuman =
+			rangeContainer.getElementsByClassName("range-definition-start")[0].value;
+		const rangeEndHuman = rangeContainer.getElementsByClassName("range-definition-end")[0].value;
+		const rangeStartPlayer = videoPlayerTimeFromVideoHumanTime(rangeStartHuman);
+		const rangeEndPlayer = videoPlayerTimeFromVideoHumanTime(rangeEndHuman);
+		const rangeStartSubmit = wubloaderTimeFromVideoPlayerTime(rangeStartPlayer);
+		const rangeEndSubmit = wubloaderTimeFromVideoPlayerTime(rangeEndPlayer);
 
 		if (edited && (!rangeStartSubmit || !rangeEndSubmit)) {
 			submissionResponseElem.classList.value = ["submission-response-error"];
@@ -551,11 +652,66 @@ async function sendVideoData(edited, overrideChanges) {
 			return;
 		}
 
+		if (edited && rangeEndPlayer < rangeStartPlayer) {
+			submissionResponseElem.innerText =
+				"One or more ranges has an end time prior to its start time.";
+			submissionResponseElem.classList.value = ["submission-response-error"];
+			return;
+		}
+
 		rangesData.push({
 			start: rangeStartSubmit,
 			end: rangeEndSubmit,
 		});
+
+		if (chaptersEnabled && rangeStartSubmit && rangeEndSubmit) {
+			for (const chapterContainer of rangeContainer.getElementsByClassName(
+				"range-definition-chapter-markers"
+			)[0].children) {
+				const startField = chapterContainer.getElementsByClassName(
+					"range-definition-chapter-marker-start"
+				)[0];
+				const descField = chapterContainer.getElementsByClassName(
+					"range-definition-chapter-marker-description"
+				)[0];
+
+				const startFieldTime = videoPlayerTimeFromVideoHumanTime(startField.value);
+				if (startFieldTime === null) {
+					if (edited) {
+						submissionResponseElem.innerText = `Unable to parse chapter start time: ${startField.value}`;
+						submissionResponseElem.classList.value = ["submission-response-error"];
+						return;
+					}
+					continue;
+				}
+				if (startFieldTime < rangeStartPlayer || startFieldTime > rangeEndPlayer) {
+					submissionResponseElem.innerText = `The chapter at "${startField.value}" is outside its containing time range.`;
+					submissionResponseElem.classList.value = ["submission-response-error"];
+					return;
+				}
+				const chapterStartTime = rangeStartInFinalVideo + startFieldTime - rangeStartPlayer;
+				const chapterData = {
+					start: chapterStartTime,
+					description: descField.value,
+				};
+				chaptersData.push(chapterData);
+			}
+		} else {
+			const enableChaptersElem = document.getElementById("enable-chapter-markers");
+			if (
+				enableChaptersElem.checked &&
+				rangeContainer.getElementsByClassName("range-definition-chapter-marker-start").length > 0
+			) {
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionResponseElem.innerText =
+					"Chapter markers can't be saved for ranges without valid endpoints.";
+				return;
+			}
+		}
+		rangeStartInFinalVideo += rangeEndPlayer - rangeStartPlayer;
 	}
+	const finalVideoDuration = rangeStartInFinalVideo;
+	const videoHasHours = finalVideoDuration >= 3600;
 
 	const ranges = [];
 	const transitions = [];
@@ -567,8 +723,38 @@ async function sendVideoData(edited, overrideChanges) {
 	// The first range will never have a transition defined, so remove that one
 	transitions.shift();
 
+	if (chaptersData.length > 0) {
+		if (chaptersData[0].start !== 0) {
+			submissionResponseElem.innerText =
+				"The first chapter must start at the beginning of the video";
+			submissionResponseElem.classList.value = ["submission-response-error"];
+			return;
+		}
+		let lastChapterStart = 0;
+		for (let chapterIndex = 1; chapterIndex < chaptersData.length; chapterIndex++) {
+			if (chaptersData[chapterIndex].start < lastChapterStart) {
+				submissionResponseElem.innerText = "Chapters are out of order";
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				return;
+			}
+			if (edited && chaptersData[chapterIndex].start - lastChapterStart < 10) {
+				submissionResponseElem.innerText = "Chapters must be at least 10 seconds apart";
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				return;
+			}
+			lastChapterStart = chaptersData[chapterIndex].start;
+		}
+
+		const chapterTextList = [];
+		for (const chapterData of chaptersData) {
+			const startTime = formatChapterTime(chapterData.start, videoHasHours);
+			chapterTextList.push(`${startTime} - ${chapterData.description}`);
+		}
+
+		videoDescription = videoDescription + CHAPTER_MARKER_DELIMITER + chapterTextList.join("\n");
+	}
+
 	const videoTitle = document.getElementById("video-info-title").value;
-	const videoDescription = document.getElementById("video-info-description").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 	const uploadLocation = document.getElementById(
@@ -658,6 +844,36 @@ async function sendVideoData(edited, overrideChanges) {
 			}: ${await submitResponse.text()}`;
 		}
 	}
+}
+
+function formatChapterTime(playerTime, hasHours) {
+	let hours = Math.trunc(playerTime / 3600);
+	let minutes = Math.trunc((playerTime / 60) % 60);
+	let seconds = Math.trunc(playerTime % 60);
+
+	while (minutes.toString().length < 2) {
+		minutes = `0${minutes}`;
+	}
+	while (seconds.toString().length < 2) {
+		seconds = `0${seconds}`;
+	}
+
+	if (hasHours) {
+		return `${hours}:${minutes}:${seconds}`;
+	}
+	return `${minutes}:${seconds}`;
+}
+
+function unformatChapterTime(chapterTime) {
+	const timeParts = chapterTime.split(":");
+	while (timeParts.length < 3) {
+		timeParts.unshift(0);
+	}
+	const hours = +timeParts[0];
+	const minutes = +timeParts[1];
+	const seconds = +timeParts[2];
+
+	return hours * 3600 + minutes * 60 + seconds;
 }
 
 function handleLeavePageWhilePending(event) {
@@ -815,8 +1031,9 @@ function addRangeDefinition() {
 
 function rangeDefinitionDOM() {
 	const rangeContainer = document.createElement("div");
-	rangeContainer.classList.add("range-definition-removable");
-	rangeContainer.classList.add("range-definition-times");
+	const rangeTimesContainer = document.createElement("div");
+	rangeTimesContainer.classList.add("range-definition-removable");
+	rangeTimesContainer.classList.add("range-definition-times");
 	const rangeStart = document.createElement("input");
 	rangeStart.type = "text";
 	rangeStart.classList.add("range-definition-start");
@@ -885,15 +1102,38 @@ function rangeDefinitionDOM() {
 	currentRangeMarker.classList.add("range-definition-current");
 	currentRangeMarker.classList.add("hidden");
 
-	rangeContainer.appendChild(rangeStart);
-	rangeContainer.appendChild(rangeStartSet);
-	rangeContainer.appendChild(rangeStartPlay);
-	rangeContainer.appendChild(rangeTimeGap);
-	rangeContainer.appendChild(rangeEnd);
-	rangeContainer.appendChild(rangeEndSet);
-	rangeContainer.appendChild(rangeEndPlay);
-	rangeContainer.appendChild(removeRange);
-	rangeContainer.appendChild(currentRangeMarker);
+	rangeTimesContainer.appendChild(rangeStart);
+	rangeTimesContainer.appendChild(rangeStartSet);
+	rangeTimesContainer.appendChild(rangeStartPlay);
+	rangeTimesContainer.appendChild(rangeTimeGap);
+	rangeTimesContainer.appendChild(rangeEnd);
+	rangeTimesContainer.appendChild(rangeEndSet);
+	rangeTimesContainer.appendChild(rangeEndPlay);
+	rangeTimesContainer.appendChild(removeRange);
+	rangeTimesContainer.appendChild(currentRangeMarker);
+
+	const rangeChaptersContainer = document.createElement("div");
+	const enableChaptersElem = document.getElementById("enable-chapter-markers");
+	const chaptersEnabled = enableChaptersElem.checked;
+	rangeChaptersContainer.classList.add("range-definition-chapter-markers");
+	if (!chaptersEnabled) {
+		rangeChaptersContainer.classList.add("hidden");
+	}
+
+	const rangeAddChapterElem = document.createElement("img");
+	rangeAddChapterElem.src = "images/plus.png";
+	rangeAddChapterElem.alt = "Add chapter marker";
+	rangeAddChapterElem.title = "Add chapter marker";
+	rangeAddChapterElem.classList.add("add-range-definition-chapter-marker");
+	rangeAddChapterElem.classList.add("click");
+	if (!chaptersEnabled) {
+		rangeAddChapterElem.classList.add("hidden");
+	}
+	rangeAddChapterElem.addEventListener("click", addChapterMarkerHandler);
+
+	rangeContainer.appendChild(rangeTimesContainer);
+	rangeContainer.appendChild(rangeChaptersContainer);
+	rangeContainer.appendChild(rangeAddChapterElem);
 
 	return rangeContainer;
 }
@@ -965,6 +1205,62 @@ function rangePlayFromEndHandler(event) {
 	videoElement.currentTime = endTime;
 }
 
+function chapterMarkerDefinitionDOM() {
+	const startFieldContainer = document.createElement("div");
+	const startField = document.createElement("input");
+	startField.type = "text";
+	startField.classList.add("range-definition-chapter-marker-start");
+	startField.placeholder = "Start time";
+
+	const setStartTime = document.createElement("img");
+	setStartTime.src = "images/pencil.png";
+	setStartTime.alt = "Set chapter start time";
+	setStartTime.title = setStartTime.alt;
+	setStartTime.classList.add("range-definition-chapter-marker-set-start");
+	setStartTime.classList.add("click");
+
+	setStartTime.addEventListener("click", (event) => {
+		const chapterContainer = event.currentTarget.parentElement;
+		const startTimeField = chapterContainer.getElementsByClassName(
+			"range-definition-chapter-marker-start"
+		)[0];
+		const videoElement = document.getElementById("video");
+		startTimeField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
+	});
+
+	startFieldContainer.appendChild(startField);
+	startFieldContainer.appendChild(setStartTime);
+
+	const descriptionField = document.createElement("input");
+	descriptionField.type = "text";
+	descriptionField.classList.add("range-definition-chapter-marker-description");
+	descriptionField.placeholder = "Description";
+
+	const removeButton = document.createElement("img");
+	removeButton.src = "images/minus.png";
+	removeButton.alt = "Remove this chapter";
+	removeButton.title = removeButton.alt;
+	removeButton.classList.add("range-definition-chapter-marker-remove");
+	removeButton.classList.add("click");
+
+	removeButton.addEventListener("click", (event) => {
+		const thisDefinition = event.currentTarget.parentElement;
+		thisDefinition.parentNode.removeChild(thisDefinition);
+	});
+
+	const chapterContainer = document.createElement("div");
+	chapterContainer.appendChild(startFieldContainer);
+	chapterContainer.appendChild(descriptionField);
+	chapterContainer.appendChild(removeButton);
+
+	return chapterContainer;
+}
+
+function addChapterMarkerHandler(event) {
+	const newChapterMarker = chapterMarkerDefinitionDOM();
+	event.currentTarget.previousElementSibling.appendChild(newChapterMarker);
+}
+
 function rangeDataUpdated() {
 	const clipBar = document.getElementById("clip-bar");
 	clipBar.innerHTML = "";
@@ -978,18 +1274,45 @@ function rangeDataUpdated() {
 		const rangeStart = videoPlayerTimeFromVideoHumanTime(rangeStartField.value);
 		const rangeEnd = videoPlayerTimeFromVideoHumanTime(rangeEndField.value);
 
-		if (rangeStart === null || rangeEnd === null) {
-			continue;
+		if (rangeStart !== null && rangeEnd !== null) {
+			const rangeStartPercentage = (rangeStart / videoDuration) * 100;
+			const rangeEndPercentage = (rangeEnd / videoDuration) * 100;
+			const widthPercentage = rangeEndPercentage - rangeStartPercentage;
+
+			const marker = document.createElement("div");
+			marker.style.width = `${widthPercentage}%`;
+			marker.style.left = `${rangeStartPercentage}%`;
+			clipBar.appendChild(marker);
 		}
 
-		const rangeStartPercentage = (rangeStart / videoDuration) * 100;
-		const rangeEndPercentage = (rangeEnd / videoDuration) * 100;
-		const widthPercentage = rangeEndPercentage - rangeStartPercentage;
-
-		const marker = document.createElement("div");
-		marker.style.width = `${widthPercentage}%`;
-		marker.style.left = `${rangeStartPercentage}%`;
-		clipBar.appendChild(marker);
+		let oldRangeStart = rangeStartField.dataset.oldTime;
+		let oldRangeEnd = rangeEndField.dataset.oldTime;
+		if (oldRangeStart) {
+			oldRangeStart = videoPlayerTimeFromVideoHumanTime(oldRangeStart);
+		} else {
+			oldRangeStart = null;
+		}
+		if (oldRangeEnd) {
+			oldRangeEnd = videoPlayerTimeFromVideoHumanTime(oldRnageEnd);
+		} else {
+			oldRangeEnd = null;
+		}
+		if (rangeStart === null) {
+			delete rangeStartField.dataset.oldTime;
+		} else if (oldRangeStart === null) {
+			rangeStartField.dataset.oldTime = rangeStartField.value;
+		} else {
+			const startOffset = rangeStart - oldRangeStart;
+			for (const chapterStartField of rangeDefinition.getElementsByClassName(
+				"range-definition-chapter-marker-start"
+			)) {
+				const chapterStart = videoPlayerTimeFromVideoHumanTime(chapterStartField.value);
+				if (chapterStart !== null) {
+					chapterStartField.value = videoHumanTimeFromVideoPlayerTime(chapterStart + startOffset);
+				}
+			}
+			rangeStartField.dataset.oldTime = rangeStartField.value;
+		}
 	}
 	updateDownloadLink();
 }
@@ -1010,6 +1333,33 @@ function setCurrentRangeEndToVideoTime() {
 	const videoElement = document.getElementById("video");
 	rangeEndField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
 	rangeDataUpdated();
+}
+
+function enableChapterMarkers(enable) {
+	document.getElementById("enable-chapter-markers").checked = enable;
+	changeEnableChaptersHandler();
+}
+
+function changeEnableChaptersHandler() {
+	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
+	for (const chapterMarkerContainer of document.getElementsByClassName(
+		"range-definition-chapter-markers"
+	)) {
+		if (chaptersEnabled) {
+			chapterMarkerContainer.classList.remove("hidden");
+		} else {
+			chapterMarkerContainer.classList.add("hidden");
+		}
+	}
+	for (const addChapterMarkerElem of document.getElementsByClassName(
+		"add-range-definition-chapter-marker"
+	)) {
+		if (chaptersEnabled) {
+			addChapterMarkerElem.classList.remove("hidden");
+		} else {
+			addChapterMarkerElem.classList.add("hidden");
+		}
+	}
 }
 
 function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
