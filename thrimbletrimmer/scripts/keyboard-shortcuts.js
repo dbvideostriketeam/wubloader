@@ -73,6 +73,7 @@ document.addEventListener("keypress", (event) => {
 			} else {
 				videoElement.pause();
 			}
+			event.preventDefault();
 			break;
 		case "l":
 			videoElement.currentTime += 10;
