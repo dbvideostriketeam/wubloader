@@ -986,10 +986,10 @@ async function cancelVideoUpload() {
 	});
 
 	if (response.ok) {
-		responseElem.innerText = "Row has been cancelled. Reloading...";
+		responseElem.innerText = "Row has been cancelled.";
 		setTimeout(() => {
-			window.location.reload();
-		}, 1000);
+			responseElem.innerText = "";
+		}, 2000);
 	} else {
 		responseElem.innerText = `${response.statusText}: ${await response.text()}`;
 	}
@@ -1014,10 +1014,14 @@ async function resetVideoRow() {
 	});
 
 	if (response.ok) {
-		responseElem.innerText = "Row has been reset. Reloading...";
+		responseElem.innerText = "Row has been reset.";
+		const forceResetConfirmationContainer = document.getElementById(
+			"data-correction-force-reset-confirm"
+		);
+		forceResetConfirmationContainer.classList.add("hidden");
 		setTimeout(() => {
-			window.location.reload();
-		}, 1000);
+			responseElem.innerText = "";
+		}, 2000);
 	} else {
 		responseElem.innerText = `${response.statusText}: ${await response.text()}`;
 	}
