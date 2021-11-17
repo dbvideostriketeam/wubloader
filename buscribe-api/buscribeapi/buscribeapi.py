@@ -220,8 +220,8 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
         ORDER BY
             {"rank DESC," if ts_query is not None else ""}
             start_time
-        {"OFFSET 0" if offset is not None else ""}
-        {"LIMIT 10" if limit is not None else ""};
+        {"OFFSET %(offset)s" if offset is not None else ""}
+        {"LIMIT %(limit)s" if limit is not None else ""};
     """
 
     return database.query(db_conn, query,
