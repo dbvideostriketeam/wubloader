@@ -168,6 +168,8 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
                 transcription_line,
                 ts_rank_cd(coalesce(to_tsvector('english', transcription_line), ''::tsvector) ||
                            coalesce(to_tsvector(array_to_string(names, ' ')), ''::tsvector), (SELECT * FROM q)) AS rank,
+                ts_headline(transcription_line, 
+                    (SELECT * FROM q), 'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text,
                 transcription_json
          FROM buscribe_transcriptions
                   LEFT OUTER JOIN (SELECT line, array_agg(name) AS names
@@ -192,6 +194,8 @@ def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset
                                       ''::tsvector) ||
                               coalesce(setweight(to_tsvector(array_to_string(names, ' ')), 'C'), ''::tsvector),
                               (SELECT * FROM q))                        AS rank,
+                   ts_headline(coalesce(verifications.verified_line, buscribe_transcriptions.transcription_line), 
+                    (SELECT * FROM q), 'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text,
                    null                                                 AS transcription_json
             FROM buscribe_transcriptions
                      INNER JOIN (
