@@ -74,6 +74,13 @@ async function loadVideoPlayer(playlistURL) {
 	globalPlayer.attachMedia(video);
 	return new Promise((resolve, _reject) => {
 		globalPlayer.on(Hls.Events.MEDIA_ATTACHED, () => {
+			const startTime = getStartTime();
+			const endTime = getEndTime();
+			if (endTime && endTime.diff(startTime).milliseconds < 0) {
+				addError(
+					"End time is before the start time. This will prevent video loading and cause other problems."
+				);
+			}
 			globalPlayer.loadSource(rangedPlaylistURL);
 
 			globalPlayer.on(Hls.Events.ERROR, (_event, data) => {
