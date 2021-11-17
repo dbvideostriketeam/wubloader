@@ -90,14 +90,6 @@ function updateTimeSettings() {
 	}
 
 	updateDownloadLink();
-
-	const startTime = getStartTime();
-	const endTime = getEndTime();
-	if (endTime && endTime.diff(startTime).milliseconds < 0) {
-		addError(
-			"End time is before the start time. This will prevent video loading and cause other problems."
-		);
-	}
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
