@@ -118,51 +118,107 @@ def get_json():
 
 
 def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset=None):
-    if ts_query is None:
-        query = "SELECT *" + \
-                ",transcription_line AS highlighted_text" + \
-                " FROM buscribe_all_transcriptions WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s " + \
-                "ORDER BY start_time "
-
-        if limit is not None:
-            query += "LIMIT %(limit)s "
-
-        if offset is not None:
-            query += "OFFSET %(limit)s "
-
-        query += ";"
-
-    else:
-        query = f"""
-        WITH q AS (
-            SELECT convert_query({"%(text_query)s" if ts_query is not None else "NULL"})
+    query = f"""
+    WITH q AS (
+    SELECT convert_query(%(text_query)s)
+),
+     time_window AS (
+         SELECT id
+         FROM buscribe_transcriptions
+         WHERE start_time >= %(start_time)s
+           AND end_time <= %(end_time)s
+     ),
+     relevant_lines AS (
+         (
+             SELECT id
+             FROM buscribe_transcriptions
+             WHERE id IN (SELECT id FROM time_window)
+               {"AND to_tsvector('english', transcription_line) @@ (SELECT * FROM q)" if ts_query else ""}
+         )
+         UNION
+         (
+             SELECT line
+             FROM buscribe_verified_lines
+             WHERE line IN (SELECT id FROM time_window)
+               {"AND to_tsvector('english', verified_line) @@ (SELECT * FROM q)" if ts_query else ""}
+         )
+         UNION
+         (
+             SELECT line
+             FROM buscribe_line_speakers
+                      INNER JOIN buscribe_speakers ON buscribe_line_speakers.speaker = buscribe_speakers.id
+             WHERE line IN (SELECT id FROM time_window)
+               {"AND to_tsvector(name) @@ (SELECT * FROM q)" if ts_query else ""}
+         )
+         UNION
+         (
+             SELECT line
+             FROM buscribe_line_inferred_speakers
+                      INNER JOIN buscribe_speakers ON buscribe_line_inferred_speakers.speaker = buscribe_speakers.id
+             WHERE line IN (SELECT id FROM time_window)
+               {"AND to_tsvector(name) @@ (SELECT * FROM q)" if ts_query else ""}
+         )
+     )
+    (
+        (SELECT id,
+                start_time,
+                end_time,
+                null                                                               AS verifier,
+                names,
+                transcription_line,
+                ts_rank_cd(coalesce(to_tsvector('english', transcription_line), ''::tsvector) ||
+                           coalesce(to_tsvector(array_to_string(names, ' ')), ''::tsvector), (SELECT * FROM q)) AS rank,
+                transcription_json
+         FROM buscribe_transcriptions
+                  LEFT OUTER JOIN (SELECT line, array_agg(name) AS names
+                                   FROM buscribe_line_inferred_speakers
+                                            INNER JOIN buscribe_speakers
+                                                       ON buscribe_line_inferred_speakers.speaker = buscribe_speakers.id
+                                   GROUP BY line) AS inferred_speakers ON id = inferred_speakers.line
+         WHERE id IN (SELECT id FROM relevant_lines)
         )
-        (SELECT *, ts_headline(transcription_line, (SELECT * FROM q),
-         'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text
-                FROM buscribe_all_transcriptions2 
-                WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s 
-                {"AND verified_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""}
-                ORDER BY {"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
-                          "coalesce(names_ts, ''::tsvector), (SELECT * FROM q)) DESC," if ts_query is not None else ""} 
-                start_time)
         UNION
-        (SELECT *, ts_headline(transcription_line, (SELECT * FROM q),
-         'StartSel=''<span class=\"highlight\">'', StopSel=</span>') AS highlighted_text
-                FROM buscribe_all_transcriptions2 
-                WHERE start_time >= %(start_time)s AND end_time <= %(end_time)s 
-                {"AND machine_line_ts @@ (SELECT * FROM q)" if ts_query is not None else ""} 
-                ORDER BY {"ts_rank_cd(coalesce(transcription_line_ts, ''::tsvector) ||" +
-                          "coalesce(names_ts, ''::tsvector), (SELECT * FROM q)) DESC," if ts_query is not None else ""} 
-                start_time)
-               """
-
-        if limit is not None:
-            query += "LIMIT %(limit)s "
-
-        if offset is not None:
-            query += "OFFSET %(limit)s "
-
-        query += ";"
+        (
+            SELECT buscribe_transcriptions.id                           AS id,
+                   start_time,
+                   end_time,
+                   cverifier                                            AS verifier,
+                   names,
+                   coalesce(verifications.verified_line,
+                            buscribe_transcriptions.transcription_line) AS transcription_line,
+                   ts_rank_cd(coalesce(
+                                      setweight(to_tsvector('english', verified_line), 'C'),
+                                      to_tsvector('english', buscribe_transcriptions.transcription_line),
+                                      ''::tsvector) ||
+                              coalesce(setweight(to_tsvector(array_to_string(names, ' ')), 'C'), ''::tsvector),
+                              (SELECT * FROM q))                        AS rank,
+                   null                                                 AS transcription_json
+            FROM buscribe_transcriptions
+                     INNER JOIN (
+                SELECT *,
+                       coalesce(relevant_verified.line, relevant_speakers.line)         AS cline,
+                       coalesce(relevant_verified.verifier, relevant_speakers.verifier) AS cverifier
+                FROM (SELECT *
+                      FROM buscribe_verified_lines
+                      WHERE line IN (SELECT id FROM relevant_lines)) AS relevant_verified
+                         FULL OUTER JOIN
+                     (SELECT line, verifier, array_agg(name) AS names
+                      FROM buscribe_line_speakers
+                               INNER JOIN buscribe_speakers
+                                          ON buscribe_line_speakers.speaker = buscribe_speakers.id
+                      WHERE line IN (SELECT id FROM relevant_lines)
+                      GROUP BY line, verifier) AS relevant_speakers
+                     ON relevant_verified.line = relevant_speakers.line AND
+                        relevant_speakers.verifier = relevant_verified.verifier) AS verifications
+                                ON id = verifications.cline
+        )
+    )
+        ORDER BY
+            {"rank DESC," if ts_query is not None else ""}
+            start_time
+        {"OFFSET 0" if offset is not None else ""}
+        {"LIMIT 10" if limit is not None else ""};
+    """
 
     return database.query(db_conn, query,
                           start_time=start_time if start_time is not None else '-infinity',
