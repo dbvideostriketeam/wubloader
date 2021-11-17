@@ -483,7 +483,6 @@ async function initializeVideoInfo() {
 			if (canAddChapters) {
 				descriptionField.value = description;
 				validateVideoDescription();
-				enableChapterMarkers(true);
 			}
 		} else {
 			const rangeStartField =
