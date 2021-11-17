@@ -1035,8 +1035,9 @@ function addRangeDefinition() {
 
 function rangeDefinitionDOM() {
 	const rangeContainer = document.createElement("div");
+	rangeContainer.classList.add("range-definition-removable");
+
 	const rangeTimesContainer = document.createElement("div");
-	rangeTimesContainer.classList.add("range-definition-removable");
 	rangeTimesContainer.classList.add("range-definition-times");
 	const rangeStart = document.createElement("input");
 	rangeStart.type = "text";
