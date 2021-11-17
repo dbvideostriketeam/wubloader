@@ -9,9 +9,7 @@ function moveSpeed(amount) {
 	if (currentIndex < 0 || currentIndex >= PLAYBACK_RATES.length) {
 		return; // We've reached/exceeded the edge
 	}
-	videoElement.playbackRate = PLAYBACK_RATES[currentIndex];
-	const playbackSelector = document.getElementById("video-controls-playback-speed");
-	playbackSelector.value = videoElement.playbackRate;
+	setSpeed(videoElement, PLAYBACK_RATES[currentIndex]);
 }
 
 function increaseSpeed() {
@@ -20,6 +18,12 @@ function increaseSpeed() {
 
 function decreaseSpeed() {
 	moveSpeed(-1);
+}
+
+function setSpeed(videoElement, speed) {
+	videoElement.playbackRate = speed;
+	const playbackSelector = document.getElementById("video-controls-playback-speed");
+	playbackSelector.value = speed;
 }
 
 document.addEventListener("keypress", (event) => {
@@ -79,6 +83,9 @@ document.addEventListener("keypress", (event) => {
 		case "L":
 			videoElement.currentTime += 1;
 			break;
+		case "m":
+			videoElement.muted = !videoElement.muted;
+			break;
 		case ",":
 			videoElement.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
 			break;
@@ -88,8 +95,14 @@ document.addEventListener("keypress", (event) => {
 		case "=":
 			increaseSpeed();
 			break;
+		case "+":
+			setSpeed(videoElement, PLAYBACK_RATES[PLAYBACK_RATES.length - 1]);
+			break;
 		case "-":
 			decreaseSpeed();
+			break;
+		case "_":
+			setSpeed(videoElement, PLAYBACK_RATES[0]);
 			break;
 		case "[":
 			if (typeof setCurrentRangeStartToVideoTime === "function") {
