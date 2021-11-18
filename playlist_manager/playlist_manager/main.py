@@ -197,11 +197,13 @@ class YoutubeAPI(object):
 				"position": index,
 			},
 		}
+		logging.info("INSERT: {}".format(json))
 		resp = self.client.request("POST", "https://www.googleapis.com/youtube/v3/playlistItems",
 			params={"part": "snippet"},
 			json=json,
 			metric_name="playlist_insert",
 		)
+		logging.info("INSERT RESPONSE {v}->{p} - {r.status_code}: {r.text!r}".format(r=resp, v=video_id, p=playlist))
 		if not resp.ok:
 			raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
 				playlist=playlist, video_id=video_id, index=index, resp=resp,
