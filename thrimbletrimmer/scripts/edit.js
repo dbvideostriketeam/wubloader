@@ -78,12 +78,20 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			rangesData.push({ start: rangeStartTime, end: rangeEndTime });
 		}
 
+		const videoElement = document.getElementById("video");
+		const currentVideoPosition = dateTimeFromVideoPlayerTime(videoElement.currentTime);
+
 		globalStartTimeString = wubloaderTimeFromDateTime(newStart);
 		globalEndTimeString = wubloaderTimeFromDateTime(newEnd);
 
 		updateSegmentPlaylist();
 
 		globalPlayer.once(Hls.Events.LEVEL_LOADED, (_data) => {
+			const newVideoPosition = videoPlayerTimeFromDateTime(currentVideoPosition);
+			if (newVideoPosition !== null) {
+				videoElement.currentTime = newVideoPosition;
+			}
+
 			let rangeErrorCount = 0;
 			for (const [rangeIndex, rangeData] of rangesData.entries()) {
 				const rangeContainer = rangeDefinitionsElements[rangeIndex];
