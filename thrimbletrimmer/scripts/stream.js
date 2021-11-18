@@ -16,6 +16,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			document.getElementById("stream-time-setting-end").value = queryParams.get("end");
 		}
 	}
+	if (queryParams.has("stream")) {
+		document.getElementById("stream-time-setting-stream").value = queryParams.get("stream");
+	}
 
 	await loadDefaults();
 
@@ -61,7 +64,9 @@ async function loadDefaults() {
 	const defaultData = await defaultDataResponse.json();
 
 	const streamNameField = document.getElementById("stream-time-setting-stream");
-	streamNameField.value = defaultData.video_channel;
+	if (streamNameField.value === "") {
+		streamNameField.value = defaultData.video_channel;
+	}
 
 	globalBusStartTime = DateTime.fromISO(defaultData.bustime_start);
 }
@@ -104,6 +109,7 @@ function updateTimeSettings() {
 	const startTime = getStartTime();
 	const endTime = getEndTime();
 	const queryParts = [];
+	queryParts.push(`stream=${globalStreamName}`);
 	queryParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
 	if (endTime) {
 		queryParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
