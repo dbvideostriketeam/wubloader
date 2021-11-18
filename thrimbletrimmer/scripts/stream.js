@@ -7,6 +7,16 @@ var globalVideoTimeReference = TIME_FRAME_AGO;
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
+
+	const queryParams = new URLSearchParams(window.location.search);
+	if (queryParams.has("start")) {
+		document.getElementById("stream-time-frame-of-reference-utc").checked = true;
+		document.getElementById("stream-time-setting-start").value = queryParams.get("start");
+		if (queryParams.has("end")) {
+			document.getElementById("stream-time-setting-end").value = queryParams.get("end");
+		}
+	}
+
 	await loadDefaults();
 
 	const timeSettingsForm = document.getElementById("stream-time-settings");
@@ -90,6 +100,15 @@ function updateTimeSettings() {
 	}
 
 	updateDownloadLink();
+
+	const startTime = getStartTime();
+	const endTime = getEndTime();
+	const queryParts = [];
+	queryParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
+	if (endTime) {
+		queryParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
+	}
+	document.getElementById("stream-time-link").href = `?${queryParts.join("&")}`;
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
