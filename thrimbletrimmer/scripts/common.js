@@ -70,6 +70,11 @@ async function loadVideoPlayer(playlistURL) {
 		setUpVideoControls();
 	});
 
+	videoElement.addEventListener("loadeddata", (_event) => {
+		const qualitySelector = document.getElementById("video-controls-quality");
+		globalPlayer.currentLevel = +qualitySelector.value;
+	});
+
 	globalPlayer = new Hls();
 	globalPlayer.attachMedia(video);
 	return new Promise((resolve, _reject) => {
