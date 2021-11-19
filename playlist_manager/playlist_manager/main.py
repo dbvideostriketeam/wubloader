@@ -185,6 +185,9 @@ class PlaylistManager(object):
 class YoutubeAPI(object):
 	def __init__(self, client):
 		self.client = client
+		# We've observed failures in the playlist API when doing concurrent calls for the same video.
+		# We could maybe have a per-video lock but this is easier.
+		self.insert_lock = gevent.lock.RLock()
 
 	def insert_into_playlist(self, playlist, video_id, index):
 		json = {
@@ -197,15 +200,16 @@ class YoutubeAPI(object):
 				"position": index,
 			},
 		}
-		resp = self.client.request("POST", "https://www.googleapis.com/youtube/v3/playlistItems",
-			params={"part": "snippet"},
-			json=json,
-			metric_name="playlist_insert",
-		)
-		if not resp.ok:
-			raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
-				playlist=playlist, video_id=video_id, index=index, resp=resp,
-			))
+		with self.insert_lock:
+			resp = self.client.request("POST", "https://www.googleapis.com/youtube/v3/playlistItems",
+				params={"part": "snippet"},
+				json=json,
+				metric_name="playlist_insert",
+			)
+			if not resp.ok:
+				raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
+					playlist=playlist, video_id=video_id, index=index, resp=resp,
+				))
 
 	def list_playlist(self, playlist):
 		"""Fetches the first page of playlist contents and returns a ListQuery object.
