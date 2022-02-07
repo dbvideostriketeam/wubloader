@@ -16,7 +16,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
-from common.segments import feed_input, render_segments_waveform
+from common.segments import feed_input, render_segments_waveform, extract_frame
 
 from . import generate_hls
 
@@ -354,6 +354,29 @@ def generate_waveform(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	return Response(render_segments_waveform(segments, (width, height)), mimetype='image/png')
+
+
+@app.route('/frame/<channel>/<quality>.png')
+@request_stats
+@has_path_args
+def get_frame(channel, quality):
+	"""
+	Returns a PNG image for the frame at the specific timestamp given.
+	Params:
+		timestamp: Required. The timestamp to get.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+	"""
+	timestamp = dateutil.parse_utc_only(request.args['timestamp'])
+
+	hours_path = os.path.join(app.static_folder, channel, quality)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	segments = get_best_segments(hours_path, timestamp, timestamp)
+	if not any(segment is not None for segment in segments):
+		return "We have no content available within the requested time range.", 406
+
+	return Response(extract_frame(segments, timestamp), mimetype='image/png')
 
 
 @app.route('/generate_videos/<channel>/<quality>', methods=['POST'])
