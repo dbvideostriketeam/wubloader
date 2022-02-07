@@ -587,3 +587,56 @@ def render_segments_waveform(segments, size=(1024, 128), scale='sqrt', color='#0
 				except (OSError, IOError):
 					pass
 
+
+@timed('extract_frame')
+def extract_frame(segments, timestamp):
+	"""
+	Extract the frame at TIMESTAMP within SEGMENT, yielding it as chunks of PNG data.
+	"""
+
+	# Remove holes
+	segments = [segment for segment in segments if segment is not None]
+
+	# Find segment containing timestamp
+	segments = [
+		segment for segment in segments
+		if segment.start <= timestamp < segment.end
+	]
+	if not segments:
+		raise ValueError("No data at timestamp within segment list")
+	if len(segments) != 1:
+		raise ValueError("Segment list contains overlap at timestamp")
+	(segment,) = segments
+
+	# "cut" input so that first frame is our target frame
+	cut_start = (timestamp - segment.start).total_seconds()
+
+	ffmpeg = None
+	input_feeder = None
+	try:
+		args = [
+			# get a single frame
+			'-vframes', '1',
+			# output as png
+			'-f', 'image2', '-c', 'png',
+		]
+		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=cut_start, duration=None, encode_args=args)
+		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+
+		for chunk in read_chunks(ffmpeg.stdout):
+			yield chunk
+
+		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+		if ffmpeg.wait() != 0:
+			raise Exception("Error while extracting frame: ffmpeg exited {}".format(ffmpeg.returncode))
+		input_feeder.get() # re-raise any errors from feed_input()
+	finally:
+		# if something goes wrong, try to clean up ignoring errors
+		if input_feeder is not None:
+			input_feeder.kill()
+		if ffmpeg is not None and ffmpeg.poll() is None:
+			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+				try:
+					action()
+				except (OSError, IOError):
+					pass
