@@ -13,7 +13,7 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
-  downloader_tag:: "59b0732-wip", // prevent downloader restarts
+  downloader_tag:: "8795050", // prevent downloader restarts
 
   // For each service, whether to deploy that service.
   enabled:: {
@@ -93,7 +93,7 @@
     dbname: "wubloader",
   },
 
-  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/condor_xii",
+  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/season_14",
 
   // Other database arguments
   db_super_user:: "postgres", // only accessible from localhost

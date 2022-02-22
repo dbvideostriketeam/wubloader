@@ -80,7 +80,7 @@ def add_range(base, range):
 
 @argh.arg('--time-offset', type=float)
 def main(match_id, race_number, output_path,
-	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor_xii',
+	host='condor.live', user='necrobot-read', password='necrobot-read', database='season_14',
 	base_dir='/srv/wubloader',
 	start_range="0,10", non_interactive=False, racer=0,
 	time_offset=None,
