@@ -201,6 +201,8 @@ def generate_media_playlist(channel, quality):
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 			If not given, effectively means "infinity", ie. no start means
 			any time ago, no end means any time in the future.
+			However if either are missing and this would cause us to return over 12 hours
+			of content, we fail instead.
 	Note that because it returns segments _covering_ that range, the playlist
 	may start slightly before and end slightly after the given times.
 	"""
@@ -218,6 +220,10 @@ def generate_media_playlist(channel, quality):
 			start = first
 		if end is None:
 			end = last
+
+	# We still allow > 12hr ranges, but only if done explicitly (both start and end are set).
+	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
+		return "Implicit range may not be longer than 12 hours", 400
 
 	# get_best_segments requires start be before end, special case that as no segments
 	# (not an error because someone might ask for a specific start, no end, but we ended up with
