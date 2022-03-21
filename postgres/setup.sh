@@ -43,7 +43,8 @@ CREATE TYPE event_state as ENUM (
 	'CLAIMED',
 	'FINALIZING',
 	'TRANSCODING',
-	'DONE'
+	'DONE',
+	'MODIFIED'
 );
 
 CREATE TYPE video_range as (
@@ -89,8 +90,8 @@ CREATE TABLE events (
 	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL),
 	editor TEXT,
 	edit_time TIMESTAMP CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
-	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL)
-
+	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL),
+	last_modified TIMESTAMP CHECK (state != 'MODIFIED' OR last_modified IS NOT NULL)
 );
 
 -- Index on state, since that's almost always what we're querying on besides id
