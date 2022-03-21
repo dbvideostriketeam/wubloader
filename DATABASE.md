@@ -48,7 +48,12 @@ is not yet able to be played (or only at reduced resolution).
 
 * `DONE`: An event whose video is ready for public consumption. As with `TRANSCODING`, if changes need
 to be made, an operator should manually delete or unlist the video then set the state back
-to `UNEDITED`.
+to `UNEDITED`, or modify the video if possible (see `MODIFIED`).
+
+* `MODIFIED`: An event that was previously successfully uploaded, which has had some of its edit inputs
+modified. Cutters will see this state and attempt to edit the video to match the new edit inputs,
+though the possible edits depend on the upload backend. This only includes edits to metadata fields
+like title, and should not require re-cutting the video. Once updated, the cutter returns the video to `DONE`.
 
 The following transitions are possible:
 
@@ -85,15 +90,21 @@ and the upload location requires no further processing.
 * `TRANSCODING -> DONE`: When any cutter detects that the upload location is finished
 transcoding the video, and it is ready for public consumption.
 
+* `DONE -> MODIFIED`: When an operator modifies an uploaded video
+
+* `MODIFIED -> DONE`: When a cutter successfully updates a modified video, or when
+an operator cancels the modification (leaving the video in an indeterminate state,
+which the operator is responsible for verifying).
+
 This is summarised in the below graph:
 
 ```
-                                            retry
-                                   ┌───────────────────────────────────────────────┐
-                                   │                                               │
-                       cancel      │                                               │
-            ┌──────────────────────┼───────────────────┐                           │
-            ∨                      ∨                   │                           │
+                                            retry                                                                                          ┌──────────┐
+                                   ┌───────────────────────────────────────────────┐                                                       │ MODIFIED │
+                                   │                                               │                                                       └──────────┘
+                       cancel      │                                               │                                                            ∧   │
+            ┌──────────────────────┼───────────────────┐                           │                                                     modify │   │ updated
+            ∨                      ∨                   │                           │                                                            │   ∨
           ┌──────────┐  edit     ┌────────┐  claim   ┌─────────┐  pre-finalize   ┌────────────┐  post-finalize   ┌─────────────┐  when ready   ┌──────┐
           │          │ ────────> │        │ ───────> │         │ ──────────────> │            │ ───────────────> │ TRANSCODING │ ────────────> │ DONE │
           │          │           │        │          │         │                 │            │                  └─────────────┘               └──────┘

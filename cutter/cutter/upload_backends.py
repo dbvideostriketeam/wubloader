@@ -63,6 +63,11 @@ class UploadBackend(object):
 	If it does, it should also have a method check_status(ids) which takes a
 	list of video ids and returns a list of the ones who have finished processing.
 
+	If updating existing videos is supported, the backend should also define a method
+	update_video(video_id, title, description, tags).
+	Fields which cannot be updated may be ignored.
+	Must not change the video id or link. Returns nothing.
+
 	The upload backend also determines the encoding settings for the cutting
 	process, this is given as a list of ffmpeg args
 	under the 'encoding_settings' attribute.
@@ -84,6 +89,9 @@ class UploadBackend(object):
 		raise NotImplementedError
 
 	def check_status(self, ids):
+		raise NotImplementedError
+
+	def update_video(self, video_id, title, description, tags):
 		raise NotImplementedError
 
 
@@ -200,6 +208,47 @@ class Youtube(UploadBackend):
 					output.append(item['id'])
 		return output
 
+	def update_video(self, video_id, title, description, tags):
+		# Any values we don't give will be deleted on PUT, so we need to first
+		# get all the existing values then merge in our updates.
+		resp = self.client.request('GET',
+			'https://www.googleapis.com/youtube/v3/videos',
+			params={
+				'part': 'id,snippet',
+				'id': video_id,
+			},
+			metric_name='get_video',
+		)
+		resp.raise_for_status()
+		data = resp.json()['items']
+		if len(data) == 0:
+			raise Exception("Could not find video {}".format(video_id))
+		assert len(data) == 1
+		data = data[0]
+		snippet = data['snippet'].copy()
+
+		snippet['title'] = title
+		snippet['description'] = description
+		snippet['tags'] = tags
+		# Since we're fetching this data anyway, we can save some quota by avoiding repeated work.
+		# We could still race and do the same update twice, but that's fine.
+		if snippet == data['snippet']:
+			self.logger.info("Skipping update for video {}: No changes".format(video_id))
+			return
+
+		resp = self.client.request('PUT',
+			'https://www.googleapis.com/youtube/v3/videos',
+			params={
+				'part': 'id,snippet',
+			},
+			json={
+				'id': video_id,
+				'snippet': snippet,
+			},
+			metric_name='update_video',
+		)
+		resp.raise_for_status()
+
 
 class Local(UploadBackend):
 	"""An "upload" backend that just saves the file to local disk.
@@ -260,3 +309,14 @@ class Local(UploadBackend):
 		else:
 			url = 'file://{}'.format(filepath)
 		return video_id, url
+
+	def update_video(self, video_id, title, description, tags):
+		if not self.write_info:
+			return
+		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
+		with open(os.path.join(self.path, '{}-{}.json'.format(safe_title, video_id)), 'w') as f:
+			common.writeall(f.write, json.dumps({
+				'title': title,
+				'description': description,
+				'tags': tags,
+			}) + '\n')

@@ -518,7 +518,6 @@ class Cutter(object):
 			))
 
 
-
 class TranscodeChecker(object):
 	NO_VIDEOS_RETRY_INTERVAL = 5 # can be fast because it's just a DB lookup
 	FOUND_VIDEOS_RETRY_INTERVAL = 20
@@ -589,6 +588,95 @@ class TranscodeChecker(object):
 			WHERE id = ANY (%s::uuid[]) AND state = 'TRANSCODING'
 		""", datetime.datetime.utcnow(), list(ids.keys()))
 		return result.rowcount
+
+
+class VideoUpdater(object):
+	CHECK_INTERVAL = 10 # this is slow to reduce the chance of multiple cutters updating the same row
+	ERROR_RETRY_INTERVAL = 20
+
+	def __init__(self, location, backend, dbmanager, stop):
+		"""
+		backend is an upload backend that supports video updates.
+		Stop is an Event triggering graceful shutdown when set.
+		"""
+		self.location = location
+		self.backend = backend
+		self.dbmanager = dbmanager
+		self.stop = stop
+		self.logger = logging.getLogger(type(self).__name__)
+
+	def wait(self, interval):
+		"""Wait for INTERVAL with jitter, unless we're stopping"""
+		self.stop.wait(common.jitter(interval))
+
+	def run(self):
+		self.conn = self.dbmanager.get_conn()
+		while not self.stop.is_set():
+			try:
+				videos = list(self.get_videos())
+				self.logger.info("Found {} videos in MODIFIED".format(len(videos)))
+				for id, video_id, title, description, tags in videos:
+					# NOTE: Since we aren't claiming videos, it's technically possible for this
+					# to happen:
+					# 1. we get MODIFIED video with title A
+					# 2. title is updated to B in database
+					# 3. someone else updates it to B in backend
+					# 4. we update it to A in backend
+					# 5. it appears to be successfully updated with B, but the title is actually A.
+					# This is unlikely and not a disaster, so we'll just live with it.
+					try:
+						self.backend.update_video(video_id, title, description, tags)
+					except Exception as ex:
+						self.logger.exception("Failed to update video")
+						self.mark_errored(id, "Failed to update video: {}".format(ex))
+						continue
+					marked = self.mark_done(id, video_id, title, description, tags)
+					if marked:
+						assert marked == 1
+						self.logger.info("Updated video {}".format(id))
+					else:
+						self.logger.warning("Updated video {}, but row has changed since. Did someone else already update it?".format(id))
+				self.wait(self.CHECK_INTERVAL)
+			except Exception:
+				self.logger.exception("Error in VideoUpdater")
+				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+				# This is heavy-handed but simple and effective.
+				self.conn = self.dbmanager.get_conn()
+				self.wait(self.ERROR_RETRY_INTERVAL)
+
+	def get_videos(self):
+		# To avoid exhausting API quota, errors aren't retryable.
+		# We ignore any rows where error is not null.
+		return query(self.conn, """
+			SELECT id, video_id, video_title, video_description, video_tags
+			FROM events
+			WHERE state = 'MODIFIED' AND error IS NULL
+		""")
+
+	def mark_done(self, id, video_id, title, description, tags):
+		"""We don't want to set to DONE if the video has been modified *again* since
+		we saw it."""
+		args = dict(id=id, video_id=video_id, video_title=title, video_description=description, video_tags=tags)
+		built_query = sql.SQL("""
+			UPDATE events
+			SET state = 'DONE'
+			WHERE state = 'MODIFIED' AND {}
+		""").format(
+			sql.SQL(" AND ").join(
+				sql.SQL("{} = {}").format(sql.Identifier(key), get_column_placeholder(key))
+				for key in args
+			)
+		)
+		return query(self.conn, built_query, **args).rowcount
+
+	def mark_errored(self, id, error):
+		# We don't overwrite any existing error, it is most likely from another attempt to update
+		# anyway.
+		query(self.conn, """
+			UPDATE events
+			SET error = %s
+			WHERE id = %s and error IS NULL
+		""", error, id)
 
 
 def main(
@@ -668,9 +756,11 @@ def main(
 	config = json.loads(config)
 	upload_locations = {}
 	needs_transcode_check = {}
+	needs_updater = {}
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
 		no_transcode_check = backend_config.pop('no_transcode_check', False)
+		no_updater = backend_config.pop('no_updater', False)
 		cut_type = backend_config.pop('cut_type', 'full')
 		if backend_type == 'youtube':
 			backend_type = Youtube
@@ -687,15 +777,24 @@ def main(
 		upload_locations[location] = backend
 		if backend.needs_transcode and not no_transcode_check:
 			needs_transcode_check[location] = backend
+		if not no_updater:
+			needs_updater[location] = backend
 
 	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags)
 	transcode_checkers = [
 		TranscodeChecker(location, backend, dbmanager, stop)
 		for location, backend in needs_transcode_check.items()
 	]
+	updaters = [
+		VideoUpdater(location, backend, dbmanager, stop)
+		for location, backend in needs_updater.items()
+	]
 	jobs = [gevent.spawn(cutter.run)] + [
 		gevent.spawn(transcode_checker.run)
 		for transcode_checker in transcode_checkers
+	] + [
+		gevent.spawn(updater.run)
+		for updater in updaters
 	]
 	# Block until any one exits
 	gevent.wait(jobs, count=1)
