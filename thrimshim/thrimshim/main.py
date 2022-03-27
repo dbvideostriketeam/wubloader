@@ -3,8 +3,6 @@ from functools import wraps
 import json
 import logging
 import re
-import signal
-import sys
 
 import argh
 import flask
@@ -213,6 +211,12 @@ def update_row(ident, editor=None):
 		'sheet_name', 'event_start', 'event_end',
 		'category', 'description', 'notes', 'tags',
 	]
+	# These columns may be modified when a video is in state 'DONE',
+	# and are a subset of edit_columns.
+	modifiable_columns = [
+		'video_title', 'video_description', 'video_tags',
+	]
+	assert set(modifiable_columns) - set(edit_columns) == set()
 
 	# Check vital edit columns are in new_row
 	wanted = set(non_null_columns + ['state'] + sheet_columns)
@@ -274,7 +278,10 @@ def update_row(ident, editor=None):
 		return 'Row {} not found'.format(ident), 404
 	assert old_row['id'] == ident
 
-	if old_row['state'] not in ['UNEDITED', 'EDITED', 'CLAIMED']:
+	if new_row['state'] == 'MODIFIED':
+		if old_row['state'] not in ['DONE', 'MODIFIED']:
+			return 'Video is in state {} and cannot be modified'.format(old_row['state']), 403
+	elif old_row['state'] not in ['UNEDITED', 'EDITED', 'CLAIMED']:
 		return 'Video already published', 403
 
 	# check whether row has been changed in the sheet since editing has begun
@@ -293,39 +300,60 @@ def update_row(ident, editor=None):
 	if changes and not override_changes:
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
-	# handle state columns
-	if new_row['state'] == 'EDITED':
-		missing = []
-		for column in non_null_columns:
+	if new_row['state'] == 'MODIFIED':
+		# Modifying published rows is more limited, we ignore all other fields.
+		for column in set(modifiable_columns) & set(non_null_columns):
 			if new_row[column] is None:
 				missing.append(column)
 		if missing:
-			return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
-		if len(new_row.get('video_title', '')) <= len(app.title_header):
-			return 'Video title must not be blank', 400
-		if len(new_row.get('video_description', '')) <= len(app.description_footer):
-			return 'Video description must not be blank. If you have nothing else to say, just repeat the title.', 400
-	elif new_row['state'] != 'UNEDITED':
-		return 'Invalid state {}'.format(new_row['state']), 400
-	new_row['uploader'] = None
-	new_row['error'] = None
-	new_row['editor'] = editor
-	new_row['edit_time'] = datetime.datetime.utcnow()
+			return 'Fields {} must be non-null for modified video'.format(', '.join(missing)), 400
+		build_query = sql.SQL("""
+			UPDATE events
+			SET last_modified = NOW(), error = NULL, state = 'MODIFIED', {}
+			WHERE id = %(id)s AND state IN ('DONE', 'MODIFIED')
+		""").format(sql.SQL(", ").join(
+			sql.SQL("{} = {}").format(
+				sql.Identifier(column), database.get_column_placeholder(column),
+			) for column in modifiable_columns
+		))
+		result = database.query(conn, build_query, id=ident, **new_row)
+		if result.rowcount != 1:
+			return 'Video changed state while we were updating - maybe it was reset?', 403
 
-	# actually update database
-	build_query = sql.SQL("""
-		UPDATE events
-		SET {}
-		WHERE id = %(id)s
-		AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
+	else:
+		# handle state columns
+		if new_row['state'] == 'EDITED':
+			missing = []
+			for column in non_null_columns:
+				if new_row[column] is None:
+					missing.append(column)
+			if missing:
+				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+			if len(new_row.get('video_title', '')) <= len(app.title_header):
+				return 'Video title must not be blank', 400
+			if len(new_row.get('video_description', '')) <= len(app.description_footer):
+				return 'Video description must not be blank. If you have nothing else to say, just repeat the title.', 400
+		elif new_row['state'] != 'UNEDITED':
+			return 'Invalid state {}'.format(new_row['state']), 400
+		new_row['uploader'] = None
+		new_row['error'] = None
+		new_row['editor'] = editor
+		new_row['edit_time'] = datetime.datetime.utcnow()
+
+		# actually update database
+		build_query = sql.SQL("""
+			UPDATE events
+			SET {}
+			WHERE id = %(id)s
+			AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
 		).format(sql.SQL(", ").join(
 			sql.SQL("{} = {}").format(
 				sql.Identifier(column), database.get_column_placeholder(column),
 			) for column in new_row.keys() if column not in sheet_columns
-	))
-	result = database.query(conn, build_query, id=ident, **new_row)
-	if result.rowcount != 1:
-		return 'Video likely already published', 403	
+		))
+		result = database.query(conn, build_query, id=ident, **new_row)
+		if result.rowcount != 1:
+			return 'Video likely already published', 403	
 			
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return ''
@@ -386,7 +414,8 @@ def reset_row(ident, editor=None):
 	query = """
 		UPDATE events 
 		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
-			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL
+			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL,
+			last_modified = NULL
 		WHERE id = %s {}
 	""".format(
 		"" if force else "AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
