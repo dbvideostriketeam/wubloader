@@ -163,3 +163,4 @@ columns                    | type                                 | role        
 `editor`                   | `TEXT`                               | state       | Email address of the last editor; corresponds to an entry in the `editors` table. Only set when state is not `UNEDITED`.
 `edit_time`                | `TIMESTAMP`                          | state       | Time of the last edit. Only set when state is not `UNEDITED`.
 `upload_time`              | `TIMESTAMP`                          | state       | Time when video state is set to `DONE`. Only set when state is `DONE`.
+`last_modified`            | `TIMESTAMP`                          | state       | Time when video state was last set to `MODIFIED`, or NULL if it has never been. Only used for diagnostics.
