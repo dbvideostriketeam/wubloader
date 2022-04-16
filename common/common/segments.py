@@ -17,6 +17,7 @@ from tempfile import TemporaryFile
 import gevent
 from gevent import subprocess
 
+from .cached_iterator import CachedIterator
 from .stats import timed
 
 
@@ -223,6 +224,14 @@ def hour_paths_for_range(hours_path, start, end):
 		current += datetime.timedelta(hours=1)
 
 
+# Maps hour path to (directory contents, cached result).
+# If the directory contents are identical, then we can use the cached result for that hour
+# instead of re-calculating. If they have changed, we throw out the cached result.
+# Since best_segments_by_start returns an iterator that may not be entirely consumed,
+# our cached result stores both all results returned so far, and the live iterator
+# in case we need to continue consuming.
+_best_segments_by_start_cache = {}
+
 def best_segments_by_start(hour):
 	"""Within a given hour path, yield the "best" segment per unique segment start time.
 	Best is defined as type=full, or failing that type=suspect, or failing that the longest type=partial.
@@ -234,8 +243,22 @@ def best_segments_by_start(hour):
 		if e.errno != errno.ENOENT:
 			raise
 		# path does not exist, treat it as having no files
-		return
+		segment_paths = []
 	segment_paths.sort()
+
+	# if result is in the cache and the segment_paths haven't changed, return cached result
+	if hour in _best_segments_by_start_cache:
+		prev_segment_paths, cached_result = _best_segments_by_start_cache[hour]
+		if prev_segment_paths == segment_paths:
+			return cached_result
+
+	# otherwise create new result and cache it
+	result = CachedIterator(_best_segments_by_start(hour, segment_paths))
+	_best_segments_by_start_cache[hour] = segment_paths, result
+	return result
+
+
+def _best_segments_by_start(hour, segment_paths):
 	# raise a warning for any files that don't parse as segments and ignore them
 	parsed = []
 	for name in segment_paths:
