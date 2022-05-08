@@ -21,6 +21,7 @@ import common
 from common import dateutil
 from common import database
 from common.requests import InstrumentedSession
+from common.segments import list_segment_files
 
 # Wraps all requests in some metric collection
 requests = InstrumentedSession()
@@ -83,8 +84,8 @@ def list_local_hours(base_dir, channel, quality):
 		return []	
 
 
-def list_local_segments(base_dir, channel, quality, hour):
-	"""List segments in a given hour directory.
+def list_local_segments(base_dir, channel, quality, hour, include_tombstones=False):
+	"""List segment files + optionally tombstone files in a given hour directory.
 
 	For a given base_dir/channel/quality/hour directory return a list of
 	non-hidden files. If the directory path is not found, return an empty list. 
@@ -93,13 +94,7 @@ def list_local_segments(base_dir, channel, quality, hour):
 	restreamer.list_segments but this avoids HTTP/JSON overheads."""
 
 	path = os.path.join(base_dir, channel, quality, hour)
-	try:
-		return [name for name in os.listdir(path) if not name.startswith('.')]
-
-	except OSError as e:
-		if e.errno != errno.ENOENT:
-			raise
-		return []	
+	return list_segment_files(path, include_tombstones=include_tombstones)
 
 
 def list_remote_hours(node, channel, quality, timeout=TIMEOUT):
@@ -111,10 +106,12 @@ def list_remote_hours(node, channel, quality, timeout=TIMEOUT):
 
 
 def list_remote_segments(node, channel, quality, hour, timeout=TIMEOUT):
-	"""Wrapper around a call to restreamer.list_segments."""
+	"""Wrapper around a call to restreamer.list_segments.
+	Lists segments as well as tombstone files.
+	"""
 	uri = '{}/files/{}/{}/{}'.format(node, channel, quality, hour)
 	logging.debug('Getting list of segments from {}'.format(uri))
-	resp = requests.get(uri, timeout=timeout, metric_name='list_remote_segments')
+	resp = requests.get(uri, params={"tombstones": "true"}, timeout=timeout, metric_name='list_remote_segments')
 	return resp.json()
 
 
@@ -272,6 +269,9 @@ class BackfillerManager(object):
 				gevent.idle()
 				path = os.path.join(self.base_dir, channel, quality, hour)
 				self.logger.info('Deleting {}'.format(path))
+				# note we make no attempt to delete the tombstones.
+				# this is to avoid a race condition where we delete the tombstone and let the original
+				# file get served before it also gets deleted.
 				segments = list_local_segments(self.base_dir, channel, quality, hour)
 				for segment in segments:
 					try:
@@ -289,6 +289,7 @@ class BackfillerManager(object):
 					if e.errno == errno.ENOENT:
 						self.logger.warn('{} already deleted'.format(path))
 					# warn if not empty (will try to delete folder again next time) 
+					# this is likely to happen if there are hidden temp files or tombstones left over.
 					elif e.errno == errno.ENOTEMPTY:
 						self.logger.warn('Failed to delete non-empty folder {}'.format(path))
 					else:
@@ -447,8 +448,12 @@ class BackfillerWorker(object):
 						break
 
 				self.logger.info('Backfilling {}/{}'.format(quality, hour))
-	
-				local_segments = set(list_local_segments(self.base_dir, channel, quality, hour))
+
+				# Note that both local and remote listings include tombstone files,
+				# but not the associated segment files for those tombstones.
+				# This way tombstones will be propagated by the backfiller but the segments
+				# they mark will not.
+				local_segments = set(list_local_segments(self.base_dir, channel, quality, hour, include_tombstones=True))
 				remote_segments = set(list_remote_segments(self.node, channel, quality, hour))
 				missing_segments = list(remote_segments - local_segments)
 	
@@ -465,7 +470,15 @@ class BackfillerWorker(object):
 						return
 
 					path = os.path.join(channel, quality, hour, missing_segment)
-	
+
+					# tombstone files are empty markers, there's no need to download them.
+					# we just create a new empty file locally.
+					if path.endswith('.tombstone'):
+						# create empty file by opening in 'w' mode then immediately closing it
+						with open(os.path.join(self.base_dir, path), 'w'):
+							pass
+						continue
+
 					# test to see if file is a segment and get the segments start time
 					try:
 						segment = common.parse_segment_path(path)

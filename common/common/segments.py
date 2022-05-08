@@ -224,6 +224,44 @@ def hour_paths_for_range(hours_path, start, end):
 		current += datetime.timedelta(hours=1)
 
 
+def list_segment_files(hour_path, include_tombstones=False):
+	"""Return a list of filenames of segments in the given hour path.
+	Segment names are not parsed or verified, but only non-hidden .ts files
+	without an associated tombstone file will be listed.
+	If include_tombstones = true, the tombstone files themselves will also be listed.
+	"""
+	try:
+		names = os.listdir(hour_path)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
+			raise
+		# path does not exist, treat it as having no files
+		return []
+
+	# Split into name and extension, this makes the later processing easier.
+	# Note that ext will include the leading dot, ie. "foo.bar" -> ("foo", ".bar").
+	# Files with no extension produce empty string, ie. "foo" -> ("foo", "")
+	# and files with leading dots treat them as part of the name, ie. ".foo" -> (".foo", "").
+	splits = [os.path.splitext(name) for name in names]
+
+	# Look for any tombstone files, which indicate we should treat the segment file of the same
+	# name as though it doesn't exist.
+	tombstones = [name for name, ext in splits if ext == '.tombstone']
+
+	# Return non-hidden ts files, except those that match a tombstone.
+	segments = [
+		name + ext for name, ext in splits
+		if name not in tombstones
+			and ext == ".ts"
+			and not name.startswith('.')
+	]
+
+	if include_tombstones:
+		return segments + ["{}.tombstone".format(name) for name in tombstones]
+	else:
+		return segments
+
+
 # Maps hour path to (directory contents, cached result).
 # If the directory contents are identical, then we can use the cached result for that hour
 # instead of re-calculating. If they have changed, we throw out the cached result.
@@ -237,13 +275,7 @@ def best_segments_by_start(hour):
 	Best is defined as type=full, or failing that type=suspect, or failing that the longest type=partial.
 	Note this means this function may perform os.stat()s.
 	"""
-	try:
-		segment_paths = os.listdir(hour)
-	except OSError as e:
-		if e.errno != errno.ENOENT:
-			raise
-		# path does not exist, treat it as having no files
-		segment_paths = []
+	segment_paths = list_segment_files(hour)
 	segment_paths.sort()
 
 	# if result is in the cache and the segment_paths haven't changed, return cached result

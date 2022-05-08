@@ -528,7 +528,13 @@ class SegmentGetter(object):
 				raise
 			return False
 		full_prefix = "{}-full".format(self.prefix)
-		return any(candidate.startswith(full_prefix) for candidate in candidates)
+		return any(
+			candidate.startswith(full_prefix)
+				# There's almost no way a matching tombstone could already exist, but just in case
+				# we'll make sure it isn't counted.
+				and not candidate.endswith(".tombstone")
+			for candidate in candidates
+		)
 
 	def get_segment(self):
 		try:
