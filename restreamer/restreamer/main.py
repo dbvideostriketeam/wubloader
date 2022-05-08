@@ -16,7 +16,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
-from common.segments import feed_input, render_segments_waveform, extract_frame
+from common.segments import feed_input, render_segments_waveform, extract_frame, list_segment_files
 
 from . import generate_hls
 
@@ -138,6 +138,7 @@ def list_hours(channel, quality):
 def list_segments(channel, quality, hour):
 	"""Returns a JSON list of segment files for a given channel, quality and
 	hour. Returns empty list on non-existant channels, etc.
+	If tombstones = "true", will also list tombstone files for that hour.
 	"""
 	path = os.path.join(
 		app.static_folder,
@@ -145,7 +146,11 @@ def list_segments(channel, quality, hour):
 		quality,
 		hour,
 	)
-	return json.dumps(listdir(path, error=False))
+	tombstones = request.args.get('tombstones', 'false').lower()
+	if tombstones not in ["true", "false"]:
+		return "tombstones must be one of: true, false", 400
+	tombstones = (tombstones == "true")
+	return json.dumps(list_segment_files(path, include_tombstones=tombstones))
 
 
 def time_range_for_quality(channel, quality):
