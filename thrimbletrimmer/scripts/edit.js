@@ -202,6 +202,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("save-button").addEventListener("click", (_event) => {
 		saveVideoDraft();
 	});
+	document.getElementById("submit-changes-button").addEventListener("click", (_event) => {
+		submitVideoChanges();
+	});
 
 	document.getElementById("advanced-submission").addEventListener("click", (_event) => {
 		const advancedOptionsContainer = document.getElementById("advanced-submission-options");
@@ -404,6 +407,15 @@ async function initializeVideoInfo() {
 			"advanced-submission-option-uploader-allow"
 		);
 		uploaderAllowlistBox.value = videoInfo.uploader_whitelist.join(",");
+	}
+
+	if (videoInfo.state === "DONE") {
+		const submitButton = document.getElementById("submit-button");
+		submitButton.classList.add("hidden");
+		const saveButton = document.getElementById("save-button");
+		saveButton.classList.add("hidden");
+		const submitChangesButton = document.getElementById("submit-changes-button");
+		submitChangesButton.classList.remove("hidden");
 	}
 
 	if (modifiedAdvancedOptions) {
@@ -611,14 +623,18 @@ async function submitVideo() {
 		}
 	}
 
-	return sendVideoData(true, false);
+	return sendVideoData("EDITED", false);
 }
 
 async function saveVideoDraft() {
-	return sendVideoData(false, false);
+	return sendVideoData("UNEDITED", false);
 }
 
-async function sendVideoData(edited, overrideChanges) {
+async function submitVideoChanges() {
+	return sendVideoData("MODIFIED", false);
+}
+
+async function sendVideoData(newState, overrideChanges) {
 	let videoDescription = document.getElementById("video-info-description").value;
 	if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
 		addError(
@@ -626,6 +642,8 @@ async function sendVideoData(edited, overrideChanges) {
 		);
 		return;
 	}
+
+	const edited = newState === "EDITED";
 
 	const submissionResponseElem = document.getElementById("submission-response");
 	submissionResponseElem.classList.value = ["submission-response-pending"];
@@ -771,7 +789,6 @@ async function sendVideoData(edited, overrideChanges) {
 		"advanced-submission-option-uploader-allow"
 	).value;
 	const uploaderAllowlist = uploaderAllowlistValue ? uploaderAllowlistValue.split(",") : null;
-	const state = edited ? "EDITED" : "UNEDITED";
 
 	const editData = {
 		video_ranges: ranges,
@@ -784,7 +801,7 @@ async function sendVideoData(edited, overrideChanges) {
 		video_channel: globalStreamName,
 		video_quality: videoInfo.video_quality,
 		uploader_whitelist: uploaderAllowlist,
-		state: state,
+		state: newState,
 
 		// We also provide some sheet column values to verify data hasn't changed.
 		sheet_name: videoInfo.sheet_name,
@@ -815,7 +832,7 @@ async function sendVideoData(edited, overrideChanges) {
 
 	if (submitResponse.ok) {
 		submissionResponseElem.classList.value = ["submission-response-success"];
-		if (edited) {
+		if (newState === "EDITED") {
 			submissionResponseElem.innerText = "Submitted edit";
 			const submissionTimesListContainer = document.createElement("ul");
 			for (const range of rangesData) {
@@ -828,8 +845,13 @@ async function sendVideoData(edited, overrideChanges) {
 				submissionTimesListContainer.appendChild(submissionTimeResponse);
 			}
 			submissionResponseElem.appendChild(submissionTimesListContainer);
-		} else {
+		} else if (newState === "UNEDITED") {
 			submissionResponseElem.innerText = "Saved draft";
+		} else if (newState === "MODIFIED") {
+			submissionResponseElem.innerText = "Submitted changes";
+		} else {
+			// should never happen but shrug
+			submissionResponseElem.innerText = `Submitted state ${newState}`;
 		}
 	} else {
 		submissionResponseElem.classList.value = ["submission-response-error"];
@@ -838,7 +860,7 @@ async function sendVideoData(edited, overrideChanges) {
 			const submitButton = document.createElement("button");
 			submitButton.innerText = "Submit Anyway";
 			submitButton.addEventListener("click", (_event) => {
-				sendVideoData(edited, true);
+				sendVideoData(newState, true);
 			});
 			submissionResponseElem.innerHTML = "";
 			submissionResponseElem.appendChild(serverErrorNode);
