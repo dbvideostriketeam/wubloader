@@ -27,6 +27,7 @@
     playlist_manager: false,
     nginx: true,
     postgres: false,
+    chat_archiver: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -171,11 +172,12 @@
   ],
 
   chat_archiver:: {
-    image: "ghcr.io/ekimekim/wubloader-downloader:chat-archiver-hack-1",
-    channel: "desertbus",
+    // We currently only support archiving chat from one channel at once.
+    // This defaults to the first channel in the $.channels list.
+    channel: $.clean_channels[0],
+    // Twitch user to log in as and path to oauth token
     user: "dbvideostriketeam",
-    logs_path: "%s/chat_logs" % $.segments_path,
-    token_path: "./chat_token.txt".
+    token_path: "./chat_token.txt",
   },
 
   // Extra options to pass via environment variables,
@@ -449,12 +451,11 @@
       [if $.db_standby then "command"]: ["/standby_setup.sh"],
     },
 
-    [if $.chat_archiver != "null" then "chat_archiver"]: {
-      local c = $.chat_archiver,
-      image: c.image,
+    [if $.enabled.chat_archiver then "chat_archiver"]: {
+      image: $.get_image("chat_archiver"),
       restart: "always",
-      command: [c.channel, c.user, "/token"],
-      volumes: ["%s:/mnt" % c.logs_path, "%s:/token" % c.token_path],
+      command: [$.chat_archiver.channel, $.chat_archiver.user, "/token"],
+      volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
     },
 
   },
