@@ -181,6 +181,9 @@ def generate_master_playlist(channel):
 
 	playlists = {}
 	for quality in qualities:
+		# "chat" is text only, not an actual video quality
+		if quality == "chat":
+			continue
 		# If start or end are given, try to restrict offered qualities to ones which exist for that
 		# time range.
 		if start is not None or end is not None:
