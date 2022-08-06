@@ -399,12 +399,14 @@ def merge_messages(left, right):
 	return result
 
 
-def main(channel, nick, oauth_token_path, base_dir='/mnt'):
+def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None):
 	with open(oauth_token_path) as f:
 		oauth_token = f.read()
 	# To ensure uniqueness even if multiple instances are running on the same host,
 	# also include our pid
-	name = "{}.{}".format(socket.gethostname(), os.getpid())
+	if name is None:
+		name = socket.gethostname()
+	name = "{}.{}".format(name, os.getpid())
 
 	stopping = gevent.event.Event()
 	gevent.signal_handler(signal.SIGTERM, stopping.set)

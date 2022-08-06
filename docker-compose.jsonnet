@@ -454,7 +454,7 @@
     [if $.enabled.chat_archiver then "chat_archiver"]: {
       image: $.get_image("chat_archiver"),
       restart: "always",
-      command: [$.chat_archiver.channel, $.chat_archiver.user, "/token"],
+      command: [$.chat_archiver.channel, $.chat_archiver.user, "/token", "--name", $.localhost],
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
     },
 
