@@ -131,9 +131,17 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 		return
 	
 	dir_name = os.path.dirname(path)
-	date, duration, _ = os.path.basename(path).split('-', 2)
-	temp_name = "-".join([date, duration, "temp", str(uuid.uuid4())])
-	temp_path = os.path.join(dir_name, "{}.ts".format(temp_name))
+	if quality == "chat":
+		# chat segment
+		_, filename_hash = os.path.basename(path).split('-', 1)
+		temp_name = "{}.{}.temp".format(os.path.basename(path), uuid4())
+	else:
+		# video segment
+		date, duration, _ = os.path.basename(path).split('-', 2)
+		filename_hash = common.parse_segment_path(missing_segment).hash
+		temp_name = "{}.ts".format("-".join([date, duration, "temp", str(uuid.uuid4())]))
+
+	temp_path = os.path.join(dir_name, temp_name)
 	common.ensure_directory(temp_path)
 	hash = hashlib.sha256()
 
@@ -149,7 +157,6 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 				common.writeall(f.write, chunk)
 				hash.update(chunk)
 
-		filename_hash = common.parse_segment_path(missing_segment).hash
 		if filename_hash != hash.digest():
 			logger.warn('Hash of segment {} does not match. Discarding segment'.format(missing_segment))
 			hash_mismatches.labels(remote=node, channel=channel, quality=quality, hour=hour).inc()

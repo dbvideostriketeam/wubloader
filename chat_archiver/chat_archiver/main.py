@@ -187,6 +187,7 @@ class Archiver(object):
 
 
 def write_batch(path, batch_time, messages):
+	"""Batches are named PATH/YYYY-MM-DDTHH/MM:SS-HASH.json"""
 	output = (format_batch(messages) + '\n').encode('utf-8')
 	hash = base64.b64encode(hashlib.sha256(output).digest(), b"-_").decode().rstrip("=")
 	hour = datetime.utcfromtimestamp(batch_time).strftime("%Y-%m-%dT%H")
