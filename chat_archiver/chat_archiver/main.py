@@ -5,6 +5,8 @@ import hashlib
 import json
 import logging
 import os
+import random
+import string
 import signal
 import socket
 import time
@@ -53,7 +55,7 @@ MAX_SERVER_LAG = 30
 ESTIMATED_TIME_PADDING = 5
 
 messages_received = prom.Counter(
-	"messages_received"
+	"messages_received",
 	"Number of chat messages recieved by the client. 'client' tag is per client instance.",
 	["channel", "client", "command"],
 )
@@ -114,6 +116,7 @@ class Archiver(object):
 		self.logger = logging.getLogger(type(self).__name__).getChild(channel)
 		self.name = name
 		self.messages = gevent.queue.Queue()
+		self.channel = channel
 		self.path = os.path.join(base_dir, channel, "chat")
 		
 		self.stopping = gevent.event.Event()
@@ -265,6 +268,16 @@ class Archiver(object):
 		self.client.stop()
 
 
+def listdir(path):
+	"""as os.listdir but return [] if dir doesn't exist"""
+	try:
+		return os.listdir(path)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
+			raise
+		return []
+
+
 def write_batch(path, batch_time, messages, size_histogram=None):
 	"""Batches are named PATH/YYYY-MM-DDTHH/MM:SS-HASH.json"""
 	output = (format_batch(messages) + '\n').encode('utf-8')
@@ -276,7 +289,7 @@ def write_batch(path, batch_time, messages, size_histogram=None):
 	filename = os.path.join(hour, "{}-{}.json".format(time, hash))
 	filepath = os.path.join(path, filename)
 	if os.path.exists(filepath):
-		logging.info("Not writing batch {} - already exists.".format(filename))
+		logging.debug("Not writing batch {} - already exists.".format(filename))
 	else:
 		temppath = "{}.{}.temp".format(filepath, uuid4())
 		ensure_directory(filepath)
@@ -306,16 +319,9 @@ def get_batch_files(path, batch_time):
 	hour = datetime.utcfromtimestamp(batch_time).strftime("%Y-%m-%dT%H")
 	time = datetime.utcfromtimestamp(batch_time).strftime("%M:%S")
 	hourdir = os.path.join(path, hour)
-	# return [] if dir doesn't exist
-	try:
-		files = os.listdir(hourdir)
-	except OSError as e:
-		if e.errno != errno.ENOENT:
-			raise
-		return []
 	return [
 		os.path.join(hourdir, name)
-		for name in files
+		for name in listdir(hourdir)
 		if name.startswith(time) and name.endswith(".json")
 	]
 
@@ -336,13 +342,13 @@ def merge_all(path, interval=None, stopping=None):
 		while True:
 			logging.debug("Scanning for merges")
 			by_time = {}
-			for hour in os.listdir(path):
-				for name in os.listdir(os.path.join(path, hour)):
+			for hour in listdir(path):
+				for name in listdir(os.path.join(path, hour)):
 					if not name.endswith(".json"):
 						continue
-				time = "-".join(name.split("-")[:3])
-				timestamp = "{}:{}".format(hour, time)
-				by_time[timestamp] = by_time.get(timestamp, 0) + 1
+					min_sec = name.split("-")[0]
+					timestamp = "{}:{}".format(hour, min_sec)
+					by_time[timestamp] = by_time.get(timestamp, 0) + 1
 			if not any(count > 1 for timestamp, count in by_time.items()):
 				logging.info("All batches are merged")
 				break
@@ -508,10 +514,11 @@ def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None, merge_inte
 	with open(oauth_token_path) as f:
 		oauth_token = f.read()
 	# To ensure uniqueness even if multiple instances are running on the same host,
-	# also include our pid
+	# also include a random slug
 	if name is None:
 		name = socket.gethostname()
-	name = "{}.{}".format(name, os.getpid())
+	slug = ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(5))
+	name = "{}.{}".format(name, slug)
 
 	stopping = gevent.event.Event()
 	gevent.signal_handler(signal.SIGTERM, stopping.set)

@@ -19,4 +19,4 @@ COPY chat_archiver /tmp/archiver
 RUN pip install /tmp/archiver && rm -r /tmp/archiver
 
 LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
-ENTRYPOINT ["python", "-m", "chat_archiver", "--base-dir", "/mnt"]
+ENTRYPOINT ["python3", "-m", "chat_archiver", "--base-dir", "/mnt"]
