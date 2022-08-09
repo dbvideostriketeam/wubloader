@@ -178,6 +178,8 @@
     // Twitch user to log in as and path to oauth token
     user: "dbvideostriketeam",
     token_path: "./chat_token.txt",
+    // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
+    backfill: true,
   },
 
   // Extra options to pass via environment variables,
@@ -253,7 +255,7 @@
       command: $.clean_channels +
       [
         "--base-dir", "/mnt",
-        "--qualities", std.join(",", $.qualities),
+        "--qualities", std.join(",", $.qualities + (if $.chat_archiver.backfill then ["chat"] else [])),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
         "--node-database", $.db_connect,

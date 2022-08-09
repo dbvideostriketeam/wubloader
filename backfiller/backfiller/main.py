@@ -21,7 +21,7 @@ import common
 from common import dateutil
 from common import database
 from common.requests import InstrumentedSession
-from common.segments import list_segment_files
+from common.segments import list_segment_files, unpadded_b64_decode
 
 # Wraps all requests in some metric collection
 requests = InstrumentedSession()
@@ -133,8 +133,9 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 	dir_name = os.path.dirname(path)
 	if quality == "chat":
 		# chat segment
-		_, filename_hash = os.path.basename(path).split('-', 1)
-		temp_name = "{}.{}.temp".format(os.path.basename(path), uuid4())
+		_, filename_hash = os.path.splitext(os.path.basename(path))[0].split('-', 1)
+		filename_hash = unpadded_b64_decode(filename_hash)
+		temp_name = "{}.{}.temp".format(os.path.basename(path), uuid.uuid4())
 	else:
 		# video segment
 		date, duration, _ = os.path.basename(path).split('-', 2)
@@ -486,23 +487,26 @@ class BackfillerWorker(object):
 							pass
 						continue
 
-					# test to see if file is a segment and get the segments start time
-					try:
-						segment = common.parse_segment_path(path)
-					except ValueError as e:
-						self.logger.warning('File {} invalid: {}'.format(path, e))
-						continue
+					# For chat archives, just download whatever is there.
+					# Otherwise, do some basic checks.
+					if quality != 'chat':
+						# test to see if file is a segment and get the segments start time
+						try:
+							segment = common.parse_segment_path(path)
+						except ValueError as e:
+							self.logger.warning('File {} invalid: {}'.format(path, e))
+							continue
 
-					# Ignore temp segments as they may go away by the time we fetch them.
-					if segment.type == "temp":
-						self.logger.debug('Skipping {} as it is a temp segment'.format(path))
-						continue
-	
-					# to avoid getting in the downloader's way ignore segments
-					# less than recent_cutoff old
-					if datetime.datetime.utcnow() - segment.start < datetime.timedelta(seconds=self.recent_cutoff):
-						self.logger.debug('Skipping {} as too recent'.format(path))
-						continue
+						# Ignore temp segments as they may go away by the time we fetch them.
+						if segment.type == "temp":
+							self.logger.debug('Skipping {} as it is a temp segment'.format(path))
+							continue
+		
+						# to avoid getting in the downloader's way ignore segments
+						# less than recent_cutoff old
+						if datetime.datetime.utcnow() - segment.start < datetime.timedelta(seconds=self.recent_cutoff):
+							self.logger.debug('Skipping {} as too recent'.format(path))
+							continue
 	
 					# start segment as soon as a pool slot opens up, then track it in workers
 					workers.append(pool.spawn(
