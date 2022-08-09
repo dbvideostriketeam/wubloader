@@ -29,11 +29,14 @@ import prometheus_client as prom
 # How long each batch is
 BATCH_INTERVAL = 60
 
-# These are known to arrive up to 10s after their actual time
+# These are known to arrive up to MAX_DELAY after their actual time
 DELAYED_COMMANDS = [
 	"JOIN",
 	"PART",
 ]
+# This isn't documented, but we've observed up to 30sec of delay, so we pad a little extra
+# and hope it's good enough.
+MAX_DELAY = 45
 
 COMMANDS = DELAYED_COMMANDS + [
 	"PRIVMSG",
@@ -247,9 +250,9 @@ class Archiver(object):
 				time_range = 3 * ESTIMATED_TIME_PADDING
 
 			if data['command'] in DELAYED_COMMANDS:
-				# might have happened 10s sooner than otherwise indicated.
-				timestamp -= 10
-				time_range += 10
+				# might have happened MAX_DELAY sooner than otherwise indicated.
+				timestamp -= MAX_DELAY
+				time_range += MAX_DELAY
 
 			self.logger.debug("Message time determined as {} + up to {}".format(timestamp, time_range))
 			data['time'] = timestamp
