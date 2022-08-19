@@ -17,6 +17,7 @@ but a brief overview of the components:
 * `thrimbletrimmer` is a browser based video editor.
 * `segment_coverage` regularly checks whether there is complete segment coverage for each hour. 
 * `playlist_manager` adds videos to youtube playlists depending on tags.
+* `chat_archiver` records twitch chat messages and merges them with records from other nodes.
 * `database` hosts a Postgres database to store events to be edited.
 * `nginx` provides a webserver through which the other components are exposed to the outside world.
 * `common` provides code shared between the other components.
