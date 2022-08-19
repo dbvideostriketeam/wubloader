@@ -17,6 +17,7 @@ from gevent.pywsgi import WSGIServer
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
 from common.segments import feed_input, render_segments_waveform, extract_frame, list_segment_files
+from common.chat import get_batch_file_range, merge_messages
 
 from . import generate_hls
 
@@ -91,8 +92,8 @@ def metrics():
 @app.route('/metrics/<trailing>')
 @request_stats
 def metrics_with_trailing(trailing):
-       """Expose Prometheus metrics."""
-       return prom.generate_latest()
+	"""Expose Prometheus metrics."""
+	return prom.generate_latest()
 
 @app.route('/files')
 @request_stats
@@ -391,6 +392,60 @@ def get_frame(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	return Response(extract_frame(segments, timestamp), mimetype='image/png')
+
+
+@app.route('/<channel>/chat.json')
+@request_stats
+@has_path_args
+def get_chat_messages(channel):
+	"""
+	Returns a JSON list of chat messages from the given time range.
+	The messages are in the same format as used in the chat archiver.
+	Messages without an exact known time are included if their possible time range
+	intersects with the requested time range. Note this means that messages in range (A, B)
+	and range (B, C) may overlap! Thankfully the kinds of messages this can happen for mostly
+	don't matter - JOINs and PARTs mainly, but sometimes ROOMSTATEs, NOTICEs and CLEARCHATs.
+	Params:
+		start, end: Required. The start and end times.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+	"""
+	start = dateutil.parse_utc_only(request.args['start'])
+	end = dateutil.parse_utc_only(request.args['end'])
+	if end <= start:
+		return "End must be after start", 400
+
+	hours_path = os.path.join(app.static_folder, channel, "chat")
+
+	# This process below may fail if a batch is deleted out from underneath us.
+	# If that happens, we need to start again.
+	retry = True
+	while retry:
+		retry = False
+		messages = []
+		for batch_file in get_batch_file_range(hours_path, start, end):
+			try:
+				with open(batch_file) as f:
+					batch = f.read()
+			except OSError as e:
+				if e.errno != errno.ENOENT:
+					raise
+				# If file doesn't exist, retry the outer loop
+				retry = True
+				break
+			batch = [json.loads(line) for line in batch.strip().split("\n")]
+			messages = merge_messages(messages, batch)
+
+	start = start.timestamp()
+	end = end.timestamp()
+	messages = sorted(
+		[
+			m for m in messages
+			# message ends after START, and starts before END
+			if start <= m['time'] + m['time_range'] and m['time'] < end
+		], key=lambda m: (m['time'], m['time_range'])
+	)
+
+	return json.dumps(messages)
 
 
 @app.route('/generate_videos/<channel>/<quality>', methods=['POST'])

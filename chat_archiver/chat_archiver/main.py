@@ -1,6 +1,5 @@
 
 import base64
-import errno
 import hashlib
 import json
 import logging
@@ -19,15 +18,13 @@ from uuid import uuid4
 import gevent.event
 import gevent.queue
 
-from common import ensure_directory
-from common.stats import timed
+from common import ensure_directory, listdir
+from common.chat import BATCH_INTERVAL, format_batch, get_batch_files, merge_messages
 
 from girc import Client
 from monotonic import monotonic
 import prometheus_client as prom
 
-# How long each batch is
-BATCH_INTERVAL = 60
 
 # These are known to arrive up to MAX_DELAY after their actual time
 DELAYED_COMMANDS = [
@@ -271,16 +268,6 @@ class Archiver(object):
 		self.client.stop()
 
 
-def listdir(path):
-	"""as os.listdir but return [] if dir doesn't exist"""
-	try:
-		return os.listdir(path)
-	except OSError as e:
-		if e.errno != errno.ENOENT:
-			raise
-		return []
-
-
 def write_batch(path, batch_time, messages, size_histogram=None):
 	"""Batches are named PATH/YYYY-MM-DDTHH/MM:SS-HASH.json"""
 	output = (format_batch(messages) + '\n').encode('utf-8')
@@ -301,32 +288,6 @@ def write_batch(path, batch_time, messages, size_histogram=None):
 		os.rename(temppath, filepath)
 		logging.info("Wrote batch {}".format(filepath))
 	return filepath
-
-
-def format_batch(messages):
-	# We need to take some care to have a consistent ordering and format here.
-	# We use a "canonicalised JSON" format, which is really just whatever the python encoder does,
-	# with compact separators and sorted keys.
-	messages = [
-		(message, json.dumps(message, separators=(',', ':'), sort_keys=True))
-		for message in messages
-	]
-	# We sort by timestamp, then timestamp range, then if all else fails, lexiographically
-	# on the encoded representation.
-	messages.sort(key=lambda item: (item[0]['time'], item[0]['time_range'], item[1]))
-	return "\n".join(line for message, line in messages)
-
-
-def get_batch_files(path, batch_time):
-	"""Returns list of batch filepaths for a given batch time"""
-	hour = datetime.utcfromtimestamp(batch_time).strftime("%Y-%m-%dT%H")
-	time = datetime.utcfromtimestamp(batch_time).strftime("%M:%S")
-	hourdir = os.path.join(path, hour)
-	return [
-		os.path.join(hourdir, name)
-		for name in listdir(hourdir)
-		if name.startswith(time) and name.endswith(".json")
-	]
 
 
 def merge_all(path, interval=None, stopping=None):
@@ -417,100 +378,6 @@ def merge_batch_files(path, batch_time):
 		# don't delete something we just (re-)wrote
 		if batch_file not in written:
 			os.remove(batch_file)
-
-@timed("merge_messages", normalize=lambda _, left, right: len(left) + len(right))
-def merge_messages(left, right):
-	"""Merges two lists of messages into one merged list.
-	This operation should be a CRDT, ie. all the following hold:
-	- associative: merge(merge(A, B), C) == merge(A, merge(B, C))
-	- commutitive: merge(A, B) == merge(B, A)
-	- reflexive: merge(A, A) == A
-	This means that no matter what order information from different sources
-	is incorporated (or if sources are repeated), the results should be the same.
-	"""
-	# An optimization - if either size is empty, return the other side without processing.
-	if not left:
-		return right
-	if not right:
-		return left
-
-	# Calculates intersection of time range of both messages, or None if they don't overlap
-	def overlap(a, b):
-		range_start = max(a['time'], b['time'])
-		range_end = min(a['time'] + a['time_range'], b['time'] + b['time_range'])
-		if range_end < range_start:
-			return None
-		return range_start, range_end - range_start
-		
-	# Returns merged message if two messages are compatible with being the same message,
-	# or else None.
-	def merge_message(a, b):
-		o = overlap(a, b)
-		if o and all(
-			a.get(k) == b.get(k)
-			for k in set(a.keys()) | set(b.keys())
-			if k not in ("receivers", "time", "time_range")
-		):
-			receivers = a["receivers"] | b["receivers"]
-			# Error checking - make sure no receiver timestamps are being overwritten.
-			# This would indicate we're merging two messages recieved at different times
-			# by the same recipient.
-			for k in receivers.keys():
-				for old in (a, b):
-					if k in old and old[k] != receivers[k]:
-						raise ValueError(f"Merge would merge two messages with different recipient timestamps: {a}, {b}")
-			return a | {
-				"time": o[0],
-				"time_range": o[1],
-				"receivers": receivers,
-			}
-		return None
-
-	# Match things with identical ids first, and collect unmatched into left and right lists
-	by_id = {}
-	unmatched = [], []
-	for messages, u in zip((left, right), unmatched):
-		for message in messages:
-			id = (message.get('tags') or {}).get('id')
-			if id:
-				by_id.setdefault(id, []).append(message)
-			else:
-				u.append(message)
-
-	result = []
-	for id, messages in by_id.items():
-		if len(messages) == 1:
-			logging.debug(f"Message with id {id} has no match")
-			result.append(messages[0])
-		else:
-			merged = merge_message(*messages)
-			if merged is None:
-				raise ValueError(f"Got two non-matching messages with id {id}: {messages[0]}, {messages[1]}")
-			logging.debug(f"Merged messages with id {id}")
-			result.append(merged)
-
-	# For time-range messages, pair off each one in left with first match in right,
-	# and pass through anything with no matches.
-	left_unmatched, right_unmatched = unmatched
-	for message in left_unmatched:
-		for other in right_unmatched:
-			merged = merge_message(message, other)
-			if merged:
-				logging.debug(
-					"Matched {m[command]} message {a[time]}+{a[time_range]} & {b[time]}+{b[time_range]} -> {m[time]}+{m[time_range]}"
-					.format(a=message, b=other, m=merged)
-				)
-				right_unmatched.remove(other)
-				result.append(merged)
-				break
-		else:
-			logging.debug("No match found for {m[command]} at {m[time]}+{m[time_range]}".format(m=message))
-			result.append(message)
-	for message in right_unmatched:
-		logging.debug("No match found for {m[command]} at {m[time]}+{m[time_range]}".format(m=message))
-		result.append(message)
-
-	return result
 
 
 def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None, merge_interval=60):
