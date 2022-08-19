@@ -150,3 +150,13 @@ def serve_with_graceful_shutdown(server, stop_timeout=20):
 	logging.info("Shutting down")
 	server.stop(stop_timeout)
 	logging.info("Gracefully shut down")
+
+
+def listdir(path):
+	"""as os.listdir but return [] if dir doesn't exist"""
+	try:
+		return os.listdir(path)
+	except OSError as e:
+		if e.errno != errno.ENOENT:
+			raise
+		return []

@@ -3,7 +3,7 @@ import argh
 import logging
 import json
 
-from .main import merge_messages, format_batch
+from common.chat import merge_messages, format_batch
 
 def main(*paths, log='INFO'):
 	"""Merge all listed batch files and output result to stdout"""

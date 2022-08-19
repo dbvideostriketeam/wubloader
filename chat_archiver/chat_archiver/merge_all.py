@@ -1,9 +1,8 @@
 
 import argh
 import logging
-import json
 
-from .main import merge_messages, format_batch, merge_all
+from .main import merge_all
 
 def main(path, log='INFO'):
 	"""Merge all batch files with the same timestamp within given directory"""
