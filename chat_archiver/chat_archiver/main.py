@@ -306,9 +306,9 @@ def write_batch(path, batch_time, messages, size_histogram=None):
 def format_batch(messages):
 	# We need to take some care to have a consistent ordering and format here.
 	# We use a "canonicalised JSON" format, which is really just whatever the python encoder does,
-	# with compact separators.
+	# with compact separators and sorted keys.
 	messages = [
-		(message, json.dumps(message, separators=(',', ':')))
+		(message, json.dumps(message, separators=(',', ':'), sort_keys=True))
 		for message in messages
 	]
 	# We sort by timestamp, then timestamp range, then if all else fails, lexiographically
