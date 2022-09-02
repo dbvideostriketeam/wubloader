@@ -72,6 +72,7 @@ CREATE TABLE events (
 	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
 	uploader_whitelist TEXT[],
 	upload_location TEXT CHECK (state = 'UNEDITED' OR upload_location IS NOT NULL),
+	public BOOLEAN NOT NULL DEFAULT TRUE,
 	video_ranges video_range[] CHECK (state IN ('UNEDITED', 'DONE') OR video_ranges IS NOT NULL),
 	video_transitions video_transition[] CHECK (state IN ('UNEDITED', 'DONE') OR video_transitions IS NOT NULL),
 	CHECK (

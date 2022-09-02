@@ -51,9 +51,10 @@ class UploadBackend(object):
 	Config args for the backend are passed into __init__ as kwargs,
 	along with credentials as the first arg.
 
-	Should have a method upload_video(title, description, tags, data).
-	Title, description and tags may have backend-specific meaning.
+	Should have a method upload_video(title, description, tags, public, data).
+	Title, description, tags and public may have backend-specific meaning.
 	Tags is a list of string.
+	Public is a boolean.
 	Data is an iterator of bytes.
 	It should return (video_id, video_link).
 
@@ -64,7 +65,7 @@ class UploadBackend(object):
 	list of video ids and returns a list of the ones who have finished processing.
 
 	If updating existing videos is supported, the backend should also define a method
-	update_video(video_id, title, description, tags).
+	update_video(video_id, title, description, tags, public).
 	Fields which cannot be updated may be ignored.
 	Must not change the video id or link. Returns nothing.
 
@@ -85,21 +86,19 @@ class UploadBackend(object):
 	encoding_settings = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', 'mpegts']
 	encoding_streamable = True
 
-	def upload_video(self, title, description, tags, data):
+	def upload_video(self, title, description, tags, public, data):
 		raise NotImplementedError
 
 	def check_status(self, ids):
 		raise NotImplementedError
 
-	def update_video(self, video_id, title, description, tags):
+	def update_video(self, video_id, title, description, tags, public):
 		raise NotImplementedError
 
 
 class Youtube(UploadBackend):
 	"""Represents a youtube channel to upload to, and settings for doing so.
 	Config args besides credentials:
-		hidden:
-			If false, video is public. If true, video is unlisted. Default false.
 		category_id:
 			The numeric category id to set as the youtube category of all videos.
 			Default is 23, which is the id for "Comedy". Set to null to not set.
@@ -128,7 +127,7 @@ class Youtube(UploadBackend):
 		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
 	]
 
-	def __init__(self, credentials, hidden=False, category_id=23, language="en", use_yt_recommended_encoding=False,
+	def __init__(self, credentials, category_id=23, language="en", use_yt_recommended_encoding=False,
 		mime_type='video/MP2T'):
 		self.logger = logging.getLogger(type(self).__name__)
 		self.client = GoogleAPIClient(
@@ -136,7 +135,6 @@ class Youtube(UploadBackend):
 			credentials['client_secret'],
 			credentials['refresh_token'],
 		)
-		self.hidden = hidden
 		self.category_id = category_id
 		self.language = language
 		self.mime_type = mime_type
@@ -144,12 +142,15 @@ class Youtube(UploadBackend):
 			self.encoding_settings = self.recommended_settings
 			self.encoding_streamable = False
 
-	def upload_video(self, title, description, tags, data):
+	def upload_video(self, title, description, tags, public, data):
 		json = {
 			'snippet': {
 				'title': title,
 				'description': description,
 				'tags': tags,
+			},
+			'status': {
+				'privacyStatus': 'public' if public else 'unlisted',
 			},
 		}
 		if self.category_id is not None:
@@ -157,15 +158,11 @@ class Youtube(UploadBackend):
 		if self.language is not None:
 			json['snippet']['defaultLanguage'] = self.language
 			json['snippet']['defaultAudioLanguage'] = self.language
-		if self.hidden:
-			json['status'] = {
-				'privacyStatus': 'unlisted',
-			}
 		resp = self.client.request('POST',
 			'https://www.googleapis.com/upload/youtube/v3/videos',
 			headers={'X-Upload-Content-Type': self.mime_type},
 			params={
-				'part': 'snippet,status' if self.hidden else 'snippet',
+				'part': 'snippet,status',
 				'uploadType': 'resumable',
 			},
 			json=json,
@@ -208,13 +205,13 @@ class Youtube(UploadBackend):
 					output.append(item['id'])
 		return output
 
-	def update_video(self, video_id, title, description, tags):
+	def update_video(self, video_id, title, description, tags, public):
 		# Any values we don't give will be deleted on PUT, so we need to first
 		# get all the existing values then merge in our updates.
 		resp = self.client.request('GET',
 			'https://www.googleapis.com/youtube/v3/videos',
 			params={
-				'part': 'id,snippet',
+				'part': 'id,snippet,status',
 				'id': video_id,
 			},
 			metric_name='get_video',
@@ -226,24 +223,27 @@ class Youtube(UploadBackend):
 		assert len(data) == 1
 		data = data[0]
 		snippet = data['snippet'].copy()
+		status = data['status'].copy()
 
 		snippet['title'] = title
 		snippet['description'] = description
 		snippet['tags'] = tags
+		status['privacyStatus'] = 'public' if public else 'unlisted'
 		# Since we're fetching this data anyway, we can save some quota by avoiding repeated work.
 		# We could still race and do the same update twice, but that's fine.
-		if snippet == data['snippet']:
+		if snippet == data['snippet'] and status == data['status']:
 			self.logger.info("Skipping update for video {}: No changes".format(video_id))
 			return
 
 		resp = self.client.request('PUT',
 			'https://www.googleapis.com/youtube/v3/videos',
 			params={
-				'part': 'id,snippet',
+				'part': 'id,snippet,status',
 			},
 			json={
 				'id': video_id,
 				'snippet': snippet,
+				'status': status,
 			},
 			metric_name='update_video',
 		)
@@ -264,10 +264,10 @@ class Local(UploadBackend):
 			If not given, returns a file:// url with the full path.
 		write_info:
 			If true, writes a json file alongside the video file containing
-			the video title, description and tags.
+			the video title, description, tags and public setting.
 			This is intended primarily for testing purposes.
 	Saves files under their title, plus a random video id to avoid conflicts.
-	Ignores description and tags.
+	Ignores other parameters.
 	"""
 
 	def __init__(self, credentials, path, url_prefix=None, write_info=False):
@@ -282,7 +282,7 @@ class Local(UploadBackend):
 				raise
 			# ignore already-exists errors
 
-	def upload_video(self, title, description, tags, data):
+	def upload_video(self, title, description, tags, public, data):
 		video_id = str(uuid.uuid4())
 		# make title safe by removing offending characters, replacing with '-'
 		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
@@ -296,6 +296,7 @@ class Local(UploadBackend):
 						'title': title,
 						'description': description,
 						'tags': tags,
+						'public': public,
 					}) + '\n')
 			with open(filepath, 'wb') as f:
 				for chunk in data:
@@ -310,7 +311,7 @@ class Local(UploadBackend):
 			url = 'file://{}'.format(filepath)
 		return video_id, url
 
-	def update_video(self, video_id, title, description, tags):
+	def update_video(self, video_id, title, description, tags, public):
 		if not self.write_info:
 			return
 		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
@@ -319,4 +320,5 @@ class Local(UploadBackend):
 				'title': title,
 				'description': description,
 				'tags': tags,
+				'public': public,
 			}) + '\n')
