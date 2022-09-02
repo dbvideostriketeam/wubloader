@@ -78,7 +78,7 @@ class PlaylistManager(object):
 		videos = query(conn, """
 			SELECT video_id, tags, COALESCE((video_ranges[1]).start, event_start) AS start_time
 			FROM events
-			WHERE state = 'DONE' AND upload_location = ANY (%s)
+			WHERE state = 'DONE' AND upload_location = ANY (%s) AND public
 		""", self.upload_locations)
 		self.dbmanager.put_conn(conn)
 		return {video.video_id: video for video in videos}
@@ -296,6 +296,8 @@ def main(
 	upload_location_allowlist is a comma-seperated list of database upload locations to
 	consider as eligible to being added to playlists. For these locations, the database video id
 	must be a youtube video id.
+	Note that non-public videos will never be added to playlists, even if they have a matching
+	upload_location.
 
 	interval is how often to check for new videos, default every 10min.
 	"""
