@@ -385,6 +385,12 @@ async function initializeVideoInfo() {
 		modifiedAdvancedOptions = true;
 	}
 
+	const publicCheckbox = document.getElementById("advanced-submission-option-public");
+	publicCheckbox.checked = videoInfo.public;
+	if (!videoInfo.public) {
+		modifiedAdvancedOptions = true;
+	}
+
 	const uploadLocationSelection = document.getElementById(
 		"advanced-submission-option-upload-location"
 	);
@@ -782,6 +788,7 @@ async function sendVideoData(newState, overrideChanges) {
 	const videoTitle = document.getElementById("video-info-title").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
+	const isPublic = document.getElementById("advanced-submission-option-public").checked;
 	const uploadLocation = document.getElementById(
 		"advanced-submission-option-upload-location"
 	).value;
@@ -798,6 +805,7 @@ async function sendVideoData(newState, overrideChanges) {
 		video_tags: videoTags,
 		allow_holes: allowHoles,
 		upload_location: uploadLocation,
+		public: isPublic,
 		video_channel: globalStreamName,
 		video_quality: videoInfo.video_quality,
 		uploader_whitelist: uploaderAllowlist,
