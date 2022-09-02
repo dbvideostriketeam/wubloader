@@ -58,6 +58,7 @@ CUT_JOB_PARAMS = [
 	"allow_holes",
 	"uploader_whitelist",
 	"upload_location",
+	"public",
 	"video_ranges",
 	"video_transitions",
 	"video_title",
@@ -417,6 +418,7 @@ class Cutter(object):
 					description=job.video_description,
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
+					public=job.public,
 					data=upload_wrapper(),
 				)
 			except (JobConsistencyError, JobCancelled, UploadError):
@@ -615,7 +617,7 @@ class VideoUpdater(object):
 			try:
 				videos = list(self.get_videos())
 				self.logger.info("Found {} videos in MODIFIED".format(len(videos)))
-				for id, video_id, title, description, tags in videos:
+				for id, video_id, title, description, tags, public in videos:
 					# NOTE: Since we aren't claiming videos, it's technically possible for this
 					# to happen:
 					# 1. we get MODIFIED video with title A
@@ -625,12 +627,12 @@ class VideoUpdater(object):
 					# 5. it appears to be successfully updated with B, but the title is actually A.
 					# This is unlikely and not a disaster, so we'll just live with it.
 					try:
-						self.backend.update_video(video_id, title, description, tags)
+						self.backend.update_video(video_id, title, description, tags, public)
 					except Exception as ex:
 						self.logger.exception("Failed to update video")
 						self.mark_errored(id, "Failed to update video: {}".format(ex))
 						continue
-					marked = self.mark_done(id, video_id, title, description, tags)
+					marked = self.mark_done(id, video_id, title, description, tags, public)
 					if marked:
 						assert marked == 1
 						self.logger.info("Updated video {}".format(id))
@@ -648,15 +650,15 @@ class VideoUpdater(object):
 		# To avoid exhausting API quota, errors aren't retryable.
 		# We ignore any rows where error is not null.
 		return query(self.conn, """
-			SELECT id, video_id, video_title, video_description, video_tags
+			SELECT id, video_id, video_title, video_description, video_tags, public
 			FROM events
 			WHERE state = 'MODIFIED' AND error IS NULL
 		""")
 
-	def mark_done(self, id, video_id, title, description, tags):
+	def mark_done(self, id, video_id, title, description, tags, public):
 		"""We don't want to set to DONE if the video has been modified *again* since
 		we saw it."""
-		args = dict(id=id, video_id=video_id, video_title=title, video_description=description, video_tags=tags)
+		args = dict(id=id, video_id=video_id, video_title=title, video_description=description, video_tags=tags, public=public)
 		built_query = sql.SQL("""
 			UPDATE events
 			SET state = 'DONE'
