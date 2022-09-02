@@ -206,7 +206,7 @@ def update_row(ident, editor=None):
 		'video_channel', 'video_quality', 'video_title',
 		'video_description', 'video_tags',
 	]
-	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist']
+	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist', 'public']
 	sheet_columns = [
 		'sheet_name', 'event_start', 'event_end',
 		'category', 'description', 'notes', 'tags',
@@ -214,7 +214,7 @@ def update_row(ident, editor=None):
 	# These columns may be modified when a video is in state 'DONE',
 	# and are a subset of edit_columns.
 	modifiable_columns = [
-		'video_title', 'video_description', 'video_tags',
+		'video_title', 'video_description', 'video_tags', 'public'
 	]
 	assert set(modifiable_columns) - set(edit_columns) == set()
 
