@@ -299,6 +299,12 @@ class SheetSync(object):
 		if event.error is None and row['_parse_errors']:
 			event = event._replace(error=", ".join(row['_parse_errors']))
 
+		# As a presentation detail, we show any row in state DONE with public = False as
+		# a virtual state UNLISTED instead, to indicate that it probably still requires other
+		# work before being modified to be public = True later.
+		if event.state == 'DONE' and not event.public:
+			event = event._replace(state='UNLISTED')
+
 		# Update database with any changed inputs
 		changed = [col for col in self.input_columns if row[col] != getattr(event, col)]
 		if changed:
