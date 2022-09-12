@@ -69,6 +69,10 @@ class UploadBackend(object):
 	Fields which cannot be updated may be ignored.
 	Must not change the video id or link. Returns nothing.
 
+	If uploading thumbnails for a video is supported, the backend should define a method
+	set_thumbnail(video_id, thumbnail) where thumbnail is a bytestring containing image data.
+	Returns nothing.
+
 	The upload backend also determines the encoding settings for the cutting
 	process, this is given as a list of ffmpeg args
 	under the 'encoding_settings' attribute.
@@ -93,6 +97,9 @@ class UploadBackend(object):
 		raise NotImplementedError
 
 	def update_video(self, video_id, title, description, tags, public):
+		raise NotImplementedError
+
+	def set_thumbnail(self, video_id, thumbnail):
 		raise NotImplementedError
 
 
@@ -246,6 +253,14 @@ class Youtube(UploadBackend):
 				'status': status,
 			},
 			metric_name='update_video',
+		)
+		resp.raise_for_status()
+
+	def set_thumbnail(self, video_id, thumbnail):
+		resp = self.client.request('POST',
+			'https://www.googleapis.com/youtube/v3/thumbnails/set',
+			params={'videoId': video_id},
+			body=thumbnail,
 		)
 		resp.raise_for_status()
 
