@@ -121,6 +121,36 @@ This is summarised in the below graph:
   └────────────────────────────────────────────────────────────────────────────────┘
 ```
 
+#### Thumbnails
+
+The state around thumbnails is a little complicated.
+
+The `thumbnail_mode` is set by the editor and has the following options:
+* `NONE`: Video should not have a thumbnail uploaded.
+  This will not delete an existing thumbnail if present.
+* `BARE`: Video thumbnail is a still frame taken from the stream at `thumbnail_time`.
+  `thumbnail_time` must not be NULL. `thumbnail_template` must be NULL.
+* `TEMPLATE`: Video thumbnail takes a still frame from the stream at `thumbnail_time` and
+  combines it with a template image with name `thumbnail_template`. Both these columns must
+  not be NULL.
+* `CUSTOM`: Video thumbnail is a custom image stored in `thumbnail_image`, which must not be NULL.
+
+In the cases of `BARE` and `TEMPLATE`, `thumbnail_image` is used to store the generated image.
+This generation happens when the video is uploaded.
+However, if the `thumbnail_image` column is later set to NULL and state set to `MODIFIED`,
+the image will be re-generated before the video is modified.
+
+Unused columns for the current mode are allowed to be non-NULL, this allows for changing
+the mode then changing it back, without losing the old saved settings.
+
+All the above columns are modifiable, within the constraints outlined above.
+The mode column's default is currently `TEMPLATE`, but this is just a UX choice.
+
+Finally, the `thumbnail_last_written` column holds a SHA256 hash of the image data most recently
+uploaded. This allows us to detect if it has changed when modifying a video.
+We could query the current thumbnail from youtube's API, but this may be re-encoded or scaled
+and not have exactly the same content.
+
 #### Full schema
 
 The details below assume postgres, but nothing is signifigantly different in any SQL DB,
@@ -156,6 +186,10 @@ columns                    | type                                 | role        
 `video_tags`               | `TEXT[]`                             | edit input  | Custom tags to annotate the video with. If already set, used as the default when editing instead of `tags`.
 `video_channel`            | `TEXT`                               | edit input  | The twitch channel to cut the video from. If already set, used as the default channel selection when editing, instead of a pre-configured editor default. While this will almost always be the default value, it's a useful thing to be able to change should the need arise.
 `video_quality`            | `TEXT NOT NULL DEFAULT 'source'      | edit input  | The stream quality to cut the video from. Used as the default quality selection when editing. While this will almost always be the default value, it's a useful thing to be able to change should the need arise.
+`thumbnail_mode`           | `ENUM NOT NULL DEFAULT 'TEMPLATE'    | edit input  | The thumbnail mode. See "Thumbnails" above.
+`thumbnail_time`           | `TIMESTAMP`                          | edit input  | The video time to grab a frame from for the thumbnail in BARE and TEMPLATE modes.
+`thumbnail_template`       | `TEXT`                               | edit input  | The template name to use for the thumbnail in TEMPLATE mode.
+`thumbnail_image`          | `BYTEA`                              | edit input  | In CUSTOM mode, the thumbnail image. In BARE and TEMPLATE modes, the generated thumbnail image, or NULL to indicate it should be generated when next needed.
 `state`                    | `ENUM NOT NULL DEFAULT 'UNEDITED'`   | state       | See "The state machine" above.
 `uploader`                 | `TEXT`                               | state       | The name of the cutter node performing the cut and upload. Set when transitioning from `EDITED` to `CLAIMED` and cleared on a retryable error. Left uncleared on non-retryable errors to provide information to the operator. Cleared on a re-edit if set.
 `error`                    | `TEXT`                               | state       | A human-readable error message, set if a non-retryable error occurs. Its presence indicates operator intervention is required. Cleared on a re-edit if set.
@@ -165,3 +199,4 @@ columns                    | type                                 | role        
 `edit_time`                | `TIMESTAMP`                          | state       | Time of the last edit. Only set when state is not `UNEDITED`.
 `upload_time`              | `TIMESTAMP`                          | state       | Time when video state is set to `DONE`. Only set when state is `DONE`.
 `last_modified`            | `TIMESTAMP`                          | state       | Time when video state was last set to `MODIFIED`, or NULL if it has never been. Only used for diagnostics.
+`thumbnail_last_written`   | `BYTEA`                              | state       | The SHA256 hash, in binary form, of the most recently uploaded thumbnail image.

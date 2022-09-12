@@ -57,8 +57,16 @@ CREATE TYPE video_transition as (
 	duration INTERVAL
 );
 
+CREATE TYPE thumbnail_mode as ENUM (
+	'NONE',
+	'BARE',
+	'TEMPLATE',
+	'CUSTOM'
+);
+
 CREATE TABLE events (
 	id UUID PRIMARY KEY,
+
 	sheet_name TEXT NOT NULL,
 	event_start TIMESTAMP,
 	event_end TIMESTAMP,
@@ -69,6 +77,7 @@ CREATE TABLE events (
 	image_links TEXT[] NOT NULL DEFAULT '{}', -- default empty array
 	notes TEXT NOT NULL DEFAULT '',
 	tags TEXT[] NOT NULL DEFAULT '{}', -- default empty array
+
 	allow_holes BOOLEAN NOT NULL DEFAULT FALSE,
 	uploader_whitelist TEXT[],
 	upload_location TEXT CHECK (state = 'UNEDITED' OR upload_location IS NOT NULL),
@@ -84,6 +93,29 @@ CREATE TABLE events (
 	video_tags TEXT[] CHECK (state IN ('UNEDITED', 'DONE') OR video_tags IS NOT NULL),
 	video_channel TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_channel IS NOT NULL),
 	video_quality TEXT NOT NULL DEFAULT 'source',
+
+	thumbnail_mode thumbnail_mode NOT NULL DEFAULT 'TEMPLATE',
+	thumbnail_time TIMESTAMP CHECK (
+		state = 'UNEDITED'
+		OR thumbnail_mode in ('NONE', 'CUSTOM')
+		OR thumbnail_time IS NOT NULL
+	),
+	thumbnail_template TEXT CHECK (
+		state = 'UNEDITED'
+		OR thumbnail_mode != 'TEMPLATE'
+		OR thumbnail_template IS NOT NULL
+	),
+	thumbnail_image BYTEA CHECK (
+		state = 'UNEDITED'
+		OR thumbnail_mode != 'CUSTOM'
+		OR thumbnail_image IS NOT NULL
+	),
+	thumbnail_last_written BYTEA CHECK (
+		state != 'DONE'
+		OR thumbnail_mode = 'NONE'
+		OR thumbnail_last_written IS NOT NULL
+	),
+	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
 	error TEXT,
