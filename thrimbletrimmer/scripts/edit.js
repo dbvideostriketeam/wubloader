@@ -385,8 +385,8 @@ async function initializeVideoInfo() {
 		modifiedAdvancedOptions = true;
 	}
 
-	const publicCheckbox = document.getElementById("advanced-submission-option-public");
-	publicCheckbox.checked = videoInfo.public;
+	const unlistedCheckbox = document.getElementById("advanced-submission-option-unlisted");
+	unlistedCheckbox.checked = !videoInfo.public;
 	if (!videoInfo.public) {
 		modifiedAdvancedOptions = true;
 	}
@@ -788,7 +788,7 @@ async function sendVideoData(newState, overrideChanges) {
 	const videoTitle = document.getElementById("video-info-title").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
-	const isPublic = document.getElementById("advanced-submission-option-public").checked;
+	const isPublic = !document.getElementById("advanced-submission-option-unlisted").checked;
 	const uploadLocation = document.getElementById(
 		"advanced-submission-option-upload-location"
 	).value;
