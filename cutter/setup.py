@@ -7,6 +7,7 @@ setup(
 	install_requires = [
 		"argh",
 		"gevent",
+		"Pillow", # for thumbnail templating
 		"prometheus-client",
 		"psycogreen",
 		"psycopg2",
