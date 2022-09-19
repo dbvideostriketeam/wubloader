@@ -40,7 +40,7 @@ def ts(dt):
 	return dt.strftime("%FT%T")
 
 
-def main(find1, find2, host='condor.live', user='necrobot-read', password='necrobot-read', database='season_14'):
+def main(find1, find2, host='condor.live', user='necrobot-read', password='necrobot-read', database='condorxiv'):
 	logging.basicConfig(level=logging.INFO)
 
 	if password is None:

@@ -93,7 +93,7 @@
     dbname: "wubloader",
   },
 
-  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/season_14",
+  condor_db:: "mysql://necrobot-read:necrobot-read@condor.live/condorxiv",
 
   // Other database arguments
   db_super_user:: "postgres", // only accessible from localhost
