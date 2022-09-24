@@ -16,6 +16,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
+from common.images import compose_thumbnail_template
 from common.segments import feed_input, render_segments_waveform, extract_frame, list_segment_files
 from common.chat import get_batch_file_range, merge_messages
 
@@ -392,6 +393,40 @@ def get_frame(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	return Response(extract_frame(segments, timestamp), mimetype='image/png')
+
+
+@app.route('/thumbnail/<channel>/<quality>.png')
+@request_stats
+@has_path_args
+def get_thumbnail(channel, quality):
+	"""
+	Returns a PNG image which is a preview of how a thumbnail will be generated.
+	Params:
+		timestamp: Required. The frame to use as the thumbnail image.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+		template: Required. The template name to use.
+			Must be one of the template names (without file extension) as returned
+			by GET /files/thumbnail_templates
+	"""
+	template_name = request.args['template']
+	template_path = os.path.join(app.static_folder, "thumbnail_templates", f"{template_name}.png")
+	if not os.path.exists(template_path):
+		return "No such template", 404
+
+	timestamp = dateutil.parse_utc_only(request.args['timestamp'])
+
+	hours_path = os.path.join(app.static_folder, channel, quality)
+	if not os.path.isdir(hours_path):
+		abort(404)
+
+	segments = get_best_segments(hours_path, timestamp, timestamp)
+	if not any(segment is not None for segment in segments):
+		return "We have no content available within the requested time range.", 406
+
+	frame = b''.join(extract_frame(segments, timestamp))
+	template = compose_thumbnail_template(app.static_folder, template_name, frame)
+
+	return Response(template, mimetype='image/png')
 
 
 @app.route('/<channel>/chat.json')

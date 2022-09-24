@@ -11,6 +11,7 @@ setup(
 		"gevent",
 		"monotonic",
 		"prometheus-client",
+		"Pillow", # for thumbnail templates
 		"wubloader-common",
 	],
 )
