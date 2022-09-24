@@ -167,6 +167,28 @@ def get_row(ident):
 	response["bustime_start"] = app.bustime_start
 	response["upload_locations"] = app.upload_locations
 
+	# pick default thumbnail template based on start time.
+	# pick default frame time as the middle of the video.
+	# ignore both if video has no start time yet.
+	DEFAULT_TEMPLATES = [
+		"zeta",
+		"dawn-guard",
+		"alpha-flight",
+		"night-watch",
+	]
+	if response['event_start'] is not None:
+		start = response['event_start']
+		if response['thumbnail_template'] is None:
+			response['thumbnail_template'] = DEFAULT_TEMPLATES[int(start.hour / 6)]
+		if response['thumbnail_time'] is None:
+			if response['event_end'] is not None:
+				# take full duration, and add half to start to get halfway
+				duration = response['event_end'] - start
+				response['thumbnail_time'] = start + duration / 2
+			else:
+				# no end time, just use start time as default frame
+				response['thumbnail_time'] = start
+
 	# remove any added headers or footers so round-tripping is a no-op
 	if (
 		app.title_header
@@ -204,9 +226,11 @@ def update_row(ident, editor=None):
 	non_null_columns = [
 		'upload_location', 'video_ranges', 'video_transitions',
 		'video_channel', 'video_quality', 'video_title',
-		'video_description', 'video_tags',
+		'video_description', 'video_tags', 'thumbnail_mode', 'public'
 	]
-	edit_columns = non_null_columns + ['allow_holes', 'uploader_whitelist', 'public']
+	edit_columns = non_null_columns + [
+		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template', 'thumbnail_image'
+	]
 	sheet_columns = [
 		'sheet_name', 'event_start', 'event_end',
 		'category', 'description', 'notes', 'tags',
@@ -214,7 +238,8 @@ def update_row(ident, editor=None):
 	# These columns may be modified when a video is in state 'DONE',
 	# and are a subset of edit_columns.
 	modifiable_columns = [
-		'video_title', 'video_description', 'video_tags', 'public'
+		'video_title', 'video_description', 'video_tags', 'public',
+		'thumbnail_mode', 'thumbnail_time', 'thumbnail_template', 'thumbnail_image',
 	]
 	assert set(modifiable_columns) - set(edit_columns) == set()
 
@@ -390,10 +415,12 @@ def manual_link(ident, editor=None):
 	if old_row.state != 'UNEDITED':
 		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
 	now = datetime.datetime.utcnow()
+	# note we force thumbnail mode of manual uploads to always be NONE,
+	# since they might not be a video we actually control at all, or might not even be on youtube.
 	results = database.query(conn, """
 		UPDATE events 
 		SET state='DONE', upload_location = %s, video_link = %s, video_id = %s,
-			editor = %s, edit_time = %s, upload_time = %s
+			editor = %s, edit_time = %s, upload_time = %s, thumbnail_mode = 'NONE'
 		WHERE id = %s AND state = 'UNEDITED'
 	""", upload_location, link, video_id, editor, now, now, ident)
 	logging.info("Row {} video_link set to {}".format(ident, link))
