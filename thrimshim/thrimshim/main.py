@@ -210,6 +210,8 @@ def get_row(ident):
 			return value.isoformat()
 		if isinstance(value, datetime.timedelta):
 			return value.total_seconds()
+		if isinstance(value, memoryview) or isinstance(value, bytes):
+			return base64.b64encode(bytes(value)).decode()
 		raise TypeError(f"Can't convert object of type {value.__class__.__name__} to JSON: {value}")
 	return json.dumps(response, default=convert)
 
@@ -287,6 +289,18 @@ def update_row(ident, editor=None):
 		None if transition is None else tuple(transition)
 		for transition in new_row['video_transitions']
 	]
+
+	# Convert binary fields from base64 and do basic validation of contents
+	if new_row.get('thumbnail_image') is not None:
+		if new_row['thumbnail_mode'] != 'CUSTOM':
+			return 'Can only upload custom image when thumbnail_mode = "CUSTOM"', 400
+		try:
+			new_row['thumbnail_image'] = base64.b64decode(new_row['thumbnail_image'])
+		except binascii.Error:
+			return 'thumbnail_image must be valid base64', 400
+		# check for PNG file header
+		if not new_row['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+			return 'thumbnail_image must be a PNG', 400
 
 	conn = app.db_manager.get_conn()
 	# Check a row with id = ident is in the database

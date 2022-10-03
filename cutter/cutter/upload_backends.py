@@ -258,9 +258,10 @@ class Youtube(UploadBackend):
 
 	def set_thumbnail(self, video_id, thumbnail):
 		resp = self.client.request('POST',
-			'https://www.googleapis.com/youtube/v3/thumbnails/set',
+			'https://www.googleapis.com/upload/youtube/v3/thumbnails/set',
 			params={'videoId': video_id},
-			body=thumbnail,
+			headers={'Content-Type': 'image/png'},
+			data=thumbnail,
 		)
 		resp.raise_for_status()
 
