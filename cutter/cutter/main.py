@@ -692,9 +692,6 @@ UPDATE_JOB_PARAMS = [
 	"thumbnail_image",
 	"thumbnail_last_written",
 ]
-UpdateJob = namedtuple('UpdateJob', [
-	"id",
-] + UPDATE_JOB_PARAMS)
 
 class VideoUpdater(object):
 	CHECK_INTERVAL = 10 # this is slow to reduce the chance of multiple cutters updating the same row
@@ -755,12 +752,20 @@ class VideoUpdater(object):
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
 								updates['thumbnail_image'] = thumbnail_image
 							new_hash = hashlib.sha256(thumbnail_image).digest()
-							if job.thumbnail_last_written != new_hash:
+							if bytes(job.thumbnail_last_written) != new_hash:
 								self.logger.info("Setting thumbnail for {}".format(job.id))
-								self.backend.set_thumbnail(job.video_id, job.thumbnail_image)
+								self.backend.set_thumbnail(job.video_id, thumbnail_image)
 								updates['thumbnail_last_written'] = new_hash
+							else:
+								self.logger.info("No change in thumbnail image for {}".format(job.id))
 					except Exception as ex:
-						self.logger.exception("Failed to update video")
+						# for HTTPErrors, getting http response body is also useful
+						if isinstance(ex, requests.HTTPError):
+							self.logger.exception("Failed to update video: {}".format(ex.response.content))
+							ex = "{}: {}".format(ex, ex.response.content)
+						else:
+							self.logger.exception("Failed to update video")
+
 						self.mark_errored(job.id, "Failed to update video: {}".format(ex))
 						continue
 
@@ -788,14 +793,15 @@ class VideoUpdater(object):
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in UPDATE_JOB_PARAMS)
 		)
-		return [UpdateJob(**row) for row in query(self.conn, built_query)]
+		return list(query(self.conn, built_query))
 
 	def mark_done(self, job, updates):
 		"""We don't want to set to DONE if the video has been modified *again* since
 		we saw it."""
+		updates['state'] = 'DONE'
 		built_query = sql.SQL("""
 			UPDATE events
-			SET state = 'DONE', {}
+			SET {}
 			WHERE state = 'MODIFIED' AND {}
 		""").format(
 			sql.SQL(", ").join(
@@ -804,12 +810,13 @@ class VideoUpdater(object):
 				) for key in updates
 			),
 			sql.SQL(" AND ").join(
-				sql.SQL("{} = {}").format(sql.Identifier(key), get_column_placeholder(key))
+				# NULL != NULL, so we need "IS NOT DISTINCT FROM" to mean "equal, even if they're null"
+				sql.SQL("{} IS NOT DISTINCT FROM {}").format(sql.Identifier(key), get_column_placeholder(key))
 				for key in UPDATE_JOB_PARAMS
 			)
 		)
 		updates = {"new_{}".format(key): value for key, value in updates.items()}
-		return query(self.conn, built_query, **job, **updates).rowcount
+		return query(self.conn, built_query, **job._asdict(), **updates).rowcount
 
 	def mark_errored(self, id, error):
 		# We don't overwrite any existing error, it is most likely from another attempt to update
