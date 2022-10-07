@@ -419,3 +419,37 @@ function videoPlayerTimeFromVideoHumanTime(videoHumanTime) {
 
 	return hours * 3600 + minutes * 60 + seconds;
 }
+
+function getSegmentList() {
+	return globalPlayer.latencyController.levelDetails.fragments;
+}
+
+function dateTimeFromVideoPlayerTime(videoPlayerTime) {
+	const segmentList = getSegmentList();
+	let segmentStartTime;
+	let segmentStartISOTime;
+	for (const segment of segmentList) {
+		const segmentEndTime = segment.start + segment.duration;
+		if (videoPlayerTime >= segment.start && videoPlayerTime < segmentEndTime) {
+			segmentStartTime = segment.start;
+			segmentStartISOTime = segment.rawProgramDateTime;
+			break;
+		}
+	}
+	if (segmentStartISOTime === undefined) {
+		return null;
+	}
+	const wubloaderDateTime = DateTime.fromISO(segmentStartISOTime);
+	const offset = videoPlayerTime - segmentStartTime;
+	return wubloaderDateTime.plus({ seconds: offset });
+}
+
+function downloadFrame() {
+	const videoElement = document.getElementById("video");
+	const dateTime = dateTimeFromVideoPlayerTime(videoElement.currentTime);
+	const url = `/frame/${globalStreamName}/source.png?timestamp=${wubloaderTimeFromDateTime(dateTime)}`;
+	// Avoid : as it causes problems on Windows
+	const filename = `${dateTime.toFormat("yyyy-LL-dd'T'HH-mm-ss.SSS")}.png`;
+	// TODO REPLACE WITH CORRECT CALL
+	console.log(`Would download ${url} as ${filename}`);
+}

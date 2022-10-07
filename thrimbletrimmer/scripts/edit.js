@@ -220,6 +220,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		updateDownloadLink();
 	});
 
+	document.getElementById("download-frame").addEventListener("click", (_event) => {
+		downloadFrame();
+	});
+
 	document.getElementById("manual-link-update").addEventListener("click", (_event) => {
 		const manualLinkDataContainer = document.getElementById("data-correction-manual-link");
 		manualLinkDataContainer.classList.toggle("hidden");
@@ -1431,26 +1435,6 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	return null;
 }
 
-function dateTimeFromVideoPlayerTime(videoPlayerTime) {
-	const segmentList = getSegmentList();
-	let segmentStartTime;
-	let segmentStartISOTime;
-	for (const segment of segmentList) {
-		const segmentEndTime = segment.start + segment.duration;
-		if (videoPlayerTime >= segment.start && videoPlayerTime < segmentEndTime) {
-			segmentStartTime = segment.start;
-			segmentStartISOTime = segment.rawProgramDateTime;
-			break;
-		}
-	}
-	if (segmentStartISOTime === undefined) {
-		return null;
-	}
-	const wubloaderDateTime = DateTime.fromISO(segmentStartISOTime);
-	const offset = videoPlayerTime - segmentStartTime;
-	return wubloaderDateTime.plus({ seconds: offset });
-}
-
 function videoPlayerTimeFromDateTime(dateTime) {
 	const segmentList = getSegmentList();
 	for (const segment of segmentList) {
@@ -1495,8 +1479,4 @@ function wubloaderTimeFromVideoHumanTime(videoHumanTime) {
 		return null;
 	}
 	return wubloaderTimeFromVideoPlayerTime(videoPlayerTime);
-}
-
-function getSegmentList() {
-	return globalPlayer.latencyController.levelDetails.fragments;
 }
