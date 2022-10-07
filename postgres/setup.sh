@@ -144,8 +144,10 @@ CREATE TABLE editors (
 -- Playlists are communicated to playlist manager via this table.
 -- Sheetsync will wipe and re-populate this table periodically to match what is in the sheet
 CREATE TABLE playlists (
+	playlist_id TEXT PRIMARY KEY,
+	name TEXT NOT NULL,
 	tags TEXT[] NOT NULL,
-	playlist_id TEXT PRIMARY KEY
+	show_in_description BOOLEAN NOT NULL
 );
 EOSQL
 
