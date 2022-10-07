@@ -259,11 +259,46 @@ def update_row(ident, editor=None):
 	for extra in extras:
 		del new_row[extra]
 
+	# Check a row with id = ident is in the database
+	conn = app.db_manager.get_conn()
+	built_query = sql.SQL("""
+		SELECT id, state, {} 
+		FROM events
+		WHERE id = %s
+	""").format(sql.SQL(', ').join(
+		sql.Identifier(key) for key in sheet_columns
+	))
+	results = database.query(conn, built_query, ident)
+	old_row = results.fetchone()._asdict()
+	if old_row is None:
+		return 'Row {} not found'.format(ident), 404
+	assert old_row['id'] == ident
+
+	playlists = query(conn, """ 
+		SELECT playlist_id, name, tags
+		FROM playlists
+		WHERE show_in_description
+	""")
+	# Filter for matching playlists for this video
+	playlists = [
+		playlist for playlist in playlists
+		if all(
+			tag.lower() in [t.lower() for t in old_row['tags']]
+			for tag in playlist.tags
+		)
+	]
+
 	# Include headers and footers
-	if 'video_title' in new_row:
-		new_row['video_title'] = app.title_header + new_row['video_title']
-	if 'video_description' in new_row:
-		new_row['video_description'] += app.description_footer
+	playlist_info = get_playlist_info(conn)
+	new_row['video_title'] = app.title_header + new_row['video_title']
+	description_lines = ["This video is part of the following playlists:"]
+	description_lines += [
+		# TODO check this url
+		"{} [https://youtube.com/playlist/{}]".format(playlist.name, playlist.playlist_id)
+		for playlist in playlists
+	]
+	description_lines.append(app.description_footer)
+	new_row['video_description'] += "\n".join(description_lines)
 
 	# Validate youtube requirements on title and description
 	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
@@ -305,21 +340,6 @@ def update_row(ident, editor=None):
 		# check for PNG file header
 		if not new_row['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
 			return 'thumbnail_image must be a PNG', 400
-
-	conn = app.db_manager.get_conn()
-	# Check a row with id = ident is in the database
-	built_query = sql.SQL("""
-		SELECT id, state, {} 
-		FROM events
-		WHERE id = %s
-	""").format(sql.SQL(', ').join(
-		sql.Identifier(key) for key in sheet_columns
-	))
-	results = database.query(conn, built_query, ident)
-	old_row = results.fetchone()._asdict()
-	if old_row is None:
-		return 'Row {} not found'.format(ident), 404
-	assert old_row['id'] == ident
 
 	if new_row['state'] == 'MODIFIED':
 		if old_row['state'] not in ['DONE', 'MODIFIED']:
@@ -374,8 +394,6 @@ def update_row(ident, editor=None):
 				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
 			if len(new_row.get('video_title', '')) <= len(app.title_header):
 				return 'Video title must not be blank', 400
-			if len(new_row.get('video_description', '')) <= len(app.description_footer):
-				return 'Video description must not be blank. If you have nothing else to say, just repeat the title.', 400
 		elif new_row['state'] != 'UNEDITED':
 			return 'Invalid state {}'.format(new_row['state']), 400
 		new_row['uploader'] = None

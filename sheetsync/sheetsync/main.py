@@ -364,6 +364,11 @@ class SheetSync(object):
 		overwriting the entire playlists table"""
 		playlists = []
 		for row in rows:
+			# TODO redo sheet parsing for new columns
+			# Defaults for now:
+			name = ""
+			show_in_description = false
+
 			if len(row) != 3:
 				continue
 			tags, _, playlist_id = row
@@ -373,7 +378,7 @@ class SheetSync(object):
 			playlist_id = playlist_id.strip()
 			if len(playlist_id) != 34 or not playlist_id.startswith('PL'):
 				continue
-			playlists.append((tags, playlist_id))
+			playlists.append((playlist_id, tags, name, show_in_description))
 		# We want to wipe and replace all the current entries in the table.
 		# The easiest way to do this is a DELETE then an INSERT, all within a transaction.
 		# The "with" block will perform everything under it within a transaction, rolling back
@@ -381,7 +386,7 @@ class SheetSync(object):
 		logging.info("Updating playlists table with {} playlists".format(len(playlists)))
 		with self.conn:
 			query(self.conn, "DELETE FROM playlists")
-			execute_values(self.conn.cursor(), "INSERT INTO playlists(tags, playlist_id) VALUES %s", playlists)
+			execute_values(self.conn.cursor(), "INSERT INTO playlists(playlist_id, tags, name, show_in_description) VALUES %s", playlists)
 
 
 @argh.arg('dbconnect', help=
