@@ -28,6 +28,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		updateTimeSettings();
 	});
 
+	document.getElementById("download-frame").addEventListener("click", (_event) => {
+		downloadFrame();
+	});
+
 	const timeConversionForm = document.getElementById("time-converter");
 	timeConversionForm.addEventListener("submit", (event) => {
 		event.preventDefault();
