@@ -194,6 +194,7 @@ def get_row(ident):
 				response['thumbnail_time'] = start
 
 	# remove any added headers or footers so round-tripping is a no-op
+	# TODO make work with playlist links in description
 	if (
 		app.title_header
 		and response["video_title"] is not None
