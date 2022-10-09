@@ -314,6 +314,16 @@ def cut(channel, quality):
 			return "We have no content available within the requested time range.", 406
 		segment_ranges.append(segments)
 
+	crop = None
+	if crop in request.args:
+		if type not in ('mpegts', 'mp4'):
+			return "Crop can only be given for full cuts", 400
+		try:
+			x, y, width, height = [int(n) for n in request.args['crop'].split(',')]
+		except ValueError:
+			return "Bad crop value", 400
+		crop = x, y, width, height
+
 	type = request.args.get('type', 'fast')
 	if type == 'rough':
 		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
@@ -327,6 +337,12 @@ def cut(channel, quality):
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
 		if len(ranges) > 1:
 			return "full cut does not support multiple ranges at this time", 400
+		if crop is not None:
+			x, y, w, h = crop
+			encoding_args = [
+				"-vf",
+				"crop={}:{}:{}:{},scale=1080:1920".format(w, h, x, y),
+			]
 		start, end = ranges[0]
 		return Response(full_cut_segments(segment_ranges[0], start, end, encoding_args, stream=stream), mimetype=mimetype)
 	else:

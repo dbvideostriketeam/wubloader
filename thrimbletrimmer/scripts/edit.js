@@ -304,6 +304,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("download-type-select").addEventListener("change", () => {
 		updateDownloadLink();
 	});
+	document.getElementById("download-crop").addEventListener("change", () => {
+		updateDownloadLink();
+	});
 
 	document.getElementById("download-frame").addEventListener("click", (_event) => {
 		downloadFrame();
@@ -1078,8 +1081,11 @@ function handleLeavePageWhilePending(event) {
 	return event.returnValue;
 }
 
-function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
+function generateDownloadURL(timeRanges, downloadType, allowHoles, crop, quality) {
 	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
+	if (crop != "" && downloadType === "mpegts") {
+		queryParts.push(`crop=${crop}`);
+	}
 	for (const range of timeRanges) {
 		let timeRangeString = "";
 		if (range.hasOwnProperty("start")) {
@@ -1099,6 +1105,7 @@ function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
 function updateDownloadLink() {
 	const downloadType = document.getElementById("download-type-select").value;
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
+	const crop = document.getElementById("download-crop").value
 
 	const timeRanges = [];
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
@@ -1120,6 +1127,7 @@ function updateDownloadLink() {
 		timeRanges,
 		downloadType,
 		allowHoles,
+		crop,
 		videoInfo.video_quality
 	);
 	document.getElementById("download-link").href = downloadURL;
