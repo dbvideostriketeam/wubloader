@@ -470,6 +470,16 @@ function downloadFrame() {
 	const url = `/frame/${globalStreamName}/source.png?timestamp=${wubloaderTimeFromDateTime(dateTime)}`;
 	// Avoid : as it causes problems on Windows
 	const filename = `${dateTime.toFormat("yyyy-LL-dd'T'HH-mm-ss.SSS")}.png`;
-	// TODO REPLACE WITH CORRECT CALL
-	console.log(`Would download ${url} as ${filename}`);
+	triggerDownload(url, filename);
+}
+
+function triggerDownload(url, filename) {
+	// URL must be same-origin.
+	const link = document.createElement('a');
+	link.setAttribute('download', filename);
+	link.href = url;
+	link.setAttribute('target', '_blank');
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
 }
