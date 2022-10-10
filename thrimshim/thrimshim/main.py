@@ -5,6 +5,8 @@ import logging
 import re
 
 import argh
+import base64
+import binascii
 import flask
 import gevent
 import gevent.backdoor
