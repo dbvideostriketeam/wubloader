@@ -14,96 +14,9 @@
 	</head>
 	<body>
 		<div id="errors"></div>
-		<form id="stream-time-settings">
-			<div>
-				<label for="stream-time-setting-stream" class="field-label">Stream</label>
-				<input type="text" id="stream-time-setting-stream" />
-			</div>
-			<div>
-				<label for="stream-time-setting-start" class="field-label">Start Time</label>
-				<input type="text" id="stream-time-setting-start" value="0:10:00" />
-			</div>
-			<div>
-				<label for="stream-time-setting-end" class="field-label">End Time</label>
-				<input type="text" id="stream-time-setting-end" />
-			</div>
-			<div>
-				<div id="stream-time-frame-of-reference">
-					<input
-						type="radio"
-						name="time-frame-of-reference"
-						id="stream-time-frame-of-reference-utc"
-						value="1"
-					/>
-					<label for="stream-time-frame-of-reference-utc">UTC</label>
-					<input
-						type="radio"
-						name="time-frame-of-reference"
-						id="stream-time-frame-of-reference-bus"
-						value="2"
-					/>
-					<label for="stream-time-frame-of-reference-bus">Bus Time</label>
-					<input
-						type="radio"
-						name="time-frame-of-reference"
-						id="stream-time-frame-of-reference-ago"
-						value="3"
-						checked
-					/>
-					<label for="stream-time-frame-of-reference-ago">Time Ago</label>
-				</div>
-			</div>
-			<div>
-				<button id="stream-time-settings-submit" type="submit">Load Playlist</button>
-			</div>
-			<div>
-				<a href="" id="stream-time-link">Link to this time range</a>
-			</div>
-		</form>
-
-		<video id="video" preload="auto"></video>
-
-		<div id="video-controls">
-			<div id="video-controls-bar">
-				<div>
-					<img id="video-controls-play-pause" src="images/video-controls/play.png" class="click" />
-				</div>
-				<div id="video-controls-time">
-					<span id="video-controls-current-time"></span>
-					/
-					<span id="video-controls-duration"></span>
-				</div>
-				<div id="video-controls-spacer"></div>
-				<div id="video-controls-volume">
-					<img
-						id="video-controls-volume-mute"
-						src="images/video-controls/volume.png"
-						class="click"
-					/>
-					<progress id="video-controls-volume-level" value="0.5" class="click"></progress>
-				</div>
-				<div>
-					<select id="video-controls-playback-speed"></select>
-				</div>
-				<div>
-					<select id="video-controls-quality"></select>
-				</div>
-				<div>
-					<img
-						id="video-controls-fullscreen"
-						src="images/video-controls/fullscreen.png"
-						class="click"
-					/>
-				</div>
-			</div>
-			<progress id="video-controls-playback-position" value="0" class="click"></progress>
-		</div>
-
-		<div id="editor-help">
-			<a href="#" id="editor-help-link">Help</a>
-			<div id="editor-help-box" class="hidden">
-				<a id="editor-help-box-close">[X]</a>
-				<h2>Keyboard Shortcuts</h2>
+		<div id="page-container">
+			<details id="editor-help">
+				<summary>Keyboard Shortcuts</summary>
 				<ul>
 					<li>Number keys (0-9): Jump to that 10% interval of the video (0% - 90%)</li>
 					<li>K or Space: Toggle pause</li>
@@ -122,41 +35,130 @@
 					<li>Shift+-: Minimum playback speed</li>
 					<li>Backspace: Reset playback speed to 1x</li>
 				</ul>
+			</details>
+			<form id="stream-time-settings">
+				<div>
+					<label for="stream-time-setting-stream" class="field-label">Stream</label>
+					<input type="text" id="stream-time-setting-stream" />
+				</div>
+				<div>
+					<label for="stream-time-setting-start" class="field-label">Start Time</label>
+					<input type="text" id="stream-time-setting-start" value="0:10:00" />
+				</div>
+				<div>
+					<label for="stream-time-setting-end" class="field-label">End Time</label>
+					<input type="text" id="stream-time-setting-end" />
+				</div>
+				<div>
+					<div id="stream-time-frame-of-reference">
+						<input
+							type="radio"
+							name="time-frame-of-reference"
+							id="stream-time-frame-of-reference-utc"
+							value="1"
+						/>
+						<label for="stream-time-frame-of-reference-utc">UTC</label>
+						<input
+							type="radio"
+							name="time-frame-of-reference"
+							id="stream-time-frame-of-reference-bus"
+							value="2"
+						/>
+						<label for="stream-time-frame-of-reference-bus">Bus Time</label>
+						<input
+							type="radio"
+							name="time-frame-of-reference"
+							id="stream-time-frame-of-reference-ago"
+							value="3"
+							checked
+						/>
+						<label for="stream-time-frame-of-reference-ago">Time Ago</label>
+					</div>
+				</div>
+				<div>
+					<button id="stream-time-settings-submit" type="submit">Load Playlist</button>
+				</div>
+				<div>
+					<a href="" id="stream-time-link">Link to this time range</a>
+				</div>
+			</form>
+
+			<video id="video" preload="auto"></video>
+
+			<div id="video-controls">
+				<div id="video-controls-bar">
+					<div>
+						<img
+							id="video-controls-play-pause"
+							src="images/video-controls/play.png"
+							class="click"
+						/>
+					</div>
+					<div id="video-controls-time">
+						<span id="video-controls-current-time"></span>
+						/
+						<span id="video-controls-duration"></span>
+					</div>
+					<div id="video-controls-spacer"></div>
+					<div id="video-controls-volume">
+						<img
+							id="video-controls-volume-mute"
+							src="images/video-controls/volume.png"
+							class="click"
+						/>
+						<progress id="video-controls-volume-level" value="0.5" class="click"></progress>
+					</div>
+					<div>
+						<select id="video-controls-playback-speed"></select>
+					</div>
+					<div>
+						<select id="video-controls-quality"></select>
+					</div>
+					<div>
+						<img
+							id="video-controls-fullscreen"
+							src="images/video-controls/fullscreen.png"
+							class="click"
+						/>
+					</div>
+				</div>
+				<progress id="video-controls-playback-position" value="0" class="click"></progress>
 			</div>
+
+			<a href="#" id="download">Download Video</a>
+			<a href="#" id="time-converter-link">Convert Times</a>
+			<form id="time-converter" class="hidden">
+				<h2>Time Converter</h2>
+				<div id="time-converter-time-container">
+					<input class="time-converter-time" type="text" placeholder="Time to convert" />
+				</div>
+				<img
+					src="images/plus.png"
+					id="time-converter-add-time"
+					tooltip="Add time conversion field"
+					class="click"
+					tabindex="0"
+				/>
+				<div>
+					From:
+					<input name="time-converter-from" id="time-converter-from-utc" type="radio" value="1" />
+					<label for="time-converter-from-utc">UTC</label>
+					<input name="time-converter-from" id="time-converter-from-bus" type="radio" value="2" />
+					<label for="time-converter-from-bus">Bus Time</label>
+					<input name="time-converter-from" id="time-converter-from-ago" type="radio" value="3" />
+					<label for="time-converter-from-ago">Time Ago</label>
+				</div>
+				<div>
+					To:
+					<input name="time-converter-to" id="time-converter-to-utc" type="radio" value="1" />
+					<label for="time-converter-to-utc">UTC</label>
+					<input name="time-converter-to" id="time-converter-to-bus" type="radio" value="2" />
+					<label for="time-converter-to-bus">Bus Time</label>
+					<input name="time-converter-to" id="time-converter-to-ago" type="radio" value="3" />
+					<label for="time-converter-to-ago">Time Ago</label>
+				</div>
+				<button type="submit">Convert Times</button>
+			</form>
 		</div>
-		<a href="#" id="download">Download Video</a>
-		<a href="#" id="time-converter-link">Convert Times</a>
-		<form id="time-converter" class="hidden">
-			<h2>Time Converter</h2>
-			<div id="time-converter-time-container">
-				<input class="time-converter-time" type="text" placeholder="Time to convert" />
-			</div>
-			<img
-				src="images/plus.png"
-				id="time-converter-add-time"
-				tooltip="Add time conversion field"
-				class="click"
-				tabindex="0"
-			/>
-			<div>
-				From:
-				<input name="time-converter-from" id="time-converter-from-utc" type="radio" value="1" />
-				<label for="time-converter-from-utc">UTC</label>
-				<input name="time-converter-from" id="time-converter-from-bus" type="radio" value="2" />
-				<label for="time-converter-from-bus">Bus Time</label>
-				<input name="time-converter-from" id="time-converter-from-ago" type="radio" value="3" />
-				<label for="time-converter-from-ago">Time Ago</label>
-			</div>
-			<div>
-				To:
-				<input name="time-converter-to" id="time-converter-to-utc" type="radio" value="1" />
-				<label for="time-converter-to-utc">UTC</label>
-				<input name="time-converter-to" id="time-converter-to-bus" type="radio" value="2" />
-				<label for="time-converter-to-bus">Bus Time</label>
-				<input name="time-converter-to" id="time-converter-to-ago" type="radio" value="3" />
-				<label for="time-converter-to-ago">Time Ago</label>
-			</div>
-			<button type="submit">Convert Times</button>
-		</form>
 	</body>
 </html>

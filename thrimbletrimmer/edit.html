@@ -20,75 +20,9 @@
 	</head>
 	<body>
 		<div id="errors"></div>
-		<form id="stream-time-settings">
-			<div>
-				<span class="field-label">Stream</span>
-				<span id="stream-time-setting-stream"></span>
-			</div>
-			<div>
-				<label for="stream-time-setting-start" class="field-label">Start Time</label>
-				<input type="text" id="stream-time-setting-start" />
-				<button id="stream-time-setting-start-pad" type="button">Pad 1 minute</button>
-			</div>
-			<div>
-				<label for="stream-time-setting-end" class="field-label">End Time</label>
-				<input type="text" id="stream-time-setting-end" />
-				<button id="stream-time-setting-end-pad" type="button">Pad 1 minute</button>
-			</div>
-			<div>
-				<button type="submit" id="stream-time-settings-submit">Update Time Range</button>
-			</div>
-		</form>
-
-		<video id="video" preload="auto"></video>
-
-		<div id="video-controls">
-			<div id="video-controls-bar">
-				<div>
-					<img id="video-controls-play-pause" src="images/video-controls/play.png" class="click" />
-				</div>
-				<div id="video-controls-time">
-					<span id="video-controls-current-time"></span>
-					/
-					<span id="video-controls-duration"></span>
-				</div>
-				<div id="video-controls-spacer"></div>
-				<div id="video-controls-volume">
-					<img
-						id="video-controls-volume-mute"
-						src="images/video-controls/volume.png"
-						class="click"
-					/>
-					<progress id="video-controls-volume-level" value="0.5" class="click"></progress>
-				</div>
-				<div>
-					<select id="video-controls-playback-speed"></select>
-				</div>
-				<div>
-					<select id="video-controls-quality"></select>
-				</div>
-				<div>
-					<img
-						id="video-controls-fullscreen"
-						src="images/video-controls/fullscreen.png"
-						class="click"
-					/>
-				</div>
-			</div>
-			<progress id="video-controls-playback-position" value="0" class="click"></progress>
-		</div>
-
-		<div id="clip-bar"></div>
-		<div id="waveform-container">
-			<img id="waveform" alt="Waveform for the video" />
-			<div id="waveform-marker"></div>
-		</div>
-
-		<div id="editor-help">
-			<a href="#" id="editor-help-link">Help</a>
-			<div id="editor-help-box" class="hidden">
-				<a id="editor-help-box-close">[X]</a>
-				<h2>Keyboard Shortcuts</h2>
+		<div id="page-container">
+			<details id="editor-help">
+				<summary>Keyboard Shortcuts</summary>
 				<ul>
 					<li>Number keys (0-9): Jump to that 10% interval of the video (0% - 90%)</li>
 					<li>K or Space: Toggle pause</li>
@@ -117,165 +51,237 @@
 						active range is the last one
 					</li>
 				</ul>
-			</div>
-		</div>
+			</details>
+			<form id="stream-time-settings">
+				<div>
+					<span class="field-label">Stream</span>
+					<span id="stream-time-setting-stream"></span>
+				</div>
+				<div>
+					<label for="stream-time-setting-start" class="field-label">Start Time</label>
+					<input type="text" id="stream-time-setting-start" />
+					<button id="stream-time-setting-start-pad" type="button">Pad 1 minute</button>
+				</div>
+				<div>
+					<label for="stream-time-setting-end" class="field-label">End Time</label>
+					<input type="text" id="stream-time-setting-end" />
+					<button id="stream-time-setting-end-pad" type="button">Pad 1 minute</button>
+				</div>
+				<div>
+					<button type="submit" id="stream-time-settings-submit">Update Time Range</button>
+				</div>
+			</form>
 
-		<div>
-			<input type="checkbox" id="enable-chapter-markers" />
-			<label for="enable-chapter-markers">Add chapter markers to video description</label>
-		</div>
-		<div id="range-definitions">
+			<video id="video" preload="auto"></video>
+
+			<div id="video-controls">
+				<div id="video-controls-bar">
+					<div>
+						<img
+							id="video-controls-play-pause"
+							src="images/video-controls/play.png"
+							class="click"
+						/>
+					</div>
+					<div id="video-controls-time">
+						<span id="video-controls-current-time"></span>
+						/
+						<span id="video-controls-duration"></span>
+					</div>
+					<div id="video-controls-spacer"></div>
+					<div id="video-controls-volume">
+						<img
+							id="video-controls-volume-mute"
+							src="images/video-controls/volume.png"
+							class="click"
+						/>
+						<progress id="video-controls-volume-level" value="0.5" class="click"></progress>
+					</div>
+					<div>
+						<select id="video-controls-playback-speed"></select>
+					</div>
+					<div>
+						<select id="video-controls-quality"></select>
+					</div>
+					<div>
+						<img
+							id="video-controls-fullscreen"
+							src="images/video-controls/fullscreen.png"
+							class="click"
+						/>
+					</div>
+				</div>
+				<progress id="video-controls-playback-position" value="0" class="click"></progress>
+			</div>
+
+			<div id="clip-bar"></div>
+			<div id="waveform-container">
+				<img id="waveform" alt="Waveform for the video" />
+				<div id="waveform-marker"></div>
+			</div>
+
 			<div>
-				<div class="range-definition-times">
-					<input type="text" class="range-definition-start" />
-					<img
-						src="images/pencil.png"
-						alt="Set range start point to current video time"
-						class="range-definition-set-start click"
-					/>
-					<img
-						src="images/play_to.png"
-						alt="Play from start point"
-						class="range-definition-play-start click"
-					/>
-					<div class="range-definition-between-time-gap"></div>
-					<input type="text" class="range-definition-end" />
-					<img
-						src="images/pencil.png"
-						alt="Set range end point to current video time"
-						class="range-definition-set-end click"
-					/>
-					<img
-						src="images/play_to.png"
-						alt="Play from end point"
-						class="range-definition-play-end click"
-					/>
-					<div class="range-definition-icon-gap"></div>
-					<img
-						src="images/arrow.png"
-						alt="Range affected by keyboard shortcuts"
-						title="Range affected by keyboard shortcuts"
-						class="range-definition-current"
-					/>
-				</div>
-				<div class="range-definition-chapter-markers hidden"></div>
-				<img
-					src="images/plus.png"
-					alt="Add chapter marker"
-					title="Add chapter marker"
-					class="add-range-definition-chapter-marker click hidden"
-					tabindex="0"
-				/>
+				<input type="checkbox" id="enable-chapter-markers" />
+				<label for="enable-chapter-markers">Add chapter markers to video description</label>
 			</div>
-		</div>
-		<img
-			src="images/plus.png"
-			alt="Add range"
-			id="add-range-definition"
-			class="click"
-			tabindex="0"
-		/>
-
-		<div id="video-info">
-			<div id="video-info-editor-notes-container" class="hidden">
-				<div id="video-info-editor-notes-header">Notes to Editor:</div>
-				<div id="video-info-editor-notes"></div>
-			</div>
-			<label for="video-info-title">Title:</label>
-			<div id="video-info-title-full">
-				<span id="video-info-title-prefix"></span>
-				<input type="text" id="video-info-title" />
-			</div>
-			<label for="video-info-description">Description:</label>
-			<textarea id="video-info-description"></textarea>
-			<label for="video-info-tags">Tags (comma-separated):</label>
-			<input type="text" id="video-info-tags" />
-		</div>
-
-		<div id="submission">
-			<div id="submission-toolbar">
-				<button id="submit-button">Submit</button>
-				<button id="save-button">Save Draft</button>
-				<button id="submit-changes-button" class="hidden">Submit Changes</button>
-				<a id="advanced-submission" href="#">Advanced Submission Options</a>
-			</div>
-			<div id="advanced-submission-options" class="hidden">
+			<div id="range-definitions">
 				<div>
-					<label for="advanced-submission-option-allow-holes">Allow holes</label>
-					<input type="checkbox" id="advanced-submission-option-allow-holes" />
-				</div>
-
-				<div>
-					<label for="advanced-submission-option-unlisted">Make unlisted</label>
-					<input type="checkbox" id="advanced-submission-option-unlisted" />
-				</div>
-
-				<div>
-					<label for="advanced-submission-option-upload-location">Upload location:</label>
-					<select id="advanced-submission-option-upload-location"></select>
-				</div>
-
-				<div>
-					<label for="advanced-submission-option-uploader-allow">Uploader allowlist:</label>
-					<input type="text" id="advanced-submission-option-uploader-allow" />
+					<div class="range-definition-times">
+						<input type="text" class="range-definition-start" />
+						<img
+							src="images/pencil.png"
+							alt="Set range start point to current video time"
+							class="range-definition-set-start click"
+						/>
+						<img
+							src="images/play_to.png"
+							alt="Play from start point"
+							class="range-definition-play-start click"
+						/>
+						<div class="range-definition-between-time-gap"></div>
+						<input type="text" class="range-definition-end" />
+						<img
+							src="images/pencil.png"
+							alt="Set range end point to current video time"
+							class="range-definition-set-end click"
+						/>
+						<img
+							src="images/play_to.png"
+							alt="Play from end point"
+							class="range-definition-play-end click"
+						/>
+						<div class="range-definition-icon-gap"></div>
+						<img
+							src="images/arrow.png"
+							alt="Range affected by keyboard shortcuts"
+							title="Range affected by keyboard shortcuts"
+							class="range-definition-current"
+						/>
+					</div>
+					<div class="range-definition-chapter-markers hidden"></div>
+					<img
+						src="images/plus.png"
+						alt="Add chapter marker"
+						title="Add chapter marker"
+						class="add-range-definition-chapter-marker click hidden"
+						tabindex="0"
+					/>
 				</div>
 			</div>
-			<div id="submission-response"></div>
-		</div>
+			<img
+				src="images/plus.png"
+				alt="Add range"
+				id="add-range-definition"
+				class="click"
+				tabindex="0"
+			/>
 
-		<div id="download">
-			<label for="download-type-select">Download type:</label>
-			<select id="download-type-select">
-				<option value="rough" selected>Rough (fastest, pads start and end by a few seconds)</option>
-				<option value="fast">Fast (may have artifacts a few seconds in from start and end)</option>
-				<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
-			</select>
-			<a id="download-link">Download Video</a>
-		</div>
+			<div id="video-info">
+				<div id="video-info-editor-notes-container" class="hidden">
+					<div id="video-info-editor-notes-header">Notes to Editor:</div>
+					<div id="video-info-editor-notes"></div>
+				</div>
+				<label for="video-info-title">Title:</label>
+				<div id="video-info-title-full">
+					<span id="video-info-title-prefix"></span>
+					<input type="text" id="video-info-title" />
+				</div>
+				<label for="video-info-description">Description:</label>
+				<textarea id="video-info-description"></textarea>
+				<label for="video-info-tags">Tags (comma-separated):</label>
+				<input type="text" id="video-info-tags" />
+			</div>
 
-		<div id="data-correction">
-			<div id="data-correction-toolbar">
-				<a id="manual-link-update" href="#">Manual Link Update</a>
-				|
-				<a id="cancel-video-upload" href="#">Cancel Upload</a>
-				|
-				<a id="reset-entire-video" href="#">Force Reset Row</a>
+			<div id="submission">
+				<div id="submission-toolbar">
+					<button id="submit-button">Submit</button>
+					<button id="save-button">Save Draft</button>
+					<button id="submit-changes-button" class="hidden">Submit Changes</button>
+					<a id="advanced-submission" href="#">Advanced Submission Options</a>
+				</div>
+				<div id="advanced-submission-options" class="hidden">
+					<div>
+						<label for="advanced-submission-option-allow-holes">Allow holes</label>
+						<input type="checkbox" id="advanced-submission-option-allow-holes" />
+					</div>
+
+					<div>
+						<label for="advanced-submission-option-unlisted">Make unlisted</label>
+						<input type="checkbox" id="advanced-submission-option-unlisted" />
+					</div>
+
+					<div>
+						<label for="advanced-submission-option-upload-location">Upload location:</label>
+						<select id="advanced-submission-option-upload-location"></select>
+					</div>
+
+					<div>
+						<label for="advanced-submission-option-uploader-allow">Uploader allowlist:</label>
+						<input type="text" id="advanced-submission-option-uploader-allow" />
+					</div>
+				</div>
+				<div id="submission-response"></div>
 			</div>
-			<div id="data-correction-manual-link" class="hidden">
-				<input type="text" id="data-correction-manual-link-entry" />
-				<label for="data-correction-manual-link-youtube"
-					>Is YouTube upload (add to playlists)?</label
-				>
-				<input type="checkbox" id="data-correction-manual-link-youtube" />
-				<button id="data-correction-manual-link-submit">Set Link</button>
-				<div id="data-correction-manual-link-response"></div>
+
+			<div id="download">
+				<label for="download-type-select">Download type:</label>
+				<select id="download-type-select">
+					<option value="rough" selected>
+						Rough (fastest, pads start and end by a few seconds)
+					</option>
+					<option value="fast">
+						Fast (may have artifacts a few seconds in from start and end)
+					</option>
+					<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
+				</select>
+				<a id="download-link">Download Video</a>
 			</div>
-			<div id="data-correction-force-reset-confirm" class="hidden">
-				<p>Are you sure you want to reset this event?</p>
-				<p>
-					This will set the row back to Unedited and forget about any video that may already exist.
-				</p>
-				<p>
-					This is intended as a last-ditch effort to clear a malfunctioning cutter, or if a video
-					needs to be reedited and replaced.
-				</p>
-				<p>
-					<strong
-						>It is your responsibility to deal with any video that may have already been
-						uploaded.</strong
+
+			<div id="data-correction">
+				<div id="data-correction-toolbar">
+					<a id="manual-link-update" href="#">Manual Link Update</a>
+					|
+					<a id="cancel-video-upload" href="#">Cancel Upload</a>
+					|
+					<a id="reset-entire-video" href="#">Force Reset Row</a>
+				</div>
+				<div id="data-correction-manual-link" class="hidden">
+					<input type="text" id="data-correction-manual-link-entry" />
+					<label for="data-correction-manual-link-youtube"
+						>Is YouTube upload (add to playlists)?</label
 					>
-				</p>
-				<p>
-					<button id="data-correction-force-reset-yes">Yes, reset it!</button>
-					<button id="data-correction-force-reset-no">Oh, never mind!</button>
-				</p>
+					<input type="checkbox" id="data-correction-manual-link-youtube" />
+					<button id="data-correction-manual-link-submit">Set Link</button>
+					<div id="data-correction-manual-link-response"></div>
+				</div>
+				<div id="data-correction-force-reset-confirm" class="hidden">
+					<p>Are you sure you want to reset this event?</p>
+					<p>
+						This will set the row back to Unedited and forget about any video that may already
+						exist.
+					</p>
+					<p>
+						This is intended as a last-ditch effort to clear a malfunctioning cutter, or if a video
+						needs to be reedited and replaced.
+					</p>
+					<p>
+						<strong
+							>It is your responsibility to deal with any video that may have already been
+							uploaded.</strong
+						>
+					</p>
+					<p>
+						<button id="data-correction-force-reset-yes">Yes, reset it!</button>
+						<button id="data-correction-force-reset-no">Oh, never mind!</button>
+					</p>
+				</div>
+				<div id="data-correction-cancel-response"></div>
 			</div>
-			<div id="data-correction-cancel-response"></div>
-		</div>
 
-		<div id="google-authentication">
-			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
-			<a href="#" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
+			<div id="google-authentication">
+				<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
+				<a href="#" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
+			</div>
 		</div>
 	</body>
 </html>

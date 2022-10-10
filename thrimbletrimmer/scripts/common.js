@@ -23,26 +23,6 @@ function commonPageSetup() {
 			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work."
 		);
 	}
-
-	const helpLink = document.getElementById("editor-help-link");
-	helpLink.addEventListener("click", toggleHelpDisplay);
-
-	const closeHelp = document.getElementById("editor-help-box-close");
-	closeHelp.addEventListener("click", (_event) => {
-		const helpBox = document.getElementById("editor-help-box");
-		helpBox.classList.add("hidden");
-	});
-}
-
-function toggleHelpDisplay() {
-	const helpBox = document.getElementById("editor-help-box");
-	if (helpBox.classList.contains("hidden")) {
-		const helpLink = document.getElementById("editor-help-link");
-		helpBox.style.top = `${helpLink.offsetTop + helpLink.offsetHeight}px`;
-		helpBox.classList.remove("hidden");
-	} else {
-		helpBox.classList.add("hidden");
-	}
 }
 
 function addError(errorText) {
