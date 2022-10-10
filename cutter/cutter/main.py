@@ -697,7 +697,7 @@ class VideoUpdater(object):
 	CHECK_INTERVAL = 10 # this is slow to reduce the chance of multiple cutters updating the same row
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, location, segments_path, backend, dbmanager, stop):
+	def __init__(self, location, segments_path, backend, dbmanager, tags, stop):
 		"""
 		backend is an upload backend that supports video updates.
 		Stop is an Event triggering graceful shutdown when set.
@@ -706,6 +706,7 @@ class VideoUpdater(object):
 		self.segments_path = segments_path
 		self.backend = backend
 		self.dbmanager = dbmanager
+		self.tags = tags
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
@@ -732,7 +733,8 @@ class VideoUpdater(object):
 					updates = {}
 					try:
 						# Update video metadata
-						self.backend.update_video(job.video_id, job.video_title, job.video_description, job.video_tags, job.public)
+						tags = list(set(self.tags + job.video_tags)
+						self.backend.update_video(job.video_id, job.video_title, job.video_description, tags, job.public)
 
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
 						# but that should be very rare and can be dealt with out of band.
@@ -935,7 +937,7 @@ def main(
 		for location, backend in needs_transcode_check.items()
 	]
 	updaters = [
-		VideoUpdater(location, base_dir, backend, dbmanager, stop)
+		VideoUpdater(location, base_dir, backend, dbmanager, tags, stop)
 		for location, backend in needs_updater.items()
 	]
 	jobs = [gevent.spawn(cutter.run)] + [

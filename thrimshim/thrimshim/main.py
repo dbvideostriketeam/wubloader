@@ -179,7 +179,9 @@ def get_row(ident):
 	if response['event_start'] is not None:
 		start = response['event_start']
 		if 'thumbnail_template' not in response or response['thumbnail_template'] is None:
-			response['thumbnail_template'] = DEFAULT_TEMPLATES[int(start.hour / 6)]
+			pst_hour = (start.hour - 8) % 24
+			shift = int(pst_hour / 6)
+			response['thumbnail_template'] = DEFAULT_TEMPLATES[shift]
 		if 'thumbnail_time' not in response or response['thumbnail_time'] is None:
 			if response['event_end'] is not None:
 				# take full duration, and add half to start to get halfway
