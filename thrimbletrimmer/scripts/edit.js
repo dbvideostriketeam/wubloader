@@ -229,6 +229,29 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		const videoPlayer = document.getElementById("video");
 		videoPlayer.currentTime = thumbnailTime;
 	});
+	const thumbnailTemplateSelection = document.getElementById("video-info-thumbnail-template");
+	const thumbnailTemplatesListResponse = await fetch("/files/thumbnail_templates");
+	if (thumbnailTemplatesListResponse.ok) {
+		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
+		for (const templateFileName of thumbnailTemplatesList) {
+			const templateOption = document.createElement("option");
+			const templateName = templateFileName.substring(0, templateFileName.lastIndexOf("."));
+			templateOption.innerText = templateName;
+			templateOption.value = templateName;
+			if (templateName === videoInfo.thumbnail_template) {
+				templateOption.selected = true;
+			}
+			thumbnailTemplateSelection.appendChild(templateOption);
+		}
+	} else {
+		addError("Failed to load thumbnail templates list");
+	}
+	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
+	if (videoInfo.thumbnail_time) {
+		document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
+			videoInfo.thumbnail_time
+		);
+	}
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
 		submitVideo();
@@ -839,31 +862,35 @@ async function sendVideoData(newState, overrideChanges) {
 	if (thumbnailMode === "CUSTOM") {
 		const fileInput = document.getElementById("video-info-thumbnail-custom");
 		if (fileInput.files.length === 0) {
-			submissionResponseElem.innerText =
-				"A thumbnail file was not provided for the custom thumbnail";
-			submissionResponseElem.classList.value = ["submission-response-error"];
-			return;
+			if (!videoInfo.thumbnail_image) {
+				submissionResponseElem.innerText =
+					"A thumbnail file was not provided for the custom thumbnail";
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				return;
+			}
+			thumbnailImage = videoInfo.thumbnail_image;
+		} else {
+			const fileHandle = fileInput.files[0];
+			const fileReader = new FileReader();
+			let loadPromiseResolve;
+			const loadPromise = new Promise((resolve, _reject) => {
+				loadPromiseResolve = resolve;
+			});
+			fileReader.addEventListener("loadend", (event) => {
+				loadPromiseResolve(event.target);
+			});
+			fileReader.readAsArrayBuffer(fileHandle);
+			const fileLoadData = await loadPromise;
+			if (fileLoadData.error) {
+				submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				return;
+			}
+			const fileData = fileLoadData.result;
+			const fileBytes = new Uint8Array(fileData);
+			const fileBinaryString = String.fromCharCode(...fileBytes);
+			thumbnailImage = btoa(fileBinaryString);
 		}
-		const fileHandle = fileInput.files[0];
-		const fileReader = new FileReader();
-		let loadPromiseResolve;
-		const loadPromise = new Promise((resolve, _reject) => {
-			loadPromiseResolve = resolve;
-		});
-		fileReader.addEventListener("loadend", (event) => {
-			loadPromiseResolve(event.target);
-		});
-		fileReader.readAsArrayBuffer(fileHandle);
-		const fileLoadData = await loadPromise;
-		if (fileLoadData.error) {
-			submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
-			submissionResponseElem.classList.value = ["submission-response-error"];
-			return;
-		}
-		const fileData = fileLoadData.result;
-		const fileBytes = new Uint8Array(fileData);
-		const fileBinaryString = String.fromCharCode(...fileBytes);
-		thumbnailImage = btoa(fileBinaryString);
 	}
 
 	const videoTitle = document.getElementById("video-info-title").value;
