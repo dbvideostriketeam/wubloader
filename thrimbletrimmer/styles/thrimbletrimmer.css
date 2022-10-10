@@ -313,6 +313,10 @@ a,
 	flex-grow: 1;
 }
 
+.video-info-thumbnail-mode-options {
+	margin: 2px 0;
+}
+
 #video-info-thumbnail-template-preview-image {
 	max-width: 320px;
 }
