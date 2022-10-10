@@ -190,6 +190,43 @@
 			<textarea id="video-info-description"></textarea>
 			<label for="video-info-tags">Tags (comma-separated):</label>
 			<input type="text" id="video-info-tags" />
+			<label for="video-info-thumbnail-mode">Thumbnail:</label>
+			<div id="video-info-thumbnail">
+				<div>
+					<select id="video-info-thumbnail-mode">
+						<option value="NONE">No custom thumbnail</option>
+						<option value="BARE">Use video frame</option>
+						<option value="TEMPLATE" selected>Use video frame in image template</option>
+						<option value="CUSTOM">Use a custom thumbnail image</option>
+					</select>
+				</div>
+				<div class="video-info-thumbnail-mode-options" id="video-info-thumbnail-template-options">
+					<select id="video-info-thumbnail-template">
+						<!-- TODO Implement options for template selection -->
+					</select>
+				</div>
+				<div class="video-info-thumbnail-mode-options" id="video-info-thumbnail-time-options">
+					<input type="text" id="video-info-thumbnail-time" />
+					<img
+						src="images/pencil.png"
+						alt="Set video thumbnail frame to current video time"
+						class="click"
+						id="video-info-thumbnail-time-set"
+					/>
+					<img
+						src="images/play_to.png"
+						alt="Set video time to video thumbnail frame"
+						class="click"
+						id="video-info-thumbnail-time-play"
+					/>
+				</div>
+				<div
+					class="hidden video-info-thumbnail-mode-options"
+					id="video-info-thumbnail-custom-options"
+				>
+					<input type="file" id="video-info-thumbnail-custom" accept="image/png" />
+				</div>
+			</div>
 		</div>
 
 		<div id="submission">

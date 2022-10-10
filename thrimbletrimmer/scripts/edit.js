@@ -195,6 +195,40 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("video-info-description").addEventListener("input", (_event) => {
 		validateVideoDescription();
 	});
+	document.getElementById("video-info-thumbnail-mode").addEventListener("change", () => {
+		const newValue = document.getElementById("video-info-thumbnail-mode").value;
+		const unhideIDs = [];
+
+		if (newValue === "BARE") {
+			unhideIDs.push("video-info-thumbnail-time-options");
+		} else if (newValue === "TEMPLATE") {
+			unhideIDs.push("video-info-thumbnail-template-options");
+			unhideIDs.push("video-info-thumbnail-time-options");
+		} else if (newValue === "CUSTOM") {
+			unhideIDs.push("video-info-thumbnail-custom-options");
+		}
+
+		document.getElementsByClassName("video-info-thumbnail-mode-options").classList.add("hidden");
+		for (elemID of unhideIDs) {
+			document.getElementById(elemID).classList.remove("hidden");
+		}
+	});
+	document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
+		const field = document.getElementById("video-info-thumbnail-time");
+		const videoPlayer = document.getElementById("video");
+		const videoPlayerTime = videoPlayer.currentTime;
+		field.value = videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
+	});
+	document.getElementById("video-info-thumbnail-time-play").addEventListener("click", (_event) => {
+		const field = document.getElementById("video-info-thumbnail-time");
+		const thumbnailTime = videoPlayerTimeFromVideoHumanTime(field.value);
+		if (thumbnailTime === null) {
+			addError("Couldn't play from thumbnail frame; failed to parse time");
+			return;
+		}
+		const videoPlayer = document.getElementById("video");
+		videoPlayer.currentTime = thumbnailTime;
+	});
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
 		submitVideo();
@@ -785,6 +819,53 @@ async function sendVideoData(newState, overrideChanges) {
 		videoDescription = videoDescription + CHAPTER_MARKER_DELIMITER + chapterTextList.join("\n");
 	}
 
+	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+	let thumbnailTemplate = null;
+	let thumbnailTime = null;
+	let thumbnailImage = null;
+	if (thumbnailMode === "BARE" || thumbnailMode === "TEMPLATE") {
+		thumbnailTime = wubloaderTimeFromVideoHumanTime(
+			document.getElementById("video-info-thumbnail-time").value
+		);
+		if (thumbnailTime === null) {
+			submissionResponseElem.innerText = "The thumbnail time is invalid";
+			submissionResponseElem.classList.value = ["submission-response-error"];
+			return;
+		}
+	}
+	if (thumbnailMode === "TEMPLATE") {
+		thumbnailTemplate = document.getElementById("video-info-thumbnail-template").value;
+	}
+	if (thumbnailMode === "CUSTOM") {
+		const fileInput = document.getElementById("video-info-thumbnail-custom");
+		if (fileInput.files.length === 0) {
+			submissionResponseElem.innerText =
+				"A thumbnail file was not provided for the custom thumbnail";
+			submissionResponseElem.classList.value = ["submission-response-error"];
+			return;
+		}
+		const fileHandle = fileInput.files[0];
+		const fileReader = new FileReader();
+		let loadPromiseResolve;
+		const loadPromise = new Promise((resolve, _reject) => {
+			loadPromiseResolve = resolve;
+		});
+		fileReader.addEventListener("loadend", (event) => {
+			loadPromiseResolve(event.target);
+		});
+		fileReader.readAsArrayBuffer(fileHandle);
+		const fileLoadData = await loadPromise;
+		if (fileLoadData.error) {
+			submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
+			submissionResponseElem.classList.value = ["submission-response-error"];
+			return;
+		}
+		const fileData = fileLoadData.result;
+		const fileBytes = new Uint8Array(fileData);
+		const fileBinaryString = String.fromCharCode(...fileBytes);
+		thumbnailImage = btoa(fileBinaryString);
+	}
+
 	const videoTitle = document.getElementById("video-info-title").value;
 	const videoTags = document.getElementById("video-info-tags").value.split(",");
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
@@ -810,6 +891,10 @@ async function sendVideoData(newState, overrideChanges) {
 		video_quality: videoInfo.video_quality,
 		uploader_whitelist: uploaderAllowlist,
 		state: newState,
+		thumbnail_mode: thumbnailMode,
+		thumbnail_template: thumbnailTemplate,
+		thumbnail_time: thumbnailTime,
+		thumbnail_image: thumbnailImage,
 
 		// We also provide some sheet column values to verify data hasn't changed.
 		sheet_name: videoInfo.sheet_name,
