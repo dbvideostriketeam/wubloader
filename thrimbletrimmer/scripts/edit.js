@@ -208,7 +208,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			unhideIDs.push("video-info-thumbnail-custom-options");
 		}
 
-		document.getElementsByClassName("video-info-thumbnail-mode-options").classList.add("hidden");
+		for (const optionElement of document.getElementsByClassName(
+			"video-info-thumbnail-mode-options"
+		)) {
+			optionElement.classList.add("hidden");
+		}
 		for (elemID of unhideIDs) {
 			document.getElementById(elemID).classList.remove("hidden");
 		}
@@ -235,6 +239,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
 		for (const templateFileName of thumbnailTemplatesList) {
 			const templateOption = document.createElement("option");
+			// Thumbnails are fetched from restreamer with file extensions. The thumbnail name is the file name.
 			const templateName = templateFileName.substring(0, templateFileName.lastIndexOf("."));
 			templateOption.innerText = templateName;
 			templateOption.value = templateName;
@@ -248,9 +253,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
 	if (videoInfo.thumbnail_time) {
-		document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
-			videoInfo.thumbnail_time
-		);
+		document.getElementById("video").addEventListener("loadedmetadata", (_event) => {
+			document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
+				videoInfo.thumbnail_time
+			);
+		});
 	}
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
