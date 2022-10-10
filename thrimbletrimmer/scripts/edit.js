@@ -204,6 +204,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		} else if (newValue === "TEMPLATE") {
 			unhideIDs.push("video-info-thumbnail-template-options");
 			unhideIDs.push("video-info-thumbnail-time-options");
+			unhideIDs.push("video-info-thumbnail-template-preview");
 		} else if (newValue === "CUSTOM") {
 			unhideIDs.push("video-info-thumbnail-custom-options");
 		}
@@ -233,6 +234,22 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		const videoPlayer = document.getElementById("video");
 		videoPlayer.currentTime = thumbnailTime;
 	});
+	document
+		.getElementById("video-info-thumbnail-template-preview-generate")
+		.addEventListener("click", (_event) => {
+			const imageElement = document.getElementById("video-info-thumbnail-template-preview-image");
+			const timeEntryElement = document.getElementById("video-info-thumbnail-time");
+			const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
+			if (imageTime === null) {
+				imageElement.classList.add("hidden");
+				addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
+				return;
+			}
+			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
+			imageElement.src = `/thumbnail/${globalStreamName}/source.png?timestamp=${imageTime}&template=${imageTemplate}`;
+			imageElement.classList.remove("hidden");
+		});
+
 	const thumbnailTemplateSelection = document.getElementById("video-info-thumbnail-template");
 	const thumbnailTemplatesListResponse = await fetch("/files/thumbnail_templates");
 	if (thumbnailTemplatesListResponse.ok) {

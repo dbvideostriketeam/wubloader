@@ -305,6 +305,10 @@ a,
 	flex-grow: 1;
 }
 
+#video-info-thumbnail-template-preview-image {
+	max-width: 320px;
+}
+
 .submission-response-error {
 	white-space: pre-wrap;
 }
