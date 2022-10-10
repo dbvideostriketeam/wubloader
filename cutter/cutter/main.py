@@ -733,7 +733,7 @@ class VideoUpdater(object):
 					updates = {}
 					try:
 						# Update video metadata
-						tags = list(set(self.tags + job.video_tags)
+						tags = list(set(self.tags + job.video_tags))
 						self.backend.update_video(job.video_id, job.video_title, job.video_description, tags, job.public)
 
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
