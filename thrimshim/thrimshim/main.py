@@ -346,7 +346,7 @@ def update_row(ident, editor=None):
 	if new_row['state'] == 'MODIFIED':
 		# Modifying published rows is more limited, we ignore all other fields.
 		for column in set(modifiable_columns) & set(non_null_columns):
-			if new_row[column] is None:
+			if new_row.get(column) is None:
 				missing.append(column)
 		if missing:
 			return 'Fields {} must be non-null for modified video'.format(', '.join(missing)), 400
@@ -357,7 +357,7 @@ def update_row(ident, editor=None):
 		""").format(sql.SQL(", ").join(
 			sql.SQL("{} = {}").format(
 				sql.Identifier(column), database.get_column_placeholder(column),
-			) for column in modifiable_columns
+			) for column in set(modifiable_columns) & set(new_row)
 		))
 		result = database.query(conn, build_query, id=ident, **new_row)
 		if result.rowcount != 1:
