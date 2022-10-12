@@ -364,20 +364,16 @@ class SheetSync(object):
 		overwriting the entire playlists table"""
 		playlists = []
 		for row in rows:
-			# TODO redo sheet parsing for new columns
-			# Defaults for now:
-			name = ""
-			show_in_description = false
-
-			if len(row) != 3:
+			if len(row) != 5:
 				continue
-			tags, _, playlist_id = row
+			tags, _, name, playlist_id, show_in_desctiption = row
 			tags = self.column_parsers['tags'](tags)
 			if not tags:
 				continue
 			playlist_id = playlist_id.strip()
 			if len(playlist_id) != 34 or not playlist_id.startswith('PL'):
 				continue
+			show_in_description = show_in_description == "[✓]"
 			playlists.append((playlist_id, tags, name, show_in_description))
 		# We want to wipe and replace all the current entries in the table.
 		# The easiest way to do this is a DELETE then an INSERT, all within a transaction.
