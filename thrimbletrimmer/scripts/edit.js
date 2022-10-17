@@ -9,7 +9,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
 
 	const timeUpdateForm = document.getElementById("stream-time-settings");
-	timeUpdateForm.addEventListener("submit", (event) => {
+	timeUpdateForm.addEventListener("submit", async (event) => {
 		event.preventDefault();
 
 		if (!videoInfo) {
@@ -126,6 +126,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			updateWaveform();
 			waveformImage.classList.remove("hidden");
 		}
+
+		await getChatLog(globalStartTimeString, globalEndTimeString);
+		document.getElementById("chat-replay").innerHTML = "";
+		renderChatLog();
 	});
 
 	await loadVideoInfo();
@@ -338,6 +342,20 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("google-auth-sign-out").addEventListener("click", (_event) => {
 		googleSignOut();
 	});
+
+	await loadEditorChatData();
+	if (globalChatData) {
+		if (hasSegmentList()) {
+			renderChatLog();
+		} else {
+			const videoPlayer = document.getElementById("video");
+			const initialChatLogRender = (_event) => {
+				renderChatLog();
+				videoPlayer.removeEventListener("loadedmetadata", initialChatLogRender);
+			};
+			videoPlayer.addEventListener("loadedmetadata", initialChatLogRender);
+		}
+	}
 });
 
 async function loadVideoInfo() {
@@ -355,7 +373,7 @@ async function loadVideoInfo() {
 		return;
 	}
 	videoInfo = await dataResponse.json();
-	initializeVideoInfo();
+	await initializeVideoInfo();
 }
 
 async function initializeVideoInfo() {
@@ -1544,6 +1562,39 @@ function changeEnableChaptersHandler() {
 	}
 }
 
+async function loadEditorChatData() {
+	if (!globalStartTimeString || !globalEndTimeString) {
+		return [];
+	}
+	return getChatLog(globalStartTimeString, globalEndTimeString);
+}
+
+function renderChatLog() {
+	const chatReplayParent = document.getElementById("chat-replay");
+	chatReplayParent.innerHTML = "";
+	for (const chatMessage of globalChatData) {
+		if (chatMessage.message.command === "PRIVMSG") {
+			const chatDOM = renderChatMessage(chatMessage);
+			if (chatDOM) {
+				chatReplayParent.appendChild(chatDOM);
+			}
+		} else if (chatMessage.message.command === "CLEARMSG") {
+			const removedMessageID = chatMessage.message.tags["target-msg-id"];
+			const removedMessageElem = document.getElementById(`chat-replay-message-${removedMessageID}`);
+			if (removedMessageElem) {
+				removedMessageElem.classList.add("chat-replay-message-cleared");
+			}
+		} else if (chatMessage.message.command === "CLEARCHAT") {
+			const removedSender = chatMessage.message.params[1];
+			for (const childNode of document.getElementById("chat-replay").children) {
+				if (childNode.dataset.sender === removedSender) {
+					childNode.classList.add("chat-replay-message-cleared");
+				}
+			}
+		}
+	}
+}
+
 function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	const wubloaderDateTime = dateTimeFromWubloaderTime(wubloaderTime);
 	const segmentList = getSegmentList();
@@ -1571,32 +1622,12 @@ function videoPlayerTimeFromWubloaderTime(wubloaderTime) {
 	return null;
 }
 
-function videoPlayerTimeFromDateTime(dateTime) {
-	const segmentList = getSegmentList();
-	for (const segment of segmentList) {
-		const segmentStart = DateTime.fromISO(segment.rawProgramDateTime);
-		const segmentEnd = segmentStart.plus({ seconds: segment.duration });
-		if (dateTime >= segmentStart && dateTime <= segmentEnd) {
-			return segment.start + dateTime.diff(segmentStart).as("seconds");
-		}
-	}
-	return null;
-}
-
 function dateTimeFromVideoHumanTime(videoHumanTime) {
 	const videoPlayerTime = videoPlayerTimeFromVideoHumanTime(videoHumanTime);
 	if (videoPlayerTime === null) {
 		return null;
 	}
 	return dateTimeFromVideoPlayerTime(videoPlayerTime);
-}
-
-function videoHumanTimeFromDateTime(dateTime) {
-	const videoPlayerTime = videoPlayerTimeFromDateTime(dateTime);
-	if (videoPlayerTime === null) {
-		return null;
-	}
-	return videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
 }
 
 function wubloaderTimeFromVideoPlayerTime(videoPlayerTime) {

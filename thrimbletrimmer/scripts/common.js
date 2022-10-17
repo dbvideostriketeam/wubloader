@@ -11,6 +11,8 @@ var globalPlayer = null;
 var globalSetUpControls = false;
 var globalSeekTimer = null;
 
+var globalChatData = [];
+
 Hls.DefaultConfig.maxBufferHole = 600;
 
 const VIDEO_FRAMES_PER_SECOND = 30;
@@ -348,30 +350,6 @@ function busTimeFromWubloaderTime(wubloaderTime) {
 	return busTimeFromDateTime(dt);
 }
 
-function assembleVideoPlaylistURL(basePlaylistURL) {
-	let playlistURL = basePlaylistURL;
-
-	const queryStringParts = startAndEndTimeQueryStringParts();
-	if (queryStringParts) {
-		playlistURL += "?" + queryStringParts.join("&");
-	}
-	return playlistURL;
-}
-
-function startAndEndTimeQueryStringParts() {
-	const startTime = getStartTime();
-	const endTime = getEndTime();
-
-	let queryStringParts = [];
-	if (startTime) {
-		queryStringParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
-	}
-	if (endTime) {
-		queryStringParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
-	}
-	return queryStringParts;
-}
-
 function videoHumanTimeFromVideoPlayerTime(videoPlayerTime) {
 	const hours = Math.floor(videoPlayerTime / 3600);
 	let minutes = Math.floor((videoPlayerTime % 3600) / 60);
@@ -420,10 +398,6 @@ function videoPlayerTimeFromVideoHumanTime(videoHumanTime) {
 	return hours * 3600 + minutes * 60 + seconds;
 }
 
-function getSegmentList() {
-	return globalPlayer.latencyController.levelDetails.fragments;
-}
-
 function dateTimeFromVideoPlayerTime(videoPlayerTime) {
 	const segmentList = getSegmentList();
 	let segmentStartTime;
@@ -444,10 +418,72 @@ function dateTimeFromVideoPlayerTime(videoPlayerTime) {
 	return wubloaderDateTime.plus({ seconds: offset });
 }
 
+function videoPlayerTimeFromDateTime(dateTime) {
+	const segmentList = getSegmentList();
+	for (const segment of segmentList) {
+		const segmentStart = DateTime.fromISO(segment.rawProgramDateTime);
+		const segmentEnd = segmentStart.plus({ seconds: segment.duration });
+		if (dateTime >= segmentStart && dateTime <= segmentEnd) {
+			return segment.start + dateTime.diff(segmentStart).as("seconds");
+		}
+	}
+	return null;
+}
+
+function videoHumanTimeFromDateTime(dateTime) {
+	const videoPlayerTime = videoPlayerTimeFromDateTime(dateTime);
+	if (videoPlayerTime === null) {
+		return null;
+	}
+	return videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
+}
+
+function assembleVideoPlaylistURL(basePlaylistURL) {
+	let playlistURL = basePlaylistURL;
+
+	const queryStringParts = startAndEndTimeQueryStringParts();
+	if (queryStringParts) {
+		playlistURL += "?" + queryStringParts.join("&");
+	}
+	return playlistURL;
+}
+
+function startAndEndTimeQueryStringParts() {
+	const startTime = getStartTime();
+	const endTime = getEndTime();
+
+	let queryStringParts = [];
+	if (startTime) {
+		queryStringParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
+	}
+	if (endTime) {
+		queryStringParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
+	}
+	return queryStringParts;
+}
+
+function getSegmentList() {
+	return globalPlayer.latencyController.levelDetails.fragments;
+}
+
+function hasSegmentList() {
+	if (
+		globalPlayer &&
+		globalPlayer.latencyController &&
+		globalPlayer.latencyController.levelDetails &&
+		globalPlayer.latencyController.levelDetails.fragments
+	) {
+		return true;
+	}
+	return false;
+}
+
 function downloadFrame() {
 	const videoElement = document.getElementById("video");
 	const dateTime = dateTimeFromVideoPlayerTime(videoElement.currentTime);
-	const url = `/frame/${globalStreamName}/source.png?timestamp=${wubloaderTimeFromDateTime(dateTime)}`;
+	const url = `/frame/${globalStreamName}/source.png?timestamp=${wubloaderTimeFromDateTime(
+		dateTime
+	)}`;
 	// Avoid : as it causes problems on Windows
 	const filename = `${dateTime.toFormat("yyyy-LL-dd'T'HH-mm-ss.SSS")}.png`;
 	triggerDownload(url, filename);
@@ -455,11 +491,119 @@ function downloadFrame() {
 
 function triggerDownload(url, filename) {
 	// URL must be same-origin.
-	const link = document.createElement('a');
-	link.setAttribute('download', filename);
+	const link = document.createElement("a");
+	link.setAttribute("download", filename);
 	link.href = url;
-	link.setAttribute('target', '_blank');
+	link.setAttribute("target", "_blank");
 	document.body.appendChild(link);
 	link.click();
 	document.body.removeChild(link);
+}
+
+async function getChatLog(startWubloaderTime, endWubloaderTime) {
+	globalChatData = [];
+	const url = `/${globalStreamName}/chat.json?start=${startWubloaderTime}&end=${endWubloaderTime}`;
+	const response = await fetch(url);
+	if (!response.ok) {
+		return;
+	}
+	const chatLogData = await response.json();
+	for (const chatLine of chatLogData) {
+		if (
+			chatLine.command !== "PRIVMSG" &&
+			chatLine.command !== "CLEARMSG" &&
+			chatLine.command !== "CLEARCHAT"
+		) {
+			continue;
+		}
+		const when = DateTime.fromSeconds(chatLine.time);
+		// Here, we just push each line successively into the list. This assumes data is provided to us in chronological order.
+		globalChatData.push({ message: chatLine, when: when });
+	}
+}
+
+function renderChatMessage(chatMessageData) {
+	const chatMessage = chatMessageData.message;
+	if (chatMessage.command !== "PRIVMSG" || chatMessage.params[0] !== `#${globalStreamName}`) {
+		return null;
+	}
+
+	const sendTimeElement = document.createElement("div");
+	sendTimeElement.classList.add("chat-replay-message-time");
+	const messageTime = videoHumanTimeFromDateTime(chatMessageData.when);
+	sendTimeElement.innerText = messageTime;
+
+	var displayName = "";
+	if (chatMessage.tags.hasOwnProperty("display-name")) {
+		displayName = chatMessage.tags["display-name"];
+	} else {
+		displayName = chatMessage.sender;
+	}
+
+	const senderNameElement = document.createElement("div");
+	senderNameElement.classList.add("chat-replay-message-sender");
+	if (chatMessage.tags.hasOwnProperty("color")) {
+		senderNameElement.style.color = chatMessage.tags.color;
+	}
+	senderNameElement.innerText = displayName;
+
+	const messageTextElement = document.createElement("div");
+	messageTextElement.classList.add("chat-replay-message-text");
+	if (chatMessage.tags.emotes) {
+		const emoteDataStrings = chatMessage.tags.emotes.split("/");
+		let emotePositions = [];
+		for (const emoteDataString of emoteDataStrings) {
+			const emoteData = emoteDataString.split(":", 2);
+			const emoteID = emoteData[0];
+			const emotePositionList = emoteData[1].split(",").map((val) => {
+				const positions = val.split("-");
+				return { emote: emoteID, start: +positions[0], end: +positions[1] };
+			});
+			emotePositions = emotePositions.concat(emotePositionList);
+		}
+		emotePositions.sort((a, b) => a.start - b.start);
+
+		let messageText = [chatMessage.params[1]];
+		while (emotePositions.length > 0) {
+			const emoteData = emotePositions.pop(); // Pop the highest-index element from the array
+			let text = messageText.shift();
+			const textAndEmote = [text.substring(0, emoteData.start)];
+
+			const emoteImg = document.createElement("img");
+			emoteImg.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteData.emote}/default/dark/1.0`;
+			const emoteStringLen = emoteData.end - emoteData.start + 1;
+			const emoteText = text.substring(emoteData.start, emoteStringLen);
+			emoteImg.alt = emoteText;
+			emoteImg.title = emoteText;
+			textAndEmote.push(emoteImg);
+
+			const remainingText = text.substring(emoteData.end + 1);
+			if (remainingText !== "") {
+				textAndEmote.push(remainingText);
+			}
+			messageText = textAndEmote.concat(messageText);
+		}
+
+		for (const messagePart of messageText) {
+			if (typeof messagePart === "string") {
+				const node = document.createTextNode(messagePart);
+				messageTextElement.appendChild(node);
+			} else {
+				messageTextElement.appendChild(messagePart);
+			}
+		}
+	} else {
+		messageTextElement.innerText = chatMessage.params[1];
+	}
+
+	const messageContainer = document.createElement("div");
+	messageContainer.classList.add("chat-replay-message");
+	if (chatMessage.tags.hasOwnProperty("id")) {
+		messageContainer.id = `chat-replay-message-${chatMessage.tags.id}`;
+	}
+	messageContainer.dataset.sender = chatMessage.sender;
+	messageContainer.appendChild(sendTimeElement);
+	messageContainer.appendChild(senderNameElement);
+	messageContainer.appendChild(messageTextElement);
+	return messageContainer;
 }
