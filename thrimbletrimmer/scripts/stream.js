@@ -257,6 +257,7 @@ function initialChatRender() {
 	}
 
 	globalChatPreviousRenderTime = videoTime;
+	chatReplayContainer.scrollTop = chatReplayContainer.scrollHeight;
 }
 
 function updateChatRender() {
@@ -269,13 +270,16 @@ function updateChatRender() {
 	}
 	const videoPlayer = document.getElementById("video");
 	const videoTime = videoPlayer.currentTime;
+	const chatReplayContainer = document.getElementById("chat-replay");
+	const wasScrolledToBottom =
+		chatReplayContainer.scrollTop + chatReplayContainer.offsetHeight >=
+		chatReplayContainer.scrollHeight;
 
 	if (videoTime < globalChatPreviousRenderTime) {
 		initialChatRender();
 	} else {
 		const videoDateTime = dateTimeFromVideoPlayerTime(videoTime);
 		const lastAddedTime = dateTimeFromVideoPlayerTime(globalChatPreviousRenderTime);
-		const chatReplayContainer = document.getElementById("chat-replay");
 
 		let rangeMin = 0;
 		let rangeMax = globalChatData.length;
@@ -301,6 +305,9 @@ function updateChatRender() {
 		}
 	}
 	globalChatPreviousRenderTime = videoTime;
+	if (wasScrolledToBottom) {
+		chatReplayContainer.scrollTop = chatReplayContainer.scrollHeight;
+	}
 }
 
 function handleChatMessage(chatReplayContainer, chatMessage) {

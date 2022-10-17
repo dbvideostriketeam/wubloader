@@ -368,6 +368,7 @@ a,
 
 #chat-replay {
 	overflow-y: auto;
+	min-height: 250px;
 }
 
 .chat-replay-message {
@@ -385,6 +386,15 @@ a,
 .chat-replay-message-text {
 	flex-basis: 200px;
 	flex-grow: 1;
+}
+
+.chat-replay-message-emote {
+	/*
+	This size is set based on Twitch's 1.0 emote size.
+	This will need to be updated if that changes. (Otherwise, auto-scrolling will break.)
+	*/
+	width: 28px;
+	height: 28px;
 }
 
 .chat-replay-message-reply {

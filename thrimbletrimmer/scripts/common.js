@@ -585,6 +585,7 @@ function renderChatMessage(chatMessageData) {
 
 			const emoteImg = document.createElement("img");
 			emoteImg.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteData.emote}/default/dark/1.0`;
+			emoteImg.classList.add("chat-replay-message-emote");
 			const emoteStringLen = emoteData.end - emoteData.start + 1;
 			const emoteText = text.substring(emoteData.start, emoteStringLen);
 			emoteImg.alt = emoteText;
