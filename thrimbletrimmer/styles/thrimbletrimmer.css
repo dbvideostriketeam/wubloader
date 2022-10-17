@@ -6,6 +6,8 @@ body {
 
 	background: #222;
 	color: #fff;
+	height: 100vh;
+	margin: 0;
 }
 
 a {
@@ -66,6 +68,15 @@ a,
 
 #page-container {
 	position: relative;
+	max-height: 100vh;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+}
+
+#page-container > * {
+	flex: 0 1 auto;
 }
 
 #editor-help {
@@ -81,6 +92,7 @@ a,
 	align-items: flex-end;
 	gap: 5px;
 	margin-bottom: 10px;
+	margin-top: 5px;
 }
 
 #stream-time-settings > div {
@@ -352,6 +364,10 @@ a,
 .time-converter-time {
 	display: block;
 	width: 200px;
+}
+
+#chat-replay {
+	overflow-y: auto;
 }
 
 .chat-replay-message {
