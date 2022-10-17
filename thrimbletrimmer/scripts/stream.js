@@ -55,9 +55,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		container.appendChild(newField);
 	});
 
-	updateTimeSettings();
+	await updateTimeSettings();
 
-	await getStreamChatLog();
 	const videoPlayer = document.getElementById("video");
 	videoPlayer.addEventListener("loadedmetadata", (_event) => initialChatRender());
 	videoPlayer.addEventListener("timeupdate", (_event) => updateChatRender());
@@ -105,7 +104,7 @@ function dateTimeFromTimeString(timeString, timeStringFormat) {
 	}
 }
 
-function updateTimeSettings() {
+async function updateTimeSettings() {
 	updateStoredTimeSettings();
 	if (globalLoadedVideoPlayer) {
 		updateSegmentPlaylist();
@@ -125,6 +124,8 @@ function updateTimeSettings() {
 		queryParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
 	}
 	document.getElementById("stream-time-link").href = `?${queryParts.join("&")}`;
+
+	await getStreamChatLog();
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
@@ -260,6 +261,10 @@ function initialChatRender() {
 
 function updateChatRender() {
 	if (!globalChatData) {
+		return;
+	}
+	if (!hasSegmentList()) {
+		// The update is due to a stream refresh, so we'll wait for the initial render instead
 		return;
 	}
 	const videoPlayer = document.getElementById("video");
