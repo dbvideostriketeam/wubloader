@@ -366,6 +366,11 @@ a,
 	text-align: right;
 }
 
+.chat-replay-message-text {
+	flex-basis: 200px;
+	flex-grow: 1;
+}
+
 .chat-replay-message-cleared {
 	opacity: 0.5;
 }
