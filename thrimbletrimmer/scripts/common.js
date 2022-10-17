@@ -549,6 +549,20 @@ function renderChatMessage(chatMessageData) {
 
 	const messageTextElement = document.createElement("div");
 	messageTextElement.classList.add("chat-replay-message-text");
+
+	if (chatMessage.tags.hasOwnProperty("reply-parent-msg-id")) {
+		const replyParentID = chatMessage.tags["reply-parent-msg-id"];
+		const replyParentSender = chatMessage.tags["reply-parent-display-name"];
+		const replyParentMessageText = chatMessage.tags["reply-parent-msg-body"];
+		const replyContainer = document.createElement("div");
+		const replyTextContainer = document.createElement("a");
+		replyTextContainer.href = `#chat-replay-message-${replyParentID}`;
+		replyTextContainer.innerText = `Replying to ${replyParentSender}: ${replyParentMessageText}`;
+		replyContainer.appendChild(replyTextContainer);
+		replyContainer.classList.add("chat-replay-message-reply");
+		messageTextElement.appendChild(replyContainer);
+	}
+
 	if (chatMessage.tags.emotes) {
 		const emoteDataStrings = chatMessage.tags.emotes.split("/");
 		let emotePositions = [];
@@ -593,7 +607,7 @@ function renderChatMessage(chatMessageData) {
 			}
 		}
 	} else {
-		messageTextElement.innerText = chatMessage.params[1];
+		messageTextElement.appendChild(document.createTextNode(chatMessage.params[1]));
 	}
 
 	const messageContainer = document.createElement("div");

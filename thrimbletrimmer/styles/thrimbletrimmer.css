@@ -371,6 +371,14 @@ a,
 	flex-grow: 1;
 }
 
+.chat-replay-message-reply {
+	font-size: 80%;
+}
+
+.chat-replay-message-reply a {
+	text-decoration: none;
+}
+
 .chat-replay-message-cleared {
 	opacity: 0.5;
 }
