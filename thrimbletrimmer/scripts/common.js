@@ -559,9 +559,8 @@ function renderChatMessage(chatMessageData) {
 
 		if (replyParentMessageText.startsWith("\u0001ACTION")) {
 			replyContainer.classList.add("chat-replay-message-text-action");
-			const substringLength =
-				replyParentMessageText.length - (replyParentMessageText.endsWith("\u0001") ? 8 : 7);
-			replyParentMessageText = replyParentMessageText.substring(7, substringLength);
+			const substringEnd = (replyParentMessageText.endsWith("\u0001") ? replyParentMessageText.length - 1 : replyParentMessageText);
+			replyParentMessageText = replyParentMessageText.substring(7, substringEnd);
 		}
 
 		replyTextContainer.href = `#chat-replay-message-${replyParentID}`;
@@ -574,8 +573,8 @@ function renderChatMessage(chatMessageData) {
 	let chatMessageText = chatMessage.params[1];
 	if (chatMessageText.startsWith("\u0001ACTION")) {
 		messageTextElement.classList.add("chat-replay-message-text-action");
-		const substringLength = chatMessageText.length - (chatMessageText.endsWith("\u0001") ? 8 : 7);
-		chatMessageText = chatMessageText.substring(7, substringLength);
+		const substringEnd = (chatMessageText.endsWith("\u0001") ? chatMessageText.length - 1 : chatMessageText.length);
+		chatMessageText = chatMessageText.substring(7, substringEnd);
 	}
 
 	if (chatMessage.tags.emotes) {
@@ -601,8 +600,7 @@ function renderChatMessage(chatMessageData) {
 			const emoteImg = document.createElement("img");
 			emoteImg.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteData.emote}/default/dark/1.0`;
 			emoteImg.classList.add("chat-replay-message-emote");
-			const emoteStringLen = emoteData.end - emoteData.start + 1;
-			const emoteText = text.substring(emoteData.start, emoteStringLen);
+			const emoteText = text.substring(emoteData.start, emoteData.end + 1);
 			emoteImg.alt = emoteText;
 			emoteImg.title = emoteText;
 			textAndEmote.push(emoteImg);
