@@ -388,6 +388,14 @@ a,
 	flex-grow: 1;
 }
 
+.chat-replay-message-text-action {
+	font-style: italic;
+}
+
+.chat-replay-message-text-action .chat-replay-message-reply:not(.chat-replay-message-text-action) {
+	font-style: normal; /* Clear the italics from the action */
+}
+
 .chat-replay-message-emote {
 	/*
 	This size is set based on Twitch's 1.0 emote size.

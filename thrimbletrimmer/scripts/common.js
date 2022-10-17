@@ -553,14 +553,29 @@ function renderChatMessage(chatMessageData) {
 	if (chatMessage.tags.hasOwnProperty("reply-parent-msg-id")) {
 		const replyParentID = chatMessage.tags["reply-parent-msg-id"];
 		const replyParentSender = chatMessage.tags["reply-parent-display-name"];
-		const replyParentMessageText = chatMessage.tags["reply-parent-msg-body"];
+		let replyParentMessageText = chatMessage.tags["reply-parent-msg-body"];
 		const replyContainer = document.createElement("div");
 		const replyTextContainer = document.createElement("a");
+
+		if (replyParentMessageText.startsWith("\u0001ACTION")) {
+			replyContainer.classList.add("chat-replay-message-text-action");
+			const substringLength =
+				replyParentMessageText.length - (replyParentMessageText.endsWith("\u0001") ? 8 : 7);
+			replyParentMessageText = replyParentMessageText.substring(7, substringLength);
+		}
+
 		replyTextContainer.href = `#chat-replay-message-${replyParentID}`;
 		replyTextContainer.innerText = `Replying to ${replyParentSender}: ${replyParentMessageText}`;
 		replyContainer.appendChild(replyTextContainer);
 		replyContainer.classList.add("chat-replay-message-reply");
 		messageTextElement.appendChild(replyContainer);
+	}
+
+	let chatMessageText = chatMessage.params[1];
+	if (chatMessageText.startsWith("\u0001ACTION")) {
+		messageTextElement.classList.add("chat-replay-message-text-action");
+		const substringLength = chatMessageText.length - (chatMessageText.endsWith("\u0001") ? 8 : 7);
+		chatMessageText = chatMessageText.substring(7, substringLength);
 	}
 
 	if (chatMessage.tags.emotes) {
@@ -577,7 +592,7 @@ function renderChatMessage(chatMessageData) {
 		}
 		emotePositions.sort((a, b) => a.start - b.start);
 
-		let messageText = [chatMessage.params[1]];
+		let messageText = [chatMessageText];
 		while (emotePositions.length > 0) {
 			const emoteData = emotePositions.pop(); // Pop the highest-index element from the array
 			let text = messageText.shift();
@@ -608,7 +623,7 @@ function renderChatMessage(chatMessageData) {
 			}
 		}
 	} else {
-		messageTextElement.appendChild(document.createTextNode(chatMessage.params[1]));
+		messageTextElement.appendChild(document.createTextNode(chatMessageText));
 	}
 
 	const messageContainer = document.createElement("div");
