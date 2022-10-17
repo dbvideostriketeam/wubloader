@@ -353,3 +353,22 @@ a,
 	display: block;
 	width: 200px;
 }
+
+.chat-replay-message {
+	display: flex;
+	gap: 10px;
+}
+
+.chat-replay-message-time {
+	flex-basis: 110px;
+	color: #ccc;
+	text-align: right;
+}
+
+.chat-replay-message-cleared {
+	opacity: 0.5;
+}
+
+.chat-replay-message-cleared .chat-replay-message-text {
+	text-decoration: line-through;
+}
