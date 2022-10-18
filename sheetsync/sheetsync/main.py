@@ -366,7 +366,7 @@ class SheetSync(object):
 		for row in rows:
 			if len(row) != 5:
 				continue
-			tags, _, name, playlist_id, show_in_desctiption = row
+			tags, _, name, playlist_id, show_in_description = row
 			tags = self.column_parsers['tags'](tags)
 			if not tags:
 				continue
