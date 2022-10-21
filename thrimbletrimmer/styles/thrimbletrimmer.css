@@ -392,6 +392,10 @@ a,
 	font-style: italic;
 }
 
+.chat-replay-message-system {
+	color: #aaf;
+}
+
 .chat-replay-message-text-action .chat-replay-message-reply:not(.chat-replay-message-text-action) {
 	font-style: normal; /* Clear the italics from the action */
 }
