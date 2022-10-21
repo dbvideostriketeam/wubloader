@@ -329,5 +329,10 @@ function handleChatMessage(chatReplayContainer, chatMessage) {
 				messageElem.classList.add("chat-replay-message-cleared");
 			}
 		}
+	} else if (chatMessage.message.command === "USERNOTICE") {
+		const chatDOMList = renderSystemMessages(chatMessage);
+		for (const chatDOM of chatDOMList) {
+			chatReplayContainer.appendChild(chatDOM);
+		}
 	}
 }

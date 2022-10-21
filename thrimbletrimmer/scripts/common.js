@@ -512,7 +512,8 @@ async function getChatLog(startWubloaderTime, endWubloaderTime) {
 		if (
 			chatLine.command !== "PRIVMSG" &&
 			chatLine.command !== "CLEARMSG" &&
-			chatLine.command !== "CLEARCHAT"
+			chatLine.command !== "CLEARCHAT" &&
+			chatLine.command !== "USERNOTICE"
 		) {
 			continue;
 		}
@@ -530,22 +531,9 @@ function renderChatMessage(chatMessageData) {
 
 	const sendTimeElement = document.createElement("div");
 	sendTimeElement.classList.add("chat-replay-message-time");
-	const messageTime = videoHumanTimeFromDateTime(chatMessageData.when);
-	sendTimeElement.innerText = messageTime;
+	sendTimeElement.innerText = videoHumanTimeFromDateTime(chatMessageData.when);
 
-	var displayName = "";
-	if (chatMessage.tags.hasOwnProperty("display-name")) {
-		displayName = chatMessage.tags["display-name"];
-	} else {
-		displayName = chatMessage.sender;
-	}
-
-	const senderNameElement = document.createElement("div");
-	senderNameElement.classList.add("chat-replay-message-sender");
-	if (chatMessage.tags.hasOwnProperty("color")) {
-		senderNameElement.style.color = chatMessage.tags.color;
-	}
-	senderNameElement.innerText = displayName;
+	const senderNameElement = createMessageSenderElement(chatMessageData);
 
 	const messageTextElement = document.createElement("div");
 	messageTextElement.classList.add("chat-replay-message-text");
@@ -569,6 +557,96 @@ function renderChatMessage(chatMessageData) {
 		replyContainer.classList.add("chat-replay-message-reply");
 		messageTextElement.appendChild(replyContainer);
 	}
+
+	addChatMessageTextToElement(chatMessageData, messageTextElement);
+
+	const messageContainer = createMessageContainer(chatMessageData, false);
+	messageContainer.appendChild(sendTimeElement);
+	messageContainer.appendChild(senderNameElement);
+	messageContainer.appendChild(messageTextElement);
+	return messageContainer;
+}
+
+function renderSystemMessages(chatMessageData) {
+	const chatMessage = chatMessageData.message;
+	if (chatMessage.command !== "USERNOTICE" || chatMessage.params[0] != `#${globalStreamName}`) {
+		return [];
+	}
+
+	const messages = [];
+
+	const sendTimeElement = document.createElement("div");
+	sendTimeElement.classList.add("chat-replay-message-time");
+	sendTimeElement.innerText = videoHumanTimeFromDateTime(chatMessageData.when);
+
+	const systemTextElement = document.createElement("div");
+	systemTextElement.classList.add("chat-replay-message-text");
+	systemTextElement.classList.add("chat-replay-message-system");
+	systemTextElement.appendChild(document.createTextNode(chatMessage.tags["system-msg"]));
+
+	const firstMessageContainer = createMessageContainer(chatMessageData, true);
+	firstMessageContainer.appendChild(sendTimeElement);
+	firstMessageContainer.appendChild(systemTextElement);
+	messages.push(firstMessageContainer);
+
+	if (chatMessage.params.length === 1) {
+		return messages;
+	}
+
+	const emptySendTimeElement = document.createElement("div");
+	emptySendTimeElement.classList.add("chat-replay-message-time");
+
+	const senderNameElement = createMessageSenderElement(chatMessageData);
+
+	const messageTextElement = document.createElement("div");
+	messageTextElement.classList.add("chat-replay-message-text");
+	addChatMessageTextToElement(chatMessageData, messageTextElement);
+
+	const secondMessageContainer = createMessageContainer(chatMessageData, false);
+	secondMessageContainer.appendChild(emptySendTimeElement);
+	secondMessageContainer.appendChild(senderNameElement);
+	secondMessageContainer.appendChild(messageTextElement);
+	messages.push(secondMessageContainer);
+	
+	return messages;
+}
+
+function createMessageContainer(chatMessageData, isSystemMessage) {
+	const chatMessage = chatMessageData.message;
+	const messageContainer = document.createElement("div");
+	messageContainer.classList.add("chat-replay-message");
+	if (chatMessage.tags.hasOwnProperty("id")) {
+		if (isSystemMessage) {
+			messageContainer.id = `chat-replay-message-system-${chatMessage.tags.id}`;
+		} else {
+			messageContainer.id = `chat-replay-message-${chatMessage.tags.id}`;
+		}
+	}
+	messageContainer.dataset.sender = chatMessage.sender;
+	return messageContainer;
+}
+
+function getMessageDisplayName(chatMessageData) {
+	const chatMessage = chatMessageData.message;
+	if (chatMessage.tags.hasOwnProperty("display-name")) {
+		return chatMessage.tags["display-name"];
+	}
+	return chatMessage.sender;
+}
+
+function createMessageSenderElement(chatMessageData) {
+	const chatMessage = chatMessageData.message;
+	const senderNameElement = document.createElement("div");
+	senderNameElement.classList.add("chat-replay-message-sender");
+	if (chatMessage.tags.hasOwnProperty("color")) {
+		senderNameElement.style.color = chatMessage.tags.color;
+	}
+	senderNameElement.innerText = getMessageDisplayName(chatMessageData);
+	return senderNameElement;
+}
+
+function addChatMessageTextToElement(chatMessageData, messageTextElement) {
+	const chatMessage = chatMessageData.message;
 
 	let chatMessageText = chatMessage.params[1];
 	if (chatMessageText.startsWith("\u0001ACTION")) {
@@ -623,15 +701,4 @@ function renderChatMessage(chatMessageData) {
 	} else {
 		messageTextElement.appendChild(document.createTextNode(chatMessageText));
 	}
-
-	const messageContainer = document.createElement("div");
-	messageContainer.classList.add("chat-replay-message");
-	if (chatMessage.tags.hasOwnProperty("id")) {
-		messageContainer.id = `chat-replay-message-${chatMessage.tags.id}`;
-	}
-	messageContainer.dataset.sender = chatMessage.sender;
-	messageContainer.appendChild(sendTimeElement);
-	messageContainer.appendChild(senderNameElement);
-	messageContainer.appendChild(messageTextElement);
-	return messageContainer;
 }

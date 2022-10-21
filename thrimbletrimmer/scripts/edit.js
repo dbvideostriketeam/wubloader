@@ -1591,6 +1591,11 @@ function renderChatLog() {
 					childNode.classList.add("chat-replay-message-cleared");
 				}
 			}
+		} else if (chatMessage.message.command === "USERNOTICE") {
+			const chatDOMList = renderSystemMessages(chatMessage);
+			for (const chatDOM of chatDOMList) {
+				chatReplayParent.appendChild(chatDOM);
+			}
 		}
 	}
 }
