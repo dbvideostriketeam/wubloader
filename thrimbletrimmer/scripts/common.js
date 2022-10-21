@@ -677,11 +677,13 @@ function addChatMessageTextToElement(chatMessageData, messageTextElement) {
 
 			const emoteImg = document.createElement("img");
 			emoteImg.src = `https://static-cdn.jtvnw.net/emoticons/v2/${emoteData.emote}/default/dark/1.0`;
-			emoteImg.classList.add("chat-replay-message-emote");
 			const emoteText = text.substring(emoteData.start, emoteData.end + 1);
 			emoteImg.alt = emoteText;
 			emoteImg.title = emoteText;
-			textAndEmote.push(emoteImg);
+			const emoteContainer = document.createElement("span");
+			emoteContainer.classList.add("chat-replay-message-emote");
+			emoteContainer.appendChild(emoteImg);
+			textAndEmote.push(emoteContainer);
 
 			const remainingText = text.substring(emoteData.end + 1);
 			if (remainingText !== "") {
