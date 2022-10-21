@@ -296,6 +296,10 @@ function updateChatRender() {
 			lastChatIndex = Math.floor((rangeMin + rangeMax) / 2);
 		}
 
+		if (lastChatIndex === 0 && globalChatData[0].when > lastAddedTime) {
+			lastChatIndex = -1;
+		}
+
 		for (let chatIndex = lastChatIndex + 1; chatIndex < globalChatData.length; chatIndex++) {
 			const chatMessage = globalChatData[chatIndex];
 			if (chatMessage.when > videoDateTime) {
