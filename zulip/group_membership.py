@@ -9,19 +9,19 @@ import requests
 logging.basicConfig(level='INFO')
 
 class Client(object):
-	def __init__(self, base_url, api_key):
+	def __init__(self, base_url, email, api_key):
 		self.base_url = base_url
+		self.email = email
 		self.api_key = api_key
 		self.session = requests.Session()
 
 	def request(self, method, *path, **params):
-		# TODO api key
 		if method == 'GET':
 			args = {"params": params}
 		else:
 			args = {"data": params}
 		url = "/".join([self.base_url, "api/v1"] + list(path))
-		resp = session.request(method, url, **args)
+		resp = session.request(method, url, auth=(self.email, self.api_key), **args)
 		resp.raise_for_status()
 		return resp.json()
 
@@ -99,7 +99,7 @@ def main(conf_file, hour=-1):
 			Z | D | A | N, expanding to all hours of Zeta, Dawn Guard, Alpha Flight, Night Watch respectively.
 	"""
 	config = parse_config(conf_file)
-	client = Client(config["url"], config["api_key"])
+	client = Client(config["url"], config["email"], config["api_key"])
 	user_map = config["members"]
 	groups = config["groups"]
 	if hour >= 0:
