@@ -195,6 +195,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	document.getElementById("video-info-title").addEventListener("input", (_event) => {
 		validateVideoTitle();
+		document.getElementById("video-info-title-abbreviated").innerText =
+			videoInfo.title_prefix + document.getElementById("video-info-title").value;
 	});
 	document.getElementById("video-info-description").addEventListener("input", (_event) => {
 		validateVideoDescription();
@@ -457,6 +459,8 @@ async function initializeVideoInfo() {
 		titleElem.value = videoInfo.description;
 	}
 	validateVideoTitle();
+	document.getElementById("video-info-title-abbreviated").innerText =
+		videoInfo.title_prefix + titleElem.value;
 
 	const descriptionElem = document.getElementById("video-info-description");
 	if (videoInfo.video_description) {
@@ -1408,7 +1412,7 @@ function rangePlayFromEndHandler(event) {
 function chapterMarkerDefinitionDOM() {
 	const startFieldContainer = document.createElement("div");
 	startFieldContainer.classList.add("range-definition-chapter-marker-start-field");
-	
+
 	const startField = document.createElement("input");
 	startField.type = "text";
 	startField.classList.add("range-definition-chapter-marker-start");
@@ -1439,7 +1443,9 @@ function chapterMarkerDefinitionDOM() {
 
 	playFromStartTime.addEventListener("click", (event) => {
 		const chapterContainer = event.currentTarget.parentElement;
-		const startTimeField = chapterContainer.getElementsByClassName("range-definition-chapter-marker-start")[0];
+		const startTimeField = chapterContainer.getElementsByClassName(
+			"range-definition-chapter-marker-start"
+		)[0];
 		const newVideoTime = videoPlayerTimeFromVideoHumanTime(startTimeField.value);
 		if (newVideoTime !== null) {
 			const videoElement = document.getElementById("video");
