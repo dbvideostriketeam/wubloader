@@ -292,13 +292,15 @@ def update_row(ident, editor=None):
 
 	# Include headers and footers
 	new_row['video_title'] = app.title_header + new_row['video_title']
-	# NOTE: If you change this format, you need to also change the regex that matches this
-	# on the GET handler.
-	description_lines = [DESCRIPTION_PLAYLISTS_HEADER]
-	description_lines += [
-		"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
-		for playlist in playlists
-	]
+	description_lines = []
+	if playlists:
+		# NOTE: If you change this format, you need to also change the regex that matches this
+		# on the GET handler.
+		description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
+		description_lines += [
+			"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
+			for playlist in playlists
+		]
 	description_lines.append(app.description_footer)
 	new_row['video_description'] += "\n".join(description_lines)
 
