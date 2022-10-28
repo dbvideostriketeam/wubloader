@@ -273,6 +273,12 @@ a,
 	margin-left: 30px;
 }
 
+.range-definition-chapter-marker-start-field {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
 .range-definition-chapter-marker-start {
 	width: 100px;
 	text-align: right;

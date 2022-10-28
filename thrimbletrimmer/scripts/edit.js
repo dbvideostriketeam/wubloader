@@ -1407,6 +1407,8 @@ function rangePlayFromEndHandler(event) {
 
 function chapterMarkerDefinitionDOM() {
 	const startFieldContainer = document.createElement("div");
+	startFieldContainer.classList.add("range-definition-chapter-marker-start-field");
+	
 	const startField = document.createElement("input");
 	startField.type = "text";
 	startField.classList.add("range-definition-chapter-marker-start");
@@ -1428,8 +1430,26 @@ function chapterMarkerDefinitionDOM() {
 		startTimeField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
 	});
 
+	const playFromStartTime = document.createElement("img");
+	playFromStartTime.src = "images/play_to.png";
+	playFromStartTime.alt = "Play from chapter start time";
+	playFromStartTime.title = playFromStartTime.alt;
+	playFromStartTime.classList.add("range-definition-chapter-marker-play-start");
+	playFromStartTime.classList.add("click");
+
+	playFromStartTime.addEventListener("click", (event) => {
+		const chapterContainer = event.currentTarget.parentElement;
+		const startTimeField = chapterContainer.getElementsByClassName("range-definition-chapter-marker-start")[0];
+		const newVideoTime = videoPlayerTimeFromVideoHumanTime(startTimeField.value);
+		if (newVideoTime !== null) {
+			const videoElement = document.getElementById("video");
+			videoElement.currentTime = newVideoTime;
+		}
+	});
+
 	startFieldContainer.appendChild(startField);
 	startFieldContainer.appendChild(setStartTime);
+	startFieldContainer.appendChild(playFromStartTime);
 
 	const descriptionField = document.createElement("input");
 	descriptionField.type = "text";
