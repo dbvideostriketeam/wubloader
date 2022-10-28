@@ -293,7 +293,7 @@ a,
 	margin: 5px 0;
 	display: grid;
 	grid-template-columns: 200px 1fr;
-	grid-template-rows: minmax(min-content, max-content) 1.25em minmax(4em, max-content) 1.25em;
+	grid-template-rows: minmax(min-content, max-content) 1.25em 3em minmax(4em, max-content) 1.25em;
 	gap: 2px;
 }
 
@@ -321,6 +321,22 @@ a,
 
 #video-info-title {
 	flex-grow: 1;
+}
+
+#video-info-title-abbreviated {
+	width: 200px;
+	overflow: hidden;
+	font-size: 1em;
+	line-height: 1em;
+	height: 2em;
+	text-overflow: ellipsis;
+
+	/* For some reason, all this Webkit-specific-looking stuff is required to show ellipses
+	   on wrapped text.
+	   It also somehow works on Firefox. */
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
 }
 
 .video-info-thumbnail-mode-options {

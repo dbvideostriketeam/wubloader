@@ -547,7 +547,9 @@ function renderChatMessage(chatMessageData) {
 
 		if (replyParentMessageText.startsWith("\u0001ACTION")) {
 			replyContainer.classList.add("chat-replay-message-text-action");
-			const substringEnd = (replyParentMessageText.endsWith("\u0001") ? replyParentMessageText.length - 1 : replyParentMessageText);
+			const substringEnd = replyParentMessageText.endsWith("\u0001")
+				? replyParentMessageText.length - 1
+				: replyParentMessageText;
 			replyParentMessageText = replyParentMessageText.substring(7, substringEnd);
 		}
 
@@ -607,7 +609,7 @@ function renderSystemMessages(chatMessageData) {
 	secondMessageContainer.appendChild(senderNameElement);
 	secondMessageContainer.appendChild(messageTextElement);
 	messages.push(secondMessageContainer);
-	
+
 	return messages;
 }
 
@@ -651,7 +653,9 @@ function addChatMessageTextToElement(chatMessageData, messageTextElement) {
 	let chatMessageText = chatMessage.params[1];
 	if (chatMessageText.startsWith("\u0001ACTION")) {
 		messageTextElement.classList.add("chat-replay-message-text-action");
-		const substringEnd = (chatMessageText.endsWith("\u0001") ? chatMessageText.length - 1 : chatMessageText.length);
+		const substringEnd = chatMessageText.endsWith("\u0001")
+			? chatMessageText.length - 1
+			: chatMessageText.length;
 		chatMessageText = chatMessageText.substring(7, substringEnd);
 	}
 
