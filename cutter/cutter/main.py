@@ -656,8 +656,8 @@ class TranscodeChecker(object):
 		result = query(self.conn, """
 			SELECT id, video_id
 			FROM events
-			WHERE state = 'TRANSCODING'
-		""")
+			WHERE state = 'TRANSCODING' AND upload_backend = %(location)s
+		""", self.location)
 		return {id: video_id for id, video_id in result.fetchall()}
 
 	def check_ids(self, ids):
@@ -791,11 +791,11 @@ class VideoUpdater(object):
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
-			WHERE state = 'MODIFIED' AND error IS NULL
+			WHERE state = 'MODIFIED' AND error IS NULL AND upload_backend = %(location)s
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in UPDATE_JOB_PARAMS)
 		)
-		return list(query(self.conn, built_query))
+		return list(query(self.conn, built_query, location=self.location))
 
 	def mark_done(self, job, updates):
 		"""We don't want to set to DONE if the video has been modified *again* since
