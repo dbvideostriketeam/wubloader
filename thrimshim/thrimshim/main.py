@@ -301,7 +301,7 @@ def update_row(ident, editor=None):
 			"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
 			for playlist in playlists
 		]
-		description lines.append('') # blank line before footer
+		description_lines.append('') # blank line before footer
 	description_lines.append(app.description_footer)
 	new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
