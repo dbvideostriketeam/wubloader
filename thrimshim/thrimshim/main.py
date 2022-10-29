@@ -200,7 +200,7 @@ def get_row(ident):
 		and response["video_title"].startswith(app.title_header)
 	):
 		response["video_title"] = response["video_title"][len(app.title_header):]
-	description_playlist_re = re.compile(r"({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\n)+)?{}$".format(
+	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\n)+\n)?{}$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
 		re.escape(app.description_footer),
 	))
@@ -301,8 +301,9 @@ def update_row(ident, editor=None):
 			"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
 			for playlist in playlists
 		]
+		description lines.append('') # blank line before footer
 	description_lines.append(app.description_footer)
-	new_row['video_description'] += "\n".join(description_lines)
+	new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
 	# Validate youtube requirements on title and description
 	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
@@ -514,7 +515,7 @@ def main(
 	app.default_channel = default_channel
 	app.bustime_start = bustime_start
 	app.title_header = "" if title_header is None else "{} - ".format(title_header)
-	app.description_footer = "" if description_footer is None else "\n\n{}".format(description_footer)
+	app.description_footer = "" if description_footer is None else description_footer
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
 
