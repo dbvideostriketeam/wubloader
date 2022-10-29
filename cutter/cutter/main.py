@@ -656,8 +656,8 @@ class TranscodeChecker(object):
 		result = query(self.conn, """
 			SELECT id, video_id
 			FROM events
-			WHERE state = 'TRANSCODING' AND upload_backend = %(location)s
-		""", self.location)
+			WHERE state = 'TRANSCODING' AND upload_location = %(location)s
+		""", location=self.location)
 		return {id: video_id for id, video_id in result.fetchall()}
 
 	def check_ids(self, ids):
@@ -791,7 +791,7 @@ class VideoUpdater(object):
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
-			WHERE state = 'MODIFIED' AND error IS NULL AND upload_backend = %(location)s
+			WHERE state = 'MODIFIED' AND error IS NULL AND upload_location = %(location)s
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(key) for key in UPDATE_JOB_PARAMS)
 		)
