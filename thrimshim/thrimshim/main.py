@@ -200,7 +200,7 @@ def get_row(ident):
 		and response["video_title"].startswith(app.title_header)
 	):
 		response["video_title"] = response["video_title"][len(app.title_header):]
-	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\n)+\n)?{}$".format(
+	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?{}$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
 		re.escape(app.description_footer),
 	))
