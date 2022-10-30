@@ -16,29 +16,32 @@
     // Note: "latest" is not recommended in production, as you can't be sure what version
     // you're actually running, and must manually re-pull to get an updated copy.
     image_tag: "latest",
-
     // image tag for postgres, which changes less
     // postgres shouldn't be restarted unless absolutely necessary
     database_tag: "bb05e37",
 
     // For each component, whether to deploy that component.
     enabled: {
-      downloader: true,
-      restreamer: true,
-      backfiller: true,
-      cutter: false,
-      sheetsync: false,
-      thrimshim: true,
-      segment_coverage: true,
-      playlist_manager: false,
-      nginx: true,
-      postgres: false,
+      downloader: true,         # fetching segments from twitch.tv
+      restreamer: true,         # serving segments for other wubloader nodes and/or thrimbletrimmer editor interface
+      backfiller: true,         # fetching segments from other wubloader nodes
+      cutter: false,            # performing cuts based on editor input
+      sheetsync: false,         # syncing google sheets and postgres
+      thrimshim: true,          # storing editor inputs in postgres
+      segment_coverage: true,   # generating segment coverage graphs
+      playlist_manager: false,  # auto-populating youtube playlists
+      nginx: true,              # proxying between the various pods
+      postgres: false,          # source-of-truth database
+      chat_archiver: false,     # records twitch chat messages and merges them with records from other nodes
     },
 
     // Twitch channels to capture.
     // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
     // and warned about if they're not currently streaming.
     channels: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
+
+    // clean version of the channel list without importance markers
+    clean_channels:: [std.split(c, '!')[0] for c in $.channels],
 
     // Stream qualities to capture
     qualities: ["source", "480p"],
@@ -107,14 +110,14 @@
     sheetsync_creds: import "./google_creds.json",
 
     // The URL to write to the sheet for edit links, with {} being replaced by the id
-    edit_url: "https://wubloader.example.com/thrimbletrimmer?id={}",
+    edit_url: "https://wubloader.example.com/thrimbletrimmer/edit.html?id={}",
 
     // The spreadsheet ID and worksheet names for sheetsync to act on
     sheet_id: "your_id_here",
     worksheets: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1,7)],
     
     // Fixed tags to add to all videos
-    video_tags: ["DB13", "DB2019", "2019", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
+    video_tags: ["DB15", "DB2021", "2021", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
     
     // A map from youtube playlist IDs to a list of tags.
     // Playlist manager will populate each playlist with all videos which have all those tags.
@@ -148,8 +151,7 @@
 
     // Config for cutter upload locations. See cutter docs for full detail.
     cutter_config: {
-      desertbus: {type: "youtube"},
-      unlisted: {type: "youtube", hidden: true, no_transcode_check: true},
+      desertbus: {type: "youtube", cut_type: "fast"},
     },
     default_location: "desertbus",
 
@@ -160,6 +162,17 @@
     // The footer to put at the bottom of descriptions, in its own paragraph
     description_footer: "Uploaded by the Desert Bus Video Strike Team",
 
+    // Chat archiver settings
+    chat_archiver:: {
+      // We currently only support archiving chat from one channel at once.
+      // This defaults to the first channel in the $.channels list.
+      channel: $.clean_channels[0],
+      // Twitch user to log in as and path to oauth token
+      user: "dbvideostriketeam",
+      token: importstr "./chat_token.txt",
+      // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
+      backfill: true,
+    },
   },
 
   // A few derived values.
@@ -330,7 +343,7 @@
     // It can talk to the database to discover other wubloader nodes, or be given a static list.
     if $.config.enabled.backfiller then $.deployment("backfiller", args=$.clean_channels + [
       "--base-dir", "/mnt",
-      "--qualities", std.join(",", $.config.qualities),
+      "--qualities", std.join(",", $.config.qualities + (if $.config.chat_archiver.backfill then ["chat"] else [])),
       "--static-nodes", std.join(",", $.config.peers),
       "--backdoor-port", std.toString($.config.backdoor_port),
       "--node-database", $.db_connect,
@@ -377,7 +390,7 @@
       "/etc/creds/cutter_creds.json"
     ],
     volumes=[
-      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
     ],
     volumeMounts=[
       {mountPath: "/etc/creds", name: "wubloader-creds"},
@@ -395,7 +408,7 @@
       $.config.sheet_id
     ] + $.config.worksheets,
     volumes=[
-      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
     ],
     volumeMounts=[
       {mountPath: "/etc/creds", name: "wubloader-creds"},
@@ -413,7 +426,21 @@
         for playlist in std.objectFields($.playlists)
     ],
     volumes=[
-      {name:"wubloader-creds", secret: {secretname: "wubloader-creds"}}
+      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
+    ],
+    volumeMounts=[
+      {mountPath: "/etc/creds", name: "wubloader-creds"},
+    ]),
+    // chat_archiver records twitch chat messages and merges them with records from other nodes.
+    if $.config.enabled.chat_archiver then $.deployment("chat-archiver",
+    args=[
+      $.config.chat_archiver.channel,
+      $.config.chat_archiver.user,
+      "/etc/creds/chat_token.txt",
+      "--name", $.config.localhost
+    ],
+    volumes=[
+      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
     ],
     volumeMounts=[
       {mountPath: "/etc/creds", name: "wubloader-creds"},
@@ -452,8 +479,9 @@
     if $.config.enabled.playlist_manager then $.service("playlist-manager"),
     if $.config.enabled.sheetsync then $.service("sheetsync"),
     if $.config.enabled.postgres then $.service("postgres"),
+    if $.config.enabled.chat_archiver then $.service("chat-archiver"),
     // Secret for cutter_creds_file and sheetsync_creds_file
-    {
+    if $.config.enabled.cutter || $.config.enabled.sheetsync || $.config.enabled.playlist_manager || $.config.enabled.chat_archiver then {
       apiVersion: "v1",
       kind: "Secret",
       metadata: {
@@ -463,7 +491,8 @@
       type: "Opaque",
       stringData: {
         "cutter_creds.json": std.toString($.config.cutter_creds),
-        "sheetsync_creds.json": std.toString($.config.sheetsync_creds)
+        "sheetsync_creds.json": std.toString($.config.sheetsync_creds),
+        "chat_token.txt": $.config.chat_archiver.token
       },
     },
     // PV manifest for segments
