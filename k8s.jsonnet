@@ -574,6 +574,7 @@
                 metric_rule("cutter"),
                 metric_rule("sheetsync"),
                 metric_rule("playlist_manager"),
+                metric_rule("chat_archiver"),
                 // Map /segments and /thrimbletrimmer to the static content nginx
                 rule("nginx", "/segments", "Prefix"),
                 rule("nginx", "/thrimbletrimmer", "Prefix"),
