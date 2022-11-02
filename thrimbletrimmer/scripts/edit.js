@@ -126,10 +126,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			updateWaveform();
 			waveformImage.classList.remove("hidden");
 		}
-
-		await getChatLog(globalStartTimeString, globalEndTimeString);
-		document.getElementById("chat-replay").innerHTML = "";
-		renderChatLog();
 	});
 
 	await loadVideoInfo();
@@ -1492,7 +1488,7 @@ function addChapterMarkerHandler(event) {
 	event.currentTarget.previousElementSibling.appendChild(newChapterMarker);
 }
 
-function rangeDataUpdated() {
+async function rangeDataUpdated() {
 	const clipBar = document.getElementById("clip-bar");
 	clipBar.innerHTML = "";
 
@@ -1546,6 +1542,10 @@ function rangeDataUpdated() {
 		}
 	}
 	updateDownloadLink();
+
+	await getChatLog(globalStartTimeString, globalEndTimeString);
+		document.getElementById("chat-replay").innerHTML = "";
+		renderChatLog();
 }
 
 function setCurrentRangeStartToVideoTime() {
