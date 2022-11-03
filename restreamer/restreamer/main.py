@@ -155,6 +155,20 @@ def list_segments(channel, quality, hour):
 	return json.dumps(list_segment_files(path, include_tombstones=tombstones))
 
 
+@app.route('/thumbnail-templates')
+def list_thumbnail_templates():
+	"""List available thumbnail templates. Returns a JSON list of names."""
+	path = os.path.join(
+		app.static_folder,
+		"thumbnail_templates",
+	)
+	return json.dumps([
+		os.path.splitext(filename)[0]
+		for filename in listdir(path)
+		if os.path.splitext(filename)[1] == ".png"
+	])
+
+
 def time_range_for_quality(channel, quality):
 	"""Returns earliest and latest times that the given quality has segments for
 	(up to hour resolution), or 404 if it doesn't exist / is empty."""

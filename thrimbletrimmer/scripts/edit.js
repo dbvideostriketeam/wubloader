@@ -253,13 +253,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		});
 
 	const thumbnailTemplateSelection = document.getElementById("video-info-thumbnail-template");
-	const thumbnailTemplatesListResponse = await fetch("/files/thumbnail_templates");
+	const thumbnailTemplatesListResponse = await fetch("/thumbnail-templates");
 	if (thumbnailTemplatesListResponse.ok) {
 		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
-		for (const templateFileName of thumbnailTemplatesList) {
+		for (const templateName of thumbnailTemplatesList) {
 			const templateOption = document.createElement("option");
-			// Thumbnails are fetched from restreamer with file extensions. The thumbnail name is the file name.
-			const templateName = templateFileName.substring(0, templateFileName.lastIndexOf("."));
 			templateOption.innerText = templateName;
 			templateOption.value = templateName;
 			if (templateName === videoInfo.thumbnail_template) {
