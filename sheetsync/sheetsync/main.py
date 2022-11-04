@@ -370,6 +370,10 @@ class SheetSync(object):
 			tags = self.column_parsers['tags'](tags)
 			if not tags:
 				continue
+			# special-case for the "all everything" list,
+			# we don't want "no tags" to mean "all videos" so we need a sentinel value.
+			if tags == ["<all>"]:
+				tags = []
 			playlist_id = playlist_id.strip()
 			if len(playlist_id) != 34 or not playlist_id.startswith('PL'):
 				continue
