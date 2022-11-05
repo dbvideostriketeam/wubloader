@@ -84,9 +84,12 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	coming_online = []
 	display_names = {}
 	supervisor = None
+	found_any = False
 	for user_id, (_, hours) in schedule.items():
 		prev = get_role_at_hour(hours, hour - 1)
 		now = get_role_at_hour(hours, hour)
+		if now != "" or prev != "":
+			found_any = True
 		if now == "Supervisor":
 			supervisor = user_id
 			if user_id not in display_names:
@@ -98,6 +101,10 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 				coming_online.append((now, user_id))
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
+
+	if not found_any:
+		logging.info("Not posting schedule for hour {} as no-one is or was scheduled".format(hour))
+
 	# sort by role
 	going_offline.sort()
 	coming_online.sort()
@@ -180,7 +187,7 @@ def parse_schedule(user_ids, schedule_file):
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False):
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False):
 	"""
 	config:
 		url: the base url of the instance
@@ -212,10 +219,12 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		return
 	while True:
 		hour = (time.time() - start_time) // 3600
-		if not no_groups:
-			update_groups(client, group_ids, schedule, hour)
-		if stream:
-			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions)
+		if not no_initial:
+			if not no_groups:
+				update_groups(client, group_ids, schedule, hour)
+			if stream:
+				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions)
+		no_initial = False
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()
 		if remaining > 0:
