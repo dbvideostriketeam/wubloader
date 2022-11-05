@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 
 import gevent.pool
 import argh
+import yaml
 
 import requests
 session = requests.Session()
@@ -196,7 +197,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	authentication is an object {email, api_key}
 	"""
 	with open(conf_file) as f:
-		config = json.load(f)
+		config = yaml.safe_load(f)
 	client = Client(config["url"], config["api_user"]["email"], config["api_user"]["api_key"])
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
