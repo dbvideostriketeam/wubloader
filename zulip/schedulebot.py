@@ -104,6 +104,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 
 	if not found_any:
 		logging.info("Not posting schedule for hour {} as no-one is or was scheduled".format(hour))
+		return
 
 	# sort by role
 	going_offline.sort()
@@ -111,11 +112,12 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	logging.info(f"Going offline: {going_offline}")
 	logging.info(f"Coming online: {coming_online}")
 
-	start_time_pst = datetime.utcfromtimestamp(start_time) - timedelta(hours=8)
-	current_time = (start_time_pst + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
-	hour_pst = current_time.hour
+	start_time = datetime.utcfromtimestamp(start_time)
+	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
+	current_time_pst = current_time - timedelta(hours=8)
+	hour_pst = current_time_pst.hour
 	shift = hour_pst // 6
-	shift = ["night-watch", "zeta", "dawn-guard", "alpha-flight"][shift]
+	shift = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
 	shift_hour = hour_pst % 6 + 1
 
 	def render_name(user_id, mention=True):
@@ -164,6 +166,10 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		"---",
 	]
 
+	if stream == "DEBUG":
+		print("\n".join(lines))
+		return
+
 	send_client.request("POST", "messages",
 		type="stream",
 		to=stream,
@@ -177,7 +183,7 @@ def parse_schedule(user_ids, schedule_file):
 	with open(schedule_file) as f:
 		for row in csv.reader(f):
 			name = row[0]
-			if name in ["", "Chat Member", "[Counts]", "Hour of the Run"] or name.startswith("-"):
+			if name in ["", "Chat Member", "Hour of the Run"] or name.startswith("-") or name.startswith("["):
 				continue
 			if name not in user_ids:
 				logging.warning(f"No user id known for user {name}")
@@ -218,7 +224,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions)
 		return
 	while True:
-		hour = (time.time() - start_time) // 3600
+		hour = int((time.time() - start_time) / 3600)
 		if not no_initial:
 			if not no_groups:
 				update_groups(client, group_ids, schedule, hour)
