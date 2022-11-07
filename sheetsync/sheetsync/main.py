@@ -364,9 +364,13 @@ class SheetSync(object):
 		overwriting the entire playlists table"""
 		playlists = []
 		for row in rows:
-			if len(row) != 5:
+			if len(row) == 5:
+				tags, _, name, playlist_id, show_in_description = row
+			elif len(row) == 4:
+				tags, _, name, playlist_id = row
+				show_in_description = ""
+			else:
 				continue
-			tags, _, name, playlist_id, show_in_description = row
 			tags = self.column_parsers['tags'](tags)
 			if not tags:
 				continue
