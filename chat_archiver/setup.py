@@ -11,5 +11,6 @@ setup(
 		'argh',
 		'gevent',
 		'monotonic',
+		'requests', # for emote fetching
 	],
 )
