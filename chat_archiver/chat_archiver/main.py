@@ -380,7 +380,7 @@ def merge_batch_files(path, batch_time):
 			os.remove(batch_file)
 
 
-def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None, merge_interval=60):
+def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None, merge_interval=60, metrics_port=8008):
 	with open(oauth_token_path) as f:
 		oauth_token = f.read()
 	# To ensure uniqueness even if multiple instances are running on the same host,
@@ -398,6 +398,8 @@ def main(channel, nick, oauth_token_path, base_dir='/mnt', name=None, merge_inte
 		interval=merge_interval,
 		stopping=stopping
 	)
+
+	prom.start_http_server(metrics_port)
 
 	logging.info("Starting")
 	for index in count():
