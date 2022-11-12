@@ -214,7 +214,7 @@ class Archiver(object):
 			self.logger.debug("Got message: {}".format(data))
 			messages_received.labels(channel=self.channel, client=id(self), command=message.command).inc()
 
-			if data.get('tags', {}).get('emotes', '') != '':
+			if data['tags'] and data['tags'].get('emotes', '') != '':
 				emote_specs = data['tags']['emotes'].split('/')
 				emote_ids = [emote_spec.split(':')[0] for emote_spec in emote_specs]
 				ensure_emotes(self.base_dir, emote_ids)
