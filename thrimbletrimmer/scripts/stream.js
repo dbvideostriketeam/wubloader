@@ -240,7 +240,7 @@ async function getStreamChatLog() {
 }
 
 function initialChatRender() {
-	if (!globalChatData) {
+	if (!globalChatData || globalChatData.length === 0) {
 		return;
 	}
 	const videoPlayer = document.getElementById("video");
@@ -261,7 +261,7 @@ function initialChatRender() {
 }
 
 function updateChatRender() {
-	if (!globalChatData) {
+	if (!globalChatData || globalChatData === 0) {
 		return;
 	}
 	if (!hasSegmentList()) {
