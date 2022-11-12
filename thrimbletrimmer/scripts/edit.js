@@ -1542,8 +1542,8 @@ async function rangeDataUpdated() {
 	updateDownloadLink();
 
 	await getChatLog(globalStartTimeString, globalEndTimeString);
-		document.getElementById("chat-replay").innerHTML = "";
-		renderChatLog();
+	document.getElementById("chat-replay").innerHTML = "";
+	renderChatLog();
 }
 
 function setCurrentRangeStartToVideoTime() {
