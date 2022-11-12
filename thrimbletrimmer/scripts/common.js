@@ -604,7 +604,11 @@ function renderSystemMessages(chatMessageData) {
 	const systemTextElement = document.createElement("div");
 	systemTextElement.classList.add("chat-replay-message-text");
 	systemTextElement.classList.add("chat-replay-message-system");
-	systemTextElement.appendChild(document.createTextNode(chatMessage.tags["system-msg"]));
+	let systemMsg = chatMessage.tags["system-msg"];
+	if (!systemMsg && chatMessage.tags["msg-id"] === "announcement") {
+		systemMsg = "Announcement";
+	}
+	systemTextElement.appendChild(document.createTextNode(systemMsg));
 
 	const firstMessageContainer = createMessageContainer(chatMessageData, true);
 	firstMessageContainer.appendChild(sendTimeElement);
