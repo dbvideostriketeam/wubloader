@@ -430,7 +430,7 @@ class Cutter(object):
 					range = job.video_ranges[0]
 					cut = full_cut_segments(
 						job.segment_ranges[0], range.start, range.end,
-						upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
+						encode_args, stream=upload_backend.encoding_streamable,
 					)
 
 				for chunk in cut:
