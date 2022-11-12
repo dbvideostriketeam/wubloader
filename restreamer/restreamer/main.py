@@ -458,8 +458,11 @@ def get_chat_messages(channel):
 		start, end: Required. The start and end times.
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 	"""
-	start = dateutil.parse_utc_only(request.args['start'])
-	end = dateutil.parse_utc_only(request.args['end'])
+	try:
+		start = dateutil.parse_utc_only(request.args['start'])
+		end = dateutil.parse_utc_only(request.args['end'])
+	except ValueError:
+		return "Invalid timestamp", 400
 	if end <= start:
 		return "End must be after start", 400
 
