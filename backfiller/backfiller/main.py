@@ -94,7 +94,7 @@ def list_local_segments(base_dir, channel, quality, hour, include_tombstones=Fal
 	restreamer.list_segments but this avoids HTTP/JSON overheads."""
 
 	path = os.path.join(base_dir, channel, quality, hour)
-	return list_segment_files(path, include_tombstones=include_tombstones)
+	return list_segment_files(path, include_tombstones=include_tombstones, include_chat=True)
 
 
 def list_remote_hours(node, channel, quality, timeout=TIMEOUT):

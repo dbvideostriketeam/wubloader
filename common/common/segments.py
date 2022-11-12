@@ -224,11 +224,12 @@ def hour_paths_for_range(hours_path, start, end):
 		current += datetime.timedelta(hours=1)
 
 
-def list_segment_files(hour_path, include_tombstones=False):
+def list_segment_files(hour_path, include_tombstones=False, include_chat=False):
 	"""Return a list of filenames of segments in the given hour path.
 	Segment names are not parsed or verified, but only non-hidden .ts files
 	without an associated tombstone file will be listed.
 	If include_tombstones = true, the tombstone files themselves will also be listed.
+	If include_chat = true, .json files will also be listed.
 	"""
 	try:
 		names = os.listdir(hour_path)
@@ -252,7 +253,7 @@ def list_segment_files(hour_path, include_tombstones=False):
 	segments = [
 		name + ext for name, ext in splits
 		if name not in tombstones
-			and ext == ".ts"
+			and (ext == ".ts" or (include_chat and ext == ".json"))
 			and not name.startswith('.')
 	]
 
