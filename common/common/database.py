@@ -17,10 +17,12 @@ from psycogreen.gevent import patch_psycopg
 COMPOSITE_TYPES = [
 	"video_range",
 	"video_transition",
+	"public.box",
 ]
 COLUMN_CASTS = {
 	"video_ranges": "video_range[]",
 	"video_transitions": "video_transition[]",
+	"video_crop": "public.box",
 }
 
 def get_column_placeholder(column):
