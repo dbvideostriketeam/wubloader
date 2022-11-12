@@ -7,6 +7,10 @@ const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
+	globalLoadChatWorker.onmessage = (event) => {
+		updateChatDataFromWorkerResponse(event.data);
+		renderChatLog();
+	};
 
 	const timeUpdateForm = document.getElementById("stream-time-settings");
 	timeUpdateForm.addEventListener("submit", async (event) => {
@@ -338,20 +342,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("google-auth-sign-out").addEventListener("click", (_event) => {
 		googleSignOut();
 	});
-
-	await loadEditorChatData();
-	if (globalChatData) {
-		if (hasSegmentList()) {
-			renderChatLog();
-		} else {
-			const videoPlayer = document.getElementById("video");
-			const initialChatLogRender = (_event) => {
-				renderChatLog();
-				videoPlayer.removeEventListener("loadedmetadata", initialChatLogRender);
-			};
-			videoPlayer.addEventListener("loadedmetadata", initialChatLogRender);
-		}
-	}
 });
 
 async function loadVideoInfo() {
@@ -1540,10 +1530,6 @@ async function rangeDataUpdated() {
 		}
 	}
 	updateDownloadLink();
-
-	await getChatLog(globalStartTimeString, globalEndTimeString);
-	document.getElementById("chat-replay").innerHTML = "";
-	renderChatLog();
 }
 
 function setCurrentRangeStartToVideoTime() {
@@ -1589,13 +1575,6 @@ function changeEnableChaptersHandler() {
 			addChapterMarkerElem.classList.add("hidden");
 		}
 	}
-}
-
-async function loadEditorChatData() {
-	if (!globalStartTimeString || !globalEndTimeString) {
-		return [];
-	}
-	return getChatLog(globalStartTimeString, globalEndTimeString);
 }
 
 function renderChatLog() {

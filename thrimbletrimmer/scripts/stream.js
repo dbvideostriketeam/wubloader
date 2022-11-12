@@ -8,6 +8,10 @@ var globalChatPreviousRenderTime = null;
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
+	globalLoadChatWorker.onmessage = (event) => {
+		updateChatDataFromWorkerResponse(event.data);
+		initialChatRender();
+	};
 
 	const queryParams = new URLSearchParams(window.location.search);
 	if (queryParams.has("start")) {
@@ -124,8 +128,6 @@ async function updateTimeSettings() {
 		queryParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
 	}
 	document.getElementById("stream-time-link").href = `?${queryParts.join("&")}`;
-
-	await getStreamChatLog();
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
@@ -230,15 +232,6 @@ function convertEnteredTimes() {
 	}
 }
 
-async function getStreamChatLog() {
-	const startTime = getStartTime();
-	const endTime = getEndTime();
-	if (!startTime || !endTime) {
-		return;
-	}
-	return getChatLog(wubloaderTimeFromDateTime(startTime), wubloaderTimeFromDateTime(endTime));
-}
-
 function initialChatRender() {
 	if (!globalChatData || globalChatData.length === 0) {
 		return;
@@ -261,7 +254,7 @@ function initialChatRender() {
 }
 
 function updateChatRender() {
-	if (!globalChatData || globalChatData === 0) {
+	if (!globalChatData || globalChatData.length === 0) {
 		return;
 	}
 	if (!hasSegmentList()) {

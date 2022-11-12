@@ -12,6 +12,7 @@ var globalSetUpControls = false;
 var globalSeekTimer = null;
 
 var globalChatData = [];
+var globalLoadChatWorker = null;
 
 Hls.DefaultConfig.maxBufferHole = 600;
 
@@ -25,6 +26,8 @@ function commonPageSetup() {
 			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work."
 		);
 	}
+
+	globalLoadChatWorker = new Worker("scripts/chat-load.js");
 }
 
 function addError(errorText) {
@@ -50,6 +53,7 @@ async function loadVideoPlayer(playlistURL) {
 
 	videoElement.addEventListener("loadedmetadata", (_event) => {
 		setUpVideoControls();
+		sendChatLogLoadData();
 	});
 
 	videoElement.addEventListener("loadeddata", (_event) => {
@@ -419,12 +423,12 @@ function dateTimeFromVideoPlayerTime(videoPlayerTime) {
 }
 
 function videoPlayerTimeFromDateTime(dateTime) {
-	const segmentList = getSegmentList();
-	for (const segment of segmentList) {
-		const segmentStart = DateTime.fromISO(segment.rawProgramDateTime);
-		const segmentEnd = segmentStart.plus({ seconds: segment.duration });
+	const segmentTimes = getSegmentTimes();
+	for (const segmentData of segmentTimes) {
+		const segmentStart = segmentData.rawStart;
+		const segmentEnd = segmentData.rawEnd;
 		if (dateTime >= segmentStart && dateTime <= segmentEnd) {
-			return segment.start + dateTime.diff(segmentStart).as("seconds");
+			return segmentData.playerStart + dateTime.diff(segmentStart).as("seconds");
 		}
 	}
 	return null;
@@ -478,6 +482,17 @@ function hasSegmentList() {
 	return false;
 }
 
+function getSegmentTimes() {
+	const segmentList = getSegmentList();
+	const segmentTimes = [];
+	for (const segment of segmentList) {
+		const segmentStart = DateTime.fromISO(segment.rawProgramDateTime);
+		const segmentEnd = segmentStart.plus({ seconds: segment.duration });
+		segmentTimes.push({ rawStart: segmentStart, rawEnd: segmentEnd, playerStart: segment.start });
+	}
+	return segmentTimes;
+}
+
 function downloadFrame() {
 	const videoElement = document.getElementById("video");
 	const dateTime = dateTimeFromVideoPlayerTime(videoElement.currentTime);
@@ -500,27 +515,32 @@ function triggerDownload(url, filename) {
 	document.body.removeChild(link);
 }
 
-async function getChatLog(startWubloaderTime, endWubloaderTime) {
-	globalChatData = [];
-	const url = `/${globalStreamName}/chat.json?start=${startWubloaderTime}&end=${endWubloaderTime}`;
-	const response = await fetch(url);
-	if (!response.ok) {
+function sendChatLogLoadData() {
+	const startTime = globalStartTimeString;
+	const endTime = globalEndTimeString;
+	if (!startTime || !endTime) {
 		return;
 	}
-	const chatLogData = await response.json();
-	for (const chatLine of chatLogData) {
-		if (
-			chatLine.command !== "PRIVMSG" &&
-			chatLine.command !== "CLEARMSG" &&
-			chatLine.command !== "CLEARCHAT" &&
-			chatLine.command !== "USERNOTICE"
-		) {
-			continue;
-		}
-		const when = DateTime.fromSeconds(chatLine.time);
-		// Here, we just push each line successively into the list. This assumes data is provided to us in chronological order.
-		globalChatData.push({ message: chatLine, when: when });
+	const segmentMetadata = getSegmentTimes();
+	for (const segmentData of segmentMetadata) {
+		segmentData.rawStart = segmentData.rawStart.toMillis();
+		segmentData.rawEnd = segmentData.rawEnd.toMillis();
 	}
+
+	const message = {
+		stream: globalStreamName,
+		start: startTime,
+		end: endTime,
+		segmentMetadata: segmentMetadata,
+	};
+	globalLoadChatWorker.postMessage(message);
+}
+
+function updateChatDataFromWorkerResponse(chatData) {
+	for (const chatLine of chatData) {
+		chatLine.when = DateTime.fromMillis(chatLine.when);
+	}
+	globalChatData = chatData;
 }
 
 function renderChatMessage(chatMessageData) {
@@ -531,7 +551,7 @@ function renderChatMessage(chatMessageData) {
 
 	const sendTimeElement = document.createElement("div");
 	sendTimeElement.classList.add("chat-replay-message-time");
-	sendTimeElement.innerText = videoHumanTimeFromDateTime(chatMessageData.when);
+	sendTimeElement.innerText = chatMessageData.displayWhen;
 
 	const senderNameElement = createMessageSenderElement(chatMessageData);
 
@@ -579,7 +599,7 @@ function renderSystemMessages(chatMessageData) {
 
 	const sendTimeElement = document.createElement("div");
 	sendTimeElement.classList.add("chat-replay-message-time");
-	sendTimeElement.innerText = videoHumanTimeFromDateTime(chatMessageData.when);
+	sendTimeElement.innerText = chatMessageData.displayWhen;
 
 	const systemTextElement = document.createElement("div");
 	systemTextElement.classList.add("chat-replay-message-text");
