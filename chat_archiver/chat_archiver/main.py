@@ -322,6 +322,10 @@ def ensure_emotes(base_dir, emote_ids):
 					logging.debug("Skipping checking emote with key {} - already running".format(key))
 
 
+def wait_for_ensure_emotes():
+	gevent.wait(_EMOTES_RUNNING.values())
+
+
 def write_batch(path, batch_time, messages, size_histogram=None):
 	"""Batches are named PATH/YYYY-MM-DDTHH/MM:SS-HASH.json"""
 	output = (format_batch(messages) + '\n').encode('utf-8')
