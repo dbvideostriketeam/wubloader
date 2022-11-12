@@ -138,7 +138,7 @@ def list_hours(channel, quality):
 @request_stats
 @has_path_args
 def list_segments(channel, quality, hour):
-	"""Returns a JSON list of segment files for a given channel, quality and
+	"""Returns a JSON list of segment or chat files for a given channel, quality and
 	hour. Returns empty list on non-existant channels, etc.
 	If tombstones = "true", will also list tombstone files for that hour.
 	"""
@@ -152,7 +152,7 @@ def list_segments(channel, quality, hour):
 	if tombstones not in ["true", "false"]:
 		return "tombstones must be one of: true, false", 400
 	tombstones = (tombstones == "true")
-	return json.dumps(list_segment_files(path, include_tombstones=tombstones))
+	return json.dumps(list_segment_files(path, include_tombstones=tombstones, include_chat=True))
 
 
 @app.route('/thumbnail-templates')
