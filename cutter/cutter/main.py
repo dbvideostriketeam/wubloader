@@ -63,6 +63,7 @@ CUT_JOB_PARAMS = [
 	"public",
 	"video_ranges",
 	"video_transitions",
+	"video_crop",
 	"video_title",
 	"video_description",
 	"video_tags",
@@ -400,12 +401,20 @@ class Cutter(object):
 					self.logger.debug("No encoding settings, using fast cut")
 					if any(transition is not None for transition in job.video_transitions):
 						raise ValueError("Fast cuts do not support complex transitions")
+					if job.video_crop is not None:
+						raise ValueError("Fast cuts do not support cropping")
 					cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
 				else:
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
 						upload_backend.encoding_settings,
 					))
+					encode_args = upload_backend.encoding_settings
+					if job.video_crop:
+						x, y, w, h = job.video_crop
+						encode_args = [
+							"-vf", "crop={}:{}:{}:{}".format(w, h, x, y)
+						] + encode_args
 					if len(job.video_ranges) > 1:
 						raise ValueError("Full cuts do not support multiple ranges")
 					range = job.video_ranges[0]

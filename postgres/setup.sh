@@ -64,6 +64,13 @@ CREATE TYPE thumbnail_mode as ENUM (
 	'CUSTOM'
 );
 
+CREATE TYPE box as (
+	x INTEGER,
+	y INTEGER,
+	w INTEGER,
+	h INTEGER
+)
+
 CREATE TABLE events (
 	id UUID PRIMARY KEY,
 
@@ -88,6 +95,7 @@ CREATE TABLE events (
 		(video_ranges IS NULL AND video_transitions IS NULL)
 		OR CARDINALITY(video_ranges) = CARDINALITY(video_transitions) + 1
 	),
+	video_crop box,
 	video_title TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_title IS NOT NULL),
 	video_description TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_description IS NOT NULL),
 	video_tags TEXT[] CHECK (state IN ('UNEDITED', 'DONE') OR video_tags IS NOT NULL),
