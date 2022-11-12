@@ -151,6 +151,12 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 		uri = '{}/segments/{}/{}/{}/{}'.format(node, channel, quality, hour, missing_segment)
 		resp = requests.get(uri, stream=True, timeout=timeout, metric_name='get_remote_segment')
 
+		# When backfilling chat batches, it's common for the batch to have been replaced
+		# by the time we try to pull it, as it has been merged into another batch.
+		# We don't consider this an error.
+		if resp.status_code == 404 and quality == 'chat':
+			logger.info("Ignoring missing chat batch at url: {}".format(uri))
+			return
 		resp.raise_for_status()
 
 		with open(temp_path, 'wb') as f:
