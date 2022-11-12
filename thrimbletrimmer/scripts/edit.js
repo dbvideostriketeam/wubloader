@@ -1593,9 +1593,16 @@ function renderChatLog() {
 				removedMessageElem.classList.add("chat-replay-message-cleared");
 			}
 		} else if (chatMessage.message.command === "CLEARCHAT") {
-			const removedSender = chatMessage.message.params[1];
-			for (const childNode of document.getElementById("chat-replay").children) {
-				if (childNode.dataset.sender === removedSender) {
+			if (chatMessage.message.params.length > 1) {
+				const removedSender = chatMessage.message.params[1];
+				for (const childNode of document.getElementById("chat-replay").children) {
+					if (childNode.dataset.sender === removedSender) {
+						childNode.classList.add("chat-replay-message-cleared");
+					}
+				}
+			} else {
+				// Without a target parameter, the CLEARCHAT clears all messages in the entire chat.
+				for (const childNode of document.getElementById("chat-replay").children) {
 					childNode.classList.add("chat-replay-message-cleared");
 				}
 			}

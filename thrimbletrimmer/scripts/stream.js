@@ -320,9 +320,15 @@ function handleChatMessage(chatReplayContainer, chatMessage) {
 			targetMessageElem.classList.add("chat-replay-message-cleared");
 		}
 	} else if (chatMessage.message.command === "CLEARCHAT") {
-		const removedSender = chatMessage.message.params[1];
-		for (const messageElem of chatReplayContainer.children) {
-			if (messageElem.dataset.sender === removedSender) {
+		if (chatMessage.message.params.length > 1) {
+			const removedSender = chatMessage.message.params[1];
+			for (const messageElem of chatReplayContainer.children) {
+				if (messageElem.dataset.sender === removedSender) {
+					messageElem.classList.add("chat-replay-message-cleared");
+				}
+			}
+		} else {
+			for (const messageElem of chatReplayContainer.children) {
 				messageElem.classList.add("chat-replay-message-cleared");
 			}
 		}
