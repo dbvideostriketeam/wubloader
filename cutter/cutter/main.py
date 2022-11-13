@@ -768,7 +768,14 @@ class VideoUpdater(object):
 						else:
 							self.logger.exception("Failed to update video")
 
-						self.mark_errored(job.id, "Failed to update video: {}".format(ex))
+						# Explicitly retryable errors aren't problems
+						if isinstance(ex, UploadError) and ex.retryable:
+							self.logger.warning("Retryable error when updating video", exc_info=True)
+							# By giving up without marking as done or errored, another cutter should get it.
+							# Or we'll get it next loop.
+						else:
+							self.mark_errored(job.id, "Failed to update video: {}".format(ex))
+
 						continue
 
 					marked = self.mark_done(job, updates)

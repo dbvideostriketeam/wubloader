@@ -254,6 +254,8 @@ class Youtube(UploadBackend):
 			},
 			metric_name='update_video',
 		)
+		if resp.status_code == 409:
+			raise UploadError("Multiple updates to same video, got 409: {}".format(resp.text), retryable=True)
 		resp.raise_for_status()
 
 	def set_thumbnail(self, video_id, thumbnail):
