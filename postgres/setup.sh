@@ -120,10 +120,10 @@ CREATE TABLE events (
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
 	error TEXT,
 	video_id TEXT,
-	video_link TEXT CHECK (state != 'DONE' OR video_link IS NOT NULL),
+	video_link TEXT CHECK ((NOT (state IN ('DONE', 'MODIFIED'))) OR video_link IS NOT NULL),
 	editor TEXT,
 	edit_time TIMESTAMP CHECK (state = 'UNEDITED' OR editor IS NOT NULL),
-	upload_time TIMESTAMP CHECK (state != 'DONE' OR upload_time IS NOT NULL),
+	upload_time TIMESTAMP CHECK ((NOT (state IN ('DONE', 'MODIFIED'))) OR upload_time IS NOT NULL),
 	last_modified TIMESTAMP CHECK (state != 'MODIFIED' OR last_modified IS NOT NULL)
 );
 
