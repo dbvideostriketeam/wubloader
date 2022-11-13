@@ -911,19 +911,23 @@ async function sendVideoData(newState, overrideChanges) {
 				loadPromiseResolve = resolve;
 			});
 			fileReader.addEventListener("loadend", (event) => {
-				loadPromiseResolve(event.target);
+				loadPromiseResolve();
 			});
-			fileReader.readAsArrayBuffer(fileHandle);
-			const fileLoadData = await loadPromise;
+			fileReader.readAsDataURL(fileHandle);
+			await loadPromise;
+			const fileLoadData = fileReader.result;
 			if (fileLoadData.error) {
 				submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
 				submissionResponseElem.classList.value = ["submission-response-error"];
 				return;
 			}
-			const fileData = fileLoadData.result;
-			const fileBytes = new Uint8Array(fileData);
-			const fileBinaryString = String.fromCharCode(...fileBytes);
-			thumbnailImage = btoa(fileBinaryString);
+			if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
+				submissionResponseElem.innerHTML =
+					"An error occurred converting the uploaded image to base64.";
+				submissionResponseElem.classList.value = ["submission-response-error"];
+				return;
+			}
+			thumbnailImage = fileLoadData.substring(22);
 		}
 	}
 
