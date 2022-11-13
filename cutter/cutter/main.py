@@ -507,7 +507,10 @@ class Cutter(object):
 					).inc()
 					set_row(
 						state='MODIFIED',
+						upload_time=datetime.datetime.utcnow(),
 						last_modified=datetime.datetime.utcnow(),
+						video_id=video_id,
+						video_link=video_link,
 						error="Error setting thumbnail: {}".format(ex),
 					)
 					return
