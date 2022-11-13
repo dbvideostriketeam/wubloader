@@ -201,29 +201,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("video-info-description").addEventListener("input", (_event) => {
 		validateVideoDescription();
 	});
-	document.getElementById("video-info-thumbnail-mode").addEventListener("change", () => {
-		const newValue = document.getElementById("video-info-thumbnail-mode").value;
-		const unhideIDs = [];
-
-		if (newValue === "BARE") {
-			unhideIDs.push("video-info-thumbnail-time-options");
-		} else if (newValue === "TEMPLATE") {
-			unhideIDs.push("video-info-thumbnail-template-options");
-			unhideIDs.push("video-info-thumbnail-time-options");
-			unhideIDs.push("video-info-thumbnail-template-preview");
-		} else if (newValue === "CUSTOM") {
-			unhideIDs.push("video-info-thumbnail-custom-options");
-		}
-
-		for (const optionElement of document.getElementsByClassName(
-			"video-info-thumbnail-mode-options"
-		)) {
-			optionElement.classList.add("hidden");
-		}
-		for (elemID of unhideIDs) {
-			document.getElementById(elemID).classList.remove("hidden");
-		}
-	});
+	document
+		.getElementById("video-info-thumbnail-mode")
+		.addEventListener("change", updateThumbnailInputState);
 	document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
 		const field = document.getElementById("video-info-thumbnail-time");
 		const videoPlayer = document.getElementById("video");
@@ -273,6 +253,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		addError("Failed to load thumbnail templates list");
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
+	updateThumbnailInputState();
 	if (videoInfo.thumbnail_time) {
 		document.getElementById("video").addEventListener("loadedmetadata", (_event) => {
 			document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
@@ -654,6 +635,30 @@ async function googleSignOut() {
 		const signOutElem = document.getElementById("google-auth-sign-out");
 		signInElem.classList.remove("hidden");
 		signOutElem.classList.add("hidden");
+	}
+}
+
+function updateThumbnailInputState() {
+	const newValue = document.getElementById("video-info-thumbnail-mode").value;
+	const unhideIDs = [];
+
+	if (newValue === "BARE") {
+		unhideIDs.push("video-info-thumbnail-time-options");
+	} else if (newValue === "TEMPLATE") {
+		unhideIDs.push("video-info-thumbnail-template-options");
+		unhideIDs.push("video-info-thumbnail-time-options");
+		unhideIDs.push("video-info-thumbnail-template-preview");
+	} else if (newValue === "CUSTOM") {
+		unhideIDs.push("video-info-thumbnail-custom-options");
+	}
+
+	for (const optionElement of document.getElementsByClassName(
+		"video-info-thumbnail-mode-options"
+	)) {
+		optionElement.classList.add("hidden");
+	}
+	for (elemID of unhideIDs) {
+		document.getElementById(elemID).classList.remove("hidden");
 	}
 }
 
