@@ -189,7 +189,16 @@ def parse_schedule(user_ids, schedule_file):
 				logging.warning(f"No user id known for user {name}")
 				continue
 			user_id = user_ids[name]
-			schedule[user_id] = name, row[1:]
+			if user_id in schedule:
+				logging.warning(f"Multiple rows for user {name}, merging")
+				_, old_hours = schedule[user_id]
+				merged = [
+					old or new
+					for old, new in zip(old_hours, row[1:])
+				]
+				schedule[user_id] = name, merged
+			else:
+				schedule[user_id] = name, row[1:]
 	return schedule
 
 
