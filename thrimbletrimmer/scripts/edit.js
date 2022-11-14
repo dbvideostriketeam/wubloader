@@ -151,14 +151,16 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 
 	const addRangeIcon = document.getElementById("add-range-definition");
-	addRangeIcon.addEventListener("click", (_event) => {
-		addRangeDefinition();
-	});
-	addRangeIcon.addEventListener("keypress", (event) => {
-		if (event.key === "Enter") {
+	if (videoInfo.state !== "DONE") {
+		addRangeIcon.addEventListener("click", (_event) => {
 			addRangeDefinition();
-		}
-	});
+		});
+		addRangeIcon.addEventListener("keypress", (event) => {
+			if (event.key === "Enter") {
+				addRangeDefinition();
+			}
+		});
+	}
 
 	const enableChaptersElem = document.getElementById("enable-chapter-markers");
 	enableChaptersElem.addEventListener("change", (_event) => {
@@ -494,6 +496,16 @@ async function initializeVideoInfo() {
 		saveButton.classList.add("hidden");
 		const submitChangesButton = document.getElementById("submit-changes-button");
 		submitChangesButton.classList.remove("hidden");
+
+		document.getElementById("add-range-definition").classList.add("hidden");
+		const startTimes = document.getElementsByClassName("range-definition-start");
+		const endTimes = document.getElementsByClassName("range-definition-end");
+		for (const timeField of startTimes) {
+			timeField.disabled = true;
+		}
+		for (const timeField of endTimes) {
+			timeField.disabled = true;
+		}
 	}
 
 	if (modifiedAdvancedOptions) {
