@@ -9,12 +9,24 @@ def generate_master(playlists):
 	Little validation or encoding is done - please try to keep the names valid
 	without escaping.
 	"""
+	# Canned bandwidth estimates based on the quality name,
+	# these may be entirely wrong but should be good enough.
+	# "source" and other unlisted names map to 1080p.
+	BANDWIDTHS = {
+		"1080p": 6846146,
+		"720p": 2373000,
+		"480p": 1427999,
+		"360p": 630000,
+		"160p": 230000,
+	}
+
 	lines = ["#EXTM3U"]
 	for name, url in playlists.items():
+		bandwidth = BANDWIDTHS.get(name, BANDWIDTHS["1080p"])
 		lines += [
 			# We name each variant with a VIDEO rendition with no url
 			'#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="{name}",NAME="{name}",AUTOSELECT=YES,DEFAULT=YES'.format(name=name),
-			'#EXT-X-STREAM-INF:VIDEO="{name}",NAME="{name}"'.format(name=name),
+			'#EXT-X-STREAM-INF:VIDEO="{name}",NAME="{name},BANDWIDTH={bandwidth}"'.format(name=name, bandwidth=bandwidth),
 			url,
 		]
 	return "\n".join(lines) + '\n'
