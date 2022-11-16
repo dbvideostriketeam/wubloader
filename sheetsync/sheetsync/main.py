@@ -218,8 +218,8 @@ class SheetSync(object):
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(col) for col in
 				{ "id", "state", "error", "public" }
-				| self.input_columns
-				| self.output_columns
+				| set(self.input_columns)
+				| set(self.output_columns)
 			),
 		)
 		result = query(self.conn, built_query)
