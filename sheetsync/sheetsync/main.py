@@ -213,7 +213,16 @@ class SheetSync(object):
 
 	def get_events(self):
 		"""Return the entire events table as a map {id: event namedtuple}"""
-		result = query(self.conn, "SELECT * FROM events")
+		built_query = sql.SQL("""
+			SELECT {} FROM EVENTS
+		""").format(
+			sql.SQL(", ").join(sql.Identifier(col) for col in
+				{ "id", "state", "error", "public" }
+				| self.input_columns
+				| self.output_columns
+			),
+		)
+		result = query(self.conn, built_query)
 		by_id = {}
 		counts = defaultdict(lambda: 0)
 		for row in result.fetchall():
