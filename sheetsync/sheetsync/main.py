@@ -217,7 +217,7 @@ class SheetSync(object):
 			SELECT {} FROM EVENTS
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(col) for col in
-				{ "id", "state", "error", "public" }
+				{ "id", "state", "error", "public", "poster_moment", "sheet_name", "category" }
 				| set(self.input_columns)
 				| set(self.output_columns)
 			),
