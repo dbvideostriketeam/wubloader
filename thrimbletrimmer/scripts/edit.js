@@ -765,7 +765,7 @@ async function sendVideoData(newState, overrideChanges) {
 	window.addEventListener("beforeunload", handleLeavePageWhilePending);
 
 	const rangesData = [];
-	const chaptersData = [];
+	let chaptersData = [];
 	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
 	let rangeStartInFinalVideo = 0;
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
@@ -804,6 +804,7 @@ async function sendVideoData(newState, overrideChanges) {
 		});
 
 		if (chaptersEnabled && rangeStartSubmit && rangeEndSubmit) {
+			const rangeChapters = [];
 			for (const chapterContainer of rangeContainer.getElementsByClassName(
 				"range-definition-chapter-markers"
 			)[0].children) {
@@ -831,10 +832,13 @@ async function sendVideoData(newState, overrideChanges) {
 				const chapterStartTime = rangeStartInFinalVideo + startFieldTime - rangeStartPlayer;
 				const chapterData = {
 					start: chapterStartTime,
+					videoStart: startFieldTime,
 					description: descField.value,
 				};
-				chaptersData.push(chapterData);
+				rangeChapters.push(chapterData);
 			}
+			rangeChapters.sort((a, b) => a.videoStart - b.videoStart);
+			chaptersData = chaptersData.concat(rangeChapters);
 		} else {
 			const enableChaptersElem = document.getElementById("enable-chapter-markers");
 			if (
@@ -871,11 +875,6 @@ async function sendVideoData(newState, overrideChanges) {
 		}
 		let lastChapterStart = 0;
 		for (let chapterIndex = 1; chapterIndex < chaptersData.length; chapterIndex++) {
-			if (chaptersData[chapterIndex].start < lastChapterStart) {
-				submissionResponseElem.innerText = "Chapters are out of order";
-				submissionResponseElem.classList.value = ["submission-response-error"];
-				return;
-			}
 			if (edited && chaptersData[chapterIndex].start - lastChapterStart < 10) {
 				submissionResponseElem.innerText = "Chapters must be at least 10 seconds apart";
 				submissionResponseElem.classList.value = ["submission-response-error"];
