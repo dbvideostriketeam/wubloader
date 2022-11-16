@@ -67,6 +67,7 @@ document.addEventListener("keypress", (event) => {
 			videoElement.currentTime -= 10;
 			break;
 		case "k":
+		case "K":
 		case " ":
 			if (videoElement.paused) {
 				videoElement.play();
@@ -88,9 +89,11 @@ document.addEventListener("keypress", (event) => {
 			videoElement.muted = !videoElement.muted;
 			break;
 		case ",":
+		case "<":
 			videoElement.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
 			break;
 		case ".":
+		case ">":
 			videoElement.currentTime += 1 / VIDEO_FRAMES_PER_SECOND;
 			break;
 		case "=":
