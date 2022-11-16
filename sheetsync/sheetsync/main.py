@@ -25,6 +25,11 @@ sheets_synced = prom.Counter(
 	'Number of successful sheet syncs',
 )
 
+sheet_sync_duration = prom.Histogram(
+	'sheet_sync_duration',
+	'Time taken to complete a sheet sync',
+)
+
 sync_errors = prom.Counter(
 	'sync_errors',
 	'Number of errors syncing sheets',
@@ -155,6 +160,7 @@ class SheetSync(object):
 		while not self.stop.is_set():
 
 			try:
+				sync_start = monotonic()
 				# Since the full dataset is small, the cost of round tripping to the database to check
 				# each row is more expensive than the cost of just grabbing the entire table
 				# and comparing locally.
@@ -171,7 +177,6 @@ class SheetSync(object):
 					playlist_worksheet = None
 
 				sync_count += 1
-				sync_start = monotonic()
 
 				for worksheet in worksheets:
 					rows = self.sheets.get_rows(self.sheet_id, worksheet)
@@ -203,6 +208,7 @@ class SheetSync(object):
 			else:
 				logging.info("Successful sync of worksheets: {}".format(", ".join(worksheets)))
 				sheets_synced.inc()
+				sheet_sync_duration.observe(monotonic() - sync_start)
 				self.wait(sync_start, self.RETRY_INTERVAL)
 
 	def get_events(self):
