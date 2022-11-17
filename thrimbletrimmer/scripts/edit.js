@@ -242,6 +242,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	const thumbnailTemplatesListResponse = await fetch("/thumbnail-templates");
 	if (thumbnailTemplatesListResponse.ok) {
 		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
+		thumbnailTemplatesList.sort();
 		for (const templateName of thumbnailTemplatesList) {
 			const templateOption = document.createElement("option");
 			templateOption.innerText = templateName;
