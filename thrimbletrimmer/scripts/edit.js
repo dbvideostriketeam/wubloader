@@ -599,7 +599,6 @@ async function initializeVideoInfo() {
 			const rangeStartField =
 				rangeDefinitionsContainer.getElementsByClassName("range-definition-start")[0];
 			rangeStartField.value = videoHumanTimeFromWubloaderTime(globalStartTimeString);
-			rangeStartField.dataset.oldTime = rangeStartField.value;
 			if (globalEndTimeString) {
 				const rangeEndField =
 					rangeDefinitionsContainer.getElementsByClassName("range-definition-end")[0];
@@ -1519,35 +1518,6 @@ async function rangeDataUpdated() {
 			marker.style.width = `${widthPercentage}%`;
 			marker.style.left = `${rangeStartPercentage}%`;
 			clipBar.appendChild(marker);
-		}
-
-		let oldRangeStart = rangeStartField.dataset.oldTime;
-		let oldRangeEnd = rangeEndField.dataset.oldTime;
-		if (oldRangeStart) {
-			oldRangeStart = videoPlayerTimeFromVideoHumanTime(oldRangeStart);
-		} else {
-			oldRangeStart = null;
-		}
-		if (oldRangeEnd) {
-			oldRangeEnd = videoPlayerTimeFromVideoHumanTime(oldRnageEnd);
-		} else {
-			oldRangeEnd = null;
-		}
-		if (rangeStart === null) {
-			delete rangeStartField.dataset.oldTime;
-		} else if (oldRangeStart === null) {
-			rangeStartField.dataset.oldTime = rangeStartField.value;
-		} else {
-			const startOffset = rangeStart - oldRangeStart;
-			for (const chapterStartField of rangeDefinition.getElementsByClassName(
-				"range-definition-chapter-marker-start"
-			)) {
-				const chapterStart = videoPlayerTimeFromVideoHumanTime(chapterStartField.value);
-				if (chapterStart !== null) {
-					chapterStartField.value = videoHumanTimeFromVideoPlayerTime(chapterStart + startOffset);
-				}
-			}
-			rangeStartField.dataset.oldTime = rangeStartField.value;
 		}
 	}
 	updateDownloadLink();
