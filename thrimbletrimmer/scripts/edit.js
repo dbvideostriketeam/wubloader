@@ -1,9 +1,17 @@
 var googleUser = null;
 var videoInfo;
 var currentRange = 1;
+let globalPageState = 0;
 
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
 const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
+
+const PAGE_STATE = {
+	CLEAN: 0,
+	DIRTY: 1,
+	SUBMITTING: 2,
+	CONFIRMING: 3,
+};
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
@@ -11,6 +19,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		updateChatDataFromWorkerResponse(event.data);
 		renderChatLog();
 	};
+	window.addEventListener("beforeunload", handleLeavePage);
 
 	const timeUpdateForm = document.getElementById("stream-time-settings");
 	timeUpdateForm.addEventListener("submit", async (event) => {
@@ -51,7 +60,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		newDuration += segmentList[segmentList.length - 1].duration;
 
 		// Abort for ranges that exceed new times
-		for (const rangeContainer of document.getElementById("range-definitions").children) {
+		const rangeDefinitionsElements = document.getElementById("range-definitions").children;
+		for (const rangeContainer of rangeDefinitionsElements) {
 			const rangeStartField = rangeContainer.getElementsByClassName("range-definition-start")[0];
 			const rangeEndField = rangeContainer.getElementsByClassName("range-definition-end")[0];
 			const rangeStart = videoPlayerTimeFromVideoHumanTime(rangeStartField.value);
@@ -68,7 +78,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 
 		const rangesData = [];
-		const rangeDefinitionsElements = document.getElementById("range-definitions").children;
 		for (const rangeContainer of rangeDefinitionsElements) {
 			const rangeStartField = rangeContainer.getElementsByClassName("range-definition-start")[0];
 			const rangeEndField = rangeContainer.getElementsByClassName("range-definition-end")[0];
@@ -152,19 +161,22 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	const addRangeIcon = document.getElementById("add-range-definition");
 	if (videoInfo.state !== "DONE") {
-		addRangeIcon.addEventListener("click", (_event) => {
+		addRangeIcon.addEventListener("click", (event) => {
 			addRangeDefinition();
+			handleFieldChange(event);
 		});
 		addRangeIcon.addEventListener("keypress", (event) => {
 			if (event.key === "Enter") {
 				addRangeDefinition();
+				handleFieldChange(event);
 			}
 		});
 	}
 
 	const enableChaptersElem = document.getElementById("enable-chapter-markers");
-	enableChaptersElem.addEventListener("change", (_event) => {
+	enableChaptersElem.addEventListener("change", (event) => {
 		changeEnableChaptersHandler();
+		handleFieldChange(event);
 	});
 
 	for (const rangeStartSet of document.getElementsByClassName("range-definition-set-start")) {
@@ -180,13 +192,15 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
 	}
 	for (const rangeStart of document.getElementsByClassName("range-definition-start")) {
-		rangeStart.addEventListener("change", (_event) => {
+		rangeStart.addEventListener("change", (event) => {
 			rangeDataUpdated();
+			handleFieldChange(event);
 		});
 	}
 	for (const rangeEnd of document.getElementsByClassName("range-definition-end")) {
-		rangeEnd.addEventListener("change", (_event) => {
+		rangeEnd.addEventListener("change", (event) => {
 			rangeDataUpdated();
+			handleFieldChange(event);
 		});
 	}
 	for (const addChapterMarker of document.getElementsByClassName(
@@ -195,17 +209,22 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		addChapterMarker.addEventListener("click", addChapterMarkerHandler);
 	}
 
-	document.getElementById("video-info-title").addEventListener("input", (_event) => {
+	document.getElementById("video-info-title").addEventListener("input", (event) => {
 		validateVideoTitle();
 		document.getElementById("video-info-title-abbreviated").innerText =
 			videoInfo.title_prefix + document.getElementById("video-info-title").value;
+		handleFieldChange(event);
 	});
-	document.getElementById("video-info-description").addEventListener("input", (_event) => {
+	document.getElementById("video-info-description").addEventListener("input", (event) => {
 		validateVideoDescription();
+		handleFieldChange(event);
 	});
 	document
 		.getElementById("video-info-thumbnail-mode")
 		.addEventListener("change", updateThumbnailInputState);
+	document
+		.getElementById("video-info-thumbnail-time")
+		.addEventListener("change", handleFieldChange);
 	document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
 		const field = document.getElementById("video-info-thumbnail-time");
 		const videoPlayer = document.getElementById("video");
@@ -264,6 +283,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			);
 		});
 	}
+	// Ensure that changing values on load doesn't set keep the page dirty.
+	globalPageState = PAGE_STATE.CLEAN;
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
 		submitVideo();
@@ -619,6 +640,9 @@ async function initializeVideoInfo() {
 		const timePercent = (videoElement.currentTime / videoElement.duration) * 100;
 		document.getElementById("waveform-marker").style.left = `${timePercent}%`;
 	});
+
+	// Ensure that changes made to fields during initial load don't affect the state
+	globalPageState = PAGE_STATE.CLEAN;
 }
 
 function updateWaveform() {
@@ -651,7 +675,9 @@ async function googleSignOut() {
 	}
 }
 
-function updateThumbnailInputState() {
+function updateThumbnailInputState(event) {
+	handleFieldChange(event);
+
 	const newValue = document.getElementById("video-info-thumbnail-mode").value;
 	const unhideIDs = [];
 
@@ -723,21 +749,6 @@ function validateVideoDescription() {
 }
 
 async function submitVideo() {
-	const enableChaptersElem = document.getElementById("enable-chapter-markers");
-	const chapterStartFieldList = document.getElementsByClassName("range-definition-chapter-time");
-	if (enableChaptersElem.checked && chapterStartFieldList.length > 0) {
-		const firstRangeStartElem = document.getElementsByClassName("range-definition-start")[0];
-		const firstRangeStart = videoPlayerTimeFromMVideoHumanTime(firstRangeStartElem.value);
-
-		const firstChapterStartField = chapterStartFieldList[0];
-		const firstChapterStart = videoPlayerTimeFromVideoHumanTime(firstChapterStartField.value);
-
-		if (firstRangeStart !== firstChapterStart) {
-			addError("The first chapter marker must be at the beginning of the video");
-			return;
-		}
-	}
-
 	return sendVideoData("EDITED", false);
 }
 
@@ -763,7 +774,6 @@ async function sendVideoData(newState, overrideChanges) {
 	const submissionResponseElem = document.getElementById("submission-response");
 	submissionResponseElem.classList.value = ["submission-response-pending"];
 	submissionResponseElem.innerText = "Submitting video...";
-	window.addEventListener("beforeunload", handleLeavePageWhilePending);
 
 	const rangesData = [];
 	let chaptersData = [];
@@ -994,6 +1004,8 @@ async function sendVideoData(newState, overrideChanges) {
 		editData.override_changes = true;
 	}
 
+	globalPageState = PAGE_STATE.SUBMITTING;
+
 	const submitResponse = await fetch(`/thrimshim/${videoInfo.id}`, {
 		method: "POST",
 		headers: {
@@ -1003,9 +1015,8 @@ async function sendVideoData(newState, overrideChanges) {
 		body: JSON.stringify(editData),
 	});
 
-	window.removeEventListener("beforeunload", handleLeavePageWhilePending);
-
 	if (submitResponse.ok) {
+		globalPageState = PAGE_STATE.CLEAN;
 		submissionResponseElem.classList.value = ["submission-response-success"];
 		if (newState === "EDITED") {
 			submissionResponseElem.innerText = "Submitted edit";
@@ -1029,8 +1040,10 @@ async function sendVideoData(newState, overrideChanges) {
 			submissionResponseElem.innerText = `Submitted state ${newState}`;
 		}
 	} else {
+		globalPageState = PAGE_STATE.DIRTY;
 		submissionResponseElem.classList.value = ["submission-response-error"];
 		if (submitResponse.status === 409) {
+			globalPageState = PAGE_STATE.CONFIRMING;
 			const serverErrorNode = document.createTextNode(await submitResponse.text());
 			const submitButton = document.createElement("button");
 			submitButton.innerText = "Submit Anyway";
@@ -1080,10 +1093,29 @@ function unformatChapterTime(chapterTime) {
 	return hours * 3600 + minutes * 60 + seconds;
 }
 
-function handleLeavePageWhilePending(event) {
+function handleFieldChange(_event) {
+	globalPageState = PAGE_STATE.DIRTY;
+}
+
+function handleLeavePage(event) {
+	if (globalPageState === PAGE_STATE.CLEAN) {
+		return;
+	}
 	event.preventDefault();
-	event.returnValue =
-		"The video submission is still pending. Are you sure you want to exit? You may lose your edits.";
+	switch (globalPageState) {
+		case PAGE_STATE.DIRTY:
+			event.returnValue =
+				"There are unsaved edits. Are you sure you want to exit? You will lose your edits.";
+			break;
+		case PAGE_STATE.SUBMITTING:
+			event.returnValue =
+				"The video is stsill being submitted. Are you sure you want to exit? You may lose your edits.";
+			break;
+		case PAGE_STATE.CONFIRMING:
+			event.returnValue =
+				"There's a confirmation for video submission. Are you sure you want to exit? You will lose your edits.";
+			break;
+	}
 	return event.returnValue;
 }
 
@@ -1288,6 +1320,8 @@ function rangeDefinitionDOM() {
 	rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
 
 	removeRange.addEventListener("click", (event) => {
+		handleFieldChange(event);
+
 		let rangeContainer = event.currentTarget;
 		while (rangeContainer && !rangeContainer.classList.contains("range-definition-removable")) {
 			rangeContainer = rangeContainer.parentElement;
@@ -1495,6 +1529,7 @@ function chapterMarkerDefinitionDOM() {
 function addChapterMarkerHandler(event) {
 	const newChapterMarker = chapterMarkerDefinitionDOM();
 	event.currentTarget.previousElementSibling.appendChild(newChapterMarker);
+	handleFieldChange(event);
 }
 
 async function rangeDataUpdated() {
