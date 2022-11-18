@@ -160,8 +160,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 
 	const addRangeIcon = document.getElementById("add-range-definition");
-	if (videoInfo.state !== "DONE") {
-		addRangeIcon.addEventListener("click", (event) => {
+	if (canEditVideo()) {
+		addRangeIcon.addEventListener("click", (_event) => {
 			addRangeDefinition();
 			handleFieldChange(event);
 		});
@@ -171,6 +171,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				handleFieldChange(event);
 			}
 		});
+	} else {
+		addRangeIcon.classList.add("hidden");
 	}
 
 	const enableChaptersElem = document.getElementById("enable-chapter-markers");
@@ -179,17 +181,19 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		handleFieldChange(event);
 	});
 
-	for (const rangeStartSet of document.getElementsByClassName("range-definition-set-start")) {
-		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
-	}
-	for (const rangeEndSet of document.getElementsByClassName("range-definition-set-end")) {
-		rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
-	}
-	for (const rangeStartPlay of document.getElementsByClassName("range-definition-play-start")) {
-		rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
-	}
-	for (const rangeEndPlay of document.getElementsByClassName("range-definition-play-end")) {
-		rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
+	if (canEditVideo()) {
+		for (const rangeStartSet of document.getElementsByClassName("range-definition-set-start")) {
+			rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
+		}
+		for (const rangeEndSet of document.getElementsByClassName("range-definition-set-end")) {
+			rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
+		}
+		for (const rangeStartPlay of document.getElementsByClassName("range-definition-play-start")) {
+			rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
+		}
+		for (const rangeEndPlay of document.getElementsByClassName("range-definition-play-end")) {
+			rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
+		}
 	}
 	for (const rangeStart of document.getElementsByClassName("range-definition-start")) {
 		rangeStart.addEventListener("change", (event) => {
@@ -203,10 +207,12 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			handleFieldChange(event);
 		});
 	}
-	for (const addChapterMarker of document.getElementsByClassName(
-		"add-range-definition-chapter-marker"
-	)) {
-		addChapterMarker.addEventListener("click", addChapterMarkerHandler);
+	if (canEditMetadata()) {
+		for (const addChapterMarker of document.getElementsByClassName(
+			"add-range-definition-chapter-marker"
+		)) {
+			addChapterMarker.addEventListener("click", addChapterMarkerHandler);
+		}
 	}
 
 	document.getElementById("video-info-title").addEventListener("input", (event) => {
@@ -225,22 +231,28 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document
 		.getElementById("video-info-thumbnail-time")
 		.addEventListener("change", handleFieldChange);
-	document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
-		const field = document.getElementById("video-info-thumbnail-time");
-		const videoPlayer = document.getElementById("video");
-		const videoPlayerTime = videoPlayer.currentTime;
-		field.value = videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
-	});
-	document.getElementById("video-info-thumbnail-time-play").addEventListener("click", (_event) => {
-		const field = document.getElementById("video-info-thumbnail-time");
-		const thumbnailTime = videoPlayerTimeFromVideoHumanTime(field.value);
-		if (thumbnailTime === null) {
-			addError("Couldn't play from thumbnail frame; failed to parse time");
-			return;
-		}
-		const videoPlayer = document.getElementById("video");
-		videoPlayer.currentTime = thumbnailTime;
-	});
+
+	if (canEditMetadata()) {
+		document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
+			const field = document.getElementById("video-info-thumbnail-time");
+			const videoPlayer = document.getElementById("video");
+			const videoPlayerTime = videoPlayer.currentTime;
+			field.value = videoHumanTimeFromVideoPlayerTime(videoPlayerTime);
+		});
+		document
+			.getElementById("video-info-thumbnail-time-play")
+			.addEventListener("click", (_event) => {
+				const field = document.getElementById("video-info-thumbnail-time");
+				const thumbnailTime = videoPlayerTimeFromVideoHumanTime(field.value);
+				if (thumbnailTime === null) {
+					addError("Couldn't play from thumbnail frame; failed to parse time");
+					return;
+				}
+				const videoPlayer = document.getElementById("video");
+				videoPlayer.currentTime = thumbnailTime;
+			});
+	}
+
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
 		.addEventListener("click", (_event) => {
@@ -511,22 +523,44 @@ async function initializeVideoInfo() {
 		uploaderAllowlistBox.value = videoInfo.uploader_whitelist.join(",");
 	}
 
-	if (videoInfo.state === "DONE") {
-		const submitButton = document.getElementById("submit-button");
-		submitButton.classList.add("hidden");
-		const saveButton = document.getElementById("save-button");
-		saveButton.classList.add("hidden");
-		const submitChangesButton = document.getElementById("submit-changes-button");
-		submitChangesButton.classList.remove("hidden");
+	if (!canEditVideo()) {
+		if (canEditMetadata()) {
+			const submitButton = document.getElementById("submit-button");
+			submitButton.classList.add("hidden");
+			const saveButton = document.getElementById("save-button");
+			saveButton.classList.add("hidden");
+			const submitChangesButton = document.getElementById("submit-changes-button");
+			submitChangesButton.classList.remove("hidden");
 
-		document.getElementById("add-range-definition").classList.add("hidden");
-		const startTimes = document.getElementsByClassName("range-definition-start");
-		const endTimes = document.getElementsByClassName("range-definition-end");
-		for (const timeField of startTimes) {
-			timeField.disabled = true;
-		}
-		for (const timeField of endTimes) {
-			timeField.disabled = true;
+			document.getElementById("add-range-definition").classList.add("hidden");
+			const startTimes = document.getElementsByClassName("range-definition-start");
+			const endTimes = document.getElementsByClassName("range-definition-end");
+			for (const timeField of startTimes) {
+				timeField.disabled = true;
+			}
+			for (const timeField of endTimes) {
+				timeField.disabled = true;
+			}
+
+			for (const editIcon of document.getElementsByClassName("range-definition-set-start")) {
+				editIcon.classList.add("hidden");
+			}
+			for (const editIcon of document.getElementsByClassName("range-definition-set-end")) {
+				editIcon.classList.add("hidden");
+			}
+		} else {
+			for (const input of document.getElementsByTagName("input")) {
+				input.disabled = true;
+			}
+			for (const textArea of document.getElementsByTagName("textarea")) {
+				textArea.disabled = true;
+			}
+			for (const button of document.getElementsByTagName("button")) {
+				button.disabled = true;
+			}
+			for (const selectBox of document.getElementsByTagName("select")) {
+				selectBox.disabled = true;
+			}
 		}
 	}
 
@@ -1313,34 +1347,46 @@ function rangeDefinitionDOM() {
 	removeRange.classList.add("range-definition-remove");
 	removeRange.classList.add("click");
 
-	rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
+	if (canEditVideo()) {
+		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
+		rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
+	} else {
+		rangeStartSet.classList.add("hidden");
+		rangeEndSet.classList.add("hidden");
+		rangeStart.disabled = true;
+		rangeEnd.disabled = true;
+	}
+
 	rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
-	rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
 	rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
 
-	removeRange.addEventListener("click", (event) => {
-		handleFieldChange(event);
+	if (canEditVideo()) {
+		removeRange.addEventListener("click", (event) => {
+			handleFieldChange(event);
 
-		let rangeContainer = event.currentTarget;
-		while (rangeContainer && !rangeContainer.classList.contains("range-definition-removable")) {
-			rangeContainer = rangeContainer.parentElement;
-		}
-		if (rangeContainer) {
-			const rangeParent = rangeContainer.parentNode;
-			for (let rangeNum = 0; rangeNum < rangeParent.children.length; rangeNum++) {
-				if (rangeContainer === rangeParent.children[rangeNum]) {
-					if (rangeNum + 1 <= currentRange) {
-						// currentRange is 1-indexed to index into DOM with querySelector
-						currentRange--;
-						break;
+			let rangeContainer = event.currentTarget;
+			while (rangeContainer && !rangeContainer.classList.contains("range-definition-removable")) {
+				rangeContainer = rangeContainer.parentElement;
+			}
+			if (rangeContainer) {
+				const rangeParent = rangeContainer.parentNode;
+				for (let rangeNum = 0; rangeNum < rangeParent.children.length; rangeNum++) {
+					if (rangeContainer === rangeParent.children[rangeNum]) {
+						if (rangeNum + 1 <= currentRange) {
+							// currentRange is 1-indexed to index into DOM with querySelector
+							currentRange--;
+							break;
+						}
 					}
 				}
+				rangeParent.removeChild(rangeContainer);
+				updateCurrentRangeIndicator();
+				rangeDataUpdated();
 			}
-			rangeParent.removeChild(rangeContainer);
-			updateCurrentRangeIndicator();
-			rangeDataUpdated();
-		}
-	});
+		});
+	} else {
+		removeRange.classList.add("hidden");
+	}
 
 	const currentRangeMarker = document.createElement("img");
 	currentRangeMarker.alt = "Range affected by keyboard shortcuts";
@@ -1376,7 +1422,11 @@ function rangeDefinitionDOM() {
 	if (!chaptersEnabled) {
 		rangeAddChapterElem.classList.add("hidden");
 	}
-	rangeAddChapterElem.addEventListener("click", addChapterMarkerHandler);
+	if (canEditMetadata()) {
+		rangeAddChapterElem.addEventListener("click", addChapterMarkerHandler);
+	} else {
+		rangeAddChapterElem.classList.add("hidden");
+	}
 
 	rangeContainer.appendChild(rangeTimesContainer);
 	rangeContainer.appendChild(rangeChaptersContainer);
@@ -1387,6 +1437,9 @@ function rangeDefinitionDOM() {
 
 function getRangeSetClickHandler(startOrEnd) {
 	return (event) => {
+		if (!canEditVideo()) {
+			return;
+		}
 		const setButton = event.currentTarget;
 		const setField = setButton.parentElement.getElementsByClassName(
 			`range-definition-${startOrEnd}`
@@ -1402,7 +1455,10 @@ function getRangeSetClickHandler(startOrEnd) {
 
 function moveToNextRange() {
 	currentRange++;
-	if (currentRange > document.getElementById("range-definitions").children.length) {
+	if (
+		canEditVideo() &&
+		currentRange > document.getElementById("range-definitions").children.length
+	) {
 		addRangeDefinition();
 	}
 	updateCurrentRangeIndicator();
@@ -1484,17 +1540,21 @@ function chapterMarkerDefinitionDOM() {
 	playFromStartTime.classList.add("range-definition-chapter-marker-play-start");
 	playFromStartTime.classList.add("click");
 
-	playFromStartTime.addEventListener("click", (event) => {
-		const chapterContainer = event.currentTarget.parentElement;
-		const startTimeField = chapterContainer.getElementsByClassName(
-			"range-definition-chapter-marker-start"
-		)[0];
-		const newVideoTime = videoPlayerTimeFromVideoHumanTime(startTimeField.value);
-		if (newVideoTime !== null) {
-			const videoElement = document.getElementById("video");
-			videoElement.currentTime = newVideoTime;
-		}
-	});
+	if (canEditMetadata()) {
+		playFromStartTime.addEventListener("click", (event) => {
+			const chapterContainer = event.currentTarget.parentElement;
+			const startTimeField = chapterContainer.getElementsByClassName(
+				"range-definition-chapter-marker-start"
+			)[0];
+			const newVideoTime = videoPlayerTimeFromVideoHumanTime(startTimeField.value);
+			if (newVideoTime !== null) {
+				const videoElement = document.getElementById("video");
+				videoElement.currentTime = newVideoTime;
+			}
+		});
+	} else {
+		playFromStartTime.classList.add("hidden");
+	}
 
 	startFieldContainer.appendChild(startField);
 	startFieldContainer.appendChild(setStartTime);
@@ -1512,10 +1572,14 @@ function chapterMarkerDefinitionDOM() {
 	removeButton.classList.add("range-definition-chapter-marker-remove");
 	removeButton.classList.add("click");
 
-	removeButton.addEventListener("click", (event) => {
-		const thisDefinition = event.currentTarget.parentElement;
-		thisDefinition.parentNode.removeChild(thisDefinition);
-	});
+	if (canEditMetadata()) {
+		removeButton.addEventListener("click", (event) => {
+			const thisDefinition = event.currentTarget.parentElement;
+			thisDefinition.parentNode.removeChild(thisDefinition);
+		});
+	} else {
+		removeButton.classList.add("hidden");
+	}
 
 	const chapterContainer = document.createElement("div");
 	chapterContainer.appendChild(startFieldContainer);
@@ -1526,9 +1590,11 @@ function chapterMarkerDefinitionDOM() {
 }
 
 function addChapterMarkerHandler(event) {
-	const newChapterMarker = chapterMarkerDefinitionDOM();
-	event.currentTarget.previousElementSibling.appendChild(newChapterMarker);
-	handleFieldChange(event);
+	if (canEditMetadata()) {
+		const newChapterMarker = chapterMarkerDefinitionDOM();
+		event.currentTarget.previousElementSibling.appendChild(newChapterMarker);
+		handleFieldChange(event);
+	}
 }
 
 async function rangeDataUpdated() {
@@ -1559,6 +1625,10 @@ async function rangeDataUpdated() {
 }
 
 function setCurrentRangeStartToVideoTime() {
+	if (!canEditVideo()) {
+		return;
+	}
+
 	const rangeStartField = document.querySelector(
 		`#range-definitions > div:nth-child(${currentRange}) .range-definition-start`
 	);
@@ -1568,6 +1638,10 @@ function setCurrentRangeStartToVideoTime() {
 }
 
 function setCurrentRangeEndToVideoTime() {
+	if (!canEditVideo()) {
+		return;
+	}
+
 	const rangeEndField = document.querySelector(
 		`#range-definitions > div:nth-child(${currentRange}) .range-definition-end`
 	);
@@ -1692,4 +1766,14 @@ function wubloaderTimeFromVideoHumanTime(videoHumanTime) {
 		return null;
 	}
 	return wubloaderTimeFromVideoPlayerTime(videoPlayerTime);
+}
+
+function canEditVideo() {
+	return (
+		videoInfo.state === "UNEDITED" || videoInfo.state === "EDITED" || videoInfo.state === "CLAIMED"
+	);
+}
+
+function canEditMetadata() {
+	return canEditVideo() || videoInfo.state === "DONE" || videoInfo.state === "MODIFIED";
 }
