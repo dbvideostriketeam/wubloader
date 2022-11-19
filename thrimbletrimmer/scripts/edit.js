@@ -550,16 +550,24 @@ async function initializeVideoInfo() {
 			}
 		} else {
 			for (const input of document.getElementsByTagName("input")) {
-				input.disabled = true;
+				if (!isNonVideoInput(input)) {
+					input.disabled = true;
+				}
 			}
 			for (const textArea of document.getElementsByTagName("textarea")) {
-				textArea.disabled = true;
+				if (!isNonVideoInput(textArea)) {
+					textArea.disabled = true;
+				}
 			}
 			for (const button of document.getElementsByTagName("button")) {
-				button.disabled = true;
+				if (!isNonVideoInput(button)) {
+					button.disabled = true;
+				}
 			}
 			for (const selectBox of document.getElementsByTagName("select")) {
-				selectBox.disabled = true;
+				if (!isNonVideoInput(selectBox)) {
+					selectBox.disabled = true;
+				}
 			}
 		}
 	}
@@ -1776,4 +1784,8 @@ function canEditVideo() {
 
 function canEditMetadata() {
 	return canEditVideo() || videoInfo.state === "DONE" || videoInfo.state === "MODIFIED";
+}
+
+function isNonVideoInput(element) {
+	return element.id.startsWith("data-correction-force-reset");
 }
