@@ -188,12 +188,12 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		for (const rangeEndSet of document.getElementsByClassName("range-definition-set-end")) {
 			rangeEndSet.addEventListener("click", getRangeSetClickHandler("end"));
 		}
-		for (const rangeStartPlay of document.getElementsByClassName("range-definition-play-start")) {
-			rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
-		}
-		for (const rangeEndPlay of document.getElementsByClassName("range-definition-play-end")) {
-			rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
-		}
+	}
+	for (const rangeStartPlay of document.getElementsByClassName("range-definition-play-start")) {
+		rangeStartPlay.addEventListener("click", rangePlayFromStartHandler);
+	}
+	for (const rangeEndPlay of document.getElementsByClassName("range-definition-play-end")) {
+		rangeEndPlay.addEventListener("click", rangePlayFromEndHandler);
 	}
 	for (const rangeStart of document.getElementsByClassName("range-definition-start")) {
 		rangeStart.addEventListener("change", (event) => {
