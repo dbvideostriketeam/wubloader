@@ -68,18 +68,18 @@ def get_display_name(client, user_id):
 	return client.request("GET", "users", user_id)["user"]["full_name"]
 
 
-def update_groups(client, group_ids, schedule, hour):
+def update_groups(client, group_ids, schedule, hour, last):
 	logging.info("Setting groups for hour {}".format(hour))
 	members = get_membership(client)
 	def run_group(item):
 		group_name, group_id = item
-		new_members = determine_members(schedule, group_name, hour)
+		new_members = set() if hour == last else determine_members(schedule, group_name, hour)
 		assert group_id in members, "group {} doesn't exist".format(group_id)
 		update_members(client, group_id, members[group_id], new_members)
 	gevent.pool.Group().map(run_group, group_ids.items())
 
 
-def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions):
+def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega):
 	going_offline = []
 	coming_online = []
 	display_names = {}
@@ -88,6 +88,8 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	for user_id, (_, hours) in schedule.items():
 		prev = get_role_at_hour(hours, hour - 1)
 		now = get_role_at_hour(hours, hour)
+		if hour == last:
+			now = ""
 		if now != "" or prev != "":
 			found_any = True
 		if now == "Supervisor":
@@ -119,6 +121,13 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	shift = hour_pst // 6
 	shift = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
 	shift_hour = hour_pst % 6 + 1
+
+	if omega >= 0 and hour >= omega:
+		shift = "omega"
+		shift_hour = hour - omega + 1
+	if hour == last:
+		shift = "verified"
+		shift_hour = "7.99"
 
 	def render_name(user_id, mention=True):
 		if no_mentions:
@@ -165,6 +174,10 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		"",
 		"---",
 	]
+	if hour == last:
+		lines += [
+			"**Well done everyone, and thank you for all your hard work :heart:**"
+		]
 
 	if stream == "DEBUG":
 		print("\n".join(lines))
@@ -202,7 +215,7 @@ def parse_schedule(user_ids, schedule_file):
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False):
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, omega=-1, last=-1):
 	"""
 	config:
 		url: the base url of the instance
@@ -228,17 +241,18 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	schedule = parse_schedule(config["members"], config["schedule"])
 	if hour >= 0:
 		if not no_groups:
-			update_groups(client, group_ids, schedule, hour)
+			update_groups(client, group_ids, schedule, hour, last)
 		if stream:
-			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions)
+			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		return
 	while True:
 		hour = int((time.time() - start_time) / 3600)
+		kind = 'normal'
 		if not no_initial:
 			if not no_groups:
-				update_groups(client, group_ids, schedule, hour)
+				update_groups(client, group_ids, schedule, hour, last)
 			if stream:
-				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions)
+				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		no_initial = False
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()
