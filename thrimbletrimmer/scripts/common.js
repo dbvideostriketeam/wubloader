@@ -516,11 +516,13 @@ function triggerDownload(url, filename) {
 }
 
 function sendChatLogLoadData() {
-	const startTime = globalStartTimeString;
-	const endTime = globalEndTimeString;
+	let startTime = getStartTime();
+	let endTime = getEndTime();
 	if (!startTime || !endTime) {
 		return;
 	}
+	startTime = wubloaderTimeFromDateTime(startTime);
+	endTime = wubloaderTimeFromDateTime(endTime);
 	const segmentMetadata = getSegmentTimes();
 	for (const segmentData of segmentMetadata) {
 		segmentData.rawStart = segmentData.rawStart.toMillis();
