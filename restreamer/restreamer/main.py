@@ -17,7 +17,7 @@ from gevent.pywsgi import WSGIServer
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
 from common.images import compose_thumbnail_template
-from common.segments import feed_input, render_segments_waveform, extract_frame, list_segment_files
+from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files
 from common.chat import get_batch_file_range, merge_messages
 
 from . import generate_hls
@@ -285,6 +285,8 @@ def cut(channel, quality):
 				It may extend beyond the requested start and end times by a few seconds.
 			"fast": Very fast but with minor artifacting where the first and last segments join
 				the other segments.
+			"smart": Almost as fast as "fast" but without the artifacting.
+				Currently experimental, but expected to replace "fast".
 			"mpegts": A full cut to a streamable mpegts format. This consumes signifigant server
 				resources, so please use sparingly.
 	"""
@@ -333,6 +335,8 @@ def cut(channel, quality):
 		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'fast':
 		return Response(fast_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
+	elif type == 'smart':
+		return Response(smart_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
 			return "mp4 type has been disabled due to the load it causes", 400
