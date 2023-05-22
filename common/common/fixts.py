@@ -26,11 +26,27 @@ class FixTS():
 	"""
 	PACKET_SIZE = 188
 
+	# We need to pad the end time to the time of the NEXT expected frame, or else
+	# we'll overlap the last frame here with the first frame of the next segment.
+	# We don't know what the correct frame rate should be and trying to determine
+	# it from the PCR times might go wrong if the video data is weird or corrupt
+	# (eg. dropped frames). Instead, we'll just assume it's 30fps and add 33ms.
+	# This should be right the majority of the time, the results will still be mostly
+	# fine even if it's meant to be 60fps, and above all it's consistent and predictable.
+	NOMINAL_PCR_INTERVAL = 0.033
+
 	def __init__(self, start_time):
 		self.start_time = start_time
+		# By definition, the first PCR timestamp will be set to start_time.
+		# So this is always a safe "latest" value to start at, and it means that if
+		# the video is ended with no PCR frames, we default to "same as start time".
 		self.end_time = start_time
+		# once starting PCR is known, contains value to add to each timestamp
 		self.offset = None
+		# buffers fed data until a whole packet can be parsed
 		self.data = b""
+		# buffers packets until first PCR-containing packet
+		self.pending_packets = []
 
 	def feed(self, data):
 		"""Takes more data as a bytestring to add to buffer.
@@ -40,7 +56,32 @@ class FixTS():
 		while len(self.data) >= self.PACKET_SIZE:
 			packet = self.data[:self.PACKET_SIZE]
 			self.data = self.data[self.PACKET_SIZE:]
-			output.append(self._fix_packet(packet))
+
+			try:
+				fixed_packet = self._fix_packet(packet)
+			except OffsetNotReady:
+				# We can't fix this packet yet, so buffer it for now.
+				# Note this will also cause any further packets to "queue up" behind it
+				# (see below).
+				self.pending_packets.append(packet)
+				continue
+
+			if self.pending_packets and self.offset is not None:
+				# Offset has been found and we can process all pending packets.
+				# Note we do this before outputting our new packet to preserve order.
+				for prev_packet in self.pending_packets:
+					output.append(self._fix_packet(prev_packet))
+				self.pending_packets = []
+				output.append(fixed_packet)
+			elif self.pending_packets:
+				# If we have pending packets, we can't output any further packets until after them.
+				# So we add them to the pending queue. This means re-fixing them later but that's cheap.
+				self.pending_packets.append(packet)
+			else:
+				# Normal case, output them as we fix them. This covers both "offset is known"
+				# and "offset isn't known, but no packets so far have needed fixing".
+				output.append(fixed_packet)
+
 		return b''.join(output)
 
 	def end(self):
@@ -49,25 +90,31 @@ class FixTS():
 		"""
 		if len(self.data) > 0:
 			raise ValueError("Stream has a partial packet remaining: {!r}", self.data)
+		if self.pending_packets:
+			raise ValueError("Stream contained PTS packets but no PCR")
 		return self.end_time
 
-	# TODO we should really be only using PCR to calibrate the offset (ie. we want the first PCR
+	# We only use PCR to calibrate the offset (ie. we want the first PCR
 	# to be = start_time, not the first PTS we see which might be the audio stream).
-	# Also we need to pad the end_time to the time of the NEXT expected frame, or else
-	# we'll overlap the last frame here with the first frame of the next segment.
-	# How to determine expected frame? Easiest way is probably average or median difference
-	# between PCRs, with a reasonable fallback.
-	def _convert_time(self, old_time):
-		# If this is the first timestamp we've seen, use it to calibrate offset.
+	# If we encounter a PTS before a PCR, we throw OffsetNotReady which is handled
+	# by feed().
+	def _convert_time(self, old_time, is_pcr=False):
+		# If this is the first PCR we've seen, use it to calibrate offset.
 		if self.offset is None:
-			self.offset = self.start_time - old_time
+			if is_pcr:
+				self.offset = self.start_time - old_time
+			else:
+				raise OffsetNotReady
 		new_time = old_time + self.offset
 		# It's rare but possible that when resetting times to start at 0, the second packet
 		# might start slightly earlier than the first and thus have a negative time.
 		# This isn't encodable in the data format, so just clamp to 0.
 		new_time = max(0, new_time)
-		# keep track of latest new_time as the end time
-		self.end_time = max(self.end_time, new_time)
+		# Keep track of the nominal "end time" based on latest PCR time.
+		# PCR packets *should* be in order but use max just in case.
+		if is_pcr:
+			new_end = new_time + self.NOMINAL_PCR_INTERVAL
+			self.end_time = max(self.end_time, new_end)
 		return new_time
 
 	def _fix_packet(self, packet):
@@ -102,7 +149,6 @@ class FixTS():
 		has_adaptation_field = bool(packet[3] & 0x20)
 		has_payload = bool(packet[3] & 0x10)
 
-		has_pcr = False
 		if has_adaptation_field:
 			field_length = packet[4]
 			payload_index = 5 + field_length
@@ -117,7 +163,7 @@ class FixTS():
 				if has_pcr:
 					check(field_length >= 7, "Adaptation field indicates PCR but is too small")
 					old_time = decode_pcr(packet[6:12])
-					new_time = self._convert_time(old_time)
+					new_time = self._convert_time(old_time, is_pcr=True)
 					encoded = encode_pcr(new_time)
 					packet = packet[:6] + encoded + packet[12:]
 					assert len(packet) == 188
@@ -166,6 +212,10 @@ class FixTS():
 					packet = packet[:pts_index] + encoded + packet[pts_index + 5:]
 					assert len(packet) == 188
 		return packet
+
+
+class OffsetNotReady(Exception):
+	pass
 
 
 def bits(value, start, end):
