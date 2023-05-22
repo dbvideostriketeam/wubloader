@@ -19,6 +19,7 @@ from gevent import subprocess
 
 from .cached_iterator import CachedIterator
 from .stats import timed
+from .fixts import FixTS
 
 
 def unpadded_b64_decode(s):
@@ -456,9 +457,45 @@ def fast_cut_segments(segment_ranges, ranges):
 		yield from fast_cut_range(segments, start, end)
 
 
+class FixTSSequence:
+	"""Manages state for concatenating several videos while fixing all their timestamps.
+	Has the same api as FixTS except instead of end(), we have next(), which  also
+	resets the FixTS to take the next input video."""
+	def __init__(self):
+		self.fixts = FixTS(0)
+
+	def feed(self, data):
+		return self.fixts.feed(data)
+
+	def next(self):
+		# Note that if FixTS was unused (no data given) this is a no-op.
+		# In fact it's theoretically safe to call this function as often as you want
+		# (as long as you're sure you have no partial packets) as the only consequence
+		# is that we use a fixed time before the next timestamp instead of the timing from
+		# the original segments.
+		t = self.fixts.end()
+		self.fixts = FixTS(t)
+
+
+@timed('cut', cut_type='smart', normalize=lambda ret, sr, ranges: range_total(ranges))
+def smart_cut_segments(segment_ranges, ranges):
+	"""
+	As per fast_cut_segments(), except we also do a "fix" pass over the resulting video stream
+	to re-time internal timestamps to avoid discontinuities and make sure the video starts at t=0.
+	"""
+	if len(segment_ranges) != len(ranges):
+		raise ValueError("You need to provide one segment list for each range")
+	fixts = FixTSSequence()
+	for segments, (start, end) in zip(segment_ranges, ranges):
+		yield from fast_cut_range(segments, start, end, fixts=fixts)
+
+
 @timed('cut_range', cut_type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
-def fast_cut_range(segments, start, end):
-	"""Does a fast cut for an individual range of segments"""
+def fast_cut_range(segments, start, end, fixts=None):
+	"""Does a fast cut for an individual range of segments.
+	If a FixTSSequence is given, fixes timestamps to avoid discontinuities
+	between cut segments and passed through segments.
+	"""
 
 	# how far into the first segment to begin (if no hole at start)
 	cut_start = None
@@ -485,12 +522,19 @@ def fast_cut_range(segments, start, end):
 			logging.debug("Skipping discontinuity while cutting")
 			# TODO: If we want to be safe against the possibility of codecs changing,
 			# we should check the streams_info() after each discontinuity.
+
+			# To keep our output clean, we reset our FixTS so the output doesn't contain
+			# the discontinuity. The video just cuts to the next segment.
+			if fixts:
+				fixts.next()
 			continue
 
 		# note first and last might be the same segment.
 		# note a segment will only match if cutting actually needs to be done
 		# (ie. cut_start or cut_end is not 0)
 		if segment in (first, last):
+			if fixts:
+				fixts.next()
 			proc = None
 			try:
 				proc = ffmpeg_cut_segment(
@@ -500,7 +544,7 @@ def fast_cut_range(segments, start, end):
 				)
 				with closing(proc.stdout):
 					for chunk in read_chunks(proc.stdout):
-						yield chunk
+						yield fixts.feed(chunk) if fixts else chunk
 				proc.wait()
 			except Exception as ex:
 				# try to clean up proc, ignoring errors
@@ -516,11 +560,16 @@ def fast_cut_range(segments, start, end):
 					raise Exception(
 						"Error while streaming cut: ffmpeg exited {}".format(proc.returncode)
 					)
+			if fixts:
+				fixts.next()
 		else:
 			# no cutting needed, just serve the file
 			with open(segment.path, 'rb') as f:
 				for chunk in read_chunks(f):
-					yield chunk
+					yield fixts.feed(chunk) if fixts else chunk
+	if fixts:
+		# check for errors and indicate range is finished
+		fixts.next()
 
 
 def feed_input(segments, pipe):
