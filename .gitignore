@@ -1,3 +1,5 @@
 /docker-compose.yml
 /monitoring/prometheus.yml
 .*.uptodate
+*.egg-info
+build
