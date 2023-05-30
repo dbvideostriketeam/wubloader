@@ -41,12 +41,10 @@ class FixTS():
 		# So this is always a safe "latest" value to start at, and it means that if
 		# the video is ended with no PCR frames, we default to "same as start time".
 		self.end_time = start_time
-		# once starting PCR is known, contains value to add to each timestamp
-		self.offset = None
+		# once starting PCR/PTS is known, contains value to add to each timestamp
+		self.offsets = {"pcr": None, "pts": None}
 		# buffers fed data until a whole packet can be parsed
 		self.data = b""
-		# buffers packets until first PCR-containing packet
-		self.pending_packets = []
 
 	def feed(self, data):
 		"""Takes more data as a bytestring to add to buffer.
@@ -56,32 +54,8 @@ class FixTS():
 		while len(self.data) >= self.PACKET_SIZE:
 			packet = self.data[:self.PACKET_SIZE]
 			self.data = self.data[self.PACKET_SIZE:]
-
-			try:
-				fixed_packet = self._fix_packet(packet)
-			except OffsetNotReady:
-				# We can't fix this packet yet, so buffer it for now.
-				# Note this will also cause any further packets to "queue up" behind it
-				# (see below).
-				self.pending_packets.append(packet)
-				continue
-
-			if self.pending_packets and self.offset is not None:
-				# Offset has been found and we can process all pending packets.
-				# Note we do this before outputting our new packet to preserve order.
-				for prev_packet in self.pending_packets:
-					output.append(self._fix_packet(prev_packet))
-				self.pending_packets = []
-				output.append(fixed_packet)
-			elif self.pending_packets:
-				# If we have pending packets, we can't output any further packets until after them.
-				# So we add them to the pending queue. This means re-fixing them later but that's cheap.
-				self.pending_packets.append(packet)
-			else:
-				# Normal case, output them as we fix them. This covers both "offset is known"
-				# and "offset isn't known, but no packets so far have needed fixing".
-				output.append(fixed_packet)
-
+			fixed_packet = self._fix_packet(packet)
+			output.append(fixed_packet)
 		return b''.join(output)
 
 	def end(self):
@@ -90,31 +64,32 @@ class FixTS():
 		"""
 		if len(self.data) > 0:
 			raise ValueError("Stream has a partial packet remaining: {!r}", self.data)
-		if self.pending_packets:
-			raise ValueError("Stream contained PTS packets but no PCR")
 		return self.end_time
 
-	# We only use PCR to calibrate the offset (ie. we want the first PCR
-	# to be = start_time, not the first PTS we see which might be the audio stream).
-	# If we encounter a PTS before a PCR, we throw OffsetNotReady which is handled
-	# by feed().
-	def _convert_time(self, old_time, is_pcr=False):
-		# If this is the first PCR we've seen, use it to calibrate offset.
-		if self.offset is None:
-			if is_pcr:
-				self.offset = self.start_time - old_time
-			else:
-				raise OffsetNotReady
-		new_time = old_time + self.offset
-		# It's rare but possible that when resetting times to start at 0, the second packet
-		# might start slightly earlier than the first and thus have a negative time.
-		# This isn't encodable in the data format, so just clamp to 0.
-		new_time = max(0, new_time)
-		# Keep track of the nominal "end time" based on latest PCR time.
-		# PCR packets *should* be in order but use max just in case.
-		if is_pcr:
-			new_end = new_time + self.NOMINAL_PCR_INTERVAL
-			self.end_time = max(self.end_time, new_end)
+
+	# PCRs (which represent the "time when encoded") can vary greatly between
+	# encoded videos, sometimes with large offsets between the PCR and the PTS.
+	# For example, a video might actually start at t=1, when the PCR starts at t=0.
+	# During playback of such a video, the player would start at t=1. We want to effectively do the same,
+	# and have the first actual content of the video start at the user's requested time.
+	# So we want both the first PCR and the first PTS to be equal to start_time,
+	# with no difference between them. The easiest way to do this is to track their offsets independently.
+	def _convert_time(self, old_time, kind):
+		# If this is the first one we've seen, use it to calibrate offset.
+		if self.offsets[kind] is None:
+			self.offsets[kind] = self.start_time - old_time
+		new_time = old_time + self.offsets[kind]
+		# It's possible that the second packet might have a PTS slightly earlier than the first
+		# (eg. one is audio and one is video, and their start times slightly differ). We clamp
+		# the value so that it never goes earlier than the user's requested start time. This may
+		# cause some minor artifacting on the first packet of a stream, but saves us from invalid
+		# packets which cause further issues.
+		new_time = max(self.start_time, new_time)
+		# Keep track of the nominal "end time" based on latest PCR or PTS time.
+		# This can be thought of as finding the "video length" as max(latest ts - first ts) for any kind.
+		# then adding the requested start time to it to get the end time.
+		new_end = new_time + self.NOMINAL_PCR_INTERVAL
+		self.end_time = max(self.end_time, new_end)
 		return new_time
 
 	def _fix_packet(self, packet):
@@ -163,7 +138,7 @@ class FixTS():
 				if has_pcr:
 					check(field_length >= 7, "Adaptation field indicates PCR but is too small")
 					old_time = decode_pcr(packet[6:12])
-					new_time = self._convert_time(old_time, is_pcr=True)
+					new_time = self._convert_time(old_time, 'pcr')
 					encoded = encode_pcr(new_time)
 					packet = packet[:6] + encoded + packet[12:]
 					assert len(packet) == 188
@@ -199,7 +174,7 @@ class FixTS():
 				flags = packet[unit_index + 6]
 				has_pts = bool(flags & 0x80)
 				has_dts = bool(flags & 0x40)
-				check(not has_dts, "DTS timestamp is present, we cannot handle fixing it")
+				check(not has_dts, "DTS timestamp is present, we cannot fix DTS as it may cause packets to be before start_time")
 				# Once again, PTS is the first optional field, so we don't need to worry
 				# about other fields being present.
 				if has_pts:
@@ -207,15 +182,12 @@ class FixTS():
 					check(pts_index + 5 <= self.PACKET_SIZE, "Payload too small to read PTS")
 					raw = packet[pts_index : pts_index + 5]
 					pts = decode_ts(raw, 2)
-					pts = self._convert_time(pts)
+					pts = self._convert_time(pts, 'pts')
 					encoded = encode_ts(pts, 2)
 					packet = packet[:pts_index] + encoded + packet[pts_index + 5:]
 					assert len(packet) == 188
+
 		return packet
-
-
-class OffsetNotReady(Exception):
-	pass
 
 
 def bits(value, start, end):

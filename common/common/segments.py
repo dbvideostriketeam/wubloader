@@ -365,6 +365,10 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 		args += ['-ss', str(cut_start)]
 	if cut_end:
 		args += ['-to', str(cut_end)]
+	# disable B-frames (frames which contain data needed by earlier frames) as a codec option,
+	# as it changes the order that frames go in the file, which messes with our "concatenate the
+	# packets" method of concatenating the video.
+	args += ['-bf', '0']
 	# output to stdout as MPEG-TS
 	args += ['-f', 'mpegts', '-']
 	# run it
