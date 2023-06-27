@@ -111,8 +111,8 @@ class SheetSync(object):
 		# interpreted as None.
 		# Columns missing from this map default to simply using the string value.
 		self.column_parsers = {
-			'event_start': self.parse_bustime,
-			'event_end': self.parse_bustime,
+			'event_start': lambda v: self.parse_bustime(v),
+			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
 			'poster_moment': lambda v: v == '[\u2713]', # check mark
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
@@ -137,10 +137,15 @@ class SheetSync(object):
 			'error',
 		]
 
-	def parse_bustime(self, value):
-		"""Convert from HH:MM or HH:MM:SS format to datetime"""
-		if value.strip() in ('--', ''):
+	def parse_bustime(self, value, preserve_dash=False):
+		"""Convert from HH:MM or HH:MM:SS format to datetime.
+		If preserve_dash=True and value is "--", returns "--"
+		as a sentinel value instead of None. "" will still result in None.
+		"""
+		if not value.strip():
 			return None
+		if value.strip() == "--":
+			return "--" if preserve_dash else None
 		bustime = common.parse_bustime(value)
 		return common.bustime_to_dt(self.bustime_start, bustime)
 
@@ -261,6 +266,9 @@ class SheetSync(object):
 			] + (['Poster Moment'] if row_dict['poster_moment'] else [])
 			+ row_dict['tags']
 		)
+		# As a special case, treat an end time of "--" as equal to the start time.
+		if row_dict["event_end"] == "--":
+			row_dict["event_end"] = row_dict["event_start"]
 		return row_dict
 
 	def sync_row(self, worksheet, row_index, row, event):
