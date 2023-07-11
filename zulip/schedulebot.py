@@ -3,7 +3,6 @@ import gevent.monkey
 gevent.monkey.patch_all()
 
 import csv
-import json
 import logging
 import time
 from datetime import datetime, timedelta
@@ -12,32 +11,10 @@ import gevent.pool
 import argh
 import yaml
 
-import requests
-session = requests.Session()
+from zulip import Client
 
 logging.basicConfig(level='INFO')
 
-class Client(object):
-	def __init__(self, base_url, email, api_key):
-		self.base_url = base_url
-		self.email = email
-		self.api_key = api_key
-
-	def request(self, method, *path, **params):
-		if method == 'GET':
-			args = {"params": params}
-		else:
-			args = {"data": {
-				k: v if isinstance(v, str) else json.dumps(v)
-				for k, v in params.items()
-			}}
-		url = "/".join([self.base_url, "api/v1"] + list(map(str, path)))
-		resp = session.request(method, url, auth=(self.email, self.api_key), **args)
-		if not resp.ok:
-			logging.info(repr(params))
-			logging.info(f"Got {resp.status_code} for {url}: {resp.text}")
-		resp.raise_for_status()
-		return resp.json()
 
 def get_membership(client):
 	"""Returns {group id: member set}"""
@@ -183,12 +160,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		print("\n".join(lines))
 		return
 
-	send_client.request("POST", "messages",
-		type="stream",
-		to=stream,
-		topic="Schedule",
-		content="\n".join(lines),
-	)
+	send_client.send_to_stream(stream, "Schedule", "\n".join(lines))
 
 
 def parse_schedule(user_ids, schedule_file):
@@ -247,7 +219,6 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		return
 	while True:
 		hour = int((time.time() - start_time) / 3600)
-		kind = 'normal'
 		if not no_initial:
 			if not no_groups:
 				update_groups(client, group_ids, schedule, hour, last)
