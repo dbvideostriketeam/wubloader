@@ -1,7 +1,8 @@
 
 import argh
 import yaml
-from mastodon import Mastodon
+import mastodon
+from bs4 import BeautifulSoup
 
 import zulip
 
@@ -36,13 +37,137 @@ def format_status(status):
 	if reblog is not None:
 		boostee = format_account(reblog["account"])
 		boost_url = reblog["url"]
-		content = format_content(reblog["content"])
+		content = format_content(reblog)
 		return f"{sender} reblogged {boostee}'s [post]({boost_url})\n{content}"
 
-	return f"{"
+	content = format_content(status)
+
+	if reply:
+		return f"{sender} [replied]({url}) to message {reply}:\n{content}"
+
+	return f"{sender} [posted]({url}):\n{content}"
 
 
-class Listener(Mastodon.StreamListener):
+def md_wrap(kind, inner):
+	"""
+		Wrap inner in a markdown block with given kind, eg. "quote" or "spoiler TEXT HERE"
+	"""
+	return "\n".join([
+		f"```{kind}",
+		inner,
+		"```",
+	])
+
+
+def format_content(status):
+	# Main status text should be rendered into text and quoted
+	html = BeautifulSoup(status["content"], "html.parser")
+	text = html_to_md(html)
+	parts = [md_wrap("quote", text)]
+	# Append attachments, with the link name being the alt text.
+	# For images at least, zulip will auto-preview them.
+	for attachment in status["media_attachments"]:
+		type = attachment["type"]
+		description = attachment["description"] or "(no description provided)"
+		url = attachment["url"]
+		parts.append(f"Attached {type}: [{description}]({url})")
+	output = "\n".join(parts)
+	# If content warnings present, wrap in a spoiler block.
+	warning = status["spoiler_text"]
+	if warning:
+		output = md_wrap(f"spoiler {warning}", output)
+	return output
+
+
+def html_to_md(html):
+	"""
+	Take a status HTML as a BeautifulSoup object
+	and make a best-effort attempt to render it in markdown:
+	* Convert each <p> section to text ending in a newline
+	* Convert <a> tags to links
+	* Convert formatting tags to the markdown equivalent
+	* Ignore other tags and just pass through their inner content
+
+	Note that zulip has no way of escaping markdown syntax, so if a message contains
+	characters that happen to be valid markdown, there's not much we can do about it.
+	The only thing that could cause problems is a malicious input that breaks out of
+	our surrounding quote block. And you know what? Fine, they can have that. We can always
+	just read the link to see the real deal.
+	"""
+	if html.name is None:
+		# Raw string, return it without surrounding whitespace
+		return html.strip()
+
+	if html.name == "br":
+		# <br> should never have any contents, and just become a newline
+		return "\n"
+
+	# Lists need to be handled specially as they should only contain <li> elements
+	# and the <li> elements should be rendered differently depending on the outer element.
+	if html.name in ("ul", "ol"):
+		prefix = {"ul": "*", "ol": "1."}[html.name]
+		items = []
+		for item in html.children:
+			if item.name != "li":
+				logging.warning(f"Ignoring non-<li> inside <{html.name}> element")
+				continue
+			inner = "".join(html_to_md(child) for child in item.children)
+			# Prepend two spaces to every line, to create a "nesting" effect
+			# for sub-lists. This may break things if mixed with blockquotes but oh well.
+			inner = "\n".join("  " + line for line in inner.split("\n"))
+			items.append(prefix + inner)
+		return "\n".join(items)
+
+	# Get contents recursively. Bail if empty as this might cause weird things if rendered naively,
+	# eg. <i></i> would be rendered ** which would actually make other text bold.
+	inner = "".join(html_to_md(child) for child in html.children)
+	if not inner:
+		return ""
+
+	# <p> should insert a newline at the end
+	if html.name == "p":
+		return f"{inner}\n"
+
+	# <a> should become a link
+	href = html.get("href")
+	if html.name == "a" and href:
+		return f"[{inner}]({href})"
+
+	# <blockquote> creates a nested quote block which is its own paragraph.
+	if html.name == "blockquote":
+		return md_wrap("quote", inner)
+
+	# The following tag types are simple character-based format wrappers.
+	# Note we don't handle <u> due to lack of underline formatting in markdown.
+	# We treat all headings as bold.
+	CHAR_FORMAT = {
+		"b": "**",
+		"strong": "**",
+		"h1": "**",
+		"h2": "**",
+		"h3": "**",
+		"h4": "**",
+		"h5": "**",
+		"h6": "**",
+		"i": "*",
+		"em": "*",
+		"del": "~~",
+		"pre": "`",
+		"code": "`",
+	}
+	if html.name in CHAR_FORMAT:
+		char = CHAR_FORMAT[html.name]
+		return f"{char}{inner}{char}"
+
+	# For any other types, most notably <span> but also anything that we don't recognize,
+	# just pass the inner text though unchanged.
+	return inner
+
+
+LINE = "\n---"
+
+
+class Listener(mastodon.StreamListener):
 	def __init__(self, zulip_client, stream, post_topic, notification_topic):
 		self.zulip_client = zulip_client
 		self.stream = stream
@@ -55,7 +180,7 @@ class Listener(Mastodon.StreamListener):
 
 	def on_update(self, status):
 		logging.info(f"Got update: {status!r}")
-		self.send(self.post_topic, format_status(status))
+		self.send(self.post_topic, format_status(status) + LINE)
 
 	def on_delete(self, status_id):
 		logging.info(f"Got delete: {status_id}")
@@ -63,13 +188,13 @@ class Listener(Mastodon.StreamListener):
 
 	def on_status_update(self, status):
 		logging.info(f"Got status update: {status!r}")
-		self.send(self.post_topic, f"*The following status has been updated*\n{format_status(status)}")
+		self.send(self.post_topic, f"*The following status has been updated*\n{format_status(status)}" + LINE)
 
 	def on_notification(self, notification):
 		logging.info(f"Got {notification['type']} notification: {notification!r}")
 		if notification["type"] != "mention":
 			return
-		self.send(self.notification_topic, format_status(status))
+		self.send(self.notification_topic, format_status(status) + LINE)
 
 
 @cli
@@ -95,7 +220,7 @@ def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notif
 	mc = conf["mastodon"]
 
 	zulip_client = zulip.Client(zc["url"], zc["email"], zc["api_key"])
-	mastodon = Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
+	mastodon = mastodon.Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
 	listener = Listener(zulip_client, stream, post_topic, notification_topic)
 
 	logging.info("Starting")
