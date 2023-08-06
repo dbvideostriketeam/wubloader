@@ -1,4 +1,6 @@
 
+import logging
+
 import argh
 import yaml
 import mastodon
@@ -95,8 +97,8 @@ def html_to_md(html):
 	just read the link to see the real deal.
 	"""
 	if html.name is None:
-		# Raw string, return it without surrounding whitespace
-		return html.strip()
+		# Raw string, return as-is.
+		return html
 
 	if html.name == "br":
 		# <br> should never have any contents, and just become a newline
@@ -194,7 +196,7 @@ class Listener(mastodon.StreamListener):
 		logging.info(f"Got {notification['type']} notification: {notification!r}")
 		if notification["type"] != "mention":
 			return
-		self.send(self.notification_topic, format_status(status) + LINE)
+		self.send(self.notification_topic, format_status(notification["status"]) + LINE)
 
 
 @cli
@@ -220,20 +222,20 @@ def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notif
 	mc = conf["mastodon"]
 
 	zulip_client = zulip.Client(zc["url"], zc["email"], zc["api_key"])
-	mastodon = mastodon.Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
+	mastodon_client = mastodon.Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
 	listener = Listener(zulip_client, stream, post_topic, notification_topic)
 
 	logging.info("Starting")
-	mastodon.stream_user(listener)
+	mastodon_client.stream_user(listener)
 
 
 @cli
 def get_access_token(conf_file):
 	"""Do OAuth login flow and obtain an access token."""
 	mc = get_config(conf_file)["mastodon"]
-	mastodon = Mastodon(client_id=mc["client_id"], client_secret=mc["client_secret"], api_base_url=mc["url"])
+	client = mastodon.Mastodon(client_id=mc["client_id"], client_secret=mc["client_secret"], api_base_url=mc["url"])
 	print("Go to the following URL to obtain an access token:")
-	print(mastodon.auth_request_url(scopes=["read:notifications", "read:statuses"]))
+	print(client.auth_request_url(scopes=["read:notifications", "read:statuses"]))
 
 
 if __name__ == '__main__':
