@@ -17,7 +17,7 @@ COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx po
 PUSH=${PUSH:-}
 
 # Base is the repository namespace information, not including the wubloader-component part.
-BASE="ghcr.io/ekimekim"
+BASE="ghcr.io/dbvideostriketeam"
 
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(./get-build-tag)

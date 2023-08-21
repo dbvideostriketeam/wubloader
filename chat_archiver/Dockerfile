@@ -18,5 +18,5 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY chat_archiver /tmp/archiver
 RUN pip install /tmp/archiver && rm -r /tmp/archiver
 
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "chat_archiver", "--base-dir", "/mnt"]

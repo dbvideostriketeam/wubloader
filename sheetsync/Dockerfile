@@ -15,5 +15,5 @@ RUN apk add postgresql-dev postgresql-client
 COPY sheetsync /tmp/sheetsync
 RUN pip install /tmp/sheetsync && rm -r /tmp/sheetsync
 
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "sheetsync"]
