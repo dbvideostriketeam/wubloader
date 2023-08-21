@@ -14,5 +14,5 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY playlist_manager /tmp/playlist_manager
 RUN pip install /tmp/playlist_manager && rm -r /tmp/playlist_manager
 
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "playlist_manager"]

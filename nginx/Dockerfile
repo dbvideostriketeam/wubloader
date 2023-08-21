@@ -2,5 +2,5 @@
 FROM nginx:latest
 ADD nginx/generate-config /
 COPY thrimbletrimmer /etc/nginx/html/thrimbletrimmer
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["/bin/sh", "-c", "/generate-config && nginx -g \"daemon off;\""]

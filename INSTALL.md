@@ -21,11 +21,11 @@ This installation guide is written assuming you are on a Linux-like operating sy
 
 You can download the latest version of the wubloader from github:
 
-  https://github.com/ekimekim/wubloader/archive/master.zip
+  https://github.com/dbvideostriketeam/wubloader/archive/master.zip
   
 Alternatively if you have `git` installed you can clone the git repository:
 
-  `git clone https://github.com/ekimekim/wubloader`
+  `git clone https://github.com/dbvideostriketeam/wubloader`
   
   
 ## Generate the docker-compose file

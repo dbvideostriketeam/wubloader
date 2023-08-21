@@ -14,5 +14,5 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY api_ping /tmp/api_ping
 RUN pip install /tmp/api_ping && rm -r /tmp/api_ping
 
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "api_ping"]

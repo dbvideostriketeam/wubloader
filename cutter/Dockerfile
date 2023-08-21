@@ -15,5 +15,5 @@ RUN apk add postgresql-dev postgresql-client ffmpeg
 COPY cutter /tmp/cutter
 RUN pip install /tmp/cutter && rm -r /tmp/cutter
 
-LABEL org.opencontainers.image.source https://github.com/ekimekim/wubloader
+LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "cutter", "--base-dir", "/mnt"]

@@ -13,7 +13,7 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
-  image_base:: "ghcr.io/ekimekim", // Change this to use images from a different source than the main one
+  image_base:: "ghcr.io/dbvideostriketeam", // Change this to use images from a different source than the main one
 
   // For each service, whether to deploy that service.
   enabled:: {
