@@ -2,6 +2,7 @@
 import logging
 
 import argh
+import time
 import yaml
 import mastodon
 from bs4 import BeautifulSoup
@@ -225,8 +226,15 @@ def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notif
 	mastodon_client = mastodon.Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
 	listener = Listener(zulip_client, stream, post_topic, notification_topic)
 
-	logging.info("Starting")
-	mastodon_client.stream_user(listener)
+	RETRY_INTERVAL = 1
+
+	while True:
+		logging.info("Starting")
+		try:
+			mastodon_client.stream_user(listener)
+		except mastodon.MastodonNetworkError:
+			logging.warning(f"Lost connection, reconnecting in {RETRY_INTERVAL}s")
+			time.sleep(RETRY_INTERVAL)
 
 
 @cli
