@@ -1,10 +1,11 @@
 
-import logging
 
 import argh
+import logging
 import time
-import yaml
+
 import mastodon
+import yaml
 from bs4 import BeautifulSoup
 
 import zulip
