@@ -192,7 +192,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		send_user:
 			auth used for sending messages
 			defaults to api_user, but you may want a vanity name / avatar
-		start_time: Time of the first hour, as epoch int
+		start_time: Time of the first hour, as UTC timestamp string
 		schedule: Path to the schedule CSV file
 		members:
 			NAME: USER_ID
@@ -205,7 +205,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
 	group_ids = config["groups"]
-	start_time = config["start_time"]
+	start_time = time.strptime(config["start_time"], "%Y-%m-%dT%H:%M:%S")
 	schedule = parse_schedule(config["members"], config["schedule"])
 	if hour >= 0:
 		if not no_groups:
