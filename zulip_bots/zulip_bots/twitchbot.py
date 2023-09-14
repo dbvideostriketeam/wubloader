@@ -6,9 +6,9 @@ import logging
 
 import argh
 import girc
-import yaml
 
 import zulip
+from config import get_config
 
 
 def run(zulip_client, nick, oauth_token, stream, topic):
@@ -49,8 +49,7 @@ def main(conf_file, stream="bot-spam", topic="Twitch DMs", retry_interval=10):
 	"""
 	logging.basicConfig(level='INFO')
 
-	with open(conf_file) as f:
-		config = yaml.safe_load(f)
+	config = get_config(conf_file)
 
 	zulip_client = zulip.Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
 

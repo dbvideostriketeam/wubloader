@@ -5,17 +5,12 @@ import logging
 import time
 
 import mastodon
-import yaml
 from bs4 import BeautifulSoup
 
 import zulip
+from config import get_config
 
 cli = argh.EntryPoint()
-
-
-def get_config(conf_file):
-	with open(conf_file) as f:
-		return yaml.safe_load(f)
 
 
 def format_account(account):
