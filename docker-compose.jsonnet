@@ -28,6 +28,9 @@
     nginx: true,
     postgres: false,
     chat_archiver: false,
+    schedulebot: false,
+    tootbot: false,
+    twitchbot: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -180,6 +183,59 @@
     token_path: "./chat_token.txt",
     // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
     backfill: true,
+  },
+
+  zulip_url:: "https://chat.videostrike.team",
+
+  schedulebot:: {
+    // Creds for zulip api calls. Can't be a bot user due to annoying arbitrary restrictions.
+    api_user: {
+      email: "vst-zulip-bot@ekime.kim",
+      api_key: "",
+    },
+    // Creds for the bot user to send messages as
+    send_user: {
+      email: "schedule-bot@chat.videostrike.team",
+      api_key: "",
+    },
+    // Path to the schedule CSV
+    schedule_path:: "",
+    // Map from group names to zulip internal ids
+    groups: {
+      Supervisor: 15,
+      Sheeter: 16,
+      Editor: 17,
+      ChatOps: 18,
+    },
+    // Map from schedule names to zulip user ids
+    members: {
+      ekimekim: 8,
+    },
+    // Extra args, see schedulebot.py.
+    // --no-initial prevents re-posting current hour on restart.
+    // --omega and --last enable special behaviour for omega shift and end of run, once known.
+    args:: ["--no-initial"],
+  },
+
+  tootbot:: {
+    zulip: {
+      email: "tootbot-bot@chat.videostrike.team",
+      api_key: "",
+    },
+    mastodon: {
+      url: "https://kind.social",
+      // Obtain an access token by running: python -m zulip_bots.tootbot get-access-token
+      access_token: "",
+    },
+    args:: [],
+  },
+
+  twitchbot:: {
+    twitch_username: $.chat_archiver.user,
+    twitch_oauth_token: "",
+    zulip_email: "twitch-chat-bot@chat.videostrike.team",
+    zulip_api_key: "",
+    args:: [],
   },
 
   // Extra options to pass via environment variables,
@@ -462,6 +518,35 @@
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
       environment: $.env,
     },
+
+    local bot_service(name, config, args, subcommand=null) = {
+      image: $.get_image("zulip_bots"),
+      restart: "always",
+      entrypoint: ["python3", "-m", "zulip_bots.%s" % name]
+        + (if subcommand == null then [] else [subcommand])
+        + [std.manifestJson(config)]
+        + args,
+      environment: $.env,
+    },
+
+    [if $.enabled.schedulebot then "schedulebot"]:
+      bot_service("schedulebot", $.schedulebot + {
+        url: $.zulip_url,
+        start_time: $.bustime_start,
+        schedule: "/schedule",
+      }, $.schedulebot.args) + {
+        volumes: ["%s:/schedule" % $.schedulebot.schedule_path],
+      },
+
+    [if $.enabled.tootbot then "tootbot"]:
+      bot_service("tootbot", $.tootbot + {
+        zulip+: { url: $.zulip_url },
+      }, $.tootbot.args, subcommand="main"),
+
+    [if $.enabled.twitchbot then "twitchbot"]:
+      bot_service("twitchbot", $.twitchbot + {
+        zulip_url: $.zulip_url,
+      }, $.tootbot.args),
 
   },
 
