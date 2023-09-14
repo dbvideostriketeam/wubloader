@@ -102,9 +102,6 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	if omega >= 0 and hour >= omega:
 		shift = "omega"
 		shift_hour = hour - omega + 1
-	if hour == last:
-		shift = "verified"
-		shift_hour = "7.99"
 
 	def render_name(user_id, mention=True):
 		if no_mentions:
