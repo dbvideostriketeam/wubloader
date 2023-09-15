@@ -7,8 +7,8 @@ import logging
 import argh
 import girc
 
-import zulip
-from config import get_config
+from . import zulip
+from .config import get_config
 
 
 def run(zulip_client, nick, oauth_token, stream, topic):

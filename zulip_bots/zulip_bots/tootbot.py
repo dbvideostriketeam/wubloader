@@ -7,8 +7,8 @@ import time
 import mastodon
 from bs4 import BeautifulSoup
 
-import zulip
-from config import get_config
+from . import zulip
+from .config import get_config
 
 cli = argh.EntryPoint()
 
