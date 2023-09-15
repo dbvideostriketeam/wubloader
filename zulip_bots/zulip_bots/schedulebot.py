@@ -5,13 +5,14 @@ gevent.monkey.patch_all()
 import csv
 import logging
 import time
+from calendar import timegm
 from datetime import datetime, timedelta
 
 import gevent.pool
 import argh
 
-from zulip import Client
-from config import get_config
+from .zulip import Client
+from .config import get_config
 
 logging.basicConfig(level='INFO')
 
@@ -205,7 +206,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
 	group_ids = config["groups"]
-	start_time = time.strptime(config["start_time"], "%Y-%m-%dT%H:%M:%S")
+	start_time = timegm(time.strptime(config["start_time"], "%Y-%m-%dT%H:%M:%S"))
 	schedule = parse_schedule(config["members"], config["schedule"])
 	if hour >= 0:
 		if not no_groups:
