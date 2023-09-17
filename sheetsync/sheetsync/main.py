@@ -191,8 +191,8 @@ class SheetSync(object):
 						# because then row_index won't be correct.
 						if row_index == 0:
 							continue
-						row = self.parse_row(worksheet, row)
-						self.sync_row(worksheet, row_index, row, events.get(row['id']))
+						row = self.parse_row(worksheet, row_index, row)
+						self.sync_row(worksheet, row, events.get(row['id']))
 
 				if playlist_worksheet is not None:
 					rows = self.sheets.get_rows(self.sheet_id, playlist_worksheet)
@@ -240,7 +240,7 @@ class SheetSync(object):
 			event_counts.labels(*labels).set(count)
 		return by_id
 
-	def parse_row(self, worksheet, row):
+	def parse_row(self, worksheet, row_index, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
 		row_dict = {'_parse_errors': []}
 		for column, index in self.column_map.items():
@@ -269,9 +269,11 @@ class SheetSync(object):
 		# As a special case, treat an end time of "--" as equal to the start time.
 		if row_dict["event_end"] == "--":
 			row_dict["event_end"] = row_dict["event_start"]
+		# Always include row index
+		row_dict["index"] = row_index
 		return row_dict
 
-	def sync_row(self, worksheet, row_index, row, event):
+	def sync_row(self, worksheet, row, event):
 		"""Take a row dict and an Event from the database (or None if id not found)
 		and take whatever action is required to sync them, ie. writing to the database or sheet."""
 
@@ -288,14 +290,14 @@ class SheetSync(object):
 			if row['id'] is None:
 				if self.allocate_ids:
 					row['id'] = uuid.uuid4()
-					logging.info("Allocating id for row {!r}:{} = {}".format(worksheet, row_index, row['id']))
+					logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
 					self.sheets.write_value(
 						self.sheet_id, worksheet,
-						row_index, self.column_map['id'],
+						row["index"], self.column_map['id'],
 						str(row['id']),
 					)
 				else:
-					logging.warning("Row {!r}:{} has no valid id, skipping".format(worksheet, row_index))
+					logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
 					return
 
 			logging.info("Inserting new event {}".format(row['id']))
@@ -357,7 +359,7 @@ class SheetSync(object):
 			for col in changed:
 				self.sheets.write_value(
 					self.sheet_id, worksheet,
-					row_index, self.column_map[col],
+					row["index"], self.column_map[col],
 					format_output(getattr(event, col)),
 				)
 			rows_changed.labels('output', worksheet).inc()
@@ -372,7 +374,7 @@ class SheetSync(object):
 			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
 			self.sheets.write_value(
 				self.sheet_id, worksheet,
-				row_index, self.column_map['edit_link'],
+				row["index"], self.column_map['edit_link'],
 				edit_link,
 			)
 			self.mark_modified(worksheet)
