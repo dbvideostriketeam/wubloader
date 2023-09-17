@@ -192,6 +192,26 @@ class SheetSync(object):
 						if row_index == 0:
 							continue
 						row = self.parse_row(worksheet, row_index, row)
+
+						if row['id'] is None:
+							# If a row is all empty (including no id), ignore it.
+							# Ignore the tags column for this check since it is never non-empty due to implicit tags
+							# (and even if there's other tags, we don't care if there's nothing else in the row).
+							if not any(row[col] for col in self.input_columns if col != 'tags'):
+								continue
+							# If we can't allocate ids, warn and ignore.
+							if not self.allocate_ids:
+								logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
+								continue
+							# Otherwise, allocate id for a new row.
+							row['id'] = uuid.uuid4()
+							logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
+							self.sheets.write_value(
+								self.sheet_id, worksheet,
+								row["index"], self.column_map['id'],
+								str(row['id']),
+							)
+
 						self.sync_row(worksheet, row, events.get(row['id']))
 
 				if playlist_worksheet is not None:
@@ -278,28 +298,7 @@ class SheetSync(object):
 		and take whatever action is required to sync them, ie. writing to the database or sheet."""
 
 		if event is None:
-			# No event currently in DB, if any field is non-empty, then create it.
-			# Otherwise ignore it.
-			# Ignore the tags column for this check since it is never non-empty due to implicit tags
-			# (and even if there's other tags, we don't care if there's nothing else in the row).
-			if not any(row[col] for col in self.input_columns if col != 'tags'):
-				return
-
-			# Only generate row when needed (unless it's already there)
-			# Originally we would allocate rows on first sync, but this led to rate limiting issues.
-			if row['id'] is None:
-				if self.allocate_ids:
-					row['id'] = uuid.uuid4()
-					logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
-					self.sheets.write_value(
-						self.sheet_id, worksheet,
-						row["index"], self.column_map['id'],
-						str(row['id']),
-					)
-				else:
-					logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
-					return
-
+			# No event currently in DB, create it.
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
