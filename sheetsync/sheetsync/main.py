@@ -10,7 +10,7 @@ import gevent.event
 import prometheus_client as prom
 from monotonic import monotonic
 from psycopg2 import sql
-from psycopg2.extras import register_uuid, execute_values
+from psycopg2.extras import execute_values
 from requests import HTTPError
 
 import common
@@ -351,8 +351,6 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
-
-	register_uuid()
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
