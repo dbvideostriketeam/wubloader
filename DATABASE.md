@@ -165,7 +165,7 @@ Edit input values are initially NULL, but must not be NULL once the state is no 
 
 columns                    | type                                 | role        | description
 -------------------------- | ----------------------------------   | :---------: | -----------
-`id`                       | `UUID PRIMARY KEY`                   | sheet input | Generated and attached to rows in the sheet to uniquely identify them even in the face of added, deleted or moved rows.
+`id`                       | `TEXT PRIMARY KEY`                   | sheet input | Generated and attached to rows in the sheet to uniquely identify them even in the face of added, deleted or moved rows.
 `sheet_name`               | `TEXT NOT NULL`                      | sheet input | The name of the worksheet that the row is on. This is used to tag videos, and can be used to narrow down the range to look for an id in for more efficient lookup (though we never do that right now).
 `event_start`, `event_end` | `TIMESTAMP`                          | sheet input | Start and end time of the event. Parsed from the sheet into timestamps or NULL. Used to set the editor time span, and displayed on the public sheet. The start time also determines what "day" the event lies on, for video tagging and other purposes.
 `category`                 | `TEXT NOT NULL DEFAULT ''`           | sheet input | The kind of event. By convention selected from a small list of categories, but stored as an arbitrary string because there's little to no benefit to using an enum here, it just makes our job harder when adding a new category. Used to tag videos, and for display on the public sheet.
