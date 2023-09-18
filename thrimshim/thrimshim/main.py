@@ -22,7 +22,6 @@ from common.flask_stats import request_stats, after_request
 import google.oauth2.id_token
 import google.auth.transport.requests
 
-psycopg2.extras.register_uuid()
 app = flask.Flask('thrimshim')
 app.after_request(after_request)
 
@@ -145,7 +144,7 @@ def get_defaults():
 	})
 
 
-@app.route('/thrimshim/<uuid:ident>', methods=['GET'])
+@app.route('/thrimshim/<ident>', methods=['GET'])
 @request_stats
 def get_row(ident):
 	"""Gets the row from the database with id == ident."""
@@ -242,7 +241,7 @@ def get_row(ident):
 	return json.dumps(response, default=convert)
 
 
-@app.route('/thrimshim/<uuid:ident>', methods=['POST'])
+@app.route('/thrimshim/<ident>', methods=['POST'])
 @request_stats
 @authenticate
 def update_row(ident, editor=None):
@@ -450,7 +449,7 @@ def update_row(ident, editor=None):
 	return ''
 
 
-@app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
+@app.route('/thrimshim/manual-link/<ident>', methods=['POST'])
 @request_stats
 @authenticate
 def manual_link(ident, editor=None):
@@ -493,7 +492,7 @@ def manual_link(ident, editor=None):
 	return ''	
 	
 
-@app.route('/thrimshim/reset/<uuid:ident>', methods=['POST'])
+@app.route('/thrimshim/reset/<ident>', methods=['POST'])
 @request_stats
 @authenticate
 def reset_row(ident, editor=None):

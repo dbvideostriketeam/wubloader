@@ -690,7 +690,7 @@ class TranscodeChecker(object):
 		result = query(self.conn, """
 			UPDATE events
 			SET state = 'DONE', upload_time = %s
-			WHERE id = ANY (%s::uuid[]) AND state = 'TRANSCODING'
+			WHERE id = ANY (%s) AND state = 'TRANSCODING'
 		""", datetime.datetime.utcnow(), list(ids.keys()))
 		return result.rowcount
 

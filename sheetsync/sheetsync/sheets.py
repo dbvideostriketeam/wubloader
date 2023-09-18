@@ -120,7 +120,7 @@ class SheetsMiddleware():
 			'poster_moment': lambda v: v == '[\u2713]', # check mark
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
-			'id': lambda v: uuid.UUID(v) if v.strip() else None,
+			'id': lambda v: v if v.strip() else None,
 		}
 		# tracks when to do inactive checks
 		self.sync_count = 0
@@ -175,7 +175,7 @@ class SheetsMiddleware():
 					logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
 					continue
 				# Otherwise, allocate id for a new row.
-				row['id'] = uuid.uuid4()
+				row['id'] = str(uuid.uuid4())
 				logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
 				self.sheets.write_value(
 					self.sheet_id, worksheet,
