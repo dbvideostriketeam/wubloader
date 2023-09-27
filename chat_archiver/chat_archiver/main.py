@@ -13,12 +13,11 @@ from calendar import timegm
 from collections import defaultdict
 from datetime import datetime
 from itertools import count
-from uuid import uuid4
 
 import gevent.event
 import gevent.queue
 
-from common import ensure_directory, listdir, rename
+from common import atomic_write, listdir
 from common.chat import BATCH_INTERVAL, format_batch, get_batch_files, merge_messages
 
 from girc import Client
@@ -273,14 +272,6 @@ class Archiver(object):
 
 	def stop(self):
 		self.client.stop()
-
-
-def atomic_write(filepath, content):
-	temp_path = "{}.{}.temp".format(filepath, uuid4())
-	ensure_directory(filepath)
-	with open(temp_path, 'wb') as f:
-		f.write(content)
-	rename(temp_path, filepath)
 
 
 _EMOTES_RUNNING = {} # map (base_dir, emote id, theme, scale) -> in-progress greenlet fetching that path

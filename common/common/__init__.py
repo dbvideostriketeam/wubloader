@@ -6,6 +6,7 @@ import logging
 import os
 import random
 from signal import SIGTERM
+from uuid import uuid4
 
 import gevent.event
 
@@ -126,6 +127,21 @@ def writeall(write, value):
 			raise Exception("Wrote 0 chars while calling {} with {}-char {}".format(write, len(value), type(value).__name__))
 		# remove the first n chars and go again if we have anything left
 		value = value[n:]
+
+
+def atomic_write(filepath, content):
+	"""Writes content to filepath atomically, ie. replacing the file in one step
+	without potential for partial write. content may be str or bytes.
+	If the file already exists, it will silently do nothing as it is assumed a given
+	filename can only ever contain the same content.
+	"""
+	if isinstance(content, str):
+		content = content.encode("utf-8")
+	temp_path = "{}.{}.temp".format(filepath, uuid4())
+	ensure_directory(filepath)
+	with open(temp_path, 'wb') as f:
+		writeall(f.write, content)
+	rename(temp_path, filepath)
 
 
 def serve_with_graceful_shutdown(server, stop_timeout=20):
