@@ -151,6 +151,9 @@
   // Set to null to disable.
   backfill_max_hours_ago:: 24 * 30 * 6, // approx 6 months
 
+  // Extra directories (besides segments) to backfill
+  backfill_dirs:: ["emotes"],
+
   // The spreadsheet id and worksheet names for sheet sync to act on
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
@@ -256,6 +259,7 @@
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities + (if $.chat_archiver.backfill then ["chat"] else [])),
+        "--extras", std.join(",", $.backfill_dirs),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
         "--node-database", $.db_connect,
