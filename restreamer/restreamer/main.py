@@ -155,6 +155,23 @@ def list_segments(channel, quality, hour):
 	return json.dumps(list_segment_files(path, include_tombstones=tombstones, include_chat=True))
 
 
+@app.route('/extras/<dir>')
+@request_stats
+@has_path_args
+def list_extras(dir):
+	"""List all files under directory recursively. All paths returned are relative to dir.
+	Files can be fetched under /segments/<dir>/<path>.
+	Note this is only intended for extra files, and not for segments.
+	"""
+	root = os.path.join(app.static_folder, dir)
+	result = []
+	for path, subdirs, files in os.walk(root):
+		relpath = os.path.relpath(path, root)
+		for file in files:
+			result.append(os.path.normpath(os.path.join(relpath, file)))
+	return json.dumps(result)
+
+
 @app.route('/thumbnail-templates')
 def list_thumbnail_templates():
 	"""List available thumbnail templates. Returns a JSON list of names."""
