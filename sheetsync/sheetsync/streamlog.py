@@ -38,9 +38,8 @@ class StreamLogClient():
 
 
 class StreamLogMiddleware:
-	def __init__(self, client, bustime_start):
+	def __init__(self, client):
 		self.client = client
-		self.bustime_start = bustime_start
 		# Maps DB column names to streamlog fields.
 		self.column_map = {
 			'event_start': 'start_time',
@@ -90,10 +89,9 @@ class StreamLogMiddleware:
 			output[column] = value
 
 		# Implicit tags
-		day = dt_to_bustime(self.bustime_start, output['event_start']) // 86400
 		output['tags'] += [
 			output['category'],
-			"Day %d" % (day + 1) if day >= 0 else "Tech Test & Preshow",
+			row['section']['name'],
 		]
 		if output["poster_moment"]:
 			output['tags'] += 'Poster Moment'
