@@ -179,7 +179,7 @@ class SheetSync(object):
 		rows_found.labels(worksheet).inc()
 
 		# If no database error, but we have parse errors, indicate they should be displayed.
-		if event.error is None and row['_parse_errors']:
+		if event.error is None and row.get('_parse_errors'):
 			event = event._replace(error=", ".join(row['_parse_errors']))
 
 		# As a presentation detail, we show any row in state DONE with public = False as
