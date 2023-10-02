@@ -72,10 +72,6 @@ class StreamLogMiddleware:
 			'state': lambda v: v[0].upper() + v[1:].lower(), # Titlecase
 		}
 
-	def pick_worksheets(self):
-		# We don't have a concept of seperate worksheets, so just use a generic name
-		return "streamlog"
-
 	def get_rows(self):
 		for row in self.client.get_rows():
 			yield self.parse_row(row)
