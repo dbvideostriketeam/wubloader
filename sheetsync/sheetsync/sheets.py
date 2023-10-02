@@ -193,8 +193,8 @@ class SheetsMiddleware():
 			edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
 			if row['edit_link'] != edit_link:
 				logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
-				self.write_value(worksheet, row, "edit_link", edit_link)
-				self.mark_modified(worksheet)
+				self.write_value(row, "edit_link", edit_link)
+				self.mark_modified(row)
 
 			yield row
 
@@ -232,17 +232,17 @@ class SheetsMiddleware():
 		row_dict["sheet_name"] = worksheet
 		return row_dict
 
-	def write_value(self, worksheet, row, key, value):
+	def write_value(self, row, key, value):
 		"""Write key=value to the given row, as identified by worksheet + row dict."""
 		return self.client.write_value(
 			self.sheet_id,
-			worksheet,
+			row["sheet_name"],
 			row["index"],
 			self.column_map[key],
 			value,
 		)
 
-	def mark_modified(self, worksheet):
-		"""Mark worksheet as having had a change made, bumping it to the top of
+	def mark_modified(self, row):
+		"""Mark row as having had a change made, bumping its worksheet to the top of
 		the most-recently-modified queue."""
-		self.worksheets[worksheet] = monotonic()
+		self.worksheets[row["sheet_name"]] = monotonic()
