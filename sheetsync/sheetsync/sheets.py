@@ -155,6 +155,8 @@ class SheetsMiddleware():
 
 	def get_rows(self):
 		"""Fetch all rows of worksheet, parsed into a list of dicts."""
+		# Clear previously seen unassigned rows
+		self.unassigned_rows = {}
 		for worksheet in self.pick_worksheets():
 			rows = self.sheets.get_rows(self.sheet_id, worksheet)
 			for row_index, row in enumerate(rows):
@@ -167,10 +169,11 @@ class SheetsMiddleware():
 
 				# Handle rows without an allocated id
 				if row['id'] is None:
-					# If a row is all empty (including no id), ignore it.
+					# If a row is all empty (including no id), ignore it and mark it down for possible use in create_row().
 					# Ignore the tags column for this check since it is never non-empty due to implicit tags
 					# (and even if there's other tags, we don't care if there's nothing else in the row).
 					if not any(row[col] for col in self.input_columns if col != 'tags'):
+						self.unassigned_rows.setdefault(worksheet, []).append(row["index"])
 						continue
 					# If we can't allocate ids, warn and ignore.
 					if not self.allocate_ids:
@@ -179,11 +182,7 @@ class SheetsMiddleware():
 					# Otherwise, allocate id for a new row.
 					row['id'] = str(uuid.uuid4())
 					logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
-					self.sheets.write_value(
-						self.sheet_id, worksheet,
-						row["index"], self.column_map['id'],
-						str(row['id']),
-					)
+					self.write_id(row)
 
 				# Set edit link if marked for editing and start/end set.
 				# This prevents accidents / clicking the wrong row and provides
@@ -198,6 +197,13 @@ class SheetsMiddleware():
 					self.mark_modified(row)
 
 				yield row
+
+	def write_id(self, row):
+		self.sheets.write_value(
+			self.sheet_id, row["sheet_name"],
+			row["index"], self.column_map['id'],
+			str(row['id']),
+		)
 
 	def parse_row(self, worksheet, row_index, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
@@ -247,3 +253,14 @@ class SheetsMiddleware():
 		"""Mark row as having had a change made, bumping its worksheet to the top of
 		the most-recently-modified queue."""
 		self.worksheets[row["sheet_name"]] = monotonic()
+
+	def create_row(self, worksheet, id):
+		index = self.unassigned_rows[worksheet].pop(0)
+		row = {
+			"sheet_name": worksheet,
+			"id": id,
+			"index": index,
+		}
+		logging.info(f"Assigning existing id {row['id']} to empty row {worksheet!r}:{row['index']}")
+		self.write_id(row)
+		return row

@@ -69,10 +69,11 @@ class SheetSync(object):
 	# Time to wait after getting an error
 	ERROR_RETRY_INTERVAL = 10
 
-	def __init__(self, middleware, stop, dbmanager):
+	def __init__(self, middleware, stop, dbmanager, reverse_sync=False):
 		self.middleware = middleware
 		self.stop = stop
 		self.dbmanager = dbmanager
+		self.create_missing_ids = False
 		# List of input columns
 		self.input_columns = [
 			'event_start',
@@ -91,6 +92,14 @@ class SheetSync(object):
 			'state',
 			'error',
 		]
+		if reverse_sync:
+			# Reverse Sync refers to copying all event data from the database into the sheet,
+			# instead of it (mostly) being the other way. In particular:
+			# - All columns become output columns
+			# - We are allowed to create new sheet rows for database events if they don't exist.
+			self.create_missing_ids = True
+			self.output_columns += self.input_columns
+			self.input_columns = []
 
 	def run(self):
 		self.conn = self.dbmanager.get_conn()
@@ -103,9 +112,17 @@ class SheetSync(object):
 				# each row is more expensive than the cost of just grabbing the entire table
 				# and comparing locally.
 				events = self.get_events()
+				seen = set()
 
 				for row in self.middleware.get_rows():
+					if row['id'] in seen:
+						logging.error("Duplicate id {}, skipping".format(row['id']))
+						continue
+					seen.add(row['id'])
 					self.sync_row(row, events.get(row['id']))
+
+				for event in [e for id, e in events.items() if id not in seen]:
+					self.sync_row(event["sheet_name"], None, event)
 
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error
@@ -151,11 +168,14 @@ class SheetSync(object):
 		return by_id
 
 	def sync_row(self, row, event):
-		"""Take a row dict and an Event from the database (or None if id not found)
-		and take whatever action is required to sync them, ie. writing to the database or sheet."""
-		worksheet = row["sheet_name"]
+		"""Take a row dict (or None) and an Event from the database (or None)
+		and take whatever action is required to sync them, ie. writing to the database or sheet.
+		At least one of row and event must be non-None.
+		"""
 
 		if event is None:
+			assert row
+			worksheet = row["sheet_name"]
 			# No event currently in DB, create it.
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
@@ -175,6 +195,15 @@ class SheetSync(object):
 			self.middleware.mark_modified(worksheet)
 			return
 
+		if row is None:
+			assert event
+			if not self.create_missing_ids:
+				logging.info("Skipping event {} without any matching row".format(event["id"]))
+				return
+			logging.info("Adding new row {}".format(event["id"]))
+			row = self.middleware.create_row(event["sheet_name"], event["id"])
+
+		worksheet = row["sheet_name"]
 		rows_found.labels(worksheet).inc()
 
 		# If no database error, but we have parse errors, indicate they should be displayed.
@@ -188,7 +217,7 @@ class SheetSync(object):
 			event = event._replace(state='UNLISTED')
 
 		# Update database with any changed inputs
-		changed = [col for col in self.input_columns if row[col] != getattr(event, col)]
+		changed = [col for col in self.input_columns if row.get(col) != getattr(event, col)]
 		if changed:
 			logging.info("Updating event {} with new value(s) for {}".format(
 				row['id'], ', '.join(changed)
@@ -208,7 +237,7 @@ class SheetSync(object):
 
 		# Update sheet with any changed outputs
 		format_output = lambda v: '' if v is None else v # cast nulls to empty string
-		changed = [col for col in self.output_columns if row[col] != format_output(getattr(event, col))]
+		changed = [col for col in self.output_columns if row.get(col) != format_output(getattr(event, col))]
 		if changed:
 			logging.info("Updating sheet row {} with new value(s) for {}".format(
 				row['id'], ', '.join(changed)
@@ -324,12 +353,15 @@ class PlaylistSync:
 @argh.arg('--playlist-worksheet', help=
 	"An optional additional worksheet name that holds playlist tag definitions",
 )
-def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8005, backdoor_port=0, allocate_ids=False, playlist_worksheet=None):
+@argh.arg('--reverse-sync', help=
+	"Enables an alternate mode where all data is synced from the database to the sheet",
+)
+def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8005, backdoor_port=0, allocate_ids=False, playlist_worksheet=None, reverse_sync=False):
 	"""
 	Sheet sync constantly scans a Google Sheets sheet and a database, copying inputs from the sheet
 	to the DB and outputs from the DB to the sheet.
 
-	With the exception of id allocation, all operations are idempotent and multiple sheet syncs
+	With the exception of id allocation or reverse sync mode, all operations are idempotent and multiple sheet syncs
 	may be run for redundancy.
 	"""
 	common.PromLogCountsHandler.install()
@@ -369,7 +401,7 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 	sheets_middleware = SheetsMiddleware(sheets_client, sheet_id, worksheet_names, bustime_start, edit_url, allocate_ids)
 
 	workers = [
-		SheetSync(sheets_middleware, stop, dbmanager),
+		SheetSync(sheets_middleware, stop, dbmanager, reverse_sync),
 	]
 	if playlist_worksheet:
 		workers.append(PlaylistSync(stop, dbmanager, sheets_client, sheet_id, playlist_worksheet))
