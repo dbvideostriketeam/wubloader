@@ -434,16 +434,18 @@
       // Args for the sheetsync
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
-        "--allocate-ids",
         $.db_connect,
-        "--playlist-worksheet", $.playlist_worksheet,
-        "/etc/wubloader-creds.json",
-        $.edit_url,
-        $.bustime_start,
-        $.sheet_id,
-      ]
-      + $.worksheets
-      + (if $.archive_worksheet != null then ["--archive-worksheet", $.archive_worksheet] else []),
+        std.manifestJson({
+          type: "sheets",
+          creds: "/etc/wubloader-creds.json",
+          sheet_id: $.sheet_id,
+          worksheets: $.worksheets,
+          allocate_ids: true,
+          edit_url: $.edit_url,
+          bustime_start: $.bustime_start,
+          playlist_worksheet: $.playlist_worksheet,
+        }),
+      ],
       volumes: [
         // Mount the creds file into /etc
         "%s:/etc/wubloader-creds.json" % $.sheetsync_creds_file,
