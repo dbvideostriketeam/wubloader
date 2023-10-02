@@ -85,11 +85,12 @@ class SheetsMiddleware():
 	# If playlist_worksheet is defined, add 1 to len(worksheets).
 	# For current values, this is 100/5 * 2 + 100/5/4 * 7 = 75
 
-	def __init__(self, client, sheet_id, worksheets, bustime_start, allocate_ids=False):
+	def __init__(self, client, sheet_id, worksheets, bustime_start, edit_url, allocate_ids=False):
 		self.client = client
 		self.sheet_id = sheet_id
 		# map {worksheet: last modify time}
 		self.worksheets = {w: 0 for w in worksheets}
+		self.edit_url = edit_url
 		self.allocate_ids = allocate_ids
 		# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
 		# Hard-coded for now, future work: determine this from column headers in sheet
@@ -182,6 +183,18 @@ class SheetsMiddleware():
 					row["index"], self.column_map['id'],
 					str(row['id']),
 				)
+
+			# Set edit link if marked for editing and start/end set.
+			# This prevents accidents / clicking the wrong row and provides
+			# feedback that sheet sync is still working.
+			# Also clear it if it shouldn't be set.
+			# We do this here instead of in sync_row() because it's Sheets-specific logic
+			# that doesn't depend on the DB event in any way.
+			edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
+			if row['edit_link'] != edit_link:
+				logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
+				self.write_value(worksheet, row, "edit_link", edit_link)
+				self.mark_modified(worksheet)
 
 			yield row
 

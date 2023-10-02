@@ -69,11 +69,10 @@ class SheetSync(object):
 	# Time to wait after getting an error
 	ERROR_RETRY_INTERVAL = 10
 
-	def __init__(self, middleware, stop, dbmanager, edit_url):
+	def __init__(self, middleware, stop, dbmanager):
 		self.middleware = middleware
 		self.stop = stop
 		self.dbmanager = dbmanager
-		self.edit_url = edit_url
 		# List of input columns
 		self.input_columns = [
 			'event_start',
@@ -223,19 +222,6 @@ class SheetSync(object):
 			rows_changed.labels('output', worksheet).inc()
 			self.middleware.mark_modified(worksheet)
 
-		# Set edit link if marked for editing and start/end set.
-		# This prevents accidents / clicking the wrong row and provides
-		# feedback that sheet sync is still working.
-		# Also clear it if it shouldn't be set.
-		edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
-		if row['edit_link'] != edit_link:
-			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
-			self.middleware.write_value(
-				worksheet, row,
-				"edit_link", edit_link,
-			)
-			self.middleware.mark_modified(worksheet)
-
 
 class PlaylistSync:
 
@@ -382,10 +368,10 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
 		client_secret=sheets_creds['client_secret'],
 		refresh_token=sheets_creds['refresh_token'],
 	)
-	sheets_middleware = SheetsMiddleware(sheets_client, sheet_id, worksheet_names, bustime_start, allocate_ids)
+	sheets_middleware = SheetsMiddleware(sheets_client, sheet_id, worksheet_names, bustime_start, edit_url, allocate_ids)
 
 	workers = [
-		SheetSync(sheets_middleware, stop, dbmanager, edit_url),
+		SheetSync(sheets_middleware, stop, dbmanager),
 	]
 	if playlist_worksheet:
 		workers.append(PlaylistSync(stop, dbmanager, sheets_client, sheet_id, playlist_worksheet))
