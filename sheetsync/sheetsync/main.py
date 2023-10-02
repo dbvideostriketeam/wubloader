@@ -107,7 +107,7 @@ class SheetSync(object):
 				worksheets = self.middleware.pick_worksheets()
 				for worksheet in worksheets:
 					for row in self.middleware.get_rows(worksheet):
-						self.sync_row(worksheet, row, events.get(row['id']))
+						self.sync_row(row, events.get(row['id']))
 
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error
@@ -152,9 +152,10 @@ class SheetSync(object):
 			event_counts.labels(*labels).set(count)
 		return by_id
 
-	def sync_row(self, worksheet, row, event):
+	def sync_row(self, row, event):
 		"""Take a row dict and an Event from the database (or None if id not found)
 		and take whatever action is required to sync them, ie. writing to the database or sheet."""
+		worksheet = row["sheet_name"]
 
 		if event is None:
 			# No event currently in DB, create it.

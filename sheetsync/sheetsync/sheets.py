@@ -227,8 +227,9 @@ class SheetsMiddleware():
 		# As a special case, treat an end time of "--" as equal to the start time.
 		if row_dict["event_end"] == "--":
 			row_dict["event_end"] = row_dict["event_start"]
-		# Always include row index
+		# Always include row index and worksheet
 		row_dict["index"] = row_index
+		row_dict["sheet_name"] = worksheet
 		return row_dict
 
 	def write_value(self, worksheet, row, key, value):

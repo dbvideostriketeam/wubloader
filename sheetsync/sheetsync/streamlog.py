@@ -88,10 +88,13 @@ class StreamLogMiddleware:
 				value = self.column_decode[column](value)
 			output[column] = value
 
+		# Section name is sheet name
+		output["sheet_name"] = row["section"]["name"]
+
 		# Implicit tags
 		output['tags'] += [
 			output['category'],
-			row['section']['name'],
+			output["sheet_name"],
 		]
 		if output["poster_moment"]:
 			output['tags'] += 'Poster Moment'
