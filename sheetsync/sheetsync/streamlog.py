@@ -101,10 +101,10 @@ class StreamLogMiddleware:
 
 		return output
 
-	def write_value(self, worksheet, row, key, value):
+	def write_value(self, row, key, value):
 		if key in self.column_encode:
 			value = self.column_encode[key](value)
 		self.client.write_value(row["id"], key, value)
 
-	def mark_modified(self, worksheet):
+	def mark_modified(self, row):
 		pass # not a concept we have

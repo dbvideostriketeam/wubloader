@@ -206,7 +206,7 @@ class SheetSync(object):
 			))
 			query(self.conn, built_query, **row)
 			rows_changed.labels('input', worksheet).inc()
-			self.middleware.mark_modified(worksheet)
+			self.middleware.mark_modified(row)
 
 		# Update sheet with any changed outputs
 		format_output = lambda v: '' if v is None else v # cast nulls to empty string
@@ -217,11 +217,10 @@ class SheetSync(object):
 			))
 			for col in changed:
 				self.middleware.write_value(
-					worksheet, row,
-					col, format_output(getattr(event, col)),
+					row, col, format_output(getattr(event, col)),
 				)
 			rows_changed.labels('output', worksheet).inc()
-			self.middleware.mark_modified(worksheet)
+			self.middleware.mark_modified(row)
 
 
 class PlaylistSync:
