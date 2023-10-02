@@ -104,3 +104,6 @@ class StreamLogMiddleware:
 
 	def mark_modified(self, row):
 		pass # not a concept we have
+
+	def create_row(self, worksheet, id):
+		raise NotImplementedError
