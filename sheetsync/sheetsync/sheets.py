@@ -153,50 +153,51 @@ class SheetsMiddleware():
 		self.sync_count += 1
 		return worksheets
 
-	def get_rows(self, worksheet):
+	def get_rows(self):
 		"""Fetch all rows of worksheet, parsed into a list of dicts."""
-		rows = self.sheets.get_rows(self.sheet_id, worksheet)
-		for row_index, row in enumerate(rows):
-			# Skip first row (ie. the column titles).
-			# Need to do it inside the loop and not eg. use rows[1:],
-			# because then row_index won't be correct.
-			if row_index == 0:
-				continue
-			row = self.parse_row(worksheet, row_index, row)
-
-			# Handle rows without an allocated id
-			if row['id'] is None:
-				# If a row is all empty (including no id), ignore it.
-				# Ignore the tags column for this check since it is never non-empty due to implicit tags
-				# (and even if there's other tags, we don't care if there's nothing else in the row).
-				if not any(row[col] for col in self.input_columns if col != 'tags'):
+		for worksheet in self.pick_worksheets():
+			rows = self.sheets.get_rows(self.sheet_id, worksheet)
+			for row_index, row in enumerate(rows):
+				# Skip first row (ie. the column titles).
+				# Need to do it inside the loop and not eg. use rows[1:],
+				# because then row_index won't be correct.
+				if row_index == 0:
 					continue
-				# If we can't allocate ids, warn and ignore.
-				if not self.allocate_ids:
-					logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
-					continue
-				# Otherwise, allocate id for a new row.
-				row['id'] = str(uuid.uuid4())
-				logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
-				self.sheets.write_value(
-					self.sheet_id, worksheet,
-					row["index"], self.column_map['id'],
-					str(row['id']),
-				)
+				row = self.parse_row(worksheet, row_index, row)
 
-			# Set edit link if marked for editing and start/end set.
-			# This prevents accidents / clicking the wrong row and provides
-			# feedback that sheet sync is still working.
-			# Also clear it if it shouldn't be set.
-			# We do this here instead of in sync_row() because it's Sheets-specific logic
-			# that doesn't depend on the DB event in any way.
-			edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
-			if row['edit_link'] != edit_link:
-				logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
-				self.write_value(row, "edit_link", edit_link)
-				self.mark_modified(row)
+				# Handle rows without an allocated id
+				if row['id'] is None:
+					# If a row is all empty (including no id), ignore it.
+					# Ignore the tags column for this check since it is never non-empty due to implicit tags
+					# (and even if there's other tags, we don't care if there's nothing else in the row).
+					if not any(row[col] for col in self.input_columns if col != 'tags'):
+						continue
+					# If we can't allocate ids, warn and ignore.
+					if not self.allocate_ids:
+						logging.warning(f"Row {worksheet!r}:{row['index']} has no valid id, skipping")
+						continue
+					# Otherwise, allocate id for a new row.
+					row['id'] = str(uuid.uuid4())
+					logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
+					self.sheets.write_value(
+						self.sheet_id, worksheet,
+						row["index"], self.column_map['id'],
+						str(row['id']),
+					)
 
-			yield row
+				# Set edit link if marked for editing and start/end set.
+				# This prevents accidents / clicking the wrong row and provides
+				# feedback that sheet sync is still working.
+				# Also clear it if it shouldn't be set.
+				# We do this here instead of in sync_row() because it's Sheets-specific logic
+				# that doesn't depend on the DB event in any way.
+				edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
+				if row['edit_link'] != edit_link:
+					logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
+					self.write_value(row, "edit_link", edit_link)
+					self.mark_modified(row)
+
+				yield row
 
 	def parse_row(self, worksheet, row_index, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""

@@ -104,10 +104,8 @@ class SheetSync(object):
 				# and comparing locally.
 				events = self.get_events()
 
-				worksheets = self.middleware.pick_worksheets()
-				for worksheet in worksheets:
-					for row in self.middleware.get_rows(worksheet):
-						self.sync_row(row, events.get(row['id']))
+				for row in self.middleware.get_rows():
+					self.sync_row(row, events.get(row['id']))
 
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error
@@ -123,7 +121,7 @@ class SheetSync(object):
 				self.conn = self.dbmanager.get_conn()
 				wait(self.stop, sync_start, self.ERROR_RETRY_INTERVAL)
 			else:
-				logging.info("Successful sync of worksheets: {}".format(", ".join(worksheets)))
+				logging.info("Successful sync")
 				sheets_synced.inc()
 				sheet_sync_duration.observe(monotonic() - sync_start)
 				wait(self.stop, sync_start, self.RETRY_INTERVAL)
