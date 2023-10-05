@@ -134,7 +134,10 @@
   // Path to a JSON file containing google credentials for sheetsync as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
   // May be the same as cutter_creds_file.
-  sheetsync_creds_file:: "./google_creds.json",
+  sheet_creds_file:: "./google_creds.json",
+
+  // Path to a text file containing the auth token for the streamlog server
+  streamlog_creds_file:: "./streamlog_token.txt",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
   edit_url:: "http://thrimbletrimmer.codegunner.com/edit.html?id={}",
@@ -151,10 +154,18 @@
   // Set to null to disable.
   backfill_max_hours_ago:: 24 * 30 * 6, // approx 6 months
 
-  // The spreadsheet id and worksheet names for sheet sync to act on
+  // The spreadsheet id and worksheet names for sheet sync to act on.
+  // Set to null to disable syncing from sheets.
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
   playlist_worksheet:: "Tags",
+
+  // Set to true to enable reverse-sync mode into Sheets, instead of syncing from it.
+  sheet_reverse_sync:: false,
+
+  // The StreamLog server and event to use, or null to disable sync from StreamLog.
+  streamlog_url:: "https://streamlog.example.com",
+  streamlog_event:: "myevent",
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
