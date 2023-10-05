@@ -157,7 +157,10 @@
   // Path to a JSON file containing google credentials for sheetsync as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
   // May be the same as cutter_creds_file.
-  sheetsync_creds_file:: "./google_creds.json",
+  sheet_creds_file:: "./google_creds.json",
+
+  // Path to a text file containing the auth token for the streamlog server
+  streamlog_creds_file:: "./streamlog_token.txt",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
   edit_url:: "https://wubloader.example.com/thrimbletrimmer/edit.html?id={}",
@@ -178,6 +181,7 @@
   backfill_dirs:: ["emotes"],
 
   // The spreadsheet id and worksheet names for sheet sync to act on
+  // Set to null to disable syncing from sheets.
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
   playlist_worksheet:: "Tags",
@@ -185,6 +189,13 @@
   // The archive worksheet, if given, points to a worksheet containing events with a different
   // schema and alternate behaviour suitable for long-term archival videos instead of uploads.
   archive_worksheet:: "Video Trim Times",
+
+  // Set to true to enable reverse-sync mode into Sheets, instead of syncing from it.
+  sheet_reverse_sync:: false,
+
+  // The StreamLog server and event to use, or null to disable sync from StreamLog.
+  streamlog_url:: "https://streamlog.example.com",
+  streamlog_event:: "myevent",
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
@@ -430,26 +441,38 @@
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {
-      image: $.get_image("sheetsync"),
-      // Args for the sheetsync
-      command: [
-        "--backdoor-port", std.toString($.backdoor_port),
-        $.db_connect,
-        std.manifestJson({
+      local sync_sheet = {
           type: "sheets",
-          creds: "/etc/wubloader-creds.json",
+          creds: "/etc/sheet-creds.json",
           sheet_id: $.sheet_id,
           worksheets: $.worksheets,
           allocate_ids: true,
           edit_url: $.edit_url,
           bustime_start: $.bustime_start,
           playlist_worksheet: $.playlist_worksheet,
-        }),
-      ],
-      volumes: [
-        // Mount the creds file into /etc
-        "%s:/etc/wubloader-creds.json" % $.sheetsync_creds_file,
-      ],
+          reverse_sync: $.sheet_reverse_sync,
+      },
+      local sync_streamlog = {
+          type: "streamlog",
+          creds: "/etc/streamlog-token.txt",
+          url: $.streamlog_url,
+          event_name: $.streamlog_event,
+      },
+      local config = std.prune([
+          if $.sheet_id != null then sync_sheet,
+          if $.streamlog_url != null then sync_streamlog,
+      ]),
+      image: $.get_image("sheetsync"),
+      // Args for the sheetsync
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+        $.db_connect,
+      ] + std.map(std.manifestJson, config),
+      // Mount the creds file(s) into /etc
+      volumes: std.prune([
+        if $.sheet_id != null then "%s:/etc/sheet-creds.json" % $.sheet_creds_file,
+        if $.streamlog_url != null then "%s:/etc/streamlog-token.txt" % $.streamlog_creds_file,
+      ]),
       // If the application crashes, restart it.
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
