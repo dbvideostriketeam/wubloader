@@ -337,26 +337,38 @@
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {
-      image: $.get_image("sheetsync"),
-      // Args for the sheetsync
-      command: [
-        "--backdoor-port", std.toString($.backdoor_port),
-        $.db_connect,
-        std.manifestJson({
+      local sync_sheet = {
           type: "sheets",
-          creds: "/etc/wubloader-creds.json",
+          creds: "/etc/sheet-creds.json",
           sheet_id: $.sheet_id,
           worksheets: $.worksheets,
           allocate_ids: true,
           edit_url: $.edit_url,
           bustime_start: $.bustime_start,
           playlist_worksheet: $.playlist_worksheet,
-        }),
-      ],
-      volumes: [
-        // Mount the creds file into /etc
-        "%s:/etc/wubloader-creds.json" % $.sheetsync_creds_file,
-      ],
+          reverse_sync: $.sheet_reverse_sync,
+      },
+      local sync_streamlog = {
+          type: "streamlog",
+          creds: "/etc/streamlog-token.txt",
+          url: $.streamlog_url,
+          event_name: $.streamlog_event,
+      },
+      local config = std.prune([
+          if $.sheet_id != null then sync_sheet,
+          if $.streamlog_url != null then sync_streamlog,
+      ]),
+      image: $.get_image("sheetsync"),
+      // Args for the sheetsync
+      command: [
+        "--backdoor-port", std.toString($.backdoor_port),
+        $.db_connect,
+      ] + std.map(std.manifestJson, config),
+      // Mount the creds file(s) into /etc
+      volumes: std.prune([
+        if $.sheet_id != null then "%s:/etc/sheet-creds.json" % $.sheet_creds_file,
+        if $.streamlog_url != null then "%s:/etc/streamlog-token.txt" % $.streamlog_creds_file,
+      ]),
       // If the application crashes, restart it.
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
