@@ -61,7 +61,7 @@ class StreamLogMiddleware:
 		# Omitted columns act as the identity function.
 		self.column_decode = {
 			'event_start': parse_utc_only,
-			'event_end': parse_utc_only,
+			'event_end': lambda v: None if v["type"] == "NoTime" else parse_utc_only(v["time"]),
 			'category': lambda v: v["name"],
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'state': lambda v: v.upper(),
@@ -73,7 +73,7 @@ class StreamLogMiddleware:
 		}
 
 	def get_rows(self):
-		for row in self.client.get_rows():
+		for row in self.client.get_rows()["event_log"]:
 			yield self.parse_row(row)
 
 	def parse_row(self, row):
