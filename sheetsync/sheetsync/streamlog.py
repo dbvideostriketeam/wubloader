@@ -21,6 +21,7 @@ class StreamLogClient():
 
 	def write_value(self, row_id, key, value):
 		"""Write key=value for the given row, or delete if value=None"""
+		logging.debug("Write to streamlog {} {} = {!r}".format(row_id, key, value))
 		if value is None:
 			return self.request("DELETE", "entry", row_id, key)
 		else:
@@ -63,10 +64,7 @@ class StreamLogMiddleware:
 		# Omitted columns act as the identity function.
 		self.column_decode = {
 			'event_start': parse_utc_only,
-			# New, to switch to.
-			# 'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
-			# Old
-			'event_end': lambda v: None if v is None else parse_utc_only(v),
+			'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
 			'category': lambda v: v["name"],
 			'state': lambda v: None if v is None else v.upper(),
 		}
