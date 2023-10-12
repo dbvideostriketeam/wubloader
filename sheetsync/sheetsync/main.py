@@ -353,7 +353,7 @@ class PlaylistSync:
 		'  type: streamlog',
 		'  creds: path to a file containing the auth key',
 		'  url: The URL of the streamlog server',
-		'  event_name: The name of the streamlog event to sync',
+		'  event_id: The id of the streamlog event to sync',
 	]),
 )
 def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
@@ -417,7 +417,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 			auth_token = open(config["creds"]).read().strip()
 			client = StreamLogClient(
 				config["url"],
-				config["event_name"],
+				config["event_id"],
 				auth_token,
 			)
 			middleware = StreamLogMiddleware(client)

@@ -193,9 +193,9 @@
   // Set to true to enable reverse-sync mode into Sheets, instead of syncing from it.
   sheet_reverse_sync:: false,
 
-  // The StreamLog server and event to use, or null to disable sync from StreamLog.
+  // The StreamLog server and event id to use, or null to disable sync from StreamLog.
   streamlog_url:: "https://streamlog.example.com",
-  streamlog_event:: "myevent",
+  streamlog_event:: "id_goes_here",
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
@@ -456,7 +456,7 @@
           type: "streamlog",
           creds: "/etc/streamlog-token.txt",
           url: $.streamlog_url,
-          event_name: $.streamlog_event,
+          event_id: $.streamlog_event,
       },
       local config = std.prune([
           if $.sheet_id != null then sync_sheet,

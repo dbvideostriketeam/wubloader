@@ -8,12 +8,11 @@ from common.dateutil import parse_utc_only
 class StreamLogClient():
 	"""Client for Stream Log server"""
 
-	def __init__(self, url, event_name, auth_token):
+	def __init__(self, url, event_id, auth_token):
 		self.url = url
 		self.auth_token = auth_token
+		self.event_id = event_id
 		self.session = requests.Session()
-
-		self.event_id = self.request("GET", "event_by_name", event_name)["id"]
 
 	def get_rows(self):
 		"""Return a list of rows, where each row is a dict"""
