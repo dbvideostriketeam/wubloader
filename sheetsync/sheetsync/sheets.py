@@ -115,6 +115,7 @@ class SheetsMiddleware():
 		# Functions take a single arg (the value to parse) and ValueError is
 		# interpreted as None.
 		# Columns missing from this map default to simply using the string value.
+		empty_is_none = lambda v: None if v == "" else v
 		self.column_parsers = {
 			'event_start': lambda v: self.parse_bustime(v),
 			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
@@ -122,6 +123,8 @@ class SheetsMiddleware():
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
 			'id': lambda v: v if v.strip() else None,
+			'error': empty_is_none,
+			'video_link': empty_is_none,
 		}
 		# tracks when to do inactive checks
 		self.sync_count = 0
@@ -241,6 +244,10 @@ class SheetsMiddleware():
 
 	def write_value(self, row, key, value):
 		"""Write key=value to the given row, as identified by worksheet + row dict."""
+		# You can't write null to a spreadsheet, so cast to empty string instead.
+		# For values where this is needed, they should be parsed so that '' -> None.
+		if value is None:
+			value = ''
 		return self.client.write_value(
 			self.sheet_id,
 			row["sheet_name"],

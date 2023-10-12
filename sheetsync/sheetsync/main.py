@@ -238,15 +238,15 @@ class SheetSync(object):
 			self.middleware.mark_modified(row)
 
 		# Update sheet with any changed outputs
-		format_output = lambda v: '' if v is None else v # cast nulls to empty string
-		changed = [col for col in self.output_columns if row.get(col) != format_output(getattr(event, col))]
+		changed = [col for col in self.output_columns if row.get(col) != getattr(event, col)]
 		if changed:
 			logging.info("Updating sheet row {} with new value(s) for {}".format(
 				row['id'], ', '.join(changed)
 			))
 			for col in changed:
+				logging.debug("Writing to sheet {} {!r} -> {!r}".format(col, row.get(col), getattr(event, col)))
 				self.middleware.write_value(
-					row, col, format_output(getattr(event, col)),
+					row, col, getattr(event, col),
 				)
 			rows_changed.labels('output', worksheet).inc()
 			self.middleware.mark_modified(row)
