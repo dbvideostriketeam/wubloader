@@ -69,7 +69,6 @@ class StreamLogMiddleware:
 			'event_end': lambda v: None if v is None else parse_utc_only(v),
 			'category': lambda v: v["name"],
 			'state': lambda v: None if v is None else v.upper(),
-			'video_link': lambda v: '' if v is None else v,
 		}
 		# Maps DB column names to an encode function to convert from internal format to streamlog.
 		# Omitted columns act as the identity function.
