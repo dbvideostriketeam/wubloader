@@ -77,6 +77,7 @@ class SheetSync(object):
 		self.create_missing_ids = False
 		# List of input columns
 		self.input_columns = [
+			'sheet_name',
 			'event_start',
 			'event_end',
 			'category',
@@ -123,7 +124,7 @@ class SheetSync(object):
 					self.sync_row(row, events.get(row['id']))
 
 				for event in [e for id, e in events.items() if id not in seen]:
-					self.sync_row(event["sheet_name"], None, event)
+					self.sync_row(None, event)
 
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error
@@ -181,7 +182,7 @@ class SheetSync(object):
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
-			insert_cols = ['id', 'sheet_name'] + self.input_columns
+			insert_cols = ['id'] + self.input_columns
 			built_query = sql.SQL("""
 				INSERT INTO events ({})
 				VALUES ({})
@@ -190,7 +191,7 @@ class SheetSync(object):
 				sql.SQL(", ").join(sql.Identifier(col) for col in insert_cols),
 				sql.SQL(", ").join(get_column_placeholder(col) for col in insert_cols),
 			)
-			query(self.conn, built_query, sheet_name=worksheet, **row)
+			query(self.conn, built_query, **row)
 			rows_found.labels(worksheet).inc()
 			rows_changed.labels('insert', worksheet).inc()
 			self.middleware.mark_modified(worksheet)
@@ -407,7 +408,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 				config["worksheets"],
 				common.dateutil.parse(config["bustime_start"]),
 				config["edit_url"],
-				config["allocate_ids"],
+				config.get("allocate_ids", False),
 			)
 			if "playlist_worksheet" in config:
 				workers.append(
@@ -424,7 +425,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 		else:
 			raise ValueError("Unknown type {!r}".format(config["type"]))
 		workers.append(
-			SheetSync(middleware, stop, dbmanager, config["reverse_sync"]),
+			SheetSync(middleware, stop, dbmanager, config.get("reverse_sync", False)),
 		)
 
 	jobs = [gevent.spawn(worker.run) for worker in workers]

@@ -1,5 +1,6 @@
 
 import json
+import logging
 
 import requests
 
@@ -19,11 +20,14 @@ class StreamLogClient():
 		return self.request("GET", "event", self.event_id, "log")
 
 	def write_value(self, row_id, key, value):
-		"""Write key=value for the given row"""
-		return self.request("POST", "entry", row_id, key, body=value)
+		"""Write key=value for the given row, or delete if value=None"""
+		if value is None:
+			return self.request("DELETE", "entry", row_id, key)
+		else:
+			return self.request("POST", "entry", row_id, key, body=value)
 
 	def request(self, method, *path, body=None):
-		response = self.session.request(method, "/".join(("api", "v1") + path),
+		response = self.session.request(method, "/".join((self.url, "api", "v1") + path),
 			data=body,
 			headers={
 				"Authorization": self.auth_token,
@@ -47,12 +51,11 @@ class StreamLogMiddleware:
 			'description': 'description',
 			'submitter_winner': 'submitter_or_winner',
 			'poster_moment': 'poster_moment',
-			'image_links': 'media_link',
+			'image_links': 'media_links',
 			'notes': 'notes_to_editor',
 			'tags': 'tags',
 			'video_link': 'video_link',
 			'state': 'video_state',
-			'edit_link': 'editor_link',
 			'error': 'video_errors',
 			'id': 'id',
 		}
@@ -60,31 +63,47 @@ class StreamLogMiddleware:
 		# Omitted columns act as the identity function.
 		self.column_decode = {
 			'event_start': parse_utc_only,
-			'event_end': lambda v: None if v["type"] == "NoTime" else parse_utc_only(v["time"]),
+			# New, to switch to.
+			# 'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
+			# Old
+			'event_end': lambda v: None if v is None else parse_utc_only(v),
 			'category': lambda v: v["name"],
-			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
-			'state': lambda v: v.upper(),
+			'state': lambda v: None if v is None else v.upper(),
+			'video_link': lambda v: '' if v is None else v,
 		}
 		# Maps DB column names to an encode function to convert from internal format to streamlog.
 		# Omitted columns act as the identity function.
 		self.column_encode = {
 			'state': lambda v: v[0].upper() + v[1:].lower(), # Titlecase
 		}
+		# Maps DB column names to the url part you need to write to to set it.
+		self.write_map = {
+			"state": "video_state",
+			"error": "video_errors",
+			"video_link": "video",
+		}
 
 	def get_rows(self):
 		for row in self.client.get_rows()["event_log"]:
-			yield self.parse_row(row)
+			row = self.parse_row(row)
+			# Malformed rows can be skipped, represented as a None result
+			if row is not None:
+				yield row
 
 	def parse_row(self, row):
 		output = {}
 		for column, key in self.column_map.items():
 			value = row[key]
 			if column in self.column_decode:
-				value = self.column_decode[column](value)
+				try:
+					value = self.column_decode[column](value)
+				except Exception:
+					logging.exception(f"Failed to parse {key} value {value!r} of row {row['id']}, skipping")
+					return
 			output[column] = value
 
 		# Section name is sheet name
-		output["sheet_name"] = row["section"]["name"]
+		output["sheet_name"] = row["section"]["name"] if row["section"] else "unknown"
 
 		# Implicit tags
 		output['tags'] += [
@@ -99,7 +118,7 @@ class StreamLogMiddleware:
 	def write_value(self, row, key, value):
 		if key in self.column_encode:
 			value = self.column_encode[key](value)
-		self.client.write_value(row["id"], key, value)
+		self.client.write_value(row["id"], self.write_map[key], value)
 
 	def mark_modified(self, row):
 		pass # not a concept we have
