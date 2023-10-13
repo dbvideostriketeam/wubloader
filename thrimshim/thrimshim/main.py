@@ -242,6 +242,7 @@ def update_row(ident, editor=None):
 	]
 	edit_columns = non_null_columns + [
 		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template', 'thumbnail_image'
+		'video_crop'
 	]
 	sheet_columns = [
 		'sheet_name', 'event_start', 'event_end',
@@ -337,6 +338,8 @@ def update_row(ident, editor=None):
 		None if transition is None else tuple(transition)
 		for transition in new_row['video_transitions']
 	]
+	if new_row.get('video_crop') is not None:
+		new_row['video_crop'] = tuple(new_row['video_crop'])
 
 	# Convert binary fields from base64 and do basic validation of contents
 	if new_row.get('thumbnail_image') is not None:

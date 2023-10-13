@@ -63,6 +63,7 @@ CUT_JOB_PARAMS = [
 	"public",
 	"video_ranges",
 	"video_transitions",
+	"video_crop",
 	"video_title",
 	"video_description",
 	"video_tags",
@@ -396,22 +397,40 @@ class Cutter(object):
 			nonlocal upload_finished
 
 			try:
+				cut_type = upload_backend.preferred_cut_type
+				has_complex_transitions = any(transition is not None for transition in job.video_transitions)
 				if upload_backend.encoding_settings is None:
+					# this forces the issue
+					cut_type = 'fast'
+				elif has_complex_transitions or job.video_crop is not None:
+					# required to be full cut
+					cut_type = 'full'
+
+				if cut_type == 'fast':
 					self.logger.debug("No encoding settings, using fast cut")
-					if any(transition is not None for transition in job.video_transitions):
+					if has_complex_transitions:
 						raise ValueError("Fast cuts do not support complex transitions")
+					if job.video_crop is not None:
+						raise ValueError("Fast cuts do not support cropping")
 					cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
 				else:
+					assert cut_type == 'full', cut_type
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
 						upload_backend.encoding_settings,
 					))
+					encode_args = upload_backend.encoding_settings
+					if job.video_crop:
+						x, y, w, h = job.video_crop
+						encode_args = [
+							"-vf", "crop={}:{}:{}:{}".format(w, h, x, y)
+						] + encode_args
 					if len(job.video_ranges) > 1:
 						raise ValueError("Full cuts do not support multiple ranges")
 					range = job.video_ranges[0]
 					cut = full_cut_segments(
 						job.segment_ranges[0], range.start, range.end,
-						upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
+						encode_args, stream=upload_backend.encoding_streamable,
 					)
 
 				for chunk in cut:
@@ -934,10 +953,8 @@ def main(
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(backend_type))
 		backend = backend_type(credentials, **backend_config)
-		if cut_type == 'fast':
-			# mark for fast cut by clearing encoding settings
-			backend.encoding_settings = None
-		elif cut_type != 'full':
+		backend.preferred_cut_type = cut_type
+		if cut_type not in ('fast', 'full'):
 			raise ValueError("Unknown cut type: {!r}".format(cut_type))
 		upload_locations[location] = backend
 		if backend.needs_transcode and not no_transcode_check:
