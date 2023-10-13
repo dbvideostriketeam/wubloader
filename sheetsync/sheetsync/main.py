@@ -193,16 +193,16 @@ class SheetSync(object):
 			query(self.conn, built_query, **row)
 			rows_found.labels(worksheet).inc()
 			rows_changed.labels('insert', worksheet).inc()
-			self.middleware.mark_modified(worksheet)
+			self.middleware.mark_modified(row)
 			return
 
 		if row is None:
 			assert event
 			if not self.create_missing_ids:
-				logging.info("Skipping event {} without any matching row".format(event["id"]))
+				logging.info("Skipping event {} without any matching row".format(event.id))
 				return
-			logging.info("Adding new row {}".format(event["id"]))
-			row = self.middleware.create_row(event["sheet_name"], event["id"])
+			logging.info("Adding new row {}".format(event.id))
+			row = self.middleware.create_row(event.sheet_name, event.id)
 
 		worksheet = row["sheet_name"]
 		rows_found.labels(worksheet).inc()

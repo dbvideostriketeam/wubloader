@@ -90,6 +90,7 @@ class SheetsMiddleware():
 		self.sheet_id = sheet_id
 		# map {worksheet: last modify time}
 		self.worksheets = {w: 0 for w in worksheets}
+		self.bustime_start = bustime_start
 		self.edit_url = edit_url
 		self.allocate_ids = allocate_ids
 		# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
@@ -161,7 +162,7 @@ class SheetsMiddleware():
 		# Clear previously seen unassigned rows
 		self.unassigned_rows = {}
 		for worksheet in self.pick_worksheets():
-			rows = self.sheets.get_rows(self.sheet_id, worksheet)
+			rows = self.client.get_rows(self.sheet_id, worksheet)
 			for row_index, row in enumerate(rows):
 				# Skip first row (ie. the column titles).
 				# Need to do it inside the loop and not eg. use rows[1:],
@@ -172,10 +173,8 @@ class SheetsMiddleware():
 
 				# Handle rows without an allocated id
 				if row['id'] is None:
-					# If a row is all empty (including no id), ignore it and mark it down for possible use in create_row().
-					# Ignore the tags column for this check since it is never non-empty due to implicit tags
-					# (and even if there's other tags, we don't care if there's nothing else in the row).
-					if not any(row[col] for col in self.input_columns if col != 'tags'):
+					# Only assign a row an id if it has a start time and a description
+					if not any(row[col] for col in ["event_start", "description"]):
 						self.unassigned_rows.setdefault(worksheet, []).append(row["index"])
 						continue
 					# If we can't allocate ids, warn and ignore.
@@ -202,7 +201,7 @@ class SheetsMiddleware():
 				yield row
 
 	def write_id(self, row):
-		self.sheets.write_value(
+		self.client.write_value(
 			self.sheet_id, row["sheet_name"],
 			row["index"], self.column_map['id'],
 			str(row['id']),
