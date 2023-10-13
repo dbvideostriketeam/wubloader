@@ -67,11 +67,13 @@ class StreamLogMiddleware:
 			'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
 			'category': lambda v: v["name"],
 			'state': lambda v: None if v is None else v.upper(),
+			'error': lambda v: None if v == '' else v,
 		}
 		# Maps DB column names to an encode function to convert from internal format to streamlog.
 		# Omitted columns act as the identity function.
 		self.column_encode = {
 			'state': lambda v: v[0].upper() + v[1:].lower(), # Titlecase
+			'error': lambda v: '' if v == None else v,
 		}
 		# Maps DB column names to the url part you need to write to to set it.
 		self.write_map = {
