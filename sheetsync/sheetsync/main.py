@@ -77,7 +77,6 @@ class SheetSync(object):
 		self.create_missing_ids = False
 		# List of input columns
 		self.input_columns = [
-			'sheet_name',
 			'event_start',
 			'event_end',
 			'category',
@@ -182,7 +181,7 @@ class SheetSync(object):
 			logging.info("Inserting new event {}".format(row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
-			insert_cols = ['id'] + self.input_columns
+			insert_cols = ['id', 'sheet_name'] + self.input_columns
 			built_query = sql.SQL("""
 				INSERT INTO events ({})
 				VALUES ({})
