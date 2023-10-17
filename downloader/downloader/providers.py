@@ -29,7 +29,8 @@ class Provider:
 			session = InstrumentedSession()
 		resp = session.get(uri, metric_name='get_media_playlist')
 		resp.raise_for_status()
-		return hls_playlist.load(resp.text, base_uri=resp.url)
+		playlist = resp.text
+		return playlist, hls_playlist.load(playlist, base_uri=resp.url)
 
 
 class URLProvider(Provider):
