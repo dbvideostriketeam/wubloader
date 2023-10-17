@@ -347,12 +347,15 @@ class StreamWorker(object):
 
 	def _run(self):
 		first = True
+		history = []
+		HISTORY_SIZE = 10
 		while not self.stopping.is_set():
 
 			self.logger.debug("Getting media playlist {}".format(self.url))
 			try:
 				with soft_hard_timeout(self.logger, "getting media playlist", self.FETCH_TIMEOUTS, self.trigger_new_worker):
-					playlist = self.manager.provider.get_media_playlist(self.url, session=self.session)
+					playlist_time = datetime.datetime.utcnow()
+					raw_playlist, playlist = self.manager.provider.get_media_playlist(self.url, session=self.session)
 			except Exception as e:
 				self.logger.warning("Failed to fetch media playlist {}".format(self.url), exc_info=True)
 				self.trigger_new_worker()
@@ -367,6 +370,8 @@ class StreamWorker(object):
 
 			# We successfully got the playlist at least once
 			first = False
+
+			history = [(playlist_time, raw_playlist)] + history[:HISTORY_SIZE]
 
 			# Start any new segment getters
 			date = None # tracks date in case some segment doesn't include it
@@ -393,6 +398,7 @@ class StreamWorker(object):
 						segment,
 						date,
 						self.map_cache,
+						history,
 					)
 					gevent.spawn(self.getters[segment.uri].run)
 				if date is not None:
@@ -448,7 +454,7 @@ class SegmentGetter(object):
 	# or so, to be paranoid we set it to considerably longer than that.
 	GIVE_UP_TIMEOUT = 20 * 60
 
-	def __init__(self, parent_logger, session, base_dir, channel, quality, segment, date, map_cache):
+	def __init__(self, parent_logger, session, base_dir, channel, quality, segment, date, map_cache, history):
 		self.logger = parent_logger.getChild("SegmentGetter@{:x}".format(id(self)))
 		self.base_dir = base_dir
 		self.channel = channel
@@ -461,6 +467,7 @@ class SegmentGetter(object):
 		self.done = gevent.event.Event() # set when file exists or we give up
 		# Our parent's connection pool, but we'll replace it if there's any issues
 		self.session = session
+		self.history = history
 
 	def run(self):
 		try:
@@ -612,6 +619,16 @@ class SegmentGetter(object):
 			stat = latest_segment.labels(channel=self.channel, quality=self.quality)
 			timestamp = (self.date - datetime.datetime(1970, 1, 1)).total_seconds()
 			stat.set(max(stat._value.get(), timestamp)) # NOTE: not thread-safe but is gevent-safe
+			self.write_history(full_path)
+
+	def write_history(self, segment_path):
+		segment_path = os.path.relpath(segment_path, self.base_dir)
+		history_path = os.path.join(self.base_dir, "playlist-debug", segment_path)
+		os.makedirs(history_path)
+		for n, (timestamp, playlist) in enumerate(self.history):
+			filename = "{}_{}".format(n, timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f"))
+			path = os.path.join(history_path, filename)
+			common.atomic_write(path, playlist)
 
 
 def parse_channel(channel):
