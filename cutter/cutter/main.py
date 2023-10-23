@@ -867,11 +867,6 @@ def main(
 	for that location. This config object should contain the keys:
 		type:
 			the name of the upload backend type
-		no_transcode_check:
-			bool. If true, won't check for when videos are done transcoding.
-			This is useful when multiple upload locations actually refer to the
-			same place just with different settings, and you only want one of them
-			to actually do the check.
 		cut_type:
 			One of 'fast' or 'full'. Default 'full'. This indicates whether to use
 			fast_cut_segments() or full_cut_segments() for this location.
@@ -929,7 +924,6 @@ def main(
 	needs_updater = {}
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
-		no_transcode_check = backend_config.pop('no_transcode_check', False)
 		no_updater = backend_config.pop('no_updater', False)
 		cut_type = backend_config.pop('cut_type', 'full')
 		if backend_type == 'youtube':
@@ -945,7 +939,7 @@ def main(
 		elif cut_type != 'full':
 			raise ValueError("Unknown cut type: {!r}".format(cut_type))
 		upload_locations[location] = backend
-		if backend.needs_transcode and not no_transcode_check:
+		if backend.needs_transcode:
 			needs_transcode_check[location] = backend
 		if not no_updater:
 			needs_updater[location] = backend
