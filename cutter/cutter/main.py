@@ -17,11 +17,11 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query, get_column_placeholder
-from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles
+from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles
 from common.images import compose_thumbnail_template
 from common.stats import timed
 
-from .upload_backends import Youtube, Local, UploadError
+from .upload_backends import Youtube, Local, LocalArchive, UploadError
 
 
 videos_uploaded = prom.Counter(
@@ -937,6 +937,8 @@ def main(
 			backend_type = Youtube
 		elif backend_type == 'local':
 			backend_type = Local
+		elif backend_type == 'local-archive':
+			backend_type = LocalArchive
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(backend_type))
 		backend = backend_type(credentials, **backend_config)

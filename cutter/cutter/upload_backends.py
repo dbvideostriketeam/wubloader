@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import time
 import uuid
 
 import common
@@ -342,3 +343,30 @@ class Local(UploadBackend):
 				'tags': tags,
 				'public': public,
 			}) + '\n')
+
+	def set_thumbnail(self, video_id, thumbnail):
+		filepath = os.path.join(self.path, "{}.png".format(video_id))
+		common.atomic_write(filepath, thumbnail)
+
+
+class LocalArchive(Local):
+	"""Similar to Local() but does archive cuts. See archive_cut_segments()."""
+	encoding_settings = "archive"
+
+	def upload_video(self, title, description, tags, public, tempfiles):
+		# make title safe by removing offending characters, replacing with '-'
+		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
+		# To aid in finding the "latest" version if re-edited, prefix with current time.
+		prefix = str(time.time())
+		video_dir = "{}-{}".format(prefix, safe_title)
+		common.ensure_directory(os.path.join(self.path, video_dir))
+		for n, tempfile in enumerate(tempfiles):
+			filepath = os.path.join(self.path, video_dir, "{}-{}.mkv".format(safe_title, n))
+			# We're assuming these are on the same filesystem. This may not always be true
+			# but it will be in our normal setup. If we ever need this in the future, we'll fix it then.
+			os.rename(tempfile, filepath)
+		if self.url_prefix is not None:
+			url = self.url_prefix + video_dir
+		else:
+			url = "file://{}".format(video_dir)
+		return prefix, url
