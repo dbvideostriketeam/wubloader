@@ -749,3 +749,20 @@ def extract_frame(segments, timestamp):
 					action()
 				except (OSError, IOError):
 					pass
+
+
+def split_contiguous(segments):
+	"""For a list of segments, return a list of contiguous ranges of segments.
+	In other words, it splits the list every time there is a hole.
+	Each range will contain at least one segment.
+	"""
+	contiguous = []
+	for segment in segments:
+		if segment is None:
+			if contiguous:
+				yield contiguous
+			contiguous = []
+		else:
+			contiguous.append(segment)
+	if contiguous:
+		yield contiguous

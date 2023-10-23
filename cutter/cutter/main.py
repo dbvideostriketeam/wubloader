@@ -406,6 +406,13 @@ class Cutter(object):
 						"smart": smart_cut_segments,
 					}[upload_backend.encoding_settings]
 					cut = cut_fn(job.segment_ranges, job.video_ranges)
+				elif upload_backend.encoding_settings in ("rough", "split"):
+					# A rough cut copies the segments byte-for-byte with no processing.
+					# A split cut is a rough cut where the video is split into contiguous ranges
+					# seperated by discontinuities. We communicate these discontinuities to the uploader
+					# by inserting a None into the stream of chunks. It is expected a split-cut-capable upload
+					# location will detect these Nones and do some special behaviour (eg. making a seperate video).
+
 				else:
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
