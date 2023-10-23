@@ -579,13 +579,13 @@ class BackfillerWorker(object):
 				path = os.path.join(dir, file)
 				self.logger.info(f"Backfilling {path}")
 				workers.append(pool.spawn(
-					get_remote_extra(self.base_dir, self.node, path)
+					get_remote_extra, self.base_dir, self.node, path
 				))
 
-		for worker in workers:
-			worker.get()
+			for worker in workers:
+				worker.get()
 
-		self.logger.info("Backfilled {} extras".format(len(missing_files)))
+			self.logger.info("Backfilled {} extras for dir {}".format(len(missing_files), dir))
 
 
 	def run(self):
