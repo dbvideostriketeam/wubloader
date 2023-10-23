@@ -110,7 +110,7 @@
   db_super_password:: "postgres", // Must not contain ' or \ as these are not escaped.
   db_replication_user:: "replicate", // if empty, don't allow replication
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
-  db_readonly_user:: "vst-ro", // if empty, don't have a readonly account
+  db_readonly_user:: "readonly", // if empty, don't have a readonly account
   db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
   db_standby:: false, // set to true to have this database replicate another server
 
@@ -120,7 +120,7 @@
 
   // Config for cutter upload locations. See cutter docs for full detail.
   cutter_config:: {
-    desertbus: {type: "youtube"},
+    desertbus: {type: "youtube", cut_type: "fast"},
   },
   default_location:: "desertbus",
 
@@ -132,7 +132,10 @@
   title_header:: "DB2019",
 
   // The footer to put at the bottom of descriptions, in its own paragraph.
-  description_footer:: "Uploaded by the Desert Bus Video Strike Team",
+  description_footer:: |||
+    https://www.desertbus.org
+    Uploaded by the Desert Bus Video Strike Team
+  |||,
 
   // Path to a JSON file containing google credentials for sheetsync as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
@@ -140,7 +143,7 @@
   sheetsync_creds_file:: "./google_creds.json",
 
   // The URL to write to the sheet for edit links, with {} being replaced by the id
-  edit_url:: "http://thrimbletrimmer.codegunner.com/edit.html?id={}",
+  edit_url:: "https://wubloader.example.com/thrimbletrimmer/edit.html?id={}",
 
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
@@ -168,7 +171,7 @@
   // youtube videos from Day 1.
   // Note that you can make an "all videos" playlist by specifying no tags (ie. []).
   playlists:: {
-    "YOUR-PLAYLIST-ID": ["some tag"],
+    // Replaced entirely by tags sheet
   },
 
   // Which upload locations should be added to playlists
