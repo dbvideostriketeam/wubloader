@@ -13,6 +13,7 @@ import shutil
 from collections import namedtuple
 from contextlib import closing
 from tempfile import TemporaryFile
+from uuid import uuid4
 
 import gevent
 from gevent import subprocess
@@ -590,7 +591,7 @@ def feed_input(segments, pipe):
 	pipe.close()
 
 
-@timed('cut',
+@timed('cut_range',
 	cut_type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
 	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds(),
 )
@@ -647,6 +648,64 @@ def full_cut_segments(segments, start, end, encode_args, stream=False):
 					action()
 				except (OSError, IOError):
 					pass
+
+
+@timed('cut', cut_type='archive', normalize=lambda ret, sr, ranges: range_total(ranges))
+def archive_cut_segments(segment_ranges, ranges, tempdir):
+	"""
+	Archive cuts are special in a few ways.
+	Like a rough cut, they do not take explicit start/end times but instead
+	use the entire segment range.
+	Like a full cut, they are passed entirely through ffmpeg.
+	They explicitly use ffmpeg arguments to copy the video without re-encoding,
+	but are placed into an MKV container.
+	They are split at each discontinuity into seperate videos.
+	Finally, because the files are expected to be very large and non-streamable,
+	instead of streaming the data back to the caller, we return a list of temporary filenames
+	which the caller should then do something with (probably either read then delete, or rename).
+	"""
+	# don't re-encode anything, just put it into an MKV container
+	encode_args = ["-c", "copy", "-f", "mkv"]
+	# We treat multiple segment ranges as having an explicit discontinuity between them.
+	# So we apply split_contiguous() to each range, then flatten.
+	contiguous_ranges = []
+	for segments in segment_ranges:
+		contiguous_ranges += list(split_contiguous(segments))
+	for segments in contiguous_ranges:
+		ffmpeg = None
+		input_feeder = None
+		tempfile_name = os.path.join(tempdir, "archive-temp-{}.mkv".format(uuid4()))
+		try:
+			tempfile = open(tempfile_name, "wb")
+
+			ffmpeg = ffmpeg_cut_stdin(tempfile, None, None, encode_args)
+			input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+
+			# since we've now handed off the tempfile fd to ffmpeg, close ours
+			tempfile.close()
+
+			# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+			if ffmpeg.wait() != 0:
+				raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
+			input_feeder.get() # re-raise any errors from feed_input()
+		except:
+			# if something goes wrong, try to clean up ignoring errors
+			if input_feeder is not None:
+				input_feeder.kill()
+			if ffmpeg is not None and ffmpeg.poll() is None:
+				for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+					try:
+						action()
+					except (OSError, IOError):
+						pass
+			try:
+				os.remove(tempfile_name)
+			except (OSError, IOError):
+				pass
+			raise
+		else:
+			# Success, inform caller of tempfile. It's now their responsibility to delete.
+			yield tempfile
 
 
 @timed('waveform')
