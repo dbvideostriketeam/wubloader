@@ -17,7 +17,7 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query, get_column_placeholder
-from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, extract_frame, ContainsHoles
+from common.segments import get_best_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles
 from common.images import compose_thumbnail_template
 from common.stats import timed
 
@@ -396,11 +396,16 @@ class Cutter(object):
 			nonlocal upload_finished
 
 			try:
-				if upload_backend.encoding_settings is None:
+				if upload_backend.encoding_settings in ("fast", "smart"):
 					self.logger.debug("No encoding settings, using fast cut")
 					if any(transition is not None for transition in job.video_transitions):
 						raise ValueError("Fast cuts do not support complex transitions")
-					cut = fast_cut_segments(job.segment_ranges, job.video_ranges)
+
+					cut_fn = {
+						"fast": fast_cut_segments,
+						"smart": smart_cut_segments,
+					}[upload_backend.encoding_settings]
+					cut = cut_fn(job.segment_ranges, job.video_ranges)
 				else:
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
@@ -934,9 +939,9 @@ def main(
 		else:
 			raise ValueError("Unknown upload backend type: {!r}".format(backend_type))
 		backend = backend_type(credentials, **backend_config)
-		if cut_type == 'fast':
-			# mark for fast cut by clearing encoding settings
-			backend.encoding_settings = None
+		if cut_type in ('fast', 'smart'):
+			# mark for the given cut type by replacing encoding settings
+			backend.encoding_settings = cut_type
 		elif cut_type != 'full':
 			raise ValueError("Unknown cut type: {!r}".format(cut_type))
 		upload_locations[location] = backend

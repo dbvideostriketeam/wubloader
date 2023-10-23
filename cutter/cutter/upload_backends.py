@@ -76,8 +76,10 @@ class UploadBackend(object):
 	The upload backend also determines the encoding settings for the cutting
 	process, this is given as a list of ffmpeg args
 	under the 'encoding_settings' attribute.
-	If this is None, instead uses the 'fast cut' strategy where nothing
+	If this is not a list but the string "fast", instead uses the 'fast cut' strategy where nothing
 	is transcoded.
+	Similarly, the string "smart" uses the 'smart cut' strategy which is a fast cut with an additional
+	pass to prevent timestamp issues.
 
 	In addition, if the output format doesn't need a seekable file,
 	you should set encoding_streamable = True so we know we can stream the output directly.
