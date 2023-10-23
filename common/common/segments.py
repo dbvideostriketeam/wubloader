@@ -494,7 +494,7 @@ def smart_cut_segments(segment_ranges, ranges):
 		yield from fast_cut_range(segments, start, end, fixts=fixts)
 
 
-@timed('cut_range', cut_type='fast', normalize=lambda _, segments, start, end: (end - start).total_seconds())
+@timed('cut_range', cut_type='fast', normalize=lambda _, segments, start, end, **k: (end - start).total_seconds())
 def fast_cut_range(segments, start, end, fixts=None):
 	"""Does a fast cut for an individual range of segments.
 	If a FixTSSequence is given, fixes timestamps to avoid discontinuities
