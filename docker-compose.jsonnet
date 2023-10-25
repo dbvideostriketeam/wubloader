@@ -114,6 +114,10 @@
   db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
   db_standby:: false, // set to true to have this database replicate another server
 
+  // Path to a file containing a twitch OAuth token to use when downloading streams.
+  // This is optional (null to omit) but may be helpful to bypass ads.
+  downloader_creds_file:: null,
+
   // Path to a JSON file containing google credentials for cutter as keys
   // 'client_id', 'client_secret' and 'refresh_token'.
   cutter_creds_file:: "./google_creds.json",
@@ -284,9 +288,10 @@
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
-      ],
+      ] + if $.downloader_creds_file != null then ["--auth-file", "/token"] else [],
       // Mount the segments directory at /mnt
-      volumes: ["%s:/mnt" % $.segments_path],
+      volumes: ["%s:/mnt" % $.segments_path]
+        + if $.downloader_creds_file != null then ["%s:/token" % $.downloader_creds_file] else [],
       // If the application crashes, restart it.
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
