@@ -123,7 +123,7 @@ class StreamsManager(object):
 	FETCH_TIMEOUTS = 5, 30
 	MAX_WORKER_AGE = 20*60*60 # 20 hours, twitch's media playlist links expire after 24 hours
 
-	def __init__(self, channel, base_dir, qualities, important=False):
+	def __init__(self, channel, base_dir, qualities, important=False, auth_token=None):
 		self.channel = channel
 		self.logger = logging.getLogger("StreamsManager({})".format(channel))
 		self.base_dir = base_dir
@@ -133,6 +133,7 @@ class StreamsManager(object):
 		self.refresh_needed = gevent.event.Event() # set to tell main loop to refresh now
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
+		self.auth_token = auth_token
 		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
 			self.FETCH_MIN_INTERVAL = self.IMPORTANT_FETCH_MIN_INTERVAL
@@ -214,7 +215,7 @@ class StreamsManager(object):
 			self.logger.log(self.master_playlist_log_level, "Fetching master playlist")
 			fetch_time = monotonic()
 			with soft_hard_timeout(self.logger, "fetching master playlist", self.FETCH_TIMEOUTS, self.trigger_refresh):
-				master_playlist = twitch.get_master_playlist(self.channel)
+				master_playlist = twitch.get_master_playlist(self.channel, auth_token=self.auth_token)
 			new_urls = twitch.get_media_playlist_uris(master_playlist, list(self.stream_workers.keys()))
 			self.update_urls(fetch_time, new_urls)
 			for quality, workers in self.stream_workers.items():
@@ -600,11 +601,16 @@ class SegmentGetter(object):
 	"Twitch channels to watch. Add a '!' suffix to indicate they're expected to be always up. "
 	"This affects retry interval, error reporting and monitoring."
 )
-def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0):
+def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, auth_file=None):
 	qualities = qualities.split(",") if qualities else []
 
+	auth_token = None
+	if auth_file is not None:
+		with open(auth_file) as f:
+			auth_token = f.read().strip()
+
 	managers = [
-		StreamsManager(channel.rstrip('!'), base_dir, qualities, important=channel.endswith('!'))
+		StreamsManager(channel.rstrip('!'), base_dir, qualities, important=channel.endswith('!'), auth_token=auth_token)
 		for channel in channels
 	]
 

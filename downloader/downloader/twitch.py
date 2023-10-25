@@ -10,7 +10,7 @@ from . import hls_playlist
 logger = logging.getLogger(__name__)
 
 
-def get_access_token(channel, session):
+def get_access_token(channel, session, auth_token):
 	request = {
 		"operationName": "PlaybackAccessToken",
 		"extensions": {
@@ -27,10 +27,13 @@ def get_access_token(channel, session):
 			"playerType": "site"
 		}
 	}
+	headers = {'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko'}
+	if auth_token is not None:
+		headers["Authorization"] = "OAuth {}".format(auth_token)
 	resp = session.post(
 		"https://gql.twitch.tv/gql",
 		json=request,
-		headers={'Client-ID': 'kimne78kx3ncx6brgo4mv6wki5h1ko'},
+		headers=headers,
 		metric_name='get_access_token',
 	)
 	resp.raise_for_status()
@@ -38,11 +41,11 @@ def get_access_token(channel, session):
 	return data['signature'], data['value']
 
 
-def get_master_playlist(channel, session=None):
+def get_master_playlist(channel, session=None, auth_token=None):
 	"""Get the master playlist for given channel from twitch"""
 	if session is None:
 		session = InstrumentedSession()
-	sig, token = get_access_token(channel, session)
+	sig, token = get_access_token(channel, session, auth_token)
 	resp = session.get(
 		"https://usher.ttvnw.net/api/channel/hls/{}.m3u8".format(channel),
 		headers={
