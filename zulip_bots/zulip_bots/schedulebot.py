@@ -46,15 +46,36 @@ def get_display_name(client, user_id):
 	return client.request("GET", "users", user_id)["user"]["full_name"]
 
 
-def update_groups(client, group_ids, schedule, hour, last):
+def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last):
 	logging.info("Setting groups for hour {}".format(hour))
 	members = get_membership(client)
+	_, shift, _, _ = hour_to_shift(hour, start_time)
+
 	def run_group(item):
 		group_name, group_id = item
 		new_members = set() if hour == last else determine_members(schedule, group_name, hour)
 		assert group_id in members, "group {} doesn't exist".format(group_id)
 		update_members(client, group_id, members[group_id], new_members)
+
+	def run_group_by_shift(item):
+		group_id, user_ids = item
+		user_id = user_ids[shift]
+		update_members(client, group_id, members[group_id], {user_id})
+
 	gevent.pool.Group().map(run_group, group_ids.items())
+	gevent.pool.Group().map(run_group_by_shift, groups_by_shift.items())
+
+
+def hour_to_shift(hour, start_time):
+	"""Converts an hour number into a datetime, shift number (0-3), shift name, and hour-of-shift (1-6)"""
+	start_time = datetime.utcfromtimestamp(start_time)
+	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
+	current_time_pst = current_time - timedelta(hours=8)
+	hour_pst = current_time_pst.hour
+	shift = hour_pst // 6
+	shift_name = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
+	shift_hour = hour_pst % 6 + 1
+	return current_time, shift, shift_name, shift_hour
 
 
 def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega):
@@ -92,13 +113,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	logging.info(f"Going offline: {going_offline}")
 	logging.info(f"Coming online: {coming_online}")
 
-	start_time = datetime.utcfromtimestamp(start_time)
-	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
-	current_time_pst = current_time - timedelta(hours=8)
-	hour_pst = current_time_pst.hour
-	shift = hour_pst // 6
-	shift = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
-	shift_hour = hour_pst % 6 + 1
+	current_time, _, shift, shift_hour = hour_to_shift(hour, start_time)
 
 	if omega >= 0 and hour >= omega:
 		shift = "omega"
@@ -199,6 +214,10 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			NAME: USER_ID
 		groups:
 			NAME: GROUP_ID
+		groups_by_shift:
+			GROUP_ID: [USER_ID, USER_ID, USER_ID, USER_ID]
+			Populates membership of given group as a hard-coded list of one user per DB shift.
+			This is NOT reported in start/end of shifts.
 	authentication is an object {email, api_key}
 	"""
 	config = get_config(conf_file)
@@ -208,9 +227,10 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	group_ids = config["groups"]
 	start_time = timegm(time.strptime(config["start_time"], "%Y-%m-%dT%H:%M:%S"))
 	schedule = parse_schedule(config["members"], config["schedule"])
+	groups_by_shift = {int(id): shifts for id, shifts in config["groups_by_shift"].items()}
 	if hour >= 0:
 		if not no_groups:
-			update_groups(client, group_ids, schedule, hour, last)
+			update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
 		if stream:
 			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		return
@@ -218,7 +238,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		hour = int((time.time() - start_time) / 3600)
 		if not no_initial:
 			if not no_groups:
-				update_groups(client, group_ids, schedule, hour, last)
+				update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
 			if stream:
 				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		no_initial = False

@@ -217,6 +217,9 @@
       Editor: 17,
       ChatOps: 18,
     },
+    // Map from group id to a hard-coded set of 4 user ids, one per shift.
+    groups_by_shift: {
+    },
     // Map from schedule names to zulip user ids
     members: {
       ekimekim: 8,
