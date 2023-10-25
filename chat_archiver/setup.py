@@ -8,7 +8,7 @@ setup(
 	description='',
 	packages=find_packages(),
 	install_requires=[
-		'argh',
+		'argh==0.28.1',
 		'gevent',
 		'monotonic',
 		'requests', # for emote fetching
