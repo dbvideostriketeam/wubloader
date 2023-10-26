@@ -225,9 +225,15 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
 	group_ids = config["groups"]
-	start_time = timegm(time.strptime(config["start_time"], "%Y-%m-%dT%H:%M:%S"))
 	schedule = parse_schedule(config["members"], config["schedule"])
 	groups_by_shift = {int(id): shifts for id, shifts in config["groups_by_shift"].items()}
+
+	# Accept start time timestamp with or without trailing "Z" indicating UTC.
+	start_time = config["start_time"]
+	if start_time.endswith("Z"):
+		start_time = start_time[:-1]
+	start_time = timegm(time.strptime(start_time, "%Y-%m-%dT%H:%M:%S"))
+
 	if hour >= 0:
 		if not no_groups:
 			update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
