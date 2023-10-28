@@ -173,10 +173,10 @@ def get_row(ident):
 	# pick default frame time as the middle of the video.
 	# ignore both if video has no start time yet.
 	DEFAULT_TEMPLATES = [
-		"zeta",
-		"dawn-guard",
-		"alpha-flight",
-		"night-watch",
+		"zeta-right",
+		"dawn-guard-right",
+		"alpha-flight-right",
+		"night-watch-right",
 	]
 	if response['event_start'] is not None:
 		start = response['event_start']
