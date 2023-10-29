@@ -70,7 +70,7 @@ async function loadDefaults() {
 	const defaultDataResponse = await fetch("/thrimshim/defaults");
 	if (!defaultDataResponse.ok) {
 		addError(
-			"Failed to load Thrimbletrimmer data. This probably means that everything is broken (or, possibly, just that the Wubloader host is down). Please sound the alarm."
+			"Failed to load Thrimbletrimmer data. This probably means that everything is broken (or, possibly, just that the Wubloader host is down). Please sound the alarm.",
 		);
 		return;
 	}
@@ -169,7 +169,7 @@ function updateStoredTimeSettings() {
 function convertEnteredTimes() {
 	let timeConvertFrom = undefined;
 	const timeConvertFromSelection = document.querySelectorAll(
-		"#time-converter input[name=time-converter-from]"
+		"#time-converter input[name=time-converter-from]",
 	);
 	for (const convertFromItem of timeConvertFromSelection) {
 		if (convertFromItem.checked) {
@@ -184,7 +184,7 @@ function convertEnteredTimes() {
 
 	let timeConvertTo = undefined;
 	const timeConvertToSelection = document.querySelectorAll(
-		"#time-converter input[name=time-converter-to]"
+		"#time-converter input[name=time-converter-to]",
 	);
 	for (const convertToItem of timeConvertToSelection) {
 		if (convertToItem.checked) {
@@ -208,7 +208,7 @@ function convertEnteredTimes() {
 		let time = dateTimeFromTimeString(enteredTime, timeConvertFrom);
 		if (!time) {
 			addError(
-				`Failed to parse the time '${enteredTime}' as a value of the selected "convert from" time format.`
+				`Failed to parse the time '${enteredTime}' as a value of the selected "convert from" time format.`,
 			);
 			continue;
 		}
