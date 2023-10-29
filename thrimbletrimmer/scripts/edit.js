@@ -789,6 +789,17 @@ function validateVideoDescription() {
 	}
 }
 
+function validateChapterDescription(chapterDescField) {
+	const chapterDesc = chapterDescField.value;
+	if (chapterDesc.indexOf("<") !== -1 || chapterDesc.indexOf(">") !== -1) {
+		chapterDescField.classList.add("input-error");
+		chapterDescField.title = "Chapter description may not contain angle brackets (< or >)";
+	} else {
+		chapterDescField.classList.remove("input-error");
+		chapterDescField.title = "";
+	}
+}
+
 async function submitVideo() {
 	return sendVideoData("EDITED", false);
 }
@@ -1572,6 +1583,9 @@ function chapterMarkerDefinitionDOM() {
 	descriptionField.type = "text";
 	descriptionField.classList.add("range-definition-chapter-marker-description");
 	descriptionField.placeholder = "Description";
+	descriptionField.addEventListener("input", (event) => {
+		validateChapterDescription(descriptionField);
+	});
 
 	const removeButton = document.createElement("img");
 	removeButton.src = "images/minus.png";
