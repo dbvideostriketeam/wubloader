@@ -27,7 +27,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 		if (!videoInfo) {
 			addError(
-				"Time updates are ignored before the video metadata has been retrieved from Wubloader."
+				"Time updates are ignored before the video metadata has been retrieved from Wubloader.",
 			);
 			return;
 		}
@@ -125,7 +125,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 			if (rangeErrorCount > 0) {
 				addError(
-					"Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values."
+					"Some ranges couldn't be updated for the new video time endpoints. Please verify the time range values.",
 				);
 			}
 
@@ -209,7 +209,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	}
 	if (canEditMetadata()) {
 		for (const addChapterMarker of document.getElementsByClassName(
-			"add-range-definition-chapter-marker"
+			"add-range-definition-chapter-marker",
 		)) {
 			addChapterMarker.addEventListener("click", addChapterMarkerHandler);
 		}
@@ -291,7 +291,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	if (videoInfo.thumbnail_time) {
 		document.getElementById("video").addEventListener("loadedmetadata", (_event) => {
 			document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
-				videoInfo.thumbnail_time
+				videoInfo.thumbnail_time,
 			);
 		});
 	}
@@ -342,7 +342,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	document.getElementById("reset-entire-video").addEventListener("click", (_event) => {
 		const forceResetConfirmationContainer = document.getElementById(
-			"data-correction-force-reset-confirm"
+			"data-correction-force-reset-confirm",
 		);
 		forceResetConfirmationContainer.classList.remove("hidden");
 	});
@@ -351,7 +351,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 	document.getElementById("data-correction-force-reset-no").addEventListener("click", (_event) => {
 		const forceResetConfirmationContainer = document.getElementById(
-			"data-correction-force-reset-confirm"
+			"data-correction-force-reset-confirm",
 		);
 		forceResetConfirmationContainer.classList.add("hidden");
 	});
@@ -371,7 +371,7 @@ async function loadVideoInfo() {
 	const dataResponse = await fetch("/thrimshim/" + videoID);
 	if (!dataResponse.ok) {
 		addError(
-			"Failed to load video data. This probably means that the URL is out of date (video ID changed) or that everything is broken (or that the Wubloader host is down)."
+			"Failed to load video data. This probably means that the URL is out of date (video ID changed) or that everything is broken (or that the Wubloader host is down).",
 		);
 		return;
 	}
@@ -500,7 +500,7 @@ async function initializeVideoInfo() {
 	}
 
 	const uploadLocationSelection = document.getElementById(
-		"advanced-submission-option-upload-location"
+		"advanced-submission-option-upload-location",
 	);
 	for (locationName of videoInfo.upload_locations) {
 		const option = document.createElement("option");
@@ -518,7 +518,7 @@ async function initializeVideoInfo() {
 	if (videoInfo.uploader_whitelist) {
 		modifiedAdvancedOptions = true;
 		const uploaderAllowlistBox = document.getElementById(
-			"advanced-submission-option-uploader-allow"
+			"advanced-submission-option-uploader-allow",
 		);
 		uploaderAllowlistBox.value = videoInfo.uploader_whitelist.join(",");
 	}
@@ -613,14 +613,14 @@ async function initializeVideoInfo() {
 				if (startWubloaderTime) {
 					const startField =
 						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
-							"range-definition-start"
+							"range-definition-start",
 						)[0];
 					startField.value = videoHumanTimeFromVideoPlayerTime(startPlayerTime);
 				}
 				if (endWubloaderTime) {
 					const endField =
 						rangeDefinitionsContainer.children[rangeIndex].getElementsByClassName(
-							"range-definition-end"
+							"range-definition-end",
 						)[0];
 					endField.value = videoHumanTimeFromVideoPlayerTime(endPlayerTime);
 				}
@@ -637,13 +637,13 @@ async function initializeVideoInfo() {
 					) {
 						const chapterMarker = chapterMarkerDefinitionDOM();
 						const chapterStartField = chapterMarker.getElementsByClassName(
-							"range-definition-chapter-marker-start"
+							"range-definition-chapter-marker-start",
 						)[0];
 						chapterStartField.value = videoHumanTimeFromVideoPlayerTime(
-							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime
+							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime,
 						);
 						const chapterDescField = chapterMarker.getElementsByClassName(
-							"range-definition-chapter-marker-description"
+							"range-definition-chapter-marker-description",
 						)[0];
 						chapterDescField.value = chapterData[currentChapterIndex].description;
 						chapterContainer.appendChild(chapterMarker);
@@ -733,7 +733,7 @@ function updateThumbnailInputState(event) {
 	}
 
 	for (const optionElement of document.getElementsByClassName(
-		"video-info-thumbnail-mode-options"
+		"video-info-thumbnail-mode-options",
 	)) {
 		optionElement.classList.add("hidden");
 	}
@@ -805,7 +805,7 @@ async function sendVideoData(newState, overrideChanges) {
 	let videoDescription = document.getElementById("video-info-description").value;
 	if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
 		addError(
-			"Couldn't submit edits: Description contains manually entered chapter marker delimiter"
+			"Couldn't submit edits: Description contains manually entered chapter marker delimiter",
 		);
 		return;
 	}
@@ -858,13 +858,13 @@ async function sendVideoData(newState, overrideChanges) {
 		if (chaptersEnabled && rangeStartSubmit && rangeEndSubmit) {
 			const rangeChapters = [];
 			for (const chapterContainer of rangeContainer.getElementsByClassName(
-				"range-definition-chapter-markers"
+				"range-definition-chapter-markers",
 			)[0].children) {
 				const startField = chapterContainer.getElementsByClassName(
-					"range-definition-chapter-marker-start"
+					"range-definition-chapter-marker-start",
 				)[0];
 				const descField = chapterContainer.getElementsByClassName(
-					"range-definition-chapter-marker-description"
+					"range-definition-chapter-marker-description",
 				)[0];
 
 				const startFieldTime = videoPlayerTimeFromVideoHumanTime(startField.value);
@@ -950,7 +950,7 @@ async function sendVideoData(newState, overrideChanges) {
 	let thumbnailImage = null;
 	if (thumbnailMode === "BARE" || thumbnailMode === "TEMPLATE") {
 		thumbnailTime = wubloaderTimeFromVideoHumanTime(
-			document.getElementById("video-info-thumbnail-time").value
+			document.getElementById("video-info-thumbnail-time").value,
 		);
 		if (thumbnailTime === null) {
 			submissionResponseElem.innerText = "The thumbnail time is invalid";
@@ -1004,10 +1004,10 @@ async function sendVideoData(newState, overrideChanges) {
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 	const isPublic = !document.getElementById("advanced-submission-option-unlisted").checked;
 	const uploadLocation = document.getElementById(
-		"advanced-submission-option-upload-location"
+		"advanced-submission-option-upload-location",
 	).value;
 	const uploaderAllowlistValue = document.getElementById(
-		"advanced-submission-option-uploader-allow"
+		"advanced-submission-option-uploader-allow",
 	).value;
 	const uploaderAllowlist = uploaderAllowlistValue ? uploaderAllowlistValue.split(",") : null;
 
@@ -1202,7 +1202,7 @@ function updateDownloadLink() {
 		timeRanges,
 		downloadType,
 		allowHoles,
-		videoInfo.video_quality
+		videoInfo.video_quality,
 	);
 	document.getElementById("download-link").href = downloadURL;
 }
@@ -1293,7 +1293,7 @@ async function resetVideoRow() {
 	if (response.ok) {
 		responseElem.innerText = "Row has been reset.";
 		const forceResetConfirmationContainer = document.getElementById(
-			"data-correction-force-reset-confirm"
+			"data-correction-force-reset-confirm",
 		);
 		forceResetConfirmationContainer.classList.add("hidden");
 		setTimeout(() => {
@@ -1450,7 +1450,7 @@ function getRangeSetClickHandler(startOrEnd) {
 		}
 		const setButton = event.currentTarget;
 		const setField = setButton.parentElement.getElementsByClassName(
-			`range-definition-${startOrEnd}`
+			`range-definition-${startOrEnd}`,
 		)[0];
 
 		const videoElement = document.getElementById("video");
@@ -1535,7 +1535,7 @@ function chapterMarkerDefinitionDOM() {
 	setStartTime.addEventListener("click", (event) => {
 		const chapterContainer = event.currentTarget.parentElement;
 		const startTimeField = chapterContainer.getElementsByClassName(
-			"range-definition-chapter-marker-start"
+			"range-definition-chapter-marker-start",
 		)[0];
 		const videoElement = document.getElementById("video");
 		startTimeField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
@@ -1552,7 +1552,7 @@ function chapterMarkerDefinitionDOM() {
 		playFromStartTime.addEventListener("click", (event) => {
 			const chapterContainer = event.currentTarget.parentElement;
 			const startTimeField = chapterContainer.getElementsByClassName(
-				"range-definition-chapter-marker-start"
+				"range-definition-chapter-marker-start",
 			)[0];
 			const newVideoTime = videoPlayerTimeFromVideoHumanTime(startTimeField.value);
 			if (newVideoTime !== null) {
@@ -1638,7 +1638,7 @@ function setCurrentRangeStartToVideoTime() {
 	}
 
 	const rangeStartField = document.querySelector(
-		`#range-definitions > div:nth-child(${currentRange}) .range-definition-start`
+		`#range-definitions > div:nth-child(${currentRange}) .range-definition-start`,
 	);
 	const videoElement = document.getElementById("video");
 	rangeStartField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
@@ -1651,7 +1651,7 @@ function setCurrentRangeEndToVideoTime() {
 	}
 
 	const rangeEndField = document.querySelector(
-		`#range-definitions > div:nth-child(${currentRange}) .range-definition-end`
+		`#range-definitions > div:nth-child(${currentRange}) .range-definition-end`,
 	);
 	const videoElement = document.getElementById("video");
 	rangeEndField.value = videoHumanTimeFromVideoPlayerTime(videoElement.currentTime);
@@ -1666,7 +1666,7 @@ function enableChapterMarkers(enable) {
 function changeEnableChaptersHandler() {
 	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
 	for (const chapterMarkerContainer of document.getElementsByClassName(
-		"range-definition-chapter-markers"
+		"range-definition-chapter-markers",
 	)) {
 		if (chaptersEnabled) {
 			chapterMarkerContainer.classList.remove("hidden");
@@ -1675,7 +1675,7 @@ function changeEnableChaptersHandler() {
 		}
 	}
 	for (const addChapterMarkerElem of document.getElementsByClassName(
-		"add-range-definition-chapter-marker"
+		"add-range-definition-chapter-marker",
 	)) {
 		if (chaptersEnabled) {
 			addChapterMarkerElem.classList.remove("hidden");

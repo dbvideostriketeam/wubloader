@@ -23,7 +23,7 @@ const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 function commonPageSetup() {
 	if (!Hls.isSupported()) {
 		addError(
-			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work."
+			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work.",
 		);
 	}
 
@@ -69,7 +69,7 @@ async function loadVideoPlayer(playlistURL) {
 			const endTime = getEndTime();
 			if (endTime && endTime.diff(startTime).milliseconds < 0) {
 				addError(
-					"End time is before the start time. This will prevent video loading and cause other problems."
+					"End time is before the start time. This will prevent video loading and cause other problems.",
 				);
 			}
 			globalPlayer.loadSource(rangedPlaylistURL);
@@ -80,7 +80,7 @@ async function loadVideoPlayer(playlistURL) {
 						case Hls.ErrorTypes.NETWORK_ERROR:
 							if (data.reason === "no level found in manifest") {
 								addError(
-									"There is no video data between the specified start and end times. Change the times so that there is video content to play."
+									"There is no video data between the specified start and end times. Change the times so that there is video content to play.",
 								);
 							} else {
 								console.log("A fatal network error occurred; retrying", data);
@@ -94,7 +94,7 @@ async function loadVideoPlayer(playlistURL) {
 						default:
 							console.log("A fatal error occurred; resetting video player", data);
 							addError(
-								"Some sort of video player error occurred. Thrimbletrimmer is resetting the video player."
+								"Some sort of video player error occurred. Thrimbletrimmer is resetting the video player.",
 							);
 							resetVideoPlayer();
 					}
@@ -497,7 +497,7 @@ function downloadFrame() {
 	const videoElement = document.getElementById("video");
 	const dateTime = dateTimeFromVideoPlayerTime(videoElement.currentTime);
 	const url = `/frame/${globalStreamName}/source.png?timestamp=${wubloaderTimeFromDateTime(
-		dateTime
+		dateTime,
 	)}`;
 	// Avoid : as it causes problems on Windows
 	const filename = `${dateTime.toFormat("yyyy-LL-dd'T'HH-mm-ss.SSS")}.png`;
