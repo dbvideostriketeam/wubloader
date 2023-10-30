@@ -282,11 +282,14 @@
 			<div id="download">
 				<label for="download-type-select">Download type:</label>
 				<select id="download-type-select">
-					<option value="rough" selected>
-						Rough (fastest, pads start and end by a few seconds)
+					<option value="smart" selected>
+						Smart (experimental but preferred option)
+					</option>
+					<option value="rough">
+						Rough (raw content, pads start and end by a few seconds)
 					</option>
 					<option value="fast">
-						Fast (may have artifacts a few seconds in from start and end)
+						Fast (deprecated, use if smart is broken)
 					</option>
 					<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
 				</select>

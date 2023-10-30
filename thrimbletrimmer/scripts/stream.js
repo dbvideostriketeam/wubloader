@@ -148,7 +148,7 @@ function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quali
 
 function updateDownloadLink() {
 	const downloadLink = document.getElementById("download");
-	const downloadURL = generateDownloadURL(getStartTime(), getEndTime(), "rough", true, "source");
+	const downloadURL = generateDownloadURL(getStartTime(), getEndTime(), "smart", true, "source");
 	downloadLink.href = downloadURL;
 }
 
