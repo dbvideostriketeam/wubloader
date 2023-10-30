@@ -58,9 +58,9 @@ def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time
 		update_members(client, group_id, members[group_id], new_members)
 
 	def run_group_by_shift(item):
-		group_id, user_ids = item
-		user_id = user_ids[shift]
-		update_members(client, group_id, members[group_id], {user_id})
+		group_id, shifts = item
+		user_ids = set(shifts[shift])
+		update_members(client, group_id, members[group_id], user_ids)
 
 	gevent.pool.Group().map(run_group, group_ids.items())
 	gevent.pool.Group().map(run_group_by_shift, groups_by_shift.items())
@@ -215,8 +215,8 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		groups:
 			NAME: GROUP_ID
 		groups_by_shift:
-			GROUP_ID: [USER_ID, USER_ID, USER_ID, USER_ID]
-			Populates membership of given group as a hard-coded list of one user per DB shift.
+			GROUP_ID: [[USER_ID], [USER_ID], [USER_ID], [USER_ID]]
+			Populates membership of given group as a hard-coded list of users per DB shift.
 			This is NOT reported in start/end of shifts.
 	authentication is an object {email, api_key}
 	"""
