@@ -240,7 +240,7 @@ class BackfillerManager(object):
 	delete hours older than start. The deletion is handled by the Manager as
 	having the Workers do it could lead to race conditions."""
 
-	NODE_INTERVAL = 300 #seconds between updating list of nodes
+	NODE_INTERVAL = 30 #seconds between updating list of nodes
 
 	def __init__(self, base_dir, channels, qualities, extras=[], static_nodes=[],
 			start=None, delete_old=False, run_once=False, node_file=None,
