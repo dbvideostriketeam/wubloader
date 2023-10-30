@@ -178,7 +178,7 @@ def get_remote_segment(base_dir, node, channel, quality, hour, missing_segment,
 	logging.debug('Saving completed segment {} as {}'.format(temp_path, path))
 	common.rename(temp_path, path)
 	segments_backfilled.labels(remote=node, channel=channel, quality=quality, hour=hour).inc()
-	logger.info('Segment {}/{}/{} backfilled'.format(quality, hour, missing_segment))
+	logger.info('Segment {}/{}/{}/{} backfilled'.format(channel, quality, hour, missing_segment))
 
 
 def list_hours(node, channel, quality, start=None):
