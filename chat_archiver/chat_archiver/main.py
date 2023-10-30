@@ -113,7 +113,7 @@ merge_pass_merges = prom.Histogram(
 
 class Archiver(object):
 	def __init__(self, name, base_dir, channel, nick, oauth_token):
-		self.logger = logging.getLogger(type(self).__name__).getChild(channel)
+		self.logger = logging.getLogger(type(self).__name__).getChild(name)
 		self.name = name
 		self.messages = gevent.queue.Queue()
 		self.channel = channel
@@ -137,16 +137,16 @@ class Archiver(object):
 		# wrapper around general write_batch() function
 		write_batch(
 			self.path, batch_time, messages,
-			size_histogram=batch_bytes.labels(channel=self.channel, client=id(self)),
+			size_histogram=batch_bytes.labels(channel=self.channel, client=self.name),
 		)
-		batch_messages.labels(channel=self.channel, client=id(self)).observe(len(messages))
+		batch_messages.labels(channel=self.channel, client=self.name).observe(len(messages))
 		# incrementing a prom counter can be stupidly expensive, collect up per-command values
 		# so we can do them in one go
 		by_command = defaultdict(lambda: 0)
 		for message in messages:
 			by_command[message["command"]] += 1
 		for command, count in by_command.items():
-			messages_written.labels(channel=self.channel, client=id(self), command=command).inc(count)
+			messages_written.labels(channel=self.channel, client=self.name, command=command).inc(count)
 
 	def run(self):
 		# wait for twitch to send the initial ROOMSTATE for the room we've joined.
@@ -199,19 +199,20 @@ class Archiver(object):
 			except gevent.queue.Empty:
 				continue
 
+			self.logger.debug("Got message: {}".format(message))
+
 			if message.command not in COMMANDS:
 				self.logger.info("Skipping non-whitelisted command: {}".format(message.command))
-				messages_ignored.labels(channel=self.channel, client=id(self), command=message.command).inc()
+				messages_ignored.labels(channel=self.channel, client=self.name, command=message.command).inc()
 				continue
 
-			self.logger.debug("Got message: {}".format(message))
 			data = {
 				attr: getattr(message, attr)
 				for attr in ('command', 'params', 'sender', 'user', 'host', 'tags')
 			}
 			data['receivers'] = {self.name: message.received_at}
-			self.logger.debug("Got message: {}".format(data))
-			messages_received.labels(channel=self.channel, client=id(self), command=message.command).inc()
+			self.logger.debug("Got message data: {}".format(data))
+			messages_received.labels(channel=self.channel, client=self.name, command=message.command).inc()
 
 			if data['tags'] and data['tags'].get('emotes', '') != '':
 				emote_specs = data['tags']['emotes'].split('/')
@@ -223,7 +224,7 @@ class Archiver(object):
 				timestamp = int(data['tags']['tmi-sent-ts']) / 1000. # original is int ms
 				last_timestamped_message = message
 				last_server_time = timestamp
-				server_lag.labels(channel=self.channel, client=id(self)).set(time.time() - timestamp)
+				server_lag.labels(channel=self.channel, client=self.name).set(time.time() - timestamp)
 				time_range = 0
 				self.logger.debug("Message has exact timestamp: {}".format(timestamp))
 				# check for any non-timestamped messages which we now know must have been
