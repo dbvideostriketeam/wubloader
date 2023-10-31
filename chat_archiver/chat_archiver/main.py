@@ -47,8 +47,9 @@ COMMANDS = DELAYED_COMMANDS + [
 ]
 
 # Assume we're never more than this amount of time behind the server time
-# Worst case if too low: multiple output files for same batch that need merging later
-MAX_SERVER_LAG = 30
+# Worst case if too low: multiple output files for same batch that need merging later.
+# Should be greater than MAX_DELAY.
+MAX_SERVER_LAG = 60
 
 # When guessing when a non-timestamped event occurred, pad the possible range
 # by up to this amount before and after our best guess
