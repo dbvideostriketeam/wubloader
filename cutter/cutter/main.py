@@ -477,7 +477,7 @@ class Cutter(object):
 				# Assumed error is not retryable
 				raise UploadError("Error while generating thumbnail: {}".format(ex), retryable=False)
 
-			if len(thumbnail) > 2 * 2**20:
+			if thumbnail is not None and len(thumbnail) > 2 * 2**20:
 				self.logger.warning("Aborting upload as thumbnail is too big ({}MB, max 2MB)".format(len(thumbnail) / 2.**20))
 				raise UploadError("Thumbnail is too big ({}MB, max 2MB)".format(len(thumbnail) / 2.**20), retryable=False)
 
