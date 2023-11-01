@@ -47,6 +47,10 @@ def get_display_name(client, user_id):
 
 
 def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last):
+	if hour < 0:
+		logging.warning(f"Skipping setting groups due to negative hour of {hour}")
+		return
+
 	logging.info("Setting groups for hour {}".format(hour))
 	members = get_membership(client)
 	_, shift, _, _ = hour_to_shift(hour, start_time)
