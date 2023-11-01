@@ -665,7 +665,7 @@ def archive_cut_segments(segment_ranges, ranges, tempdir):
 	which the caller should then do something with (probably either read then delete, or rename).
 	"""
 	# don't re-encode anything, just put it into an MKV container
-	encode_args = ["-c", "copy", "-f", "mkv"]
+	encode_args = ["-c", "copy", "-f", "matroska"]
 	# We treat multiple segment ranges as having an explicit discontinuity between them.
 	# So we apply split_contiguous() to each range, then flatten.
 	contiguous_ranges = []
@@ -705,7 +705,7 @@ def archive_cut_segments(segment_ranges, ranges, tempdir):
 			raise
 		else:
 			# Success, inform caller of tempfile. It's now their responsibility to delete.
-			yield tempfile
+			yield tempfile_name
 
 
 @timed('waveform')
