@@ -353,7 +353,8 @@ class LocalArchive(Local):
 	"""Similar to Local() but does archive cuts. See archive_cut_segments()."""
 	encoding_settings = "archive"
 
-	def upload_video(self, title, description, tags, public, tempfiles):
+	def upload_video(self, title, description, tags, public, data):
+		tempfiles = data
 		# make title safe by removing offending characters, replacing with '-'
 		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
 		# To aid in finding the "latest" version if re-edited, prefix with current time.
@@ -362,6 +363,7 @@ class LocalArchive(Local):
 		common.ensure_directory(os.path.join(self.path, video_dir))
 		for n, tempfile in enumerate(tempfiles):
 			filepath = os.path.join(self.path, video_dir, "{}-{}.mkv".format(safe_title, n))
+			common.ensure_directory(filepath)
 			# We're assuming these are on the same filesystem. This may not always be true
 			# but it will be in our normal setup. If we ever need this in the future, we'll fix it then.
 			os.rename(tempfile, filepath)
