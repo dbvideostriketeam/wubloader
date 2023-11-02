@@ -127,6 +127,9 @@
     desertbus: {type: "youtube", cut_type: "fast"},
   },
   default_location:: "desertbus",
+  // archive location is the default location for archive events,
+  // only revelant if $.archive_worksheet is set.
+  archive_location:: $.default_location,
 
   // Fixed tags to add to all videos
   video_tags:: ["DB13", "DB2019", "2019", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
@@ -168,6 +171,10 @@
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
   playlist_worksheet:: "Tags",
+
+  // The archive worksheet, if given, points to a worksheet containing events with a different
+  // schema and alternate behaviour suitable for long-term archival videos instead of uploads.
+  archive_worksheet:: null,
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
@@ -382,7 +389,12 @@
         $.db_connect,
         $.clean_channels[0], // use first element as default channel
         $.bustime_start,
-      ] + if $.authentication then [] else ["--no-authentication"],
+      ]
+      + (if $.authentication then [] else ["--no-authentication"])
+      + (if $.archive_worksheet != null then [
+        "--archive-sheet", $.archive_worksheet,
+        "--archive-location", $.archive_location,
+      ] else []),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.
@@ -405,7 +417,9 @@
         $.edit_url,
         $.bustime_start,
         $.sheet_id,
-      ] + $.worksheets,
+      ]
+      + $.worksheets
+      + (if $.archive_worksheet != null then ["--archive-worksheet", $.archive_worksheet] else []),
       volumes: [
         // Mount the creds file into /etc
         "%s:/etc/wubloader-creds.json" % $.sheetsync_creds_file,
