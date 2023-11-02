@@ -305,8 +305,8 @@ class Local(UploadBackend):
 
 	def upload_video(self, title, description, tags, public, data):
 		video_id = str(uuid.uuid4())
-		# make title safe by removing offending characters, replacing with '-'
-		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
+		# make title safe by removing offending characters, replacing with '_'
+		safe_title = re.sub('[^A-Za-z0-9_]', '_', title)
 		ext = 'ts'
 		filename = '{}-{}.{}'.format(safe_title, video_id, ext)
 		filepath = os.path.join(self.path, filename)
@@ -355,8 +355,8 @@ class LocalArchive(Local):
 
 	def upload_video(self, title, description, tags, public, data):
 		tempfiles = data
-		# make title safe by removing offending characters, replacing with '-'
-		safe_title = re.sub('[^A-Za-z0-9_]', '-', title)
+		# make title safe by removing offending characters, replacing with '_'
+		safe_title = re.sub('[^A-Za-z0-9_]', '_', title)
 		# To aid in finding the "latest" version if re-edited, prefix with current time.
 		prefix = str(time.time())
 		video_dir = "{}-{}".format(prefix, safe_title)
