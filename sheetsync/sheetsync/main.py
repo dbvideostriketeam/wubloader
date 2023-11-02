@@ -75,7 +75,7 @@ class SheetSync(object):
 	# If playlist_worksheet is defined, add 1 to len(worksheets).
 	# For current values, this is 100/5 * 2 + 100/5/4 * 7 = 75
 
-	def __init__(self, stop, dbmanager, sheets, sheet_id, worksheets, edit_url, bustime_start, allocate_ids=False, playlist_worksheet=None):
+	def __init__(self, stop, dbmanager, sheets, sheet_id, worksheets, edit_url, bustime_start, allocate_ids=False, playlist_worksheet=None, archive_worksheet=None):
 		self.stop = stop
 		self.dbmanager = dbmanager
 		self.sheets = sheets
@@ -85,11 +85,12 @@ class SheetSync(object):
 		self.edit_url = edit_url
 		self.bustime_start = bustime_start
 		self.allocate_ids = allocate_ids
-		# The playlist worksheet is checked on the same cadence as inactive sheets
+		# The playlist and archive worksheets are checked on the same cadence as inactive sheets
 		self.playlist_worksheet = playlist_worksheet
+		self.archive_worksheet = archive_worksheet
 		# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
 		# Hard-coded for now, future work: determine this from column headers in sheet
-		self.column_map = {
+		self.default_column_map = {
 			'event_start': 0,
 			'event_end': 1,
 			'category': 2,
@@ -105,6 +106,25 @@ class SheetSync(object):
 			'edit_link': 13,
 			'error': 14,
 			'id': 15,
+		}
+		self.archive_column_map = {
+			'event_start': 0,
+			'event_end': 1,
+			'description': 2,
+			'state': 3,
+			'notes': 4,
+			'edit_link': 6,
+			'error': 7,
+			'id': 8,
+			# These columns are unmapped and instead are read as empty string,
+			# and writes are ignored.
+			'category': None,
+			'submitter_winner': None,
+			'poster_moment': None,
+			'image_links': None,
+			'marked_for_edit': None,
+			'tags': None,
+			'video_link': None,
 		}
 		# Maps column names to a function that parses that column's value.
 		# Functions take a single arg (the value to parse) and ValueError is
@@ -136,6 +156,12 @@ class SheetSync(object):
 			'state',
 			'error',
 		]
+
+	def column_map(self, worksheet):
+		if worksheet == self.archive_worksheet:
+			return self.archive_column_map
+		else:
+			return self.default_column_map
 
 	def parse_bustime(self, value, preserve_dash=False):
 		"""Convert from HH:MM or HH:MM:SS format to datetime.
@@ -172,7 +198,7 @@ class SheetSync(object):
 				events = self.get_events()
 				if sync_count % self.SYNCS_PER_INACTIVE_CHECK == 0:
 					# check all worksheets
-					worksheets = self.worksheets
+					worksheets = list(self.worksheets.keys()) + [self.archive_worksheet]
 					playlist_worksheet = self.playlist_worksheet
 				else:
 					# only check most recently changed worksheets
@@ -186,10 +212,11 @@ class SheetSync(object):
 				for worksheet in worksheets:
 					rows = self.sheets.get_rows(self.sheet_id, worksheet)
 					for row_index, row in enumerate(rows):
-						# Skip first row (ie. the column titles).
+						# Skip first row or rows (ie. the column titles).
 						# Need to do it inside the loop and not eg. use rows[1:],
 						# because then row_index won't be correct.
-						if row_index == 0:
+						skip_rows = 3 if worksheet == self.archive_worksheet else 1
+						if row_index < skip_rows:
 							continue
 						row = self.parse_row(worksheet, row)
 						self.sync_row(worksheet, row_index, row, events.get(row['id']))
@@ -243,8 +270,11 @@ class SheetSync(object):
 	def parse_row(self, worksheet, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
 		row_dict = {'_parse_errors': []}
-		for column, index in self.column_map.items():
-			if index >= len(row):
+		for column, index in self.column_map(worksheet).items():
+			if index is None:
+				# Unmapped column, use empty string
+				value = ''
+			elif index >= len(row):
 				# Sheets omits trailing columns if they're all empty, so substitute empty string
 				value = ''
 			else:
@@ -291,7 +321,7 @@ class SheetSync(object):
 					logging.info("Allocating id for row {!r}:{} = {}".format(worksheet, row_index, row['id']))
 					self.sheets.write_value(
 						self.sheet_id, worksheet,
-						row_index, self.column_map['id'],
+						row_index, self.column_map(worksheet)['id'],
 						str(row['id']),
 					)
 				else:
@@ -354,25 +384,37 @@ class SheetSync(object):
 			logging.info("Updating sheet row {} with new value(s) for {}".format(
 				row['id'], ', '.join(changed)
 			))
+			column_map = self.column_map(worksheet)
 			for col in changed:
+				output = format_output(getattr(event, col))
+				if column_map[col] is None:
+					logging.warning("Tried to update sheet for unmapped column {} = {!r}".format(col, output))
+					continue
 				self.sheets.write_value(
 					self.sheet_id, worksheet,
-					row_index, self.column_map[col],
-					format_output(getattr(event, col)),
+					row_index, column_map[col],
+					output
 				)
 			rows_changed.labels('output', worksheet).inc()
 			self.mark_modified(worksheet)
 
-		# Set edit link if marked for editing and start/end set.
+		# Set edit link if marked for editing or (for archive sheet) start/end set.
 		# This prevents accidents / clicking the wrong row and provides
 		# feedback that sheet sync is still working.
 		# Also clear it if it shouldn't be set.
-		edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
+		edit_link = (
+			self.edit_url.format(row['id'])
+			if row['marked_for_edit'] == '[+] Marked' or (
+				worksheet == self.archive_worksheet
+				and row['event_start']
+				and row['event_end']
+			) else ''
+		)
 		if row['edit_link'] != edit_link:
 			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
 			self.sheets.write_value(
 				self.sheet_id, worksheet,
-				row_index, self.column_map['edit_link'],
+				row_index, self.column_map(worksheet)['edit_link'],
 				edit_link,
 			)
 			self.mark_modified(worksheet)
@@ -443,7 +485,10 @@ class SheetSync(object):
 @argh.arg('--playlist-worksheet', help=
 	"An optional additional worksheet name that holds playlist tag definitions",
 )
-def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8005, backdoor_port=0, allocate_ids=False, playlist_worksheet=None):
+@argh.arg('--archive-worksheet', help=
+	"An optional additional worksheet name that manages archive videos",
+)
+def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksheet_names, metrics_port=8005, backdoor_port=0, allocate_ids=False, playlist_worksheet=None, archive_worksheet=None):
 	"""
 	Sheet sync constantly scans a Google Sheets sheet and a database, copying inputs from the sheet
 	to the DB and outputs from the DB to the sheet.
@@ -488,6 +533,6 @@ def main(dbconnect, sheets_creds_file, edit_url, bustime_start, sheet_id, worksh
         refresh_token=sheets_creds['refresh_token'],
 	)
 
-	SheetSync(stop, dbmanager, sheets, sheet_id, worksheet_names, edit_url, bustime_start, allocate_ids, playlist_worksheet).run()
+	SheetSync(stop, dbmanager, sheets, sheet_id, worksheet_names, edit_url, bustime_start, allocate_ids, playlist_worksheet, archive_worksheet).run()
 
 	logging.info("Gracefully stopped")
