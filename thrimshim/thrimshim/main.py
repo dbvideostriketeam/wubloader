@@ -161,24 +161,40 @@ def get_row(ident):
 	assert row.id == ident
 	response = row._asdict()
 
+	is_archive = response["sheet_name"] == app.archive_sheet
+
 	response['id'] = str(response['id'])	
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
-	response["title_prefix"] = app.title_header
-	response["title_max_length"] = MAX_TITLE_LENGTH - len(app.title_header)
+	title_header = "" if is_archive else app.title_header
+	response["title_prefix"] = title_header
+	response["title_max_length"] = MAX_TITLE_LENGTH - len(title_header)
 	response["bustime_start"] = app.bustime_start
-	response["upload_locations"] = app.upload_locations
+	if is_archive:
+		# move archive location to the front of the list (or add it if not present)
+		response["upload_locations"] = [app.archive_location] + [
+			location for location in app.upload_locations if location != app.archive_location
+		]
+	else:
+		response["upload_locations"] = app.upload_locations
+
+	# archive events always have allow_holes on
+	if is_archive:
+		response["allow_holes"] = True
 
 	# pick default thumbnail template based on start time.
 	# pick default frame time as the middle of the video.
 	# ignore both if video has no start time yet.
+	# or for archive events, no thumbnail.
 	DEFAULT_TEMPLATES = [
 		"zeta-right",
 		"dawn-guard-right",
 		"alpha-flight-right",
 		"night-watch-right",
 	]
-	if response['event_start'] is not None:
+	if is_archive:
+		response["thumbnail_mode"] = "NONE"
+	elif response['event_start'] is not None:
 		start = response['event_start']
 		if response['thumbnail_template'] is None:
 			# RDPs default to the RDP template. Others use the current shift.
@@ -199,16 +215,16 @@ def get_row(ident):
 
 	# remove any added headers or footers so round-tripping is a no-op
 	if (
-		app.title_header
+		title_header
 		and response["video_title"] is not None
-		and response["video_title"].startswith(app.title_header)
+		and response["video_title"].startswith(title_header)
 	):
-		response["video_title"] = response["video_title"][len(app.title_header):]
+		response["video_title"] = response["video_title"][len(title_header):]
 	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?{}$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
 		re.escape(app.description_footer),
 	))
-	if response["video_description"] is not None:
+	if (not is_archive) and response["video_description"] is not None:
 		match = description_playlist_re.search(response["video_description"])
 		if match:
 			response["video_description"] = response["video_description"][:match.start()]
@@ -280,34 +296,39 @@ def update_row(ident, editor=None):
 		return 'Row {} not found'.format(ident), 404
 	assert old_row['id'] == ident
 
-	playlists = database.query(conn, """ 
-		SELECT playlist_id, name, tags
-		FROM playlists
-		WHERE show_in_description
-	""")
-	# Filter for matching playlists for this video
-	playlists = [
-		playlist for playlist in playlists
-		if all(
-			tag.lower() in [t.lower() for t in old_row['tags']]
-			for tag in playlist.tags
-		)
-	]
+	is_archive = old_row["sheet_name"] == app.archive_sheet
 
-	# Include headers and footers
-	new_row['video_title'] = app.title_header + new_row['video_title']
-	description_lines = []
-	if playlists:
-		# NOTE: If you change this format, you need to also change the regex that matches this
-		# on the GET handler.
-		description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
-		description_lines += [
-			"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
-			for playlist in playlists
+	# archive events skip title and description munging
+	if not is_archive:
+
+		playlists = database.query(conn, """ 
+			SELECT playlist_id, name, tags
+			FROM playlists
+			WHERE show_in_description
+		""")
+		# Filter for matching playlists for this video
+		playlists = [
+			playlist for playlist in playlists
+			if all(
+				tag.lower() in [t.lower() for t in old_row['tags']]
+				for tag in playlist.tags
+			)
 		]
-		description_lines.append('') # blank line before footer
-	description_lines.append(app.description_footer)
-	new_row['video_description'] += "\n\n" + "\n".join(description_lines)
+
+		# Include headers and footers
+		new_row['video_title'] = app.title_header + new_row['video_title']
+		description_lines = []
+		if playlists:
+			# NOTE: If you change this format, you need to also change the regex that matches this
+			# on the GET handler.
+			description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
+			description_lines += [
+				"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
+				for playlist in playlists
+			]
+			description_lines.append('') # blank line before footer
+		description_lines.append(app.description_footer)
+		new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
 	# Validate youtube requirements on title and description
 	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
@@ -509,9 +530,18 @@ def reset_row(ident, editor=None):
 @argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
 @argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
 @argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
+@argh.arg('--archive-sheet', help="\n".join([
+	'Events with this value for the sheet_name field are treated as "archive" events with different behaviour. In particular:',
+	'  - The value of --archive-location is prepended to the upload locations, making it the default location.',
+	'  - Title and description modifications (eg. --title-header) are not applied.',
+	'  - allow_holes is enabled by default.',
+	'  - Thumbnail mode defaults to NONE.',
+]))
+@argh.arg('--archive-location', help="Default upload location for archive sheet events, see --archive-sheet")
 def main(
 	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False, title_header=None, description_footer=None, upload_locations='',
+	archive_sheet=None, archive_location=None,
 ):
 	server = WSGIServer((host, port), cors(app))
 
@@ -522,6 +552,11 @@ def main(
 	app.description_footer = "" if description_footer is None else description_footer
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
+
+	if archive_sheet is not None and archive_location is None:
+		raise ValueError("Setting --archive-sheet also requires setting --archive-location")
+	app.archive_sheet = archive_sheet
+	app.archive_location = archive_location
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
