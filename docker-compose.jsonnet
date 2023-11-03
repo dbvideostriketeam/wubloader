@@ -124,12 +124,16 @@
 
   // Config for cutter upload locations. See cutter docs for full detail.
   cutter_config:: {
-    desertbus: {type: "youtube", cut_type: "fast"},
+    // Default
+    desertbus: {type: "youtube", cut_type: "smart"},
+    // Backup options for advanced use, if the smart cut breaks things.
+    desertbus_slow: {type: "youtube", cut_type: "full"},
+    desertbus_emergency: {type: "youtube", cut_type: "fast"},
   },
   default_location:: "desertbus",
   // archive location is the default location for archive events,
   // only revelant if $.archive_worksheet is set.
-  archive_location:: $.default_location,
+  archive_location:: "archive",
 
   // Fixed tags to add to all videos
   video_tags:: ["DB13", "DB2019", "2019", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
@@ -174,7 +178,7 @@
 
   // The archive worksheet, if given, points to a worksheet containing events with a different
   // schema and alternate behaviour suitable for long-term archival videos instead of uploads.
-  archive_worksheet:: null,
+  archive_worksheet:: "Video Trim Times",
 
   // A map from youtube playlist IDs to a list of tags.
   // Playlist manager will populate each playlist with all videos which have all those tags.
@@ -188,6 +192,8 @@
   // Which upload locations should be added to playlists
   youtube_upload_locations:: [
     "desertbus",
+    "desertbus_slow",
+    "desertbus_emergency",
     "youtube-manual",
   ],
 
@@ -216,12 +222,11 @@
     schedule_path:: "",
     // Map from group names to zulip internal ids
     groups: {
-      Supervisor: 15,
       Sheeter: 16,
       Editor: 17,
       ChatOps: 18,
     },
-    // Map from group id to a hard-coded set of 4 user ids, one per shift.
+    // Map from group id to 4 hard-coded lists of user ids, one per shift.
     groups_by_shift: {
     },
     // Map from schedule names to zulip user ids
