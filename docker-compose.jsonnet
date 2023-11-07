@@ -544,7 +544,7 @@
     [if $.enabled.chat_archiver then "chat_archiver"]: {
       image: $.get_image("chat_archiver"),
       restart: "always",
-      command: [$.chat_archiver.user, "/token", "--name", $.localhost] + $.clean_channels,
+      command: [$.chat_archiver.user, "/token"] + $.clean_channels + ["--name", $.localhost],
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
       environment: $.env,

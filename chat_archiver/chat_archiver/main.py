@@ -173,7 +173,7 @@ class Archiver(object):
 		batches = {}
 		for channel in self.channels:
 			open_batches.labels(channel=channel, client=self.name).set_function(
-				lambda: len(1 for c, t in batches if c == channel)
+				lambda: len([1 for c, t in batches if c == channel])
 			)
 
 		# Tracks if we've seen the initial ROOMSTATE for each channel we've joined.
