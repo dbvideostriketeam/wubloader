@@ -182,7 +182,7 @@
 
   // Max hours ago to backfill, ie. do not backfill for times before this many hours ago.
   // Set to null to disable.
-  backfill_max_hours_ago:: 24 * 30 * 6, // approx 6 months
+  backfill_max_hours_ago:: 24 * 14, // 2 weeks, to avoid excessive backfill of old chat logs
 
   // Extra directories (besides segments) to backfill
   backfill_dirs:: ["emotes"],
