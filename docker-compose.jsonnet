@@ -300,7 +300,7 @@
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities),
         "--backdoor-port", std.toString($.backdoor_port),
-      ] + if $.downloader_creds_file != null then ["--auth-file", "/token"] else [],
+      ] + if $.downloader_creds_file != null then ["--twitch-auth-file", "/token"] else [],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path]
         + if $.downloader_creds_file != null then ["%s:/token" % $.downloader_creds_file] else [],
