@@ -1,6 +1,8 @@
 
+import json
 import logging
 import random
+import subprocess
 
 from common.requests import InstrumentedSession
 
@@ -49,6 +51,36 @@ class URLProvider(Provider):
 
 		# Take the first variant
 		return {"source": master_playlist.playlists[0].uri}
+
+
+class YoutubeProvider(Provider):
+	"""Provider that takes a youtube live stream (NOT a video).
+	Doesn't support multiple renditions, quality must be "source".
+	Requires yt-dlp to be available in $PATH.
+	"""
+	# Youtube links expire after 6h, so roll workers at 5h
+	MAX_WORKER_AGE = 5 * 60 * 60
+
+	def __init__(self, youtube_url):
+		self.youtube_url = youtube_url
+
+	def get_media_playlist_uris(self, qualities, session=None):
+		if qualities != ["source"]:
+			raise ValueError("Cannot provide non-source qualities")
+
+		# We outsource the work of going from a youtube URL to a media playlist at the best available quality.
+		# We do this by telling yt-dlp to dump the json info for the video.
+		output = subprocess.check_output([
+			"yt-dlp",
+			"--dump-json",
+			"--output", "infojson:-", # json dump to stdout (just "-o -" will write it to stderr)
+			self.youtube_url,
+		])
+		try:
+			data = json.loads(output)
+		except Exception:
+			raise Exception(f"Invalid JSON from yt-dlp: {output!r}")
+		return {"source": data["url"]}
 
 
 class TwitchProvider(Provider):
