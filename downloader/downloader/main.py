@@ -21,7 +21,7 @@ import common
 import common.dateutil
 import common.requests
 
-from .twitch import URLProvider, TwitchProvider, YoutubeProvider
+from .providers import URLProvider, TwitchProvider, YoutubeProvider
 
 
 segments_downloaded = prom.Counter(
