@@ -639,15 +639,18 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 
 	managers = []
 	for channel, important, type, url in channels:
+		channel_qualities = qualities
 		if type == "twitch":
 			provider = TwitchProvider(channel, auth_token=twitch_auth_token)
 		elif type == "url":
 			provider = URLProvider(url)
+			channel_qualities = ["source"]
 		elif type == "youtube":
 			provider = YoutubeProvider(url)
+			channel_qualities = ["source"]
 		else:
 			raise ValueError(f"Unknown type {type!r}")
-		manager = StreamsManager(provider, channel, base_dir, qualities, important=important)
+		manager = StreamsManager(provider, channel, base_dir, channel_qualities, important=important)
 		managers.append(manager)
 
 	def stop():
