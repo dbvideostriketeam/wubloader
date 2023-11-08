@@ -16,7 +16,7 @@ import psycopg2
 from psycopg2 import sql
 
 import common
-from common import database
+from common import database, dateutil
 from common.flask_stats import request_stats, after_request
 
 import google.oauth2.id_token
@@ -517,8 +517,57 @@ def reset_row(ident, editor=None):
 	if results.rowcount != 1:
 		return 'Row id = {} not found or not in cancellable state'.format(ident), 404
 	logging.info("Row {} reset to 'UNEDITED'".format(ident))
-	return ''	
-		
+	return ''
+
+
+@app.route('/thrimshim/odometer/<channel>')
+@request_stats
+def get_odometer(channel):
+	"""Not directly thrimbletrimmer related but easiest to put here as we have DB access.
+	Checks DB for the most recent odometer reading as of `time` param (default now).
+	However, won't consider readings older than `range` param (default 1 minute)
+	You can also pass `extrapolate`=`true` to try to extrapolate the reading at your requested time
+	based on the last known time. Note it will still only look within `range` for the last known time.
+	If it can't find a reading, returns 0.
+	"""
+	time = flask.request.args.get("time")
+	if time is None:
+		time = datetime.datetime.utcnow()
+	else:
+		time = dateutil.parse(time)
+
+	range = int(flask.request.args.get("range", "60"))
+	range = datetime.timedelta(seconds=range)
+
+	extrapolate = (flask.request.args.get("extrapolate") == "true")
+
+	start = time - range
+	end = time
+
+	conn = app.db_manager.get_conn()
+	# Get newest non-errored row within time range
+	results = database.query(conn, """
+		SELECT timestamp, odometer
+		FROM bus_data
+		WHERE odometer IS NOT NULL
+			AND channel = %(channel)s
+			AND timestamp > %(start)s
+			AND timestamp <= %(end)s
+		ORDER BY timestamp DESC
+		LIMIT 1
+	""", channel, start, end)
+	result = results.fetchone()
+	if result is None:
+		# By Sokar's request, we want to return an invalid value rather than an error response.
+		return "0"
+	if not extrapolate:
+		return str(result.odometer)
+	# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
+	SPEED = 45. / 3600 # in miles per second
+	delta_t = time - timestamp
+	delta_odo = delta_t * SPEED
+	return str(result.odometer + delta_odo)
+
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port', help='Port server will listen on. Default is 8004.')
