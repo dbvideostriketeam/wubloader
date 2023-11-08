@@ -277,8 +277,9 @@
     for key in std.objectFields($.db_args)
   ]),
 
-  // Cleaned up version of $.channels without importance markers
-  clean_channels:: [std.split(c, '!')[0] for c in $.channels],
+  // Cleaned up version of $.channels without importance/type markers.
+  // General form is CHANNEL[!][:TYPE:URL].
+  clean_channels:: [std.split(std.split(c, ":")[0], '!')[0] for c in $.channels],
 
   // Image format helper
   get_image(name, tag=$.image_tag):: "%s/wubloader-%s:%s" % [
