@@ -149,6 +149,24 @@ CREATE TABLE playlists (
 	tags TEXT[] NOT NULL,
 	show_in_description BOOLEAN NOT NULL
 );
+
+-- This table records time series data gleaned from the bus cam (right now, just the odometer).
+-- Each record indicates a timestamp and value, as well as the channel/segment file it was sourced from.
+-- Note the values are nullable and NULL indicates the value was indeterminate at that time.
+-- The "error" column records a free-form human readable message about why a value could not
+-- be determined.
+-- The odometer column is in miles. The game shows the odometer to the 1/10th mile precision.
+CREATE TABLE bus_data (
+	timestamp TIMESTAMP NOT NULL,
+	channel TEXT NOT NULL,
+	segment TEXT,
+	error TEXT,
+	odometer DOUBLE PRECISION,
+);
+
+-- Range index on timestamp as we will often want the closest timestamp to a requested point.
+-- Note btree is the default anyway but we use it explicitly here as we want the range behaviour.
+CREATE INDEX bus_data_timestamp ON bus_data USING btree (timestamp);
 EOSQL
 
 if [ -a /mnt/wubloader/nodes.csv ]; then
