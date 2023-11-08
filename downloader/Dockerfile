@@ -14,5 +14,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY downloader /tmp/downloader
 RUN pip install /tmp/downloader && rm -r /tmp/downloader
 
+# Install yt-dlp last as it changes often
+RUN pip install yt-dlp
+
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "downloader", "--base-dir", "/mnt"]
