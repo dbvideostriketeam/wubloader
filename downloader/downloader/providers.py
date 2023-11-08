@@ -30,6 +30,27 @@ class Provider:
 		return hls_playlist.load(resp.text, base_uri=resp.url)
 
 
+class URLProvider(Provider):
+	"""Provider that takes an arbitrary master playlist URL.
+	Doesn't support multiple renditions, quality must be "source".
+	"""
+	def __init__(self, master_playlist_url):
+		self.master_playlist_url = master_playlist_url
+
+	def get_media_playlist_uris(self, qualities, session=None):
+		if qualities != ["source"]:
+			raise ValueError("Cannot provide non-source qualities")
+		if session is None:
+			session = InstrumentedSession()
+
+		resp = session.get(self.master_playlist_url, metric_name='url_master_playlist')
+		resp.raise_for_status()
+		master_playlist = hls_playlist.load(resp.text, base_uri=resp.url)
+
+		# Take the first variant
+		return {"source": master_playlist.playlists[0].uri}
+
+
 class TwitchProvider(Provider):
 	"""Provider that takes a twitch channel."""
 	# Twitch links expire after 24h, so roll workers at 20h
