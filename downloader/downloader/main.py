@@ -21,7 +21,7 @@ import common
 import common.dateutil
 import common.requests
 
-from . import twitch
+from .twitch import URLProvider, TwitchProvider, YoutubeProvider
 
 
 segments_downloaded = prom.Counter(
@@ -121,9 +121,9 @@ class StreamsManager(object):
 	FETCH_MIN_INTERVAL = 20
 
 	FETCH_TIMEOUTS = 5, 30
-	MAX_WORKER_AGE = 20*60*60 # 20 hours, twitch's media playlist links expire after 24 hours
 
-	def __init__(self, channel, base_dir, qualities, important=False, auth_token=None):
+	def __init__(self, provider, channel, base_dir, qualities, important=False):
+		self.provider = provider
 		self.channel = channel
 		self.logger = logging.getLogger("StreamsManager({})".format(channel))
 		self.base_dir = base_dir
@@ -133,7 +133,6 @@ class StreamsManager(object):
 		self.refresh_needed = gevent.event.Event() # set to tell main loop to refresh now
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
-		self.auth_token = auth_token
 		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
 			self.FETCH_MIN_INTERVAL = self.IMPORTANT_FETCH_MIN_INTERVAL
@@ -215,8 +214,7 @@ class StreamsManager(object):
 			self.logger.log(self.master_playlist_log_level, "Fetching master playlist")
 			fetch_time = monotonic()
 			with soft_hard_timeout(self.logger, "fetching master playlist", self.FETCH_TIMEOUTS, self.trigger_refresh):
-				master_playlist = twitch.get_master_playlist(self.channel, auth_token=self.auth_token)
-			new_urls = twitch.get_media_playlist_uris(master_playlist, list(self.stream_workers.keys()))
+				new_urls = self.provider.get_media_playlist_uris(list(self.stream_workers.keys()))
 			self.update_urls(fetch_time, new_urls)
 			for quality, workers in self.stream_workers.items():
 				# warn and retry if the url is missing
@@ -231,7 +229,7 @@ class StreamsManager(object):
 					continue
 				latest_worker = workers[-1]
 				# is the old worker too old?
-				if latest_worker.age() > self.MAX_WORKER_AGE:
+				if latest_worker.age() > self.provider.MAX_WORKER_AGE:
 					self.logger.info("Starting new worker for {} as the latest is too old ({}h)".format(quality, latest_worker.age() / 3600.))
 					self.start_worker(quality)
 		except Exception as e:
@@ -250,7 +248,7 @@ class StreamsManager(object):
 		while not self.stopping.is_set():
 			# clamp time to max age to non-negative, and default to 0 if no workers exist
 			time_to_next_max_age = max(0, min([
-				self.MAX_WORKER_AGE - workers[-1].age()
+				self.provider.MAX_WORKER_AGE - workers[-1].age()
 				for workers in self.stream_workers.values() if workers
 			] or [0]))
 			self.logger.log(self.master_playlist_log_level, "Next master playlist refresh in at most {} sec".format(time_to_next_max_age))
@@ -349,7 +347,7 @@ class StreamWorker(object):
 			self.logger.debug("Getting media playlist {}".format(self.url))
 			try:
 				with soft_hard_timeout(self.logger, "getting media playlist", self.FETCH_TIMEOUTS, self.trigger_new_worker):
-					playlist = twitch.get_media_playlist(self.url, session=self.session)
+					playlist = self.manager.provider.get_media_playlist(self.url, session=self.session)
 			except Exception as e:
 				self.logger.warning("Failed to fetch media playlist {}".format(self.url), exc_info=True)
 				self.trigger_new_worker()
@@ -597,22 +595,38 @@ class SegmentGetter(object):
 			stat.set(max(stat._value.get(), timestamp)) # NOTE: not thread-safe but is gevent-safe
 
 
-@argh.arg('channels', nargs="+", help=
+def parse_channel(channel):
+	if ":" in channel:
+		channel, type, url = channel.split(":", 2)
+	else:
+		type = "twitch"
+		url = None
+	important = channel.endswith("!")
+	channel = channel.rstrip("!")
+	return channel, important, type, url
+
+
+@argh.arg('channels', nargs="+", type=parse_channel, help=
 	"Twitch channels to watch. Add a '!' suffix to indicate they're expected to be always up. "
-	"This affects retry interval, error reporting and monitoring."
+	"This affects retry interval, error reporting and monitoring. "
+	"Non-twitch URLs can also be given with the form CHANNEL[!]:TYPE:URL"
 )
-def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, auth_file=None):
+def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, twitch_auth_file=None):
 	qualities = qualities.split(",") if qualities else []
 
-	auth_token = None
-	if auth_file is not None:
-		with open(auth_file) as f:
-			auth_token = f.read().strip()
+	twitch_auth_token = None
+	if twitch_auth_file is not None:
+		with open(twitch_auth_file) as f:
+			twitch_auth_token = f.read().strip()
 
-	managers = [
-		StreamsManager(channel.rstrip('!'), base_dir, qualities, important=channel.endswith('!'), auth_token=auth_token)
-		for channel in channels
-	]
+	managers = []
+	for channel, important, type, url in channels:
+		if type == "twitch":
+			provider = TwitchProvider(channel, auth_token=twitch_auth_token)
+		else:
+			raise ValueError(f"Unknown type {type!r}")
+		manager = StreamsManager(provider, channel, base_dir, qualities, important=important)
+		managers.append(manager)
 
 	def stop():
 		for manager in managers:
