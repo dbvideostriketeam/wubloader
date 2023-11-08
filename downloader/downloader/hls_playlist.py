@@ -253,7 +253,7 @@ class M3U8Parser(object):
         elif line.startswith("#EXT-X-MAP"):
             attr = self.parse_tag(line, self.parse_attributes)
             byterange = self.parse_byterange(attr.get("BYTERANGE", ""))
-            self.state["map"] = Map(attr.get("URI"), byterange)
+            self.state["map"] = Map(self.uri(attr.get("URI")), byterange)
         elif line.startswith("#EXT-X-I-FRAME-STREAM-INF"):
             attr = self.parse_tag(line, self.parse_attributes)
             streaminf = self.state.pop("streaminf", attr)
