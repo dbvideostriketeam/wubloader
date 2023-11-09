@@ -36,6 +36,7 @@ jobs:
           - playlist_manager
           - chat_archiver
           - zulip_bots
+          - bus_analyzer
     steps:
       - name: Check out repo
         uses: actions/checkout@v2

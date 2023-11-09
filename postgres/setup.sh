@@ -156,17 +156,20 @@ CREATE TABLE playlists (
 -- The "error" column records a free-form human readable message about why a value could not
 -- be determined.
 -- The odometer column is in miles. The game shows the odometer to the 1/10th mile precision.
+-- The segment may be NULL, which indicates a manually-inserted value.
+-- The primary key serves two purposes:
+--   It provides an index on channel, followed by a range index on timestamp
+--   It provides a unique constraint on the same segment and timestamp
+-- Note that multiple manual records may exist for the same channel and timestamp
+-- as all NULL values are considered distinct, so the unique constraint does not hold.
 CREATE TABLE bus_data (
-	timestamp TIMESTAMP NOT NULL,
 	channel TEXT NOT NULL,
+	timestamp TIMESTAMP NOT NULL,
 	segment TEXT,
 	error TEXT,
 	odometer DOUBLE PRECISION,
+	PRIMARY KEY (channel, timestamp, segment)
 );
-
--- Range index on timestamp as we will often want the closest timestamp to a requested point.
--- Note btree is the default anyway but we use it explicitly here as we want the range behaviour.
-CREATE INDEX bus_data_timestamp ON bus_data USING btree (timestamp);
 EOSQL
 
 if [ -a /mnt/wubloader/nodes.csv ]; then
