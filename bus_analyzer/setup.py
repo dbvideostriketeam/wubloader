@@ -10,6 +10,7 @@ setup(
 	install_requires=[
 		"argh==0.28.1",
 		"gevent",
+		"Pillow",
         "psycogreen",
         "psycopg2",
 		"python-dateutil",
