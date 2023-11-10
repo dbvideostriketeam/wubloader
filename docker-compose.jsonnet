@@ -31,6 +31,7 @@
     schedulebot: false,
     tootbot: false,
     twitchbot: false,
+    bus_analyzer: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -212,6 +213,9 @@
       if std.length(std.split(c, ":")) == 1
     ],
   },
+
+  // The channel to use for bus_analyzer
+  bus_channel:: "buscam",
 
   zulip_url:: "https://chat.videostrike.team",
 
@@ -556,6 +560,14 @@
       command: [$.chat_archiver.user, "/token"] + $.chat_archiver.channels + ["--name", $.localhost],
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
+      environment: $.env,
+    },
+
+    [if $.enabled.bus_analyzer then "bus_analyzer"]: {
+      image: $.get_image("bus_analyzer"),
+      restart: "always",
+      command: [$.db_connect, $.bus_channel, "--base-dir", "/mnt"],
+      volumes: ["%s:/mnt" % $.segments_path],
       environment: $.env,
     },
 
