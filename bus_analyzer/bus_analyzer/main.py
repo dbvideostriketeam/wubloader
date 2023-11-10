@@ -11,7 +11,7 @@ import gevent.event
 from common import database
 from common.segments import parse_segment_path
 
-from .extract import extract_segment
+from .extract import extract_segment, load_prototypes
 
 
 cli = argh.EntryPoint()
@@ -19,32 +19,39 @@ cli = argh.EntryPoint()
 
 @cli
 @argh.named("extract-segment")
-def do_extract_segment(*segment_paths):
+def do_extract_segment(*segment_paths, prototypes_path="./odo-digit-prototypes"):
 	"""Extract info from individual segments and print them"""
+	prototypes = load_prototypes(prototypes_path)
 	for segment_path in segment_paths:
-		odometer = extract_segment(segment_path)
+		segment_info = parse_segment_path(segment_path)
+		odometer = extract_segment(prototypes, segment_info)
 		print(f"{segment_path} {odometer}")
 
 
 @cli
 @argh.named("analyze-segment")
-def do_analyze_segment(dbconnect, *segment_paths, base_dir='.'):
+def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path="./odo-digit-prototypes"):
 	"""Analyze individual segments and write them to the database"""
+	prototypes = load_prototypes(prototypes_path)
 	dbmanager = database.DBManager(dsn=dbconnect)
 	conn = dbmanager.get_conn()
 
 	for segment_path in segment_paths:
-		analyze_segment(conn, segment_path)
+		analyze_segment(conn, prototypes, segment_path)
 
 
-def analyze_segment(conn, segment_path, check_segment_name=None):
+def analyze_segment(conn, prototypes, segment_path, check_segment_name=None):
 	segment_info = parse_segment_path(segment_path)
+	if segment_info.type == "temp":
+		logging.info("Ignoring temp segment {}".format(segment_path))
+		return
+
 	segment_name = '/'.join(segment_path.split('/')[-4:]) # just keep last 4 path parts
 	if check_segment_name is not None:
 		assert segment_name == check_segment_name
 
 	try:
-		odometer = extract_segment(segment_path)
+		odometer = extract_segment(prototypes, segment_info)
 	except Exception:
 		logging.warning(f"Failed to extract segment {segment_path!r}", exc_info=True)
 		odometer = None
@@ -70,7 +77,7 @@ def analyze_segment(conn, segment_path, check_segment_name=None):
 	)
 
 
-def analyze_hour(conn, existing_segments, base_dir, channel, quality, hour):
+def analyze_hour(conn, prototypes, existing_segments, base_dir, channel, quality, hour):
 	hour_path = os.path.join(base_dir, channel, quality, hour)
 	try:
 		segments = os.listdir(hour_path)
@@ -93,7 +100,7 @@ def analyze_hour(conn, existing_segments, base_dir, channel, quality, hour):
 
 	logging.info("Found {} segments not already existing".format(len(segments_to_do)))
 	for segment_path, segment_name in segments_to_do:
-		analyze_segment(conn, segment_path, segment_name)
+		analyze_segment(conn, prototypes, segment_path, segment_name)
 
 
 def parse_hours(s):
@@ -105,6 +112,7 @@ def parse_hours(s):
 
 @cli
 @argh.arg("--hours", type=parse_hours, help="If integer, watch the most recent N hours. Otherwise, comma-seperated list of hours.")
+@argh.arg("channels", nargs="+")
 def main(
 	dbconnect,
 	*channels,
@@ -113,6 +121,7 @@ def main(
 	hours=2,
 	run_once=False,
 	overwrite=False,
+	prototypes_path="./odo-digit-prototypes",
 ):
 	CHECK_INTERVAL = 2
 
@@ -122,6 +131,8 @@ def main(
 
 	db_manager = database.DBManager(dsn=dbconnect)
 	conn = db_manager.get_conn()
+
+	prototypes = load_prototypes(prototypes_path)
 
 	logging.info("Started")
 
@@ -162,7 +173,7 @@ def main(
 
 		for channel in channels:
 			for hour in do_hours:
-				analyze_hour(conn, existing_segments, base_dir, channel, quality, hour)
+				analyze_hour(conn, prototypes, existing_segments, base_dir, channel, quality, hour)
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")
