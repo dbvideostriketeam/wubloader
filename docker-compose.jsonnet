@@ -38,6 +38,8 @@
   // and warned about if they're not currently streaming.
   channels:: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
 
+  backfill_only_channels:: [],
+
   // Stream qualities to capture
   qualities:: ["source", "480p"],
 
@@ -203,6 +205,12 @@
     token_path: "./chat_token.txt",
     // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
     backfill: true,
+    // Channels to watch. Defaults to "all twitch channels in $.channels" but you can add extras.
+    channels: [
+      std.split(c, '!')[0]
+      for c in $.channels
+      if std.length(std.split(c, ":")) == 1
+    ],
   },
 
   zulip_url:: "https://chat.videostrike.team",
@@ -279,7 +287,7 @@
 
   // Cleaned up version of $.channels without importance/type markers.
   // General form is CHANNEL[!][:TYPE:URL].
-  clean_channels:: [std.split(std.split(c, ":")[0], '!')[0] for c in $.channels],
+  clean_channels:: [std.split(std.split(c, ":")[0], '!')[0] for c in $.channels] + $.backfill_only_channels,
 
   // Image format helper
   get_image(name, tag=$.image_tag):: "%s/wubloader-%s:%s" % [
@@ -545,7 +553,7 @@
     [if $.enabled.chat_archiver then "chat_archiver"]: {
       image: $.get_image("chat_archiver"),
       restart: "always",
-      command: [$.chat_archiver.user, "/token"] + $.clean_channels + ["--name", $.localhost],
+      command: [$.chat_archiver.user, "/token"] + $.chat_archiver.channels + ["--name", $.localhost],
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
       environment: $.env,
