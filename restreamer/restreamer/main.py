@@ -270,7 +270,7 @@ def generate_media_playlist(channel, quality):
 	# (not an error because someone might ask for a specific start, no end, but we ended up with
 	# end before start because that's the latest time we have)
 	if start < end:
-		segments = get_best_segments(hours_path, start, end)
+		segments = get_best_segments(hours_path, start, end, no_hack=True)
 	else:
 		# Note the None to indicate there was a "hole" at both start and end
 		segments = [None]
