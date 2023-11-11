@@ -584,6 +584,7 @@ class SegmentGetter(object):
 					file_created = True
 					if map_data is not None:
 						common.writeall(f.write, map_data)
+						hash.update(map_data)
 					# We read chunk-wise in 8KiB chunks. Note that if the connection cuts halfway,
 					# we may lose part of the last chunk even though we did receive it.
 					# This is a small enough amount of data that we don't really care.
