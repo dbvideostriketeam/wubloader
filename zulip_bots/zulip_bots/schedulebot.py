@@ -182,9 +182,10 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 
 def parse_schedule(user_ids, schedule_file):
 	schedule = {}
+	user_ids = {user.lower(): id for user, id in user_ids.items()}
 	with open(schedule_file) as f:
 		for row in csv.reader(f):
-			name = row[0]
+			name = row[0].lower()
 			if name in ["", "Chat Member", "Hour of the Run"] or name.startswith("-") or name.startswith("["):
 				continue
 			if name not in user_ids:
