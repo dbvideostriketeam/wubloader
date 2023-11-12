@@ -555,18 +555,20 @@ def get_odometer(channel):
 			AND timestamp <= %(end)s
 		ORDER BY timestamp DESC
 		LIMIT 1
-	""", channel, start, end)
+	""", channel=channel, start=start, end=end)
 	result = results.fetchone()
 	if result is None:
 		# By Sokar's request, we want to return an invalid value rather than an error response.
-		return "0"
-	if not extrapolate:
-		return str(result.odometer)
-	# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
-	SPEED = 45. / 3600 # in miles per second
-	delta_t = time - timestamp
-	delta_odo = delta_t * SPEED
-	return str(result.odometer + delta_odo)
+		odometer = 0
+	elif extrapolate:
+		# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
+		SPEED = 45. / 3600 # in miles per second
+		delta_t = time - timestamp
+		delta_odo = delta_t * SPEED
+		odometer = result.odometer + delta_odo
+	else:
+		odometer = result.odometer
+	return {"odometer": odometer}
 
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
