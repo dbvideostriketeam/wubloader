@@ -188,9 +188,9 @@ def get_row(ident):
 	# or for archive events, no thumbnail.
 	DEFAULT_TEMPLATES = [
 		"zeta-right",
-		"dawn-guard-right",
-		"alpha-flight-right",
-		"night-watch-right",
+		"dawnguard-right",
+		"alphaflight-right",
+		"nightwatch-right",
 	]
 	if is_archive:
 		response["thumbnail_mode"] = "NONE"
