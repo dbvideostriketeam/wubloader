@@ -696,7 +696,7 @@
     [if $.enabled.bus_analyzer then "bus_analyzer"]: {
       image: $.get_image("bus_analyzer"),
       restart: "always",
-      command: [$.db_connect, $.bus_channel, "--base-dir", "/mnt"],
+      command: ["main", $.db_connect, $.bus_channel, "--base-dir", "/mnt"],
       volumes: ["%s:/mnt" % $.segments_path],
       environment: $.env,
     },
