@@ -563,7 +563,7 @@ def get_odometer(channel):
 	elif extrapolate:
 		# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
 		SPEED = 45. / 3600 # in miles per second
-		delta_t = time - result.timestamp
+		delta_t = (time - result.timestamp).total_seconds()
 		delta_odo = delta_t * SPEED
 		odometer = result.odometer + delta_odo
 	else:
