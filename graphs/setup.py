@@ -8,6 +8,6 @@ setup(
             'argh',
             'bokeh',
             'gevent',
-            'request'
+            'requests'
     ],
 )
