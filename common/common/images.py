@@ -1,6 +1,7 @@
 
 import json
 import os
+import sys
 from io import BytesIO
 
 from PIL import Image
@@ -70,3 +71,15 @@ def compose_thumbnail_template(base_dir, template_name, frame_data):
 	result.save(buf, format='png')
 	buf.seek(0)
 	return buf.read()
+
+
+def cli(template_name, image, base_dir="."):
+	with open(image, "rb") as f:
+		image = f.read()
+	thumbnail = compose_thumbnail_template(base_dir, template_name, image)
+	sys.stdout.buffer.write(thumbnail)
+
+
+if __name__ == '__main__':
+	import argh
+	argh.dispatch_command(cli)
