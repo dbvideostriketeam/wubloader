@@ -5,6 +5,7 @@ from io import BytesIO
 import argh
 from PIL import Image, ImageStat
 
+import common
 from common.segments import extract_frame, parse_segment_path
 
 
@@ -184,6 +185,17 @@ def create_prototype(output, *images):
 	data = [v / len(images) for v in data]
 	first.putdata(data)
 	first.save(output)
+
+
+@cli
+def get_frame(*segments):
+	for path in segments:
+		segment = parse_segment_path(path)
+		filename = segment.start.strftime("%Y-%m-%dT-%H-%M-%S") + ".png"
+		with open(filename, "wb") as f:
+			for chunk in extract_frame([segment], segment.start):
+				common.writeall(f.write, chunk)
+		print(filename)
 
 
 def extract_segment(prototypes, segment):
