@@ -288,6 +288,10 @@ a.click {
 	text-align: right;
 }
 
+.range-definition-chapter-marker-edit-gap {
+	width: 16px;
+}
+
 input.range-definition-chapter-marker-description {
 	width: 500px;
 }

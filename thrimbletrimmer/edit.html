@@ -164,7 +164,31 @@
 								class="range-definition-current"
 							/>
 						</div>
-						<div class="range-definition-chapter-markers hidden"></div>
+						<div class="range-definition-chapter-markers hidden">
+							<div>
+								<div class="range-definition-chapter-marker-start-field">
+									<input
+										type="text"
+										class="range-definition-chapter-marker-start"
+										id="range-definition-chapter-marker-first-start"
+										disabled
+									/>
+									<div class="range-definition-chapter-marker-edit-gap"></div>
+									<img
+										src="images/play_to.png"
+										alt="Play from chapter start time"
+										title="Play from chapter start time"
+										class="range-definition-chapter-marker-play-start click"
+									/>
+								</div>
+								<input
+									type="text"
+									class="range-definition-chapter-marker-description"
+									id="range-definition-chapter-marker-first-description"
+									placeholder="Description"
+								/>
+							</div>
+						</div>
 						<img
 							src="images/plus.png"
 							alt="Add chapter marker"
@@ -282,15 +306,9 @@
 			<div id="download">
 				<label for="download-type-select">Download type:</label>
 				<select id="download-type-select">
-					<option value="smart" selected>
-						Smart (experimental but preferred option)
-					</option>
-					<option value="rough">
-						Rough (raw content, pads start and end by a few seconds)
-					</option>
-					<option value="fast">
-						Fast (deprecated, use if smart is broken)
-					</option>
+					<option value="smart" selected>Smart (experimental but preferred option)</option>
+					<option value="rough">Rough (raw content, pads start and end by a few seconds)</option>
+					<option value="fast">Fast (deprecated, use if smart is broken)</option>
 					<option value="mpegts">MPEG-TS (slow, consumes server resources)</option>
 				</select>
 				<a id="download-link">Download Video</a>
