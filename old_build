@@ -11,38 +11,19 @@ cd "$(dirname "$(realpath "$0")")"
 # Pass PUSH=true to also push the resulting images, or PUSH=latest to push them as :latest tag
 
 # The different images we can build
-COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx postgres segment_coverage playlist_manager chat_archiver graphs)
+COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx postgres segment_coverage graphs)
 
 # Define push if not already defined
 PUSH=${PUSH:-}
 
 # Base is the repository namespace information, not including the wubloader-component part.
-BASE="ghcr.io/dbvideostriketeam"
+BASE="quay.io/ekimekim"
 
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(./get-build-tag)
 
 if [ "$#" -gt 0 ]; then
 	COMPONENTS=("$@")
-fi
-
-# If CACHE_FROM is set, explicitly pull and re-use specified image versions
-CACHE_IMAGES=()
-CACHE_ARGS=()
-if [ -n "${CACHE_FROM:-}" ]; then
-	# Note lack of quotes here - we want to word split
-	for commit in $CACHE_FROM; do
-		tag=$(git rev-parse --short "$commit")
-		for component in "${COMPONENTS[@]}"; do
-			CACHE_IMAGES+=("$BASE/wubloader-$component:$tag")
-			CACHE_ARGS+=("--cache-from" "$BASE/wubloader-$component:$tag")
-		done
-	done
-	echo "Trying to pull images for commits $CACHE_FROM if they exist, to re-use layers if possible"
-	for image in "${CACHE_IMAGES[@]}"; do
-		echo "Pulling $image"
-		docker pull "$image" || true # don't exit on failure
-	done
 fi
 
 for component in "${COMPONENTS[@]}"; do
@@ -53,7 +34,6 @@ for component in "${COMPONENTS[@]}"; do
 		-f "$component/Dockerfile" \
 		-t "$latest" \
 		-t "$specific" \
-		"${CACHE_ARGS[@]}" \
 		.
 	echo "Built image wubloader-$component:$TAG"
 	if [ -n "$PUSH" ]; then
