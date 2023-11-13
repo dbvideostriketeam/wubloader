@@ -631,6 +631,21 @@ async function initializeVideoInfo() {
 					const chapterContainer = rangeDefinitionsContainer.children[
 						rangeIndex
 					].getElementsByClassName("range-definition-chapter-markers")[0];
+
+					if (currentChapterIndex === 0) {
+						const chapterStartField = document.getElementById(
+							"range-definition-chapter-marker-first-start",
+						);
+						const chapterDescField = document.getElementById(
+							"range-definition-chapter-marker-first-description",
+						);
+						chapterStartField.value = videoHumanTimeFromVideoPlayerTime(
+							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime,
+						);
+						chapterDescField.value = chapterData[currentChapterIndex].description;
+						currentChapterIndex++;
+					}
+
 					while (
 						currentChapterIndex < chapterData.length &&
 						chapterData[currentChapterIndex].start < rangeEndVideoTime
@@ -1643,6 +1658,13 @@ async function rangeDataUpdated() {
 			clipBar.appendChild(marker);
 		}
 	}
+
+	const firstRangeStartField = document.getElementsByClassName("range-definition-start")[0]; // There should always be a first one
+	const firstChapterStartField = document.getElementById(
+		"range-definition-chapter-marker-first-start",
+	);
+	firstChapterStartField.value = firstRangeStartField.value;
+
 	updateDownloadLink();
 }
 
