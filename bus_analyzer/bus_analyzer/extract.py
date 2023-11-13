@@ -50,39 +50,48 @@ def extract_odo(image):
 	return image.crop(ODO_COORDS)
 
 
+def get_brightest_region(image, xs, height):
+	"""For given image, return the sub-image of given height with the brightest
+	values for all the pixels at given x positions within the row."""
+	# Calculate total brightness by row
+	rows = [
+		sum(image.getpixel((x, y)) for x in xs)
+		for y in range(image.height)
+	]
+	# Find brightest sub-image of `height` rows
+	start_at = max(range(image.height - (height-1)), key=lambda y: sum(rows[y:y+height]))
+	# Cut image to only be that part
+	return image.crop((0, start_at, image.width, start_at + height))
+
+
 def extract_digits(image, include_last=True):
-	"""Takes an odo box, and returns a list of 9x6 digit images"""
+	"""Takes an odo box, and returns a list of digit images"""
 	# convert to greyscale
 	image = image.convert(mode='L')
+
+	# Find main digits y position
+	digit_xs = [
+		x + dx
+		for x in DIGIT_X_COORDS
+		for dx in range(DIGIT_WIDTH)
+	]
+	main_digits = get_brightest_region(image, digit_xs, DIGIT_HEIGHT)
+
 	digits = []
-	for i, x in enumerate(DIGIT_X_COORDS):
-		# last digit is special
-		is_last = i == len(DIGIT_X_COORDS) - 1
-		if is_last and not include_last:
-			continue
-		digit = image.crop((x, 0, x + DIGIT_WIDTH, image.height))
-		digits.append(normalize_digit(digit, is_last))
+	for i, x in enumerate(DIGIT_X_COORDS[:-1]):
+		digit = main_digits.crop((x, 0, x + DIGIT_WIDTH, main_digits.height))
+		digits.append(normalize_digit(digit))
+
+	if include_last:
+		x = DIGIT_X_COORDS[-1]
+		last_digit = get_brightest_region(image, range(x, x + DIGIT_WIDTH), LAST_DIGIT_HEIGHT)
+		last_digit = last_digit.crop((x, 0, x + DIGIT_WIDTH, last_digit.height))
+		digits.append(normalize_digit(last_digit))
+
 	return digits
 
 
-def normalize_digit(digit, is_last=False):
-	# Calculate total brightness by row
-	rows = [
-		sum(digit.getpixel((x, y)) for x in range(digit.width))
-		for y in range(digit.height)
-	]
-	# Find brightest sub-image of DIGIT_HEIGHT rows
-	h = LAST_DIGIT_HEIGHT if is_last else DIGIT_HEIGHT
-	start_at = max(range(digit.height - (h-1)), key=lambda y: sum(rows[y:y+h]))
-	# Cut image to only be that part
-	digit = digit.crop((0, start_at, digit.width, start_at + h))
-
-	# Last digit is inverted - by looking for brightest sub-image we've likely found
-	# the section that has a white background. Now we want to normalize that so it looks like
-	# other images.
-	if is_last:
-		digit = digit.point(lambda v: 255 - v)
-
+def normalize_digit(digit):
 	# Expand the range of the image so that the darkest pixel becomes black
 	# and the lightest becomes white
 	_min, _max = digit.getextrema()
