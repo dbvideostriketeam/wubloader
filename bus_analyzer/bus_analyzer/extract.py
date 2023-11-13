@@ -199,10 +199,7 @@ def get_frame(*segments):
 
 
 def extract_segment(prototypes, segment):
-	# We haven't observed worse than 0.15 or so in the wild,
-	# and an all-black screen is identified as "1" with a score of 0.07.
-	# So as a rough middle ground, require at least 0.1.
-	ODO_SCORE_THRESHOLD = 0.1
+	ODO_SCORE_THRESHOLD = 0.01
 	frame_data = b"".join(extract_frame([segment], segment.start))
 	frame = Image.open(BytesIO(frame_data))
 	odometer, score, _ = recognize_odometer(prototypes, frame)
