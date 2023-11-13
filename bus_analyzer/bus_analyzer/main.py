@@ -2,6 +2,7 @@
 import datetime
 import logging
 import os
+import random
 import signal
 import traceback
 
@@ -26,6 +27,66 @@ def do_extract_segment(*segment_paths, prototypes_path="./odo-digit-prototypes")
 		segment_info = parse_segment_path(segment_path)
 		odometer = extract_segment(prototypes, segment_info)
 		print(f"{segment_path} {odometer}")
+
+
+@cli
+def compare_segments(dbconnect, base_dir='.', prototypes_path="./odo-digit-prototypes", since=None, until=None, num=100, null_chance=0.25, verbose=False):
+	"""
+	Collect some representitive samples from the database and re-runs them to compare to previous results.
+	num is how many samples to try.
+	"""
+	prototypes = load_prototypes(prototypes_path)
+	dbmanager = database.DBManager(dsn=dbconnect)
+	conn = dbmanager.get_conn()
+
+	where = []
+	if since:
+		where.append("timestamp >= %(since)s")
+	if until:
+		where.append("timestamp < %(until)s")
+	if not where:
+		where = ["true"]
+	where = " AND ".join(where)
+	result = database.query(conn, f"""
+		SELECT odometer, segment
+		FROM bus_data
+		WHERE segment IS NOT NULL
+			AND {where}
+	""", since=since, until=until)
+
+	# To get a wider range of tests, pick at random from all unique odo readings
+	available = {}
+	for row in result.fetchall():
+		available.setdefault(row.odometer, []).append(row.segment)
+
+	selected = []
+	while available and len(selected) < num:
+		if None in available and random.random() < null_chance:
+			odometer = None
+		else:
+			odometer = random.choice(list(available.keys()))
+		segments = available[odometer]
+		random.shuffle(segments)
+		selected.append((odometer, segments.pop()))
+		if not segments:
+			del available[odometer]
+
+	results = []
+	for old_odometer, segment in selected:
+		path = os.path.join(base_dir, segment)
+		segment_info = parse_segment_path(path)
+		odometer = extract_segment(prototypes, segment_info)
+		results.append((segment, old_odometer, odometer))
+
+	matching = 0
+	for segment, old_odometer, odometer in sorted(results, key=lambda t: t[0]):
+		match = old_odometer == odometer
+		if verbose or not match:
+			print(f"{segment}: {old_odometer} | {odometer}")
+		if match:
+			matching += 1
+
+	print("{}/{} matched".format(matching, len(selected)))
 
 
 @cli
