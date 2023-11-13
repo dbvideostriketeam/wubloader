@@ -20,7 +20,7 @@ cli = argh.EntryPoint()
 
 @cli
 @argh.named("extract-segment")
-def do_extract_segment(*segment_paths, prototypes_path="./odo-digit-prototypes"):
+def do_extract_segment(*segment_paths, prototypes_path="./prototypes"):
 	"""Extract info from individual segments and print them"""
 	prototypes = load_prototypes(prototypes_path)
 	for segment_path in segment_paths:
@@ -30,7 +30,7 @@ def do_extract_segment(*segment_paths, prototypes_path="./odo-digit-prototypes")
 
 
 @cli
-def compare_segments(dbconnect, base_dir='.', prototypes_path="./odo-digit-prototypes", since=None, until=None, num=100, null_chance=0.25, verbose=False):
+def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", since=None, until=None, num=100, null_chance=0.25, verbose=False):
 	"""
 	Collect some representitive samples from the database and re-runs them to compare to previous results.
 	num is how many samples to try.
@@ -91,7 +91,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./odo-digit-proto
 
 @cli
 @argh.named("analyze-segment")
-def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path="./odo-digit-prototypes"):
+def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path="./prototypes"):
 	"""Analyze individual segments and write them to the database"""
 	prototypes = load_prototypes(prototypes_path)
 	dbmanager = database.DBManager(dsn=dbconnect)
@@ -182,7 +182,7 @@ def main(
 	hours=2,
 	run_once=False,
 	overwrite=False,
-	prototypes_path="./odo-digit-prototypes",
+	prototypes_path="./prototypes",
 ):
 	CHECK_INTERVAL = 2
 

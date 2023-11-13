@@ -108,10 +108,11 @@ def recognize_digit(prototypes, image):
 	"""Takes a normalized digit image and returns (detected number, score, all_scores)
 	where score is between 0 and 1. Higher numbers are more certain the number is correct.
 	all_scores is for debugging.
+	If the most likely detection is NOT a number, None is returned instead.
 	"""
 	scores = sorted([
-		(compare_images(prototypes[n], image), n)
-		for n in range(10)
+		(compare_images(prototype, image), int(n) if n.isdigit() else None)
+		for n, prototype in prototypes["odo-digits"].items()
 	], reverse=True)
 	best_score, number = scores[0]
 	runner_up_score, _ = scores[1]
@@ -130,14 +131,20 @@ def compare_images(prototype, image):
 
 
 def load_prototypes(prototypes_path):
-	return [
-		Image.open(os.path.join(prototypes_path, "{}.png".format(n)))
-		for n in range(10)
-	]
+	prototypes = {}
+	for kind in os.listdir(prototypes_path):
+		prototypes[kind] = {}
+		path = os.path.join(prototypes_path, kind)
+		for filename in os.listdir(path):
+			if not filename.endswith(".png"):
+				continue
+			name = filename[:-4]
+			prototypes[kind][name] = Image.open(os.path.join(path, filename))
+	return prototypes
 
 
 @cli
-def read_digit(digit, prototypes_path="./odo-digit-prototypes", verbose=False):
+def read_digit(digit, prototypes_path="./prototypes", verbose=False):
 	"""For debugging. Compares an extracted digit image to each prototype and prints scores."""
 	prototypes = load_prototypes(prototypes_path)
 	digit = Image.open(digit)
@@ -165,7 +172,7 @@ def recognize_odometer(prototypes, frame):
 
 @cli
 @argh.arg("frames", nargs="+")
-def read_frame(frames, prototypes_path="./odo-digit-prototypes", verbose=False, include_last=False):
+def read_frame(frames, prototypes_path="./prototypes", verbose=False, include_last=False):
 	"""For testing. Takes any number of frame images (or segments) and prints the odometer reading."""
 	prototypes = load_prototypes(prototypes_path)
 	for filename in frames:

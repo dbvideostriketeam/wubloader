@@ -13,7 +13,7 @@ RUN pip install /tmp/common && rm -r /tmp/common
 # Actual application
 RUN apk add ffmpeg
 COPY bus_analyzer /tmp/bus_analyzer
-RUN pip install /tmp/bus_analyzer && cp -r /tmp/bus_analyzer/odo-digit-prototypes / && rm -r /tmp/bus_analyzer
+RUN pip install /tmp/bus_analyzer && cp -r /tmp/bus_analyzer/prototypes / && rm -r /tmp/bus_analyzer
 
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "bus_analyzer"]
