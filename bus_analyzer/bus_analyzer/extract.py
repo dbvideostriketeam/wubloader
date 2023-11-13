@@ -110,9 +110,14 @@ def recognize_digit(prototypes, image):
 	all_scores is for debugging.
 	If the most likely detection is NOT a number, None is returned instead.
 	"""
+	def maybeFloat(n):
+		try:
+			return float(n)
+		except ValueError:
+			return None
 	scores = sorted([
-		(compare_images(prototype, image), int(n) if n.isdigit() else None)
-		for n, prototype in prototypes["odo-digits"].items()
+		(compare_images(prototype, image), maybeFloat(n))
+		for n, prototype in prototypes.items()
 	], reverse=True)
 	best_score, number = scores[0]
 	runner_up_score, _ = scores[1]
@@ -148,7 +153,7 @@ def read_digit(digit, prototypes_path="./prototypes", verbose=False):
 	"""For debugging. Compares an extracted digit image to each prototype and prints scores."""
 	prototypes = load_prototypes(prototypes_path)
 	digit = Image.open(digit)
-	guess, score, all_scores = recognize_digit(prototypes, digit)
+	guess, score, all_scores = recognize_digit(prototypes["odo-digits"], digit)
 	print("Digit = {} with score {}".format(guess, score))
 	if verbose:
 		all_scores.sort(key=lambda x: x[1])
@@ -162,13 +167,17 @@ def recognize_odometer(prototypes, frame):
 	digits is for debugging.
 	"""
 	odo = extract_odo(frame)
-	digits = extract_digits(odo, include_last=False)
-	digits = [recognize_digit(prototypes, digit) for digit in digits]
+	digits = extract_digits(odo, include_last=True)
+	digits = [
+		recognize_digit(prototypes["odo-digits"], digit) for digit in digits[:-1]
+	] + [
+		recognize_digit(prototypes["odo-last-digit"], digits[-1])
+	]
 	# If any digit is None, report whole thing as None. Otherwise, calculate the number.
 	if any(digit is None for digit, _, _ in digits):
 		value = None
 	else:
-		value = sum(digit * 10.**i for i, (digit, _, _) in enumerate(digits[::-1]))
+		value = sum(digit * 10.**i for i, (digit, _, _) in zip(range(3, -2, -1), digits))
 	# Use average score of digits as frame score
 	score = sum(score for _, score, _ in digits) / len(digits)
 	return value, score, digits
