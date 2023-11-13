@@ -546,10 +546,13 @@ def get_odometer(channel):
 
 	conn = app.db_manager.get_conn()
 	# Get newest non-errored row within time range
+	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
 	results = database.query(conn, """
 		SELECT timestamp, odometer
 		FROM bus_data
 		WHERE odometer IS NOT NULL
+			AND odometer >= 109
+			AND odometer < 7000
 			AND channel = %(channel)s
 			AND timestamp > %(start)s
 			AND timestamp <= %(end)s
