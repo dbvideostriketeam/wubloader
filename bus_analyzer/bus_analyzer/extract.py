@@ -164,7 +164,11 @@ def recognize_odometer(prototypes, frame):
 	odo = extract_odo(frame)
 	digits = extract_digits(odo, include_last=False)
 	digits = [recognize_digit(prototypes, digit) for digit in digits]
-	value = sum(digit * 10.**i for i, (digit, _, _) in enumerate(digits[::-1]))
+	# If any digit is None, report whole thing as None. Otherwise, calculate the number.
+	if any(digit is None for digit, _, _ in digits):
+		value = None
+	else:
+		value = sum(digit * 10.**i for i, (digit, _, _) in enumerate(digits[::-1]))
 	# Use average score of digits as frame score
 	score = sum(score for _, score, _ in digits) / len(digits)
 	return value, score, digits
