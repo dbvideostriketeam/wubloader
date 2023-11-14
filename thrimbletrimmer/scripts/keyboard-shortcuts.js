@@ -100,7 +100,12 @@ document.addEventListener("keypress", (event) => {
 			increaseSpeed();
 			break;
 		case "+":
-			setSpeed(videoElement, PLAYBACK_RATES[PLAYBACK_RATES.length - 1]);
+			const playbackRate = videoElement.playbackRate;
+			if (playbackRate < 2) {
+				setSpeed(videoElement, 2);
+			} else {
+				setSpeed(videoElement, PLAYBACK_RATES[PLAYBACK_RATES.length - 1]);
+			}
 			break;
 		case "-":
 			decreaseSpeed();
