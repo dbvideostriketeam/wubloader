@@ -71,14 +71,26 @@ def get_brightest_region(image, xs, height):
 	return image.crop((0, start_at, image.width, start_at + height))
 
 
+def get_green(image):
+	"""Given a RGB image, highlight "green" areas and return a monochrome image"""
+	data = image.getdata()
+	newdata = [g - max(r, b) for r, g, b in data]
+	newimage = Image.new("L", image.size)
+	newimage.putdata(newdata)
+	return newimage
+
+
 def extract_digits(image, type):
 	"""Takes an odo box, and returns a list of digit images"""
 	main_digit_coords = DIGIT_X_COORDS[type]
 	if type == "odo":
 		main_digit_coords = main_digit_coords[:-1]
 
-	# convert to greyscale
-	image = image.convert(mode='L')
+	# convert to greyscale, possibly only on green channel
+	if type == "clock":
+		image = get_green(image)
+	else:
+		image = image.convert(mode='L')
 
 	# Find main digits y position
 	digit_xs = [
@@ -202,8 +214,14 @@ def recognize_clock(prototypes, frame):
 	digits = [
 		recognize_digit(prototypes["odo-digits"], digit, i == 0) for i, digit in enumerate(digits)
 	]
-	# If any digit is None, report whole thing as None. Otherwise, calculate the number.
 	if any(digit is None for digit, _, _ in digits):
+		# If any digit is None, report whole thing as None
+		value = None
+	elif digits[0][0] not in range(2):
+		# 1st digit is 0-1, or else fail
+		value = None
+	elif digits[2][0] not in range(6):
+		# 3rd digit is 0-5, or else fail
 		value = None
 	else:
 		value = sum(digit * base for base, (digit, _, _) in zip(DIGIT_BASES["clock"], digits))
