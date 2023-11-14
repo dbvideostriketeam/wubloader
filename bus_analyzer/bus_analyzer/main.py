@@ -25,8 +25,8 @@ def do_extract_segment(*segment_paths, prototypes_path="./prototypes"):
 	prototypes = load_prototypes(prototypes_path)
 	for segment_path in segment_paths:
 		segment_info = parse_segment_path(segment_path)
-		odometer = extract_segment(prototypes, segment_info)
-		print(f"{segment_path} {odometer}")
+		odometer, clock = extract_segment(prototypes, segment_info)
+		print(f"{segment_path} {odometer} {clock}")
 
 
 @cli
@@ -75,7 +75,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 	for old_odometer, segment in selected:
 		path = os.path.join(base_dir, segment)
 		segment_info = parse_segment_path(path)
-		odometer = extract_segment(prototypes, segment_info)
+		odometer, clock = extract_segment(prototypes, segment_info)
 		results.append((segment, old_odometer, odometer))
 
 	matching = 0
@@ -112,29 +112,31 @@ def analyze_segment(conn, prototypes, segment_path, check_segment_name=None):
 		assert segment_name == check_segment_name
 
 	try:
-		odometer = extract_segment(prototypes, segment_info)
+		odometer, clock = extract_segment(prototypes, segment_info)
 	except Exception:
 		logging.warning(f"Failed to extract segment {segment_path!r}", exc_info=True)
 		odometer = None
 		error = traceback.format_exc()
 	else:
-		logging.info(f"Got odometer = {odometer} for segment {segment_path!r}")
+		logging.info(f"Got odometer = {odometer}, clock = {clock} for segment {segment_path!r}")
 		error = None
 
 	database.query(
 		conn,
 		"""
-			INSERT INTO bus_data (channel, timestamp, segment, error, odometer)
-			VALUES (%(channel)s, %(timestamp)s, %(segment)s, %(error)s, %(odometer)s)
+			INSERT INTO bus_data (channel, timestamp, segment, error, odometer, clock)
+			VALUES (%(channel)s, %(timestamp)s, %(segment)s, %(error)s, %(odometer)s, %(clock)s)
 			ON CONFLICT (channel, timestamp, segment) DO UPDATE
 				SET error = %(error)s,
-					odometer = %(odometer)s
+					odometer = %(odometer)s,
+					clock = %(clock)s
 		""",
 		channel=segment_info.channel,
 		timestamp=segment_info.start,
 		segment=segment_name,
 		error=error,
 		odometer=odometer,
+		clock=clock,
 	)
 
 
