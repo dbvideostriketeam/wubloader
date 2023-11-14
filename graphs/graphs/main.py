@@ -4,12 +4,14 @@ gevent.monkey.patch_all()
 import datetime
 import logging
 import json
+import os
 
-import requests
-
+import argh
 import bokeh.plotting
 import bokeh.models
 import bokeh.palettes
+import requests
+
 
 import numpy as np
 
@@ -54,15 +56,16 @@ def load_previous_donations(start_end_times, timeout):
             
         return all_years, current_year
 
-def main():
+@argh.arg('--base-dir', help='Directory where segments are stored. Default is current working directory.')
+def main(base_dir='.'):
     
     stopping = gevent.event.Event()
 
     delay = 60 * 1
     timeout = 15
-    start_end_file = 'start_end_times.json'
     logging.info('Loading start and end times')
-    start_end_times = json.load(open(start_end_file))
+    start_end_path = os.path.join(base_dir, 'start_end_times.json')
+    start_end_times = json.load(open(start_end_path))
     start_end_times = {int(year):start_end_times[year] for year in start_end_times}
     all_years, current_year = load_previous_donations(start_end_times, timeout)
 
@@ -106,8 +109,10 @@ def main():
             p.legend.location = "top_left"
             p.legend.click_policy="hide"
 
-            logging.info('Saving plot')
-            bokeh.plotting.save(p, filename='dbfh_donations.html', title='DBfH Donations')
+            output_path = os.path.join(base_dir, 'all_years_donations.html')
+            bokeh.plotting.output_file(filename=output_path, title='DBfH All Years Donations')
+            bokeh.plotting.save(p, filename=output_path)
+            logging.info('{} Saved'.format(output_path))
         except Exception:
             logging.exception('Plotting failed. Retrying')
 

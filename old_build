@@ -11,13 +11,13 @@ cd "$(dirname "$(realpath "$0")")"
 # Pass PUSH=true to also push the resulting images, or PUSH=latest to push them as :latest tag
 
 # The different images we can build
-COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx postgres segment_coverage graphs)
+COMPONENTS=(downloader restreamer backfiller thrimshim cutter sheetsync nginx postgres segment_coverage playlist_manager chat_archiver graphs)
 
 # Define push if not already defined
 PUSH=${PUSH:-}
 
 # Base is the repository namespace information, not including the wubloader-component part.
-BASE="quay.io/ekimekim"
+BASE="ghcr.io/dbvideostriketeam"
 
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(./get-build-tag)
