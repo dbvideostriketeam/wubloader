@@ -520,7 +520,7 @@ def reset_row(ident, editor=None):
 	return ''
 
 
-@app.route('/thrimshim/odometer/<channel>')
+@app.route('/thrimshim/bus/<channel>')
 @request_stats
 def get_odometer(channel):
 	"""Not directly thrimbletrimmer related but easiest to put here as we have DB access.
@@ -541,10 +541,10 @@ def get_odometer(channel):
 
 	extrapolate = (flask.request.args.get("extrapolate") == "true")
 
+	conn = app.db_manager.get_conn()
 	start = time - range
 	end = time
 
-	conn = app.db_manager.get_conn()
 	# Get newest non-errored row within time range
 	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
 	results = database.query(conn, """
@@ -561,8 +561,7 @@ def get_odometer(channel):
 	""", channel=channel, start=start, end=end)
 	result = results.fetchone()
 	if result is None:
-		# By Sokar's request, we want to return an invalid value rather than an error response.
-		odometer = 0
+		odometer = None
 	elif extrapolate:
 		# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
 		SPEED = 45. / 3600 # in miles per second
@@ -571,7 +570,32 @@ def get_odometer(channel):
 		odometer = result.odometer + delta_odo
 	else:
 		odometer = result.odometer
-	return {"odometer": odometer}
+
+	results = database.query(conn, """
+		SELECT timestamp, clock
+		FROM bus_data
+		WHERE clock IS NOT NULL
+			AND channel = %(channel)s
+			AND timestamp > %(start)s
+			AND timestamp <= %(end)s
+		ORDER BY timestamp DESC
+		LIMIT 1
+	""", channel=channel, start=start, end=end)
+	result = results.fetchone()
+	if result is None:
+		clock = None
+	elif extrapolate:
+		delta_t = (time - result.timestamp).total_seconds()
+		clock = (result.clock + int(delta_t // 60)) % 720
+	else:
+		clock = result.clock
+
+	if clock is None:
+		clock_face = None
+	else:
+		clock_face = "{}:{:02d}".format(clock // 60, clock % 60)
+
+	return {"odometer": odometer, "clock_minutes": clock, "clock": clock_face}
 
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
