@@ -35,11 +35,17 @@ def parse_bustime(bustime):
 	parts = bustime.strip().split(':')
 	if len(parts) == 2:
 		hours, mins = parts
-		secs = 0
+		secs = "0"
 	elif len(parts) == 3:
 		hours, mins, secs = parts
 	else:
 		raise ValueError("Invalid bustime: must be HH:MM[:SS]")
+
+	# Reject negative times. Any negative hours should have been removed by now,
+	# and we in particular want to reject negative minutes.
+	if any(part.startswith("-") for part in (hours, mins, secs)):
+		raise ValueError("Invalid bustime: Individual parts cannot be negative")
+
 	hours = int(hours)
 	mins = int(mins)
 	secs = float(secs)
