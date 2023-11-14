@@ -32,6 +32,7 @@
     tootbot: false,
     twitchbot: false,
     bus_analyzer: false,
+    graphs: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -567,6 +568,14 @@
       image: $.get_image("bus_analyzer"),
       restart: "always",
       command: [$.db_connect, $.bus_channel, "--base-dir", "/mnt"],
+      volumes: ["%s:/mnt" % $.segments_path],
+      environment: $.env,
+    },
+
+    [if $.enabled.graphs then "graphs"]: {
+      image: $.get_image("graphs"),
+      restart: "always",
+      command: ["--base-dir", "/mnt/graphs"],
       volumes: ["%s:/mnt" % $.segments_path],
       environment: $.env,
     },
