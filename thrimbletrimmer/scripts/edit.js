@@ -639,10 +639,16 @@ async function initializeVideoInfo() {
 						const chapterDescField = document.getElementById(
 							"range-definition-chapter-marker-first-description",
 						);
+						let chapterStartValue = 0;
+						let chapterDescValue = "";
+						if (chapterData.length > 0) {
+							chapterStartValue = chapterData[0].start;
+							chapterDescValue = chapterData[0].description;
+						}
 						chapterStartField.value = videoHumanTimeFromVideoPlayerTime(
-							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime,
+							chapterStartValue - rangeStartOffset + startPlayerTime,
 						);
-						chapterDescField.value = chapterData[currentChapterIndex].description;
+						chapterDescField.value = chapterDescValue;
 						currentChapterIndex++;
 					}
 
