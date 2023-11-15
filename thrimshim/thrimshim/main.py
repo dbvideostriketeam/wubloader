@@ -572,9 +572,10 @@ def get_odometer(channel):
 		odometer = result.odometer
 
 	results = database.query(conn, """
-		SELECT timestamp, clock
+		SELECT timestamp, clock, timeofday
 		FROM bus_data
 		WHERE clock IS NOT NULL
+			AND timeofday IS NOT NULL
 			AND channel = %(channel)s
 			AND timestamp > %(start)s
 			AND timestamp <= %(end)s
@@ -583,19 +584,65 @@ def get_odometer(channel):
 	""", channel=channel, start=start, end=end)
 	result = results.fetchone()
 	if result is None:
-		clock = None
-	elif extrapolate:
-		delta_t = (time - result.timestamp).total_seconds()
-		clock = (result.clock + int(delta_t // 60)) % 720
-	else:
-		clock = result.clock
-
-	if clock is None:
+		clock24h = None
+		timeofday = None
 		clock_face = None
 	else:
-		clock_face = "{}:{:02d}".format(clock // 60, clock % 60)
+		clock12h = result.clock
+		timeofday = result.timeofday
 
-	return {"odometer": odometer, "clock_minutes": clock, "clock": clock_face}
+		clock24h = clock12h
+		if time_is_pm(conn, result.timestamp, clock12h, timeofday):
+			clock24h += 720
+
+		if extrapolate:
+			delta_t = (time - result.timestamp).total_seconds()
+			clock12h += delta_t
+			clock24h += delta_t
+
+		clock12h %= 720
+		clock24h %= 1440
+		clock_face = "{}:{:02d}".format(clock12h // 60, clock12h % 60)
+
+	return {
+		"odometer": odometer,
+		"clock_minutes": clock24h,
+		"clock": clock_face,
+		"timeofday": timeofday,
+	}
+
+
+def time_is_pm(conn, timestamp, clock, timeofday):
+	if timeofday == "day":
+		# before 7:30 is pm
+		return clock < 7*60+30
+	if timeofday == "dusk":
+		return True
+	if timeofday == "night":
+		# after 8:00 is pm
+		return clock >= 8*60
+	# dawn
+	# before 6:40 is pm
+	if clock < 6*60+40:
+		return True
+	# after 7:00 is am
+	if clock >= 7*60:
+		return False
+	# 6:40 to 7:00 is ambiguous, let's look backwards from our timestamp to see how long ago night was
+	results = database.query(conn, """
+		SELECT timestamp
+		FROM bus_data
+		WHERE timeofday = 'night'
+			AND timestamp < %s
+		ORDER BY timestamp DESC LIMIT 1
+	""", timestamp)
+	result = results.fetchone()
+	if result is None:
+		# Can't determine night time, assume it as a long time ago
+		return True
+	since_night = timestamp - result.timestamp
+	# Pick PM if night was more than 4h ago.
+	return since_night.total_seconds() > 4*60*60
 
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
