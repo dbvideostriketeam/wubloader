@@ -773,7 +773,7 @@ class VideoUpdater(object):
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
 								updates['thumbnail_image'] = thumbnail_image
 							new_hash = hashlib.sha256(thumbnail_image).digest()
-							if bytes(job.thumbnail_last_written) != new_hash:
+							if job.thumbnail_last_written is None or bytes(job.thumbnail_last_written) != new_hash:
 								self.logger.info("Setting thumbnail for {}".format(job.id))
 								self.backend.set_thumbnail(job.video_id, thumbnail_image)
 								updates['thumbnail_last_written'] = new_hash
