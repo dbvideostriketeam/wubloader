@@ -157,6 +157,7 @@ CREATE TABLE playlists (
 -- be determined.
 -- The odometer column is in miles. The game shows the odometer to the 1/10th mile precision.
 -- The clock is in minutes since 00:00, in 12h time.
+-- The time of day is one of "day", "dusk", "night", or "dawn"
 -- The segment may be NULL, which indicates a manually-inserted value.
 -- The primary key serves two purposes:
 --   It provides an index on channel, followed by a range index on timestamp
@@ -170,6 +171,7 @@ CREATE TABLE bus_data (
 	error TEXT,
 	odometer DOUBLE PRECISION,
 	clock INTEGER,
+	timeofday TEXT,
 	PRIMARY KEY (channel, timestamp, segment)
 );
 EOSQL

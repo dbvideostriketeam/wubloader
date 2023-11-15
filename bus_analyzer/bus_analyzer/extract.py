@@ -245,15 +245,21 @@ def read_frame(frames, prototypes_path="./prototypes", verbose=False):
 
 		value, score, digits = recognize_odometer(prototypes, frame)
 		if verbose:
-			for guess, score, all_scores in digits:
-				print("Digit = {} with score {}".format(guess, score))
+			for guess, _score, all_scores in digits:
+				print("Digit = {} with score {}".format(guess, _score))
 		print("{}: odo {} with score {}".format(filename, value, score))
 
 		value, score, digits = recognize_clock(prototypes, frame)
 		if verbose:
-			for guess, score, all_scores in digits:
-				print("Digit = {} with score {}".format(guess, score))
+			for guess, _score, all_scores in digits:
+				print("Digit = {} with score {}".format(guess, _score))
 		print("{}: clock {} with score {}".format(filename, value, score))
+
+		value, score, all_scores = recognize_time_of_day(frame)
+		if verbose:
+			for color, _score in all_scores:
+				print("{}: {}".format(color, _score))
+		print("{}: time-of-day {} with score {}".format(filename, value, score))
 
 
 @cli
@@ -281,9 +287,32 @@ def get_frame(*segments):
 		print(filename)
 
 
+def compare_colors(color_a, color_b):
+	MAX_ERROR_SQUARED = 255**2 * len(color_a)
+	return 1 - float(sum((a - b)**2 for a, b in zip(color_a, color_b))) / MAX_ERROR_SQUARED
+
+
+def recognize_time_of_day(frame):
+	"""Returns time of day, score, all scores."""
+	COLORS = {
+		"day": (89, 236, 239),
+		"dusk": (199, 162, 205),
+		"night": (1, 1, 1),
+		"dawn": (51, 59, 142),
+	}
+	sample = frame.getpixel((177, 255))
+	scores = [
+		(tod, compare_colors(sample, color))
+		for tod, color in COLORS.items()
+	]
+	best, score = max(scores, key=lambda t: t[1])
+	return best, score, scores
+
+
 def extract_segment(prototypes, segment):
 	ODO_SCORE_THRESHOLD = 0.01
 	CLOCK_SCORE_THRESHOLD = 0.01
+	TOD_SCORE_THRESHOLD = 0.9
 	frame_data = b"".join(extract_frame([segment], segment.start))
 	frame = Image.open(BytesIO(frame_data))
 	odometer, score, _ = recognize_odometer(prototypes, frame)
@@ -292,7 +321,10 @@ def extract_segment(prototypes, segment):
 	clock, score, _ = recognize_clock(prototypes, frame)
 	if score < CLOCK_SCORE_THRESHOLD:
 		clock = None
-	return odometer, clock
+	tod, score, _ = recognize_time_of_day(frame)
+	if score < TOD_SCORE_THRESHOLD:
+		tod = None
+	return odometer, clock, tod
 
 
 if __name__ == '__main__':
