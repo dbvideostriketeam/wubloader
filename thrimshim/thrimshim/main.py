@@ -422,7 +422,7 @@ def update_row(ident, editor=None):
 					missing.append(column)
 			if missing:
 				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
-			if len(new_row.get('video_title', '')) <= len(app.title_header):
+			if len(new_row.get('video_title', '')) <= len(app.title_header) and not is_archive:
 				return 'Video title must not be blank', 400
 		elif new_row['state'] != 'UNEDITED':
 			return 'Invalid state {}'.format(new_row['state']), 400
