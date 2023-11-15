@@ -275,7 +275,7 @@ class Cutter(object):
 		# Also check the thumbnail time if we need to generate it
 		thumbnail_segments = None
 		if candidate.thumbnail_mode in ('BARE', 'TEMPLATE') and candidate.thumbnail_image is None:
-			thumbnail_segments = get_best_segments_for_frame(hours_path, candidate.thumbnail_time, candidate.thumbnail_time)
+			thumbnail_segments = get_best_segments_for_frame(hours_path, candidate.thumbnail_time)
 			if thumbnail_segments == [None]:
 				raise ContainsHoles
 		return segment_ranges, thumbnail_segments
