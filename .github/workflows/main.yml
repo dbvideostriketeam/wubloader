@@ -21,7 +21,6 @@ jobs:
   build:
     runs-on: ubuntu-20.04
     strategy:
-      fail-fast: true  # cancel all in-progress jobs if any matrix job fails
       matrix:
         component:
           - downloader
