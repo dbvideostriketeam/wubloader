@@ -17,7 +17,7 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query, get_column_placeholder
-from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles
+from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles, get_best_segments_for_frame
 from common.images import compose_thumbnail_template
 from common.stats import timed
 
@@ -275,7 +275,7 @@ class Cutter(object):
 		# Also check the thumbnail time if we need to generate it
 		thumbnail_segments = None
 		if candidate.thumbnail_mode in ('BARE', 'TEMPLATE') and candidate.thumbnail_image is None:
-			thumbnail_segments = get_best_segments(hours_path, candidate.thumbnail_time, candidate.thumbnail_time)
+			thumbnail_segments = get_best_segments_for_frame(hours_path, candidate.thumbnail_time, candidate.thumbnail_time)
 			if thumbnail_segments == [None]:
 				raise ContainsHoles
 		return segment_ranges, thumbnail_segments
@@ -762,7 +762,7 @@ class VideoUpdater(object):
 							if thumbnail_image is None:
 								self.logger.info("Regenerating thumbnail for {}".format(job.id))
 								hours_path = os.path.join(self.segments_path, job.video_channel, job.video_quality)
-								segments = get_best_segments(hours_path, job.thumbnail_time, job.thumbnail_time)
+								segments = get_best_segments_for_frame(hours_path, job.thumbnail_time)
 								frame = extract_frame(segments, job.thumbnail_time)
 								frame = b''.join(frame)
 								if job.thumbnail_mode == 'BARE':

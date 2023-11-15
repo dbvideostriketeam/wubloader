@@ -17,7 +17,7 @@ from gevent.pywsgi import WSGIServer
 from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
 from common.images import compose_thumbnail_template
-from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files
+from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files, get_best_segments_for_frame
 from common.chat import get_batch_file_range, merge_messages
 
 from . import generate_hls
@@ -423,7 +423,7 @@ def get_frame(channel, quality):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	segments = get_best_segments(hours_path, timestamp, timestamp)
+	segments = get_best_segments_for_frame(hours_path, timestamp)
 	if not any(segment is not None for segment in segments):
 		return "We have no content available within the requested time range.", 406
 
@@ -454,7 +454,7 @@ def get_thumbnail(channel, quality):
 	if not os.path.isdir(hours_path):
 		abort(404)
 
-	segments = get_best_segments(hours_path, timestamp, timestamp)
+	segments = get_best_segments_for_frame(hours_path, timestamp)
 	if not any(segment is not None for segment in segments):
 		return "We have no content available within the requested time range.", 406
 

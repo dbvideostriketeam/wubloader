@@ -101,6 +101,13 @@ class ContainsHoles(Exception):
 	"""Raised by get_best_segments() when a hole is found and allow_holes is False"""
 
 
+def get_best_segments_for_frame(hour_path, timestamp):
+	# Add some leeway before and after so that we don't have errors related to
+	# landing on a segment edge.
+	leeway = datetime.timedelta(seconds=1)
+	return get_best_segments(hour_path, timestamp - leeway, timestamp + leeway)
+
+
 @timed(
 	hours_path=lambda ret, hours_path, *args, **kwargs: hours_path,
 	has_holes=lambda ret, *args, **kwargs: None in ret,
@@ -765,19 +772,11 @@ def extract_frame(segments, timestamp):
 	# Remove holes
 	segments = [segment for segment in segments if segment is not None]
 
-	# Find segment containing timestamp
-	segments = [
-		segment for segment in segments
-		if segment.start <= timestamp < segment.end
-	]
 	if not segments:
 		raise ValueError("No data at timestamp within segment list")
-	if len(segments) != 1:
-		raise ValueError("Segment list contains overlap at timestamp")
-	(segment,) = segments
 
 	# "cut" input so that first frame is our target frame
-	cut_start = (timestamp - segment.start).total_seconds()
+	cut_start = (timestamp - segments[0].start).total_seconds()
 
 	ffmpeg = None
 	input_feeder = None
