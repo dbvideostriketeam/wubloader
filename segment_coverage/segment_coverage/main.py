@@ -202,7 +202,6 @@ class CoverageChecker(object):
 <html>
   <head>
     <meta charset="utf-8">
-    <meta http-equiv="refresh" content="30"/>
     <title>{0} {1} Segment Coverage Maps</title>
       <style>
         html {{ background-color: #222;}}
@@ -216,6 +215,17 @@ class CoverageChecker(object):
               margin-left: auto;
               margin-right: auto;}}
     </style>
+    <script>
+      function updateImages() {{
+        const now = new Date().getTime(); // Generate a timestamp (to force past the browser cache)
+        for (const image of document.getElementsByTagName("img")) {{
+          const imageUrl = new URL(image.src);
+          imageUrl.search = `t=${{now}}`;
+          image.src = imageUrl;
+        }}
+      }}
+      setInterval(updateImages, 30000);
+    </script>
   </head>
   <body>
     <h1>{0} {1}</h1>""".format(self.channel, quality)
