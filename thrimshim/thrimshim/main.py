@@ -602,7 +602,7 @@ def get_odometer(channel):
 
 		clock12h %= 720
 		clock24h %= 1440
-		clock_face = "{}:{:02d}".format(clock12h // 60, clock12h % 60)
+		clock_face = "{}:{:02d}".format(clock12h // 60, int(clock12h % 60))
 
 	return {
 		"odometer": odometer,
