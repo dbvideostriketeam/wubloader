@@ -585,6 +585,7 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         "--upload-location-allowlist", std.join(",", $.youtube_upload_locations),
+        "--interval", "120",
         $.db_connect,
         "/etc/wubloader-creds.json",
       ] + [
