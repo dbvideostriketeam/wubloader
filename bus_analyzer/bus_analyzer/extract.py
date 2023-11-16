@@ -99,32 +99,34 @@ def extract_digits(image, type):
 		for dx in range(DIGIT_WIDTH)
 	]
 	main_digits = get_brightest_region(image, digit_xs, DIGIT_HEIGHT)
+	main_digits = normalize(main_digits)
 
 	digits = []
 	for i, x in enumerate(main_digit_coords):
 		digit = main_digits.crop((x, 0, x + DIGIT_WIDTH, main_digits.height))
-		digits.append(normalize_digit(digit))
+		digits.append(digit)
 
 	if type == "odo":
 		x = DIGIT_X_COORDS["odo"][-1]
 		last_digit = get_brightest_region(image, range(x, x + DIGIT_WIDTH), LAST_DIGIT_HEIGHT)
 		last_digit = last_digit.crop((x, 0, x + DIGIT_WIDTH, last_digit.height))
-		digits.append(normalize_digit(last_digit))
+		last_digit = normalize(last_digit)
+		digits.append(last_digit)
 
 	return digits
 
 
-def normalize_digit(digit):
+def normalize(image):
 	# Expand the range of the image so that the darkest pixel becomes black
 	# and the lightest becomes white
-	_min, _max = digit.getextrema()
+	_min, _max = image.getextrema()
 	_range = _max - _min
 	if _range == 0:
-		digit = digit.point(lambda v: 128)
+		image = image.point(lambda v: 128)
 	else:
-		digit = digit.point(lambda v: 255 * (v - _min) / _range)
+		image = image.point(lambda v: 255 * (v - _min) / _range)
 	
-	return digit
+	return image
 
 
 def recognize_digit(prototypes, image, blank_is_zero=False):
@@ -181,7 +183,7 @@ def read_digit(digit, prototypes_path="./prototypes", verbose=False):
 	guess, score, all_scores = recognize_digit(prototypes["odo-digits"], digit)
 	print("Digit = {} with score {}".format(guess, score))
 	if verbose:
-		all_scores.sort(key=lambda x: x[1])
+		all_scores.sort(key=lambda x: -1 if x[1] is None else x[1])
 		for s, n in all_scores:
 			print("{}: {}".format(n, s))
 

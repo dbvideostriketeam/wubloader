@@ -48,7 +48,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 		where = ["true"]
 	where = " AND ".join(where)
 	result = database.query(conn, f"""
-		SELECT odometer, segment
+		SELECT odometer, clock, timeofday, segment
 		FROM bus_data
 		WHERE segment IS NOT NULL
 			AND {where}
@@ -57,7 +57,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 	# To get a wider range of tests, pick at random from all unique odo readings
 	available = {}
 	for row in result.fetchall():
-		available.setdefault(row.odometer, []).append(row.segment)
+		available.setdefault(row.odometer, []).append((row.segment, row.clock, row.timeofday))
 
 	selected = []
 	while available and len(selected) < num:
@@ -72,18 +72,25 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 			del available[odometer]
 
 	results = []
-	for old_odometer, segment in selected:
+	for old_odometer, (segment, old_clock, old_tod) in selected:
 		path = os.path.join(base_dir, segment)
 		segment_info = parse_segment_path(path)
 		odometer, clock, tod = extract_segment(prototypes, segment_info)
-		results.append((segment, old_odometer, odometer))
+		results.append((segment, {
+			"odo": (old_odometer, odometer),
+			"clock": (old_clock, clock),
+			"tod": (old_tod, tod),
+		}))
 
 	matching = 0
-	for segment, old_odometer, odometer in sorted(results, key=lambda t: t[0]):
-		match = old_odometer == odometer
-		if verbose or not match:
-			print(f"{segment}: {old_odometer} | {odometer}")
-		if match:
+	for segment, data in sorted(results, key=lambda t: t[0]):
+		matched = True
+		for k, (old, new) in data.items():
+			match = old == new
+			if verbose or not match:
+				print(f"{segment} {k}: {old} | {new}")
+			matched &= match
+		if matched:
 			matching += 1
 
 	print("{}/{} matched".format(matching, len(selected)))
