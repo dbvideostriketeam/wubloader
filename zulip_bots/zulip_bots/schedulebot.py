@@ -176,7 +176,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		]
 	for role, user_ids in sorted(online_by_role.items()):
 		user_ids.sort()
-		lines.append("Current {}(s): ".format(
+		lines.append("Current {}(s): {}".format(
 			role,
 			", ".join(render_name(user_id, False) for user_id in user_ids),
 		))
