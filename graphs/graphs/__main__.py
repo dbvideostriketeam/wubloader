@@ -6,7 +6,6 @@ import logging
 import argh
 
 from graphs.main import main
-# from main import main
 
 LOG_FORMAT = "[%(asctime)s] %(levelname)8s %(name)s(%(module)s:%(lineno)d): %(message)s"
 
