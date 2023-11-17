@@ -100,7 +100,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 			supervisor = user_id
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
-		if now in ("Chatops", "Editor", "Sheeter"):
+		if now.lower() in ("chatops", "editor", "sheeter"):
 			online_by_role.setdefault(now, []).append(user_id)
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
@@ -176,7 +176,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		]
 	for role, user_ids in sorted(online_by_role.items()):
 		user_ids.sort()
-		lines.append("Current {}(s): {}".format(
+		lines.append("Current {}: {}".format(
 			role + ("" if role.endswith("s") else "s"), # bad attempt at pluralization
 			", ".join(render_name(user_id, False) for user_id in user_ids),
 		))
