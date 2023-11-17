@@ -10,7 +10,7 @@ import argh
 import gevent.event
 
 from common import database
-from common.segments import parse_segment_path
+from common.segments import parse_segment_path, list_segment_files
 
 from .extract import extract_segment, load_prototypes
 
@@ -151,11 +151,7 @@ def analyze_segment(conn, prototypes, segment_path, check_segment_name=None):
 
 def analyze_hour(conn, prototypes, existing_segments, base_dir, channel, quality, hour):
 	hour_path = os.path.join(base_dir, channel, quality, hour)
-	try:
-		segments = os.listdir(hour_path)
-	except FileNotFoundError:
-		logging.info(f"No such hour {hour_path!r}, skipping")
-		return
+	segments = sorted(list_segment_files(hour_path))
 
 	logging.info("Found {} segments for hour {!r}".format(len(segments), hour_path))
 	segments_to_do = []
