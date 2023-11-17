@@ -273,6 +273,9 @@
     args:: [],
   },
 
+  // template for donation data urls
+  donation_url_template:: "https://example.com/DB{}/DB{}.json",
+
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
   env:: {
@@ -575,7 +578,7 @@
     [if $.enabled.graphs then "graphs"]: {
       image: $.get_image("graphs"),
       restart: "always",
-      command: ["--base-dir", "/mnt/graphs"],
+      command: [$.donation_url_template, "--base-dir", "/mnt/graphs"],
       volumes: ["%s:/mnt" % $.segments_path],
       environment: $.env,
     },

@@ -11,10 +11,11 @@ import bokeh.plotting
 import bokeh.models
 import bokeh.palettes
 import bokeh.settings
+import numpy as np
 import requests
 
 
-import numpy as np
+
 
 def parse_json(json_donations, start_date, end_hour=np.inf, every_five=True):
 
@@ -41,7 +42,7 @@ def parse_json(json_donations, start_date, end_hour=np.inf, every_five=True):
     else:
         return trimmed_bustimes, trimmed_donations
        
-def load_previous_donations(start_end_times, timeout):
+def load_previous_donations(start_end_times, donation_url_template, timeout):
         
         all_years = {}
         for year in start_end_times:
@@ -50,8 +51,9 @@ def load_previous_donations(start_end_times, timeout):
                 current_year = year
                 continue
                 
-            logging.info('Loading year {}'.format(year))
-            url = 'https://vst.ninja/DB{}/graphs/jsons/DB{}.json'.format(year, year)
+            
+            url = donation_url_template.format(year, year)
+            logging.info('Loading {}'.format(url))
             year_json = requests.get(url, timeout=timeout).json()
             all_years[year] = parse_json(year_json, start, end, year >= 5)
             
@@ -97,8 +99,8 @@ def all_years_donations_graph(start_end_times, all_years, current_year, current_
     logging.info('{} Saved'.format(output_path))    
 
 
-@argh.arg('--base-dir', help='Directory where segments are stored. Default is current working directory.')
-def main(base_dir='.'):
+@argh.arg('--base-dir', help='Directory where graphs are output. Default is current working directory.')
+def main(donation_url_template, base_dir='.'):
     
     stopping = gevent.event.Event()  
     
@@ -113,14 +115,14 @@ def main(base_dir='.'):
     start_end_times = json.load(open(start_end_path))
     start_end_times = {int(year):start_end_times[year] for year in start_end_times}
     
-    all_years, current_year = load_previous_donations(start_end_times, timeout)
-    current_url = 'http://example.com/{}/{}'.format(current_year, current_year)
+    all_years, current_year = load_previous_donations(start_end_times, donation_url_template, timeout)
+    current_url = donation_url_template.format(current_year, current_year)
 
     while not stopping.is_set():
 
         try:
 
-            logging.info('Loading current data')
+            logging.info('Loading {}'.format(current_url))
             current_json = requests.get(current_url, timeout=timeout).json()
             
             all_years_donations_graph(start_end_times, all_years, current_year, current_json, base_dir)
@@ -129,17 +131,5 @@ def main(base_dir='.'):
         except Exception:
             logging.exception('Plotting failed. Retrying')
 
-        stopping.wait(delay)    
-
-#     logging.info('Starting Graph Generator')
-#     generator = GraphGenerator(current_url, start_time, previous_years:)
-#     manager = gevent.spawn(generator.run)
-
-#     def stop():
-#         manager.stop()
-
-#     gevent.signal_handler(signal.SIGTERM, stop)
-
-#     stop()
-#     logging.info('Gracefully stopped')
+        stopping.wait(delay)
 
