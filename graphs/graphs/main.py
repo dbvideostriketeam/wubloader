@@ -148,8 +148,8 @@ def main(donation_url_template, base_dir='.'):
     timeout = 15
     
     shifts = [['Zeta Shift',   0, 6],
-              ['Alpha Flight', 6, 12],
-              ['Dawn Guard',  12, 18],
+              ['Dawn Guard', 6, 12],
+              ['Alpha Flight',  12, 18],
               ['Night Watch', 18, 24]]
     
     # First load data required 
