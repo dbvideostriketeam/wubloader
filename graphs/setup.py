@@ -8,6 +8,7 @@ setup(
             'argh',
             'bokeh',
             'gevent',
+            'numpy',
             'requests'
     ],
 )
