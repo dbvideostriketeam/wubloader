@@ -6,8 +6,9 @@ import gevent
 
 from .requests import InstrumentedSession
 
-# Wraps all requests in some metric collection
+# Wraps all requests in some metric collection and default timeouts
 requests = InstrumentedSession()
+requests.timeout = 30
 
 
 class GoogleAPIClient(object):
