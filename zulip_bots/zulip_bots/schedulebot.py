@@ -85,6 +85,7 @@ def hour_to_shift(hour, start_time):
 def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega):
 	going_offline = []
 	coming_online = []
+	online_by_role = {}
 	display_names = {}
 	supervisor = None
 	found_any = False
@@ -97,6 +98,10 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 			found_any = True
 		if now == "Supervisor":
 			supervisor = user_id
+			if user_id not in display_names:
+				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
+		elif now != "":
+			online_by_role.setdefault(now, []).append(user_id)
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
 		if prev != now:
@@ -163,6 +168,19 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		] + [
 			f"- {render_name(user_id)} - {role}"
 			for role, user_id in going_offline
+		]
+	if online_by_role:
+		lines += [
+			"",
+			"---",
+		]
+	for role, user_ids in sorted(online_by_role.items()):
+		user_ids.sort()
+		lines += [
+			"Current {}:".format(role),
+		] + [
+			f"- {render_name(user_id, False)}"
+			for user_id in user_ids
 		]
 	lines += [
 		"",
