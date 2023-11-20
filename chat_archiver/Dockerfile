@@ -7,7 +7,7 @@ RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busyb
 RUN pip install --upgrade pip wheel
 
 # Install gevent so that we don't need to re-install it when common changes
-RUN pip install gevent
+RUN pip install gevent==22.10.2
 
 # Install girc, it's not really properly published on pypi so we pull it in via submodule
 COPY chat_archiver/girc /tmp/girc

@@ -7,7 +7,7 @@ RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busyb
 RUN pip install --upgrade pip wheel
 
 # Install gevent so that we don't need to re-install it when common changes
-RUN pip install gevent
+RUN pip install gevent==22.10.2
 
 # Install common lib first as it changes less
 COPY common /tmp/common
