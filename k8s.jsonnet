@@ -16,6 +16,9 @@
     // Note: "latest" is not recommended in production, as you can't be sure what version
     // you're actually running, and must manually re-pull to get an updated copy.
     image_tag: "latest",
+
+    image_base: "ghcr.io/dbvideostriketeam", // Change this to use images from a different source than the main one
+
     // image tag for postgres, which changes less
     // postgres shouldn't be restarted unless absolutely necessary
     database_tag: "bb05e37",
@@ -27,7 +30,7 @@
       backfiller: true,         # fetching segments from other wubloader nodes
       cutter: false,            # performing cuts based on editor input
       sheetsync: false,         # syncing google sheets and postgres
-      thrimshim: true,          # storing editor inputs in postgres
+      thrimshim: false,         # storing editor inputs in postgres
       segment_coverage: true,   # generating segment coverage graphs
       playlist_manager: false,  # auto-populating youtube playlists
       nginx: true,              # proxying between the various pods
@@ -40,23 +43,25 @@
     // and warned about if they're not currently streaming.
     channels: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
 
-    // clean version of the channel list without importance markers
-    clean_channels:: [std.split(c, '!')[0] for c in $.channels],
+    backfill_only_channels: [],
+
+    // extra directories to backfill
+    backfill_dirs: [],
+
+    // Cleaned up version of $.channels without importance/type markers.
+    // General form is CHANNEL[!][:TYPE:URL].
+    clean_channels: [std.split(std.split(c, ":")[0], '!')[0] for c in $.config.channels] + $.config.backfill_only_channels,
 
     // Stream qualities to capture
     qualities: ["source", "480p"],
 
     // NFS settings for RWX (ReadWriteMany) volume for wubloader pods
     nfs_server: "nfs.example.com",            # server IP or hostname
-    nfs_path: "/mnt/wubloader",               # path on server to mount
-    nfs_capacity: "2T",                       # storage capacity to report to k8s
+    nfs_path: "/mnt/segments",                # path on server to mount
+    nfs_capacity: "1T",                       # storage capacity to report to k8s
 
-    // PVC template storage class for statefulsets
+    // PVC template storage class for statefulset in postgres
     sts_storage_class_name: "longhorn",
-
-    // The local port within each container to bind the backdoor server on.
-    // You can exec into the container and telnet to this port to get a python shell.
-    backdoor_port: 1234,
 
     // Other nodes to always backfill from. You should not include the local node.
     // If you are using the database to find peers, you should leave this empty.
@@ -86,11 +91,10 @@
     db_args: {
       user: "vst",
       password: "dbfh2019", // don't use default in production. Must not contain ' or \ as these are not escaped.
-      host: "wubloader-postgres",
+      host: "postgres",
       port: 5432,
       dbname: "wubloader",
     },
-
     // Other database arguments
     db_super_user: "postgres",          // only accessible from localhost
     db_super_password: "postgres",      // Must not contain ' or \ as these are not escaped.
@@ -109,26 +113,26 @@
     // May be the same as cutter_creds_file.
     sheetsync_creds: import "./google_creds.json",
 
+    // Path to a file containing a twitch OAuth token to use when downloading streams.
+    // This is optional (null to omit) but may be helpful to bypass ads.
+    downloader_creds_file: null,
+
     // The URL to write to the sheet for edit links, with {} being replaced by the id
-    edit_url: "https://wubloader.example.com/thrimbletrimmer/edit.html?id={}",
+    edit_url: "http://thrimbletrimmer.codegunner.com/edit.html?id={}",
 
     // The spreadsheet ID and worksheet names for sheetsync to act on
     sheet_id: "your_id_here",
-    worksheets: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1,7)],
-    
-    // Fixed tags to add to all videos
-    video_tags: ["DB15", "DB2021", "2021", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
-    
-    // A map from youtube playlist IDs to a list of tags.
-    // Playlist manager will populate each playlist with all videos which have all those tags.
-    // For example, tags ["Day 1", "Technical"] will populate the playlist with all Technical
-    // youtube videos from Day 1.
-    // Note that you can make an "all videos" playlist by specifying no tags (ie. []).
-    playlists: {
-      "YOUR-PLAYLIST-ID": ["some tag"],
-    },
+    worksheets: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
+    playlist_worksheet: "Tags",
 
-    // The timestamp corresponding to 00:00 in bustime
+    // The archive worksheet, if given, points to a worksheet containing events with a different
+    // schema and alternate behaviour suitable for long-term archival videos instead of uploads.
+    archive_worksheet: "Video Trim Times",
+
+    // Fixed tags to add to all videos
+    video_tags: ["DB17", "DB2023", "2023", "Desert Bus", "Desert Bus for Hope", "Child's Play Charity", "Child's Play", "Charity Fundraiser"],
+
+   // The timestamp corresponding to 00:00 in bustime
     bustime_start: "1970-01-01T00:00:00Z",
 
     // The timestamps to start/end segment coverage maps at.
@@ -138,7 +142,7 @@
 
     // Max hours ago to backfill, ie. do not backfill for times before this many hours ago.
     // Set to null to disable.
-    backfill_max_hours_ago: 24 * 30 * 6, // approx 6 months
+    backfill_max_hours_ago: 24 * 14, // approx 14 days
 
     // Extra options to pass via environment variables,
     // eg. log level, disabling stack sampling.
@@ -149,29 +153,56 @@
       // WUBLOADER_ENABLE_STACKSAMPLER: "true",
     },
 
+    // A map from youtube playlist IDs to a list of tags.
+    // Playlist manager will populate each playlist with all videos which have all those tags.
+    // For example, tags ["Day 1", "Technical"] will populate the playlist with all Technical
+    // youtube videos from Day 1.
+    // Note that you can make an "all videos" playlist by specifying no tags (ie. []).
+    playlists: {
+      // Replaced entirely by tags sheet
+    },
+
+    // Which upload locations should be added to playlists
+    youtube_upload_locations: [
+      "desertbus",
+      "desertbus_slow",
+      "desertbus_emergency",
+      "youtube-manual",
+    ],
+
     // Config for cutter upload locations. See cutter docs for full detail.
     cutter_config: {
-      desertbus: {type: "youtube", cut_type: "fast"},
+      // Default
+      desertbus: {type: "youtube", cut_type: "smart"},
+      // Backup options for advanced use, if the smart cut breaks things.
+      desertbus_slow: {type: "youtube", cut_type: "full"},
+      desertbus_emergency: {type: "youtube", cut_type: "fast"},
     },
     default_location: "desertbus",
+    // archive location is the default location for archive events,
+    // only revelant if $.archive_worksheet is set.
+    archive_location: "archive",
 
     // The header to put at the front of video titles, eg. a video with a title
     // of "hello world" with title header "foo" becomes: "foo - hello world".
-    title_header: "DB2021",
+    title_header: "DB2023",
 
     // The footer to put at the bottom of descriptions, in its own paragraph
     description_footer: "Uploaded by the Desert Bus Video Strike Team",
 
     // Chat archiver settings
-    chat_archiver:: {
-      // We currently only support archiving chat from one channel at once.
-      // This defaults to the first channel in the $.channels list.
-      channel: $.clean_channels[0],
+    chat_archiver: {
       // Twitch user to log in as and path to oauth token
       user: "dbvideostriketeam",
       token: importstr "./chat_token.txt",
       // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
       backfill: true,
+      // Channels to watch. Defaults to "all twitch channels in $.channels" but you can add extras.
+      channels: [
+        std.split(c, '!')[0]
+        for c in $.channels
+        if std.length(std.split(c, ":")) == 1
+      ],
     },
   },
 
@@ -204,11 +235,12 @@
   // (eg. "downloader" is ghcr.io/dbvideostriketeam/wubloader-downloader)
   // so we only pass in name as a required arg.
   // Optional kwargs work just like python.
-  deployment(name, args=[], env=[], volumes=[], volumeMounts=[]):: {
+  deployment(name, args=[], env=[], volumes=[], volumeMounts=[], resources={}):: {
     kind: "Deployment",
     apiVersion: "apps/v1",
     metadata: {
-      name: "wubloader-%s" % name,
+      namespace: "wubloader",
+      name: name,
       labels: {app: "wubloader", component: name},
     },
     spec: {
@@ -226,8 +258,9 @@
               name: name,
               // segment-coverage is called segment_coverage in the image, so replace - with _
               // ditto for playlist-manager
-              image: "ghcr.io/dbvideostriketeam/wubloader-%s:%s" % [std.strReplace(name, "-", "_"), $.config.image_tag],
+              image: "%s/wubloader-%s:%s" % [$.config.image_base, std.strReplace(name, "-", "_"), $.config.image_tag],
               args: args,
+              resources: resources,
               volumeMounts: [{name: "data", mountPath: "/mnt"}] + volumeMounts,
               env: $.env_list + env, // main env list combined with any deployment-specific ones
             },
@@ -235,7 +268,7 @@
           volumes: [
             {
               name: "data",
-              persistentVolumeClaim: {"claimName": "mnt-wubloader"},
+              persistentVolumeClaim: {"claimName": "segments"},
             },
           ] + volumes
         },
@@ -248,7 +281,8 @@
     kind: "Service",
     apiVersion: "v1",
     metadata: {
-      name: "wubloader-%s" % name,
+      namespace: "wubloader",
+      name: name,
       labels: {app: "wubloader", component: name},
     },
     spec: {
@@ -262,7 +296,8 @@
     kind: "StatefulSet",
     apiVersion: "apps/v1",
     metadata: {
-      name: "wubloader-%s" % name,
+      namespace: "wubloader",
+      name: name,
       labels: {app: "wubloader", component: name},
     },
     spec: {
@@ -270,7 +305,7 @@
       selector: {
         matchLabels: {app: "wubloader", component: name},
       },
-      serviceName: "wubloader-%s" % name,
+      serviceName: name,
       template: {
         metadata: {
           labels: {app: "wubloader", component: name},
@@ -279,7 +314,7 @@
           containers: [
             {
               name: name,
-              image: "ghcr.io/dbvideostriketeam/wubloader-%s:%s" % [name, $.config.database_tag],
+              image: "%s/wubloader-%s:%s" % [$.config.image_base, name, $.config.database_tag],
               args: args,
               env: $.env_list + env, // main env list combined with any statefulset-specific ones
               volumeMounts: [
@@ -293,7 +328,7 @@
           volumes: [
             {
               name: "segments",
-              persistentVolumeClaim: {"claimName": "mnt-wubloader"},
+              persistentVolumeClaim: {"claimName": "segments"},
             },
           ],
         },
@@ -301,6 +336,7 @@
       volumeClaimTemplates: [
         {
           metadata: {
+            namespace: "wubloader",
             name: "database"
           },
           spec: {
@@ -324,28 +360,40 @@
   // Note that all components work fine if multiple are running
   // (they may duplicate work, but not cause errors by stepping on each others' toes).
   components:: [
+    // A namespace where all the things go
+    {
+      "apiVersion": "v1",
+      "kind": "Namespace",
+      "metadata": {
+        "name": "wubloader"
+      },
+    },
     // The downloader watches the twitch stream and writes the HLS segments to disk
     if $.config.enabled.downloader then $.deployment("downloader", args=$.config.channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--metrics-port", "80",
+    ]+ if $.config.downloader_creds_file != null then ["--auth-file", "/etc/creds/downloader_token.txt"] else [],
+    volumes=[
+      {name:"credentials", secret: {secretName: "credentials"}}
+    ],
+    volumeMounts=[
+      {mountPath: "/etc/creds", name: "credentials"},
     ]),
     // The restreamer is a http server that fields requests for checking what segments exist
     // and allows HLS streaming of segments from any requested timestamp
     if $.config.enabled.restreamer then $.deployment("restreamer", args=[
       "--base-dir", "/mnt",
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--port", "80",
     ]),
     // The backfiller periodically compares what segments exist locally to what exists on
     // other nodes. If it finds ones it doesn't have, it downloads them.
     // It can talk to the database to discover other wubloader nodes, or be given a static list.
-    if $.config.enabled.backfiller then $.deployment("backfiller", args=$.clean_channels + [
+    if $.config.enabled.backfiller then $.deployment("backfiller", args=$.config.clean_channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities + (if $.config.chat_archiver.backfill then ["chat"] else [])),
+      "--extras", std.join(",", $.config.backfill_dirs),
       "--static-nodes", std.join(",", $.config.peers),
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--node-database", $.db_connect,
       "--localhost", $.config.localhost,
       "--metrics-port", "80",
@@ -355,18 +403,20 @@
     // Segment coverage is a monitoring helper that periodically scans available segments
     // and reports stats. It also creates a "coverage map" image to represent this info.
     // It puts this in the segment directory where nginx will serve it.
-    if $.config.enabled.segment_coverage then $.deployment("segment-coverage", args=$.clean_channels + [
+    if $.config.enabled.segment_coverage then $.deployment("segment-coverage", args=$.config.clean_channels + [
       "--base-dir", "/mnt",
       "--qualities", std.join(",", $.config.qualities),
       "--metrics-port", "80",
       "--first-hour", $.config.coverage_start,
       "--last-hour", $.config.coverage_end,
+      // Render a html page showing all the images from all nodes
+      "--make-page",
+      "--connection-string", $.db_connect,
     ]),
     // Thrimshim acts as an interface between the thrimbletrimmer editor and the database
     // It is needed for thrimbletrimmer to be able to get unedited videos and submit edits
     if $.config.enabled.thrimshim then $.deployment("thrimshim", args=[
       "--port", "80",
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--title-header", $.config.title_header,
       "--description-footer", $.config.description_footer,
       "--upload-locations", std.join(",", [$.config.default_location] + [
@@ -374,14 +424,13 @@
         if location != $.config.default_location
       ]),
       $.db_connect,
-      $.clean_channels[0],  // use first element as default channel
+      $.config.clean_channels[0],  // use first element as default channel
       $.config.bustime_start,
     ]),
     // Cutter interacts with the database to perform cutting jobs
     if $.config.enabled.cutter then $.deployment("cutter",
     args=[
       "--base-dir", "/mnt",
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--metrics-port", "80",
       "--name", $.config.localhost,
       "--tags", std.join(",", $.config.video_tags),
@@ -390,16 +439,15 @@
       "/etc/creds/cutter_creds.json"
     ],
     volumes=[
-      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
+      {name:"credentials", secret: {secretName: "credentials"}}
     ],
     volumeMounts=[
-      {mountPath: "/etc/creds", name: "wubloader-creds"},
+      {mountPath: "/etc/creds", name: "credentials"},
     ]),
     // Sheetsync syncs database columns to the google docs sheet which is the primary operator interface
     if $.config.enabled.sheetsync then $.deployment("sheetsync",
     args=[
       "--allocate-ids",
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--metrics-port", "80",
       $.config.db_connect,
       "/etc/creds/sheetsync_creds.json",
@@ -408,15 +456,14 @@
       $.config.sheet_id
     ] + $.config.worksheets,
     volumes=[
-      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
+      {name:"credentials", secret: {secretName: "credentials"}}
     ],
     volumeMounts=[
-      {mountPath: "/etc/creds", name: "wubloader-creds"},
+      {mountPath: "/etc/creds", name: "credentials"},
     ]),
     // playlist_manager adds videos to youtube playlists depending on tags
     if $.config.enabled.playlist_manager then $.deployment("playlist-manager",
     args=[
-      "--backdoor-port", std.toString($.config.backdoor_port),
       "--metrics-port", "80",
       "--upload-location-allowlist", std.join(",", $.youtube_upload_locations),
       $.config.db_connect,
@@ -426,24 +473,25 @@
         for playlist in std.objectFields($.playlists)
     ],
     volumes=[
-      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
+      {name:"credentials", secret: {secretName: "credentials"}}
     ],
     volumeMounts=[
-      {mountPath: "/etc/creds", name: "wubloader-creds"},
+      {mountPath: "/etc/creds", name: "credentials"},
     ]),
     // chat_archiver records twitch chat messages and merges them with records from other nodes.
     if $.config.enabled.chat_archiver then $.deployment("chat-archiver",
     args=[
-      $.config.chat_archiver.channel,
       $.config.chat_archiver.user,
       "/etc/creds/chat_token.txt",
-      "--name", $.config.localhost
-    ],
+      ] + $.config.clean_channels + [
+      "--name", $.config.localhost,
+      "--metrics-port", "80"
+      ],
     volumes=[
-      {name:"wubloader-creds", secret: {secretName: "wubloader-creds"}}
+      {name:"credentials", secret: {secretName: "credentials"}}
     ],
     volumeMounts=[
-      {mountPath: "/etc/creds", name: "wubloader-creds"},
+      {mountPath: "/etc/creds", name: "credentials"},
     ]),
     // Normally nginx would be responsible for proxying requests to different services,
     // but in k8s we can use Ingress to do that. However nginx is still needed to serve
@@ -480,19 +528,21 @@
     if $.config.enabled.sheetsync then $.service("sheetsync"),
     if $.config.enabled.postgres then $.service("postgres"),
     if $.config.enabled.chat_archiver then $.service("chat-archiver"),
-    // Secret for cutter_creds_file and sheetsync_creds_file
+    // Secret for credentials
     if $.config.enabled.cutter || $.config.enabled.sheetsync || $.config.enabled.playlist_manager || $.config.enabled.chat_archiver then {
       apiVersion: "v1",
       kind: "Secret",
       metadata: {
-        name: "wubloader-creds",
+        namespace: "wubloader",
+        name: "credentials",
         labels: {app: "wubloader"}
       },
       type: "Opaque",
       stringData: {
         "cutter_creds.json": std.toString($.config.cutter_creds),
         "sheetsync_creds.json": std.toString($.config.sheetsync_creds),
-        "chat_token.txt": $.config.chat_archiver.token
+        "chat_token.txt": $.config.chat_archiver.token,
+        "downloader_token.txt": std.toString($.config.downloader_creds_file)
       },
     },
     // PV manifest for segments
@@ -500,7 +550,8 @@
       apiVersion: "v1",
       kind: "PersistentVolume",
       metadata: {
-        name: "mnt-wubloader",
+        namespace: "wubloader",
+        name: "segments",
         labels: {app: "wubloader"},
       },
       spec: {
@@ -508,7 +559,7 @@
         capacity: {
           storage: $.config.nfs_capacity
         },
-        mountOptions: ["fsc"],
+        mountOptions: ["fsc", "noatime"],
         nfs: {
           server: $.config.nfs_server,
           path: $.config.nfs_path,
@@ -523,7 +574,8 @@
       apiVersion: "v1",
       kind: "PersistentVolumeClaim",
       metadata: {
-        name: "mnt-wubloader",
+        namespace: "wubloader",
+        name: "segments",
         labels: {app: "wubloader"},
       },
       spec: {
@@ -533,7 +585,8 @@
             storage: $.config.nfs_capacity
           },
         },
-        volumeName: "mnt-wubloader"
+        storageClassName: "",
+        volumeName: "segments"
       },
     },
     // Ingress to direct requests to the correct services.
@@ -541,6 +594,7 @@
       kind: "Ingress",
       apiVersion: "networking.k8s.io/v1",
       metadata: {
+        namespace: "wubloader",
         name: "wubloader",
         labels: {app: "wubloader"} + $.config.ingress_labels,
       },
@@ -556,7 +610,7 @@
                 pathType: type,
                 backend: {
                   service: {
-                    name: "wubloader-%s" % std.strReplace(name, "_", "-"),
+                    name: std.strReplace(name, "_", "-"),
                     port: {
                       number: 80
                     },
