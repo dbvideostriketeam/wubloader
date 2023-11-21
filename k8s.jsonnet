@@ -541,7 +541,7 @@
     if $.config.enabled.postgres then $.service("postgres"),
     if $.config.enabled.chat_archiver then $.service("chat-archiver"),
     // Secret for credentials
-    if $.config.enabled.cutter || $.config.enabled.sheetsync || $.config.enabled.playlist_manager || $.config.enabled.chat_archiver then {
+    {
       apiVersion: "v1",
       kind: "Secret",
       metadata: {
