@@ -130,7 +130,7 @@
     downloader_creds_file: null,
 
     // The URL to write to the sheet for edit links, with {} being replaced by the id
-    edit_url: "https://wubloader.example.com/edit.html?id={}",
+    edit_url: "https://wubloader.example.com/thrimbletrimmer/edit.html?id={}",
 
     // The spreadsheet ID and worksheet names for sheetsync to act on
     sheet_id: "your_id_here",
