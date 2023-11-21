@@ -35,7 +35,7 @@
       playlist_manager: false,  # auto-populating youtube playlists
       nginx: true,              # proxying between the various pods
       postgres: false,          # source-of-truth database
-      chat_archiver: false,     # records twitch chat messages and merges them with records from other nodes
+      chat_archiver: true,      # records twitch chat messages and merges them with records from other nodes
     },
 
     // Twitch channels to capture.
@@ -46,7 +46,7 @@
     backfill_only_channels: [],
 
     // extra directories to backfill
-    backfill_dirs: [],
+    backfill_dirs: ["emotes"],
 
     // Cleaned up version of $.channels without importance/type markers.
     // General form is CHANNEL[!][:TYPE:URL].
