@@ -59,6 +59,7 @@
     nfs_server: "nfs.example.com",            # server IP or hostname
     nfs_path: "/mnt/segments",                # path on server to mount
     nfs_capacity: "1T",                       # storage capacity to report to k8s
+    nfs_mount_options: ["noatime"],           # mount options to use (important for performance!)
 
     // PVC template storage class for statefulset in postgres
     sts_storage_class_name: "longhorn",
@@ -559,7 +560,7 @@
         capacity: {
           storage: $.config.nfs_capacity
         },
-        mountOptions: ["fsc", "noatime"],
+        mountOptions: $.config.nfs_mount_options,
         nfs: {
           server: $.config.nfs_server,
           path: $.config.nfs_path,
