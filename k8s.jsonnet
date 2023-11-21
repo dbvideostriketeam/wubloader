@@ -59,7 +59,18 @@
     nfs_server: "nfs.example.com",            # server IP or hostname
     nfs_path: "/mnt/segments",                # path on server to mount
     nfs_capacity: "1T",                       # storage capacity to report to k8s
-    nfs_mount_options: ["noatime"],           # mount options to use (important for performance!)
+    # mount options to use (It is important to test these and adjust for optimal performance)
+    # these options work reasonably well on a ZFS-backed NFS server with the default 128k block size
+    nfs_mount_options: [
+      "fsc",            # use FS-Cache to cache file data
+      "noatime",        # don't update inode access times
+      "nodiratime",     # don't update directory inode access times
+      "vers=4",         # use NFSv4
+      "proto=tcp",      # use TCP (default for NFSv4)
+      "hard",           # retry NFS requests indefinitely
+      "rsize=131072",   # 128kb read size
+      "wsize=131072",   # 128kb write size
+    ],
 
     // PVC template storage class for statefulset in postgres
     sts_storage_class_name: "longhorn",
