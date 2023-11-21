@@ -254,6 +254,9 @@ class CoverageChecker(object):
 		"""Loop over available hours for each quality, checking segment coverage."""
 		self.logger.info('Starting')
 
+		ALLOWABLE_OVERLAP = 0.01 # 10ms
+		ALLOWABLE_GAP = 0.01 # 10ms
+
 		while not self.stopping.is_set():
 
 			for quality in self.qualities:
@@ -374,7 +377,8 @@ class CoverageChecker(object):
 							previous_editable = best_segment
 						else:
 							previous_end = previous.start + previous.duration
-							if segment.start < previous_end:
+							gap = (segment.start - previous_end).total_seconds()
+							if gap < -ALLOWABLE_OVERLAP:
 								if segment.type == 'full':
 									full_overlaps += 1
 									full_overlap_duration += previous_end - segment.start
@@ -389,11 +393,11 @@ class CoverageChecker(object):
 								coverage += segment.duration
 								editable_coverage += segment.duration
 
-								if segment.start > previous_end:
+								if gap > ALLOWABLE_GAP:
 									holes.append((previous_end, segment.start))
 
 								previous_editable_end = previous_editable.start + previous_editable.duration
-								if segment.start > previous_editable_end:
+								if (segment.start - previous_editable_end).total_seconds() > ALLOWABLE_GAP:
 									editable_holes.append((previous_editable_end, segment.start))
 
 								previous_editable = best_segment

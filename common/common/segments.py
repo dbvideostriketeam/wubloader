@@ -151,6 +151,11 @@ def get_best_segments(hours_path, start, end, allow_holes=True):
 	# python's datetime types represent these as integer microseconds internally. So the parsing
 	# to these types is exact, and all operations on them are exact, so all operations are exact.
 
+	# ...however in the wild we sometimes see timestamps or durations that differ by a few ms.
+	# So we allow some fudge factors.
+	ALLOWABLE_OVERLAP = 0.01 # 10ms
+	ALLOWABLE_GAP = 0.01 # 10ms
+
 	result = []
 
 	for hour in hour_paths_for_range(hours_path, start, end):
@@ -182,13 +187,14 @@ def get_best_segments(hours_path, start, end, allow_holes=True):
 			else:
 				# normal case: check against previous segment end time
 				prev_end = result[-1].end
-				if segment.start < prev_end:
+				gap = (segment.start - prev_end).total_seconds()
+				if gap < -ALLOWABLE_OVERLAP:
 					# Overlap! This shouldn't happen, though it might be possible due to weirdness
 					# if the stream drops then starts again quickly. We simply ignore the overlapping
 					# segment and let the algorithm continue.
 					logging.info("Overlapping segments: {} overlaps end of {}".format(segment, result[-1]))
 					continue
-				if result[-1].is_partial or prev_end < segment.start:
+				if result[-1].is_partial or gap > ALLOWABLE_GAP:
 					# there's a gap between prev end and this start, so add a None
 					if not allow_holes:
 						raise ContainsHoles
