@@ -20,6 +20,7 @@ from common.flask_stats import request_stats, after_request
 from common.images import compose_thumbnail_template
 from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files, get_best_segments_for_frame
 from common.chat import get_batch_file_range, merge_messages
+from common.cached_iterator import CachedIterator
 
 from . import generate_hls
 
@@ -288,19 +289,27 @@ def generate_media_playlist(channel, quality):
 		# Note the None to indicate there was a "hole" at both start and end
 		segments = [None]
 
-	result = gevent.event.AsyncResult()
-	try:
-		# Note we don't populate the cache until we're in the try block,
-		# so there is no point where an exception won't be transferred to the result.
-		_media_playlist_cache[cache_key] = result
-		playlist = "".join(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
-		result.set(playlist)
-	except BaseException as ex:
-		result.set_exception(ex)
-		raise
-	# Now we're done, remove the async result so a fresh request can start.
-	assert _media_playlist_cache.pop(cache_key) is result, "Got someone else's AsyncResult"
-	return playlist
+	def _generate_media_playlist():
+		result = gevent.event.AsyncResult()
+		try:
+			# Note we don't populate the cache until we're in the try block,
+			# so there is no point where an exception won't be transferred to the result.
+			_media_playlist_cache[cache_key] = result
+			iterator = CachedIterator(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
+			# We set the result immediately so that everyone can start returning it.
+			# Multiple readers from the CachedIterator is safe.
+			result.set(iterator)
+		except BaseException as ex:
+			result.set_exception(ex)
+			raise
+
+		# send the whole response
+		yield from iterator
+
+		# Now we're done, remove the async result so a fresh request can start.
+		assert _media_playlist_cache.pop(cache_key) is result, "Got someone else's AsyncResult"
+
+	return _generate_media_playlist()
 
 
 @app.route('/cut/<channel>/<quality>.ts')
