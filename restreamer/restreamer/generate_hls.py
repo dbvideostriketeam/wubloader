@@ -69,27 +69,30 @@ def generate_media(segments, base_url):
 	if segments and segments[0] is None:
 		segments = segments[1:]
 
+	lines = []
 	for i, segment in enumerate(segments):
-		# For very large playlists, give other things a chance to run
+		# For very large playlists, flush a chunk and give other things a chance to run
 		if i % 1000 == 0:
+			yield "\n".join(lines) + "\n"
+			lines = []
 			gevent.idle()
 		if segment is None:
 			# Discontinuity. Adding this tag tells the client that we've missed something
 			# and it should start decoding fresh on the next segment. This is required when
 			# someone stops/starts a stream and a good idea if we're missing a segment in a
 			# continuous stream.
-			yield "#EXT-X-DISCONTINUITY\n"
+			lines.append("#EXT-X-DISCONTINUITY")
 		else:
 			# Each segment has two prefixes: timestamp and duration.
 			# This tells the client exactly what time the segment represents, which is important
 			# for the editor since it needs to describe cut points in these times.
 			path = '/'.join(segment.path.split('/')[-2:])
-			lines = [
+			lines += [
 				"#EXT-X-PROGRAM-DATE-TIME:{}".format(segment.start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")),
 				"#EXTINF:{:.3f},live".format(segment.duration.total_seconds()),
 				urllib.parse.quote(os.path.join(base_url, path)),
 			]
-			yield "\n".join(lines) + "\n"
+	yield "\n".join(lines) + "\n"
 
 	# If stream is complete, add an ENDLIST marker to show this.
 	if not incomplete:

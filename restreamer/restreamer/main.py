@@ -276,20 +276,22 @@ def generate_media_playlist(channel, quality):
 	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
 		return "Implicit range may not be longer than 12 hours", 400
 
-	cache_key = (hours_path, start, end)
-	if cache_key in _media_playlist_cache:
-		return _media_playlist_cache[cache_key].get()
-
-	# get_best_segments requires start be before end, special case that as no segments
-	# (not an error because someone might ask for a specific start, no end, but we ended up with
-	# end before start because that's the latest time we have)
-	if start < end:
-		segments = get_best_segments(hours_path, start, end)
-	else:
-		# Note the None to indicate there was a "hole" at both start and end
-		segments = [None]
-
 	def _generate_media_playlist():
+		cache_key = (hours_path, start, end)
+
+		# get_best_segments requires start be before end, special case that as no segments
+		# (not an error because someone might ask for a specific start, no end, but we ended up with
+		# end before start because that's the latest time we have)
+		if start < end:
+			segments = get_best_segments(hours_path, start, end)
+		else:
+			# Note the None to indicate there was a "hole" at both start and end
+			segments = [None]
+
+		if cache_key in _media_playlist_cache:
+			yield from _media_playlist_cache[cache_key].get()
+			return
+
 		result = gevent.event.AsyncResult()
 		try:
 			# Note we don't populate the cache until we're in the try block,
