@@ -279,15 +279,6 @@ def generate_media_playlist(channel, quality):
 	def _generate_media_playlist():
 		cache_key = (hours_path, start, end)
 
-		# get_best_segments requires start be before end, special case that as no segments
-		# (not an error because someone might ask for a specific start, no end, but we ended up with
-		# end before start because that's the latest time we have)
-		if start < end:
-			segments = get_best_segments(hours_path, start, end)
-		else:
-			# Note the None to indicate there was a "hole" at both start and end
-			segments = [None]
-
 		if cache_key in _media_playlist_cache:
 			yield from _media_playlist_cache[cache_key].get()
 			return
@@ -297,7 +288,17 @@ def generate_media_playlist(channel, quality):
 			# Note we don't populate the cache until we're in the try block,
 			# so there is no point where an exception won't be transferred to the result.
 			_media_playlist_cache[cache_key] = result
+
+			# get_best_segments requires start be before end, special case that as no segments
+			# (not an error because someone might ask for a specific start, no end, but we ended up with
+			# end before start because that's the latest time we have)
+			if start < end:
+				segments = get_best_segments(hours_path, start, end)
+			else:
+				# Note the None to indicate there was a "hole" at both start and end
+				segments = [None]
 			iterator = CachedIterator(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
+
 			# We set the result immediately so that everyone can start returning it.
 			# Multiple readers from the CachedIterator is safe.
 			result.set(iterator)
