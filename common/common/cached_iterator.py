@@ -25,28 +25,31 @@ class CachedIterator():
 				# If we're more than 1 beyond the end, something has gone horribly wrong.
 				# We should've already lengthened it last iteration
 				assert len(self.items) == i, "CachedIterator logic error: {} != {}".format(len(self.items), i)
-				# Check if the iterator is still active. If not, we've reached the end or an error.
-				if self.iterator is None:
-					if self.error is not None:
-						raise self.error
-					return
 				# Note we don't need the lock up until now because we're only trying to be gevent-safe,
 				# not thread-safe. Simple operations like checking lengths can't be interrupted.
 				# However calling next on the iterator may cause a switch.
 				with self.lock:
-					try:
-						item = next(self.iterator)
-					except StopIteration:
-						# We've reached the end. Discard the iterator (in theory an iterator that
-						# has raised StopIteration once will keep raising it every time thereafter,
-						# but best not to rely on that).
-						self.iterator = None
-						# And we're done.
-						return
-					except Exception as ex:
-						# Discard the iterator and save the error to be re-served
-						self.iterator = None
-						self.error = ex
-						raise
-					self.items.append(item)
+					# Taking the lock may have also caused a switch, so we need to re-check
+					# our conditions. Someone else may have already added the item we need.
+					if len(self.items) <= i:
+						# Check if the iterator is still active. If not, we've reached the end or an error.
+						if self.iterator is None:
+							if self.error is not None:
+								raise self.error
+							return
+						try:
+							item = next(self.iterator)
+						except StopIteration:
+							# We've reached the end. Discard the iterator (in theory an iterator that
+							# has raised StopIteration once will keep raising it every time thereafter,
+							# but best not to rely on that).
+							self.iterator = None
+							# And we're done.
+							return
+						except Exception as ex:
+							# Discard the iterator and save the error to be re-served
+							self.iterator = None
+							self.error = ex
+							raise
+						self.items.append(item)
 			yield self.items[i]
