@@ -13,6 +13,7 @@ class CachedIterator():
 	"""
 	def __init__(self, iterator):
 		self.iterator = iterator # Replaced with None once it's exhausted
+		self.error = None # Set if iterator errors, the error is repeated for all future consumption
 		self.items = []
 		self.lock = gevent.lock.RLock()
 
@@ -24,8 +25,10 @@ class CachedIterator():
 				# If we're more than 1 beyond the end, something has gone horribly wrong.
 				# We should've already lengthened it last iteration
 				assert len(self.items) == i, "CachedIterator logic error: {} != {}".format(len(self.items), i)
-				# Check if the iterator is still active. If not, we've reached the end.
+				# Check if the iterator is still active. If not, we've reached the end or an error.
 				if self.iterator is None:
+					if self.error is not None:
+						raise self.error
 					return
 				# Note we don't need the lock up until now because we're only trying to be gevent-safe,
 				# not thread-safe. Simple operations like checking lengths can't be interrupted.
@@ -40,5 +43,10 @@ class CachedIterator():
 						self.iterator = None
 						# And we're done.
 						return
+					except Exception as ex:
+						# Discard the iterator and save the error to be re-served
+						self.iterator = None
+						self.error = ex
+						raise
 					self.items.append(item)
 			yield self.items[i]
