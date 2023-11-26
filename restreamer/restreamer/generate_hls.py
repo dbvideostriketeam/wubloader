@@ -3,6 +3,7 @@ import os
 import urllib.parse
 from collections import Counter
 
+import gevent
 
 def generate_master(playlists):
 	"""Generate master playlist. Playlists arg should be a map {name: url}.
@@ -36,6 +37,8 @@ def generate_media(segments, base_url):
 	"""Generate a media playlist from a list of segments as returned by common.get_best_segments().
 	Segments are specified as hour/name.ts relative to base_url.
 	"""
+	# segments may be an iterator, make it reusable
+	segments = list(segments)
 
 	# We have to pick a "target duration". in most circumstances almost all segments
 	# will be of that duration, so we get the most common duration out of all the segments
@@ -48,10 +51,8 @@ def generate_media(segments, base_url):
 	else:
 		target_duration = datetime.timedelta(seconds=6)
 
-	lines = [
-		"#EXTM3U",
-		"#EXT-X-TARGETDURATION:{:.3f}".format(target_duration.total_seconds()),
-	]
+	yield "#EXTM3U\n"
+	yield "#EXT-X-TARGETDURATION:{:.3f}\n".format(target_duration.total_seconds())
 
 	# Note and remove any trailing None from the segment list - this indicates there is a hole
 	# at the end, which means we should mark the stream as incomplete but not include a discontinuity.
@@ -68,7 +69,13 @@ def generate_media(segments, base_url):
 	if segments and segments[0] is None:
 		segments = segments[1:]
 
-	for segment in segments:
+	lines = []
+	for i, segment in enumerate(segments):
+		# For very large playlists, flush a chunk and give other things a chance to run
+		if i % 1000 == 0:
+			yield "\n".join(lines) + "\n"
+			lines = []
+			gevent.idle()
 		if segment is None:
 			# Discontinuity. Adding this tag tells the client that we've missed something
 			# and it should start decoding fresh on the next segment. This is required when
@@ -80,12 +87,13 @@ def generate_media(segments, base_url):
 			# This tells the client exactly what time the segment represents, which is important
 			# for the editor since it needs to describe cut points in these times.
 			path = '/'.join(segment.path.split('/')[-2:])
-			lines.append("#EXT-X-PROGRAM-DATE-TIME:{}".format(segment.start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")))
-			lines.append("#EXTINF:{:.3f},live".format(segment.duration.total_seconds()))
-			lines.append(urllib.parse.quote(os.path.join(base_url, path)))
+			lines += [
+				"#EXT-X-PROGRAM-DATE-TIME:{}".format(segment.start.strftime("%Y-%m-%dT%H:%M:%S.%fZ")),
+				"#EXTINF:{:.3f},live".format(segment.duration.total_seconds()),
+				urllib.parse.quote(os.path.join(base_url, path)),
+			]
+	yield "\n".join(lines) + "\n"
 
 	# If stream is complete, add an ENDLIST marker to show this.
 	if not incomplete:
-		lines.append("#EXT-X-ENDLIST")
-
-	return "\n".join(lines) + '\n'
+		yield "#EXT-X-ENDLIST\n"

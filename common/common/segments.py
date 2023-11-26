@@ -535,10 +535,11 @@ def fast_cut_range(segments, start, end, fixts=None):
 	first = segments[0] if cut_start else None
 	last = segments[-1] if cut_end else None
 
-	for segment in segments:
+	for i, segment in enumerate(segments):
 		# Since long smart cuts can be CPU and disk bound for quite a while,
 		# yield to give other things a chance to run.
-		gevent.idle()
+		if i % 1000 == 0:
+			gevent.idle()
 
 		if segment is None:
 			logging.debug("Skipping discontinuity while cutting")

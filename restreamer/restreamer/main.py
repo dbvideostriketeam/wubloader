@@ -10,6 +10,7 @@ from uuid import uuid4
 
 import gevent
 import gevent.backdoor
+import gevent.event
 import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
@@ -19,6 +20,7 @@ from common.flask_stats import request_stats, after_request
 from common.images import compose_thumbnail_template
 from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files, get_best_segments_for_frame
 from common.chat import get_batch_file_range, merge_messages
+from common.cached_iterator import CachedIterator
 
 from . import generate_hls
 
@@ -232,6 +234,14 @@ def generate_master_playlist(channel):
 	return generate_hls.generate_master(playlists)
 
 
+# Generating large media playlists is expensive, especially on the first run
+# where the cache is cold. And the video player will make repeated requests.
+# To avoid requests piling up and repeating work, if we get the exact same request again
+# while the old request is in progress, we piggyback on the previous request and return
+# the same result.
+# This cache object maps (hour_path, start, end) to an AsyncResult.
+_media_playlist_cache = {}
+
 @app.route('/playlist/<channel>/<quality>.m3u8')
 @request_stats
 @has_path_args
@@ -266,16 +276,43 @@ def generate_media_playlist(channel, quality):
 	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
 		return "Implicit range may not be longer than 12 hours", 400
 
-	# get_best_segments requires start be before end, special case that as no segments
-	# (not an error because someone might ask for a specific start, no end, but we ended up with
-	# end before start because that's the latest time we have)
-	if start < end:
-		segments = get_best_segments(hours_path, start, end)
-	else:
-		# Note the None to indicate there was a "hole" at both start and end
-		segments = [None]
+	def _generate_media_playlist():
+		cache_key = (hours_path, start, end)
 
-	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality))
+		if cache_key in _media_playlist_cache:
+			yield from _media_playlist_cache[cache_key].get()
+			return
+
+		result = gevent.event.AsyncResult()
+		try:
+			# Note we don't populate the cache until we're in the try block,
+			# so there is no point where an exception won't be transferred to the result.
+			_media_playlist_cache[cache_key] = result
+
+			# get_best_segments requires start be before end, special case that as no segments
+			# (not an error because someone might ask for a specific start, no end, but we ended up with
+			# end before start because that's the latest time we have)
+			if start < end:
+				segments = get_best_segments(hours_path, start, end)
+			else:
+				# Note the None to indicate there was a "hole" at both start and end
+				segments = [None]
+			iterator = CachedIterator(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
+
+			# We set the result immediately so that everyone can start returning it.
+			# Multiple readers from the CachedIterator is safe.
+			result.set(iterator)
+		except BaseException as ex:
+			result.set_exception(ex)
+			raise
+
+		# send the whole response
+		yield from iterator
+
+		# Now we're done, remove the async result so a fresh request can start.
+		assert _media_playlist_cache.pop(cache_key) is result, "Got someone else's AsyncResult"
+
+	return _generate_media_playlist()
 
 
 @app.route('/cut/<channel>/<quality>.ts')
