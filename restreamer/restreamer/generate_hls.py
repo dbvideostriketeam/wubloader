@@ -3,6 +3,7 @@ import os
 import urllib.parse
 from collections import Counter
 
+import gevent
 
 def generate_master(playlists):
 	"""Generate master playlist. Playlists arg should be a map {name: url}.
@@ -69,6 +70,8 @@ def generate_media(segments, base_url):
 		segments = segments[1:]
 
 	for segment in segments:
+		# For very large playlists, give other things a chance to run
+		gevent.idle()
 		if segment is None:
 			# Discontinuity. Adding this tag tells the client that we've missed something
 			# and it should start decoding fresh on the next segment. This is required when
