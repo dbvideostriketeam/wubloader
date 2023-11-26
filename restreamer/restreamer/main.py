@@ -275,31 +275,32 @@ def generate_media_playlist(channel, quality):
 	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
 		return "Implicit range may not be longer than 12 hours", 400
 
+	cache_key = (hours_path, start, end)
+	if cache_key in _media_playlist_cache:
+		return _media_playlist_cache[cache_key].get()
+
 	# get_best_segments requires start be before end, special case that as no segments
 	# (not an error because someone might ask for a specific start, no end, but we ended up with
 	# end before start because that's the latest time we have)
 	if start < end:
-		cache_key = (hours_path, start, end)
-		if cache_key in _media_playlist_cache:
-			segments = _media_playlist_cache[cache_key].get()
-		else:
-			result = gevent.event.AsyncResult()
-			try:
-				# Note we don't populate the cache until we're in the try block,
-				# so there is no point where an exception won't be transferred to the result.
-				_media_playlist_cache[cache_key] = result
-				segments = list(get_best_segments(hours_path, start, end))
-				result.set(segments)
-			except BaseException as ex:
-				result.set_exception(ex)
-				raise
-			# Now we're done, remove the async result so a fresh request can start.
-			assert _media_playlist_cache.pop(cache_key) is result, "Got someone else's AsyncResult"
+		segments = get_best_segments(hours_path, start, end)
 	else:
 		# Note the None to indicate there was a "hole" at both start and end
 		segments = [None]
 
-	return generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality))
+	result = gevent.event.AsyncResult()
+	try:
+		# Note we don't populate the cache until we're in the try block,
+		# so there is no point where an exception won't be transferred to the result.
+		_media_playlist_cache[cache_key] = result
+		playlist = "".join(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
+		result.set(playlist)
+	except BaseException as ex:
+		result.set_exception(ex)
+		raise
+	# Now we're done, remove the async result so a fresh request can start.
+	assert _media_playlist_cache.pop(cache_key) is result, "Got someone else's AsyncResult"
+	return playlist
 
 
 @app.route('/cut/<channel>/<quality>.ts')
