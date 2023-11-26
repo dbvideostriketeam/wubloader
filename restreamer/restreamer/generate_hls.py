@@ -69,9 +69,10 @@ def generate_media(segments, base_url):
 	if segments and segments[0] is None:
 		segments = segments[1:]
 
-	for segment in segments:
+	for i, segment in enumerate(segments):
 		# For very large playlists, give other things a chance to run
-		gevent.idle()
+		if i % 1000 == 0:
+			gevent.idle()
 		if segment is None:
 			# Discontinuity. Adding this tag tells the client that we've missed something
 			# and it should start decoding fresh on the next segment. This is required when
