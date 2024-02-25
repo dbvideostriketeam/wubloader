@@ -30,7 +30,7 @@ INFO_QUERY = """
 
 def main(
 	output_dir,
-	host='condor.live', user='necrobot-read', password='necrobot-read', database='condorxiv',
+	host='condor.live', user='necrobot-read', password='necrobot-read', database='condor15',
 	base_dir='/srv/wubloader', start_range='0,10', non_interactive=False, restrict_league=None,
 	only_match_id=0, best_effort_no_segments=False, no_start_detect=False,
 ):
