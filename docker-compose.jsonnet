@@ -11,7 +11,7 @@
   // things it builds with.
   // Note: "latest" is not recommended in production, as you can't be sure what version
   // you're actually running, and must manually re-pull to get an updated copy.
-  image_tag:: std.extVar("tag"),
+  image_tag:: "8f81bb6",
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
   downloader_tag:: "8795050", // prevent downloader restarts
 
