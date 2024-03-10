@@ -3,6 +3,7 @@ import json
 import logging
 import random
 import subprocess
+import os
 
 from common.requests import InstrumentedSession
 
@@ -195,3 +196,26 @@ class TwitchProvider(Provider):
 		variants["source"] = source
 
 		return {name: variant.uri for name, variant in variants.items()}
+
+class LocalProvider(Provider):
+	"""Provider that uses a local m3u8 recording.
+	"""
+	def __init__(self, directory):
+		self.directory = directory
+
+	def get_media_playlist(self, uri, session=None):
+		with open(uri) as f:
+			playlist = hls_playlist.load(f.read().strip(), uri)
+		return playlist
+
+	def get_media_playlist_uris(self, qualities, session=None):
+		if qualities != ["source"]:
+			raise ValueError("Cannot provide non-source qualities")
+
+		files = os.listdir(self.directory)
+
+		for file in reversed(files):
+			if file.endswith(".m3u8"):
+				return {"source": os.path.join(self.directory, file)}
+
+		raise ValueError("Can't find playlist (m3u8) file")
