@@ -214,7 +214,7 @@ class LocalProvider(Provider):
 
 		files = os.listdir(self.directory)
 
-		for file in reversed(files):
+		for file in sorted(files, reverse=True):
 			if file.endswith(".m3u8"):
 				return {"source": os.path.join(self.directory, file)}
 
