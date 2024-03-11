@@ -712,6 +712,25 @@ class SegmentLinker(SegmentGetter):
 		self.done = gevent.event.Event()
 		# Our parent's connection pool, but we'll replace it if there's any issues
 
+	def exists(self):
+		"""Look for an existing link to the segment. Return bool."""
+		dirname = os.path.dirname(self.prefix)
+		try:
+			candidates = os.listdir(dirname)
+		except OSError as e:
+			# on ENOENT (doesn't exist), return false
+			if e.errno != errno.ENOENT:
+				raise
+			return False
+		full_prefix = "{}-full".format(self.prefix)
+		return any(
+			os.path.join(dirname, candidate).startswith(full_prefix)
+				# There's almost no way a matching tombstone could already exist, but just in case
+				# we'll make sure it isn't counted.
+				and not candidate.endswith(".tombstone")
+			for candidate in candidates
+		)
+
 	def make_path_prefix(self):
 		return os.path.join(
 			self.base_dir,
