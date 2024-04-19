@@ -265,12 +265,15 @@ def generate_media_playlist(channel, quality):
 	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
 	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
 	if start is None or end is None:
-		# If start or end are not given, use the earliest/latest time available
+		# If start or end are not given, use the earliest/latest time available.
+		# For end in particular, always pad an extra hour to force a discontinuity at the end
+		# even if we happen to have a complete hour available. Otherwise when live streaming you
+		# can get an unexpected "video is complete" even though more segments are about to arrive.
 		first, last = time_range_for_quality(channel, quality)
 		if start is None:
 			start = first
 		if end is None:
-			end = last
+			end = last + datetime.timedelta(hours=1)
 
 	# We still allow > 12hr ranges, but only if done explicitly (both start and end are set).
 	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
