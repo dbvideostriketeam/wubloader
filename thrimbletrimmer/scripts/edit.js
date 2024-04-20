@@ -825,6 +825,11 @@ function validateChapterDescription(chapterDescField) {
 	if (chapterDesc.indexOf("<") !== -1 || chapterDesc.indexOf(">") !== -1) {
 		chapterDescField.classList.add("input-error");
 		chapterDescField.title = "Chapter description may not contain angle brackets (< or >)";
+	} else if (Array.from(chapterDesc).some(c => c.charCodeAt(0) > 127)) { // any char is non-ascii
+		// We don't know what chars are safe outside the ascii range, so we just warn on any of them.
+		// We know emoji are not safe.
+		chapterDescField.classList.add("input-error");
+		chapterDescField.title = "Chapter descriptions with non-ascii characters may cause issues, proceed with caution";
 	} else {
 		chapterDescField.classList.remove("input-error");
 		chapterDescField.title = "";
