@@ -1129,7 +1129,13 @@ async function sendVideoData(newState, overrideChanges) {
 			globalPageState = PAGE_STATE.CONFIRMING;
 			const serverErrorNode = document.createTextNode(await submitResponse.text());
 			const submitButton = document.createElement("button");
-			submitButton.innerText = "Submit Anyway";
+			if (newState === "UNEDITED") {
+				submitButton.innerText = "Save Draft Anyway";
+			} else if (newState === "MODIFIED") {
+				submitButton.innerText = "Submit Changes Anyway";
+			} else {
+				submitButton.innerText = "Submit Anyway";
+			}
 			submitButton.addEventListener("click", (_event) => {
 				sendVideoData(newState, true);
 			});
