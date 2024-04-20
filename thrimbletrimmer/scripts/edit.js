@@ -829,7 +829,7 @@ function validateChapterDescription(chapterDescField) {
 		// We don't know what chars are safe outside the ascii range, so we just warn on any of them.
 		// We know emoji are not safe.
 		chapterDescField.classList.add("input-error");
-		chapterDescField.title = "Chapter descriptions with non-ascii characters may cause issues, proceed with caution";
+		chapterDescField.title = "Chapter descriptions with non-ascii characters may cause issues; proceed with caution";
 	} else {
 		chapterDescField.classList.remove("input-error");
 		chapterDescField.title = "";
