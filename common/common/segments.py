@@ -390,22 +390,18 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return subprocess.Popen(args, stdout=subprocess.PIPE)
 
 
-def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
+def ffmpeg_cut_stdin(output_file, encode_args):
 	"""Return a Popen object which is ffmpeg cutting from stdin.
-	This is used when doing a full cut.
+	This is used when doing a full cut, plus various functions for transforming segment video without doing a multi-range cut.
 	If output_file is not subprocess.PIPE,
 	uses explicit output file object instead of using a pipe,
-	because some video formats require a seekable file.
+	because some output formats require a seekable file.
 	"""
 	args = [
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'error', # suppress noisy output
 		'-i', '-',
 	]
-	if cut_start is not None:
-		args += ['-ss', cut_start]
-	if duration is not None:
-		args += ['-t', duration]
 	args += list(encode_args)
 
 	if output_file is subprocess.PIPE:
@@ -422,7 +418,7 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 			'-y',
 		]
 	args = list(map(str, args))
-	logging.info("Running full cut with args: {}".format(" ".join(args)))
+	logging.info("Cutting from stdin with args: {}".format(" ".join(args)))
 	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=output_file)
 
 
@@ -639,7 +635,13 @@ def full_cut_segments(segments, start, end, encode_args, stream=False):
 			# has finished. We create a temporary file for this.
 			tempfile = TemporaryFile()
 
-		ffmpeg = ffmpeg_cut_stdin(tempfile, cut_start, duration, encode_args)
+		args = []
+		if cut_start is not None:
+			args += ['-ss', cut_start]
+		if duration is not None:
+			args += ['-t', duration]
+		args += list(encode_args)
+		ffmpeg = ffmpeg_cut_stdin(tempfile, cut_start, duration, args)
 		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 
 		# When streaming, we can return data as it is available
@@ -696,7 +698,7 @@ def archive_cut_segments(segment_ranges, ranges, tempdir):
 		try:
 			tempfile = open(tempfile_name, "wb")
 
-			ffmpeg = ffmpeg_cut_stdin(tempfile, None, None, encode_args)
+			ffmpeg = ffmpeg_cut_stdin(tempfile, encode_args)
 			input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 
 			# since we've now handed off the tempfile fd to ffmpeg, close ours
@@ -752,7 +754,7 @@ def render_segments_waveform(segments, size=(1024, 128), scale='sqrt', color='#0
 			# output as png
 			'-f', 'image2', '-c', 'png',
 		]
-		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=None, duration=None, encode_args=args)
+		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, args)
 		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 
 		for chunk in read_chunks(ffmpeg.stdout):
@@ -793,12 +795,14 @@ def extract_frame(segments, timestamp):
 	input_feeder = None
 	try:
 		args = [
+			# cut to correct start frame
+			"-ss", cut_start,
 			# get a single frame
 			'-vframes', '1',
 			# output as png
 			'-f', 'image2', '-c', 'png',
 		]
-		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=cut_start, duration=None, encode_args=args)
+		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, args)
 		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
 
 		for chunk in read_chunks(ffmpeg.stdout):
