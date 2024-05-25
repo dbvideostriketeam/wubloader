@@ -391,8 +391,13 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return subprocess.Popen(args, stdout=subprocess.PIPE)
 
 
+def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
+	"""Wrapper for ffmpeg_cut_many() with a simpler API for the single-input case."""
+	return ffmpeg_cut_many([(segments, input_args)], encode_args, output_file=output_file)
+
+
 @contextmanager
-def ffmpeg_cut_many(inputs, output_file, encode_args):
+def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
 	"""
 	Context manager that produces a Popen object which is ffmpeg cutting the given inputs.
 
@@ -699,7 +704,7 @@ def full_cut_segments(segments, start, end, encode_args, stream=False):
 		args += ['-t', duration]
 	args += list(encode_args)
 
-	with ffmpeg_cut_many([segments, ()], tempfile, args) as ffmpeg:
+	with ffmpeg_cut_many([segments, ()], args, output_file=tempfile) as ffmpeg:
 		# When streaming, we can return data as it is available
 		# Otherwise, just exit the context manager so tempfile is fully written.
 		if stream:
@@ -737,8 +742,8 @@ def archive_cut_segments(segment_ranges, ranges, tempdir):
 		tempfile_name = os.path.join(tempdir, "archive-temp-{}.mkv".format(uuid4()))
 		try:
 			with open(tempfile_name, "wb") as tempfile:
-				with ffmpeg_cut_many([(segments, [])], tempfile, encode_args):
-					# We just want ffmpeg to run to completion, which ffmpeg_cut_many()
+				with ffmpeg_cut_one(segments, encode_args, output_file=tempfile):
+					# We just want ffmpeg to run to completion, which ffmpeg_cut_one()
 					# will do on exit for us.
 					pass
 		except:
@@ -776,7 +781,7 @@ def render_segments_waveform(segments, size=(1024, 128), scale='sqrt', color='#0
 		# output as png
 		'-f', 'image2', '-c', 'png',
 	]
-	with ffmpeg_cut_many([(segments, [])], subprocess.PIPE, args) as ffmpeg:
+	with ffmpeg_cut_one(segments, args) as ffmpeg:
 		for chunk in read_chunks(ffmpeg.stdout):
 			yield chunk
 
@@ -803,7 +808,7 @@ def extract_frame(segments, timestamp):
 		# output as png
 		'-f', 'image2', '-c', 'png',
 	]
-	with ffmpeg_cut_many([(segments, input_args)], subprocess.PIPE, args) as ffmpeg:
+	with ffmpeg_cut_one(segments, args, input_args=input_args) as ffmpeg:
 		for chunk in read_chunks(ffmpeg.stdout):
 			yield chunk
 
