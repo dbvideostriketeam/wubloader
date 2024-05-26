@@ -651,40 +651,71 @@ def feed_input(segments, pipe):
 
 
 @timed('cut_range',
-	cut_type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
-	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds(),
+	cut_type=lambda _, segment_ranges, ranges, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
+	normalize=lambda _, segment_ranges, ranges, *a, **k: range_total(ranges),
 )
-def full_cut_segments(segments, start, end, encode_args, stream=False):
+def full_cut_segments(segment_ranges, ranges, encode_args, stream=False):
 	"""If stream=true, assume encode_args gives a streamable format,
 	and begin returning output immediately instead of waiting for ffmpeg to finish
 	and buffering to disk."""
 
-	# Remove holes
-	segments = [segment for segment in segments if segment is not None]
+	# for now, hard-code no transitions
+	transitions = [None] * (len(ranges) - 1)
 
-	# how far into the first segment to begin
-	cut_start = max(0, (start - segments[0].start).total_seconds())
-	# duration
-	duration = (end - start).total_seconds()
+	inputs = []
+	for segments, (start, end) in zip(segment_ranges, ranges):
+		# Remove holes
+		segments = [segment for segment in segments if segment is not None]
+		# how far into the first segment to begin
+		cut_start = max(0, (start - segments[0].start).total_seconds())
+		# how long the whole section should be (sets the end cut)
+		duration = (end - start).total_seconds()
+		args = [
+			"-ss", cut_start,
+			"-t", duration,
+		]
+		inputs.append((segments, args))
+
+	filters = []
+	# with no transitions, the output stream is just the first input stream
+	output_video_stream = "0:v"
+	output_audio_stream = "0:a"
+	for i, transition in enumerate(transitions):
+		# combine the current output stream with the next input stream
+		input_streams = [
+			output_video_stream, output_audio_stream,
+			f"{i+1}:v", f"{i+1}:a"
+		]
+		input_streams = "".join(f"[{stream}]" for stream in input_streams)
+		# set new output streams
+		output_video_stream = f"v{i}"
+		output_audio_stream = f"a{i}"
+		outputs = f"[{output_video_stream}][{output_audio_stream}]"
+		if transition is None:
+			filters.append(f"{input_streams}concat=n=2:v=1:a=1{outputs}")
+		else:
+			raise NotImplementedError
 
 	if stream:
 		# When streaming, we can just use a pipe
-		tempfile = subprocess.PIPE
+		output_file = subprocess.PIPE
 	else:
 		# Some ffmpeg output formats require a seekable file.
 		# For the same reason, it's not safe to begin uploading until ffmpeg
 		# has finished. We create a temporary file for this.
-		tempfile = TemporaryFile()
+		output_file = TemporaryFile()
 
 	args = []
-	if cut_start is not None:
-		args += ['-ss', cut_start]
-	if duration is not None:
-		args += ['-t', duration]
-	args += list(encode_args)
+	if filters:
+		args += [
+			"-filter_complex", "; ".join(filters),
+			"-map", f"[{output_video_stream}]",
+			"-map", f"[{output_audio_stream}]",
+		]
+	args += encode_args
 
-	with ffmpeg_cut_many([segments, ()], args, output_file=tempfile) as ffmpeg:
-		# When streaming, we can return data as it is available
+	with ffmpeg_cut_many(inputs, args, output_file) as ffmpeg:
+		# When streaming, we can return data as it is available.
 		# Otherwise, just exit the context manager so tempfile is fully written.
 		if stream:
 			for chunk in read_chunks(ffmpeg.stdout):
@@ -692,7 +723,7 @@ def full_cut_segments(segments, start, end, encode_args, stream=False):
 
 	# When not streaming, we can only return the data once ffmpeg has exited
 	if not stream:
-		for chunk in read_chunks(tempfile):
+		for chunk in read_chunks(output_file):
 			yield chunk
 
 
