@@ -332,6 +332,14 @@ def cut(channel, quality):
 			This option may be given multiple times.
 			The final video will consist of all the ranges cut back to back,
 			in the order given, with hard cuts between each range.
+		transition: A pair "TYPE,DURATION", or empty string "".
+			TYPE is a transition identifier, see common.segments for valid values.
+			DURATION is a float number of seconds for the transition to last.
+			Empty string indicates a hard cut.
+			This option may be given multiple times, with each time applying to the transition
+			between the next pair of ranges. It may be given a number of times up to 1 less
+			than the number of range args. If given less times than that (or not at all),
+			remaining ranges default to a hard cut.
 		allow_holes: Optional, default false. If false, errors out with a 406 Not Acceptable
 			if any holes are detected, rather than producing a video with missing parts.
 			Set to true by passing "true" (case insensitive).
@@ -369,6 +377,20 @@ def cut(channel, quality):
 		if end <= start:
 			return "Ends must be after starts", 400
 
+	transitions = []
+	for part in request.args.getlist('transition'):
+		if part == "":
+			transitions.append(None)
+		else:
+			video_type, duration = part.split(",")
+			duration = float(duration)
+			transitions.append((video_type, duration))
+	if len(transitions) >= len(ranges):
+		return "Too many transitions", 400
+	# pad with None
+	transitions = transitions + [None] * (len(ranges) - 1 - len(transitions))
+	has_transitions = any(t is not None for t in transitions)
+
 	allow_holes = request.args.get('allow_holes', 'false').lower()
 	if allow_holes not in ["true", "false"]:
 		return "allow_holes must be one of: true, false", 400
@@ -389,10 +411,16 @@ def cut(channel, quality):
 
 	type = request.args.get('type', 'fast')
 	if type == 'rough':
+		if has_transitions:
+			return "Cannot do rough cut with transitions", 400
 		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'fast':
+		if has_transitions:
+			return "Cannot do fast cut with transitions", 400
 		return Response(fast_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'smart':
+		if has_transitions:
+			return "Cannot do smart cut with transitions", 400
 		return Response(smart_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
@@ -400,7 +428,7 @@ def cut(channel, quality):
 		# encode as high-quality, without wasting too much cpu on encoding
 		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
-		return Response(full_cut_segments(segment_ranges, ranges, encoding_args, stream=stream), mimetype=mimetype)
+		return Response(full_cut_segments(segment_ranges, ranges, transitions, encoding_args, stream=stream), mimetype=mimetype)
 	else:
 		return "Unknown type {!r}".format(type), 400
 
