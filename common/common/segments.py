@@ -24,6 +24,91 @@ from .stats import timed
 from .fixts import FixTS
 
 
+# These are the set of transition names from the ffmpeg xfade filter that we allow.
+# This is mainly here to prevent someone putting in arbitrary strings and causing weird problems.
+KNOWN_XFADE_TRANSITIONS = [
+	"fade",
+	"wipeleft",
+	"wiperight",
+	"wipeup",
+	"wipedown",
+	"slideleft",
+	"slideright",
+	"slideup",
+	"slidedown",
+	"circlecrop",
+	"rectcrop",
+	"distance",
+	"fadeblack",
+	"fadewhite",
+	"radial",
+	"smoothleft",
+	"smoothright",
+	"smoothup",
+	"smoothdown",
+	"circleopen",
+	"circleclose",
+	"vertopen",
+	"vertclose",
+	"horzopen",
+	"horzclose",
+	"dissolve",
+	"pixelize",
+	"diagtl",
+	"diagtr",
+	"diagbl",
+	"diagbr",
+	"hlslice",
+	"hrslice",
+	"vuslice",
+	"vdslice",
+	"hblur",
+	"fadegrays",
+	"wipetl",
+	"wipetr",
+	"wipebl",
+	"wipebr",
+	"squeezeh",
+	"squeezev",
+	"zoomin",
+	"fadefast",
+	"fadeslow",
+	"hlwind",
+	"hrwind",
+	"vuwind",
+	"vdwind",
+	"coverleft",
+	"coverright",
+	"coverup",
+	"coverdown",
+	"revealleft",
+	"revealright",
+	"revealup",
+	"revealdown",
+]
+
+# These are custom transitions implemented using xfade's custom transition support.
+# It maps from name to the "expr" value to use.
+# In these expressions:
+#  X and Y are pixel coordinates
+#  A and B are the old and new video's pixel values
+#  W and H are screen width and height
+#  P is a "progress" number from 0 to 1 that increases over the course of the wipe
+CUSTOM_XFADE_TRANSITIONS = {
+	# A clock wipe is a 360 degree clockwise sweep around the center of the screen, starting at the top.
+	# It is intended to mimic an analog clock and insinuate a passing of time.
+	# It is implemented by calculating the angle of the point off a center line (using atan2())
+	# then using the new video if progress > that angle (normalized to 0-1).
+	"clockwipe": "if(lt((1-atan2(W/2-X,Y-H/2)/PI) / 2, P), A, B)",
+	# The classic star wipe is an expanding 5-pointed star from the center.
+	# It's mostly a meme.
+	# It is implemented by converting to polar coordinates (distance and angle off center),
+	# then comparing distance to a star formula derived from here: https://math.stackexchange.com/questions/4293250/how-to-write-a-polar-equation-for-a-five-pointed-star
+	# Made by SenseAmidstMadness.
+	"starwipe": "if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)),pow((1-P),2)*(0.75)*1/cos((2*asin(cos(5*(atan2(Y-H/2,X-W/2)+PI/2)))+PI*3)/(10))), B, A)",
+}
+
+
 def unpadded_b64_decode(s):
 	"""Decode base64-encoded string that has had its padding removed.
 	Note it takes a unicode and returns a bytes."""
@@ -654,13 +739,18 @@ def feed_input(segments, pipe):
 	cut_type=lambda _, segment_ranges, ranges, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
 	normalize=lambda _, segment_ranges, ranges, *a, **k: range_total(ranges),
 )
-def full_cut_segments(segment_ranges, ranges, encode_args, stream=False):
+def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=False):
 	"""If stream=true, assume encode_args gives a streamable format,
 	and begin returning output immediately instead of waiting for ffmpeg to finish
 	and buffering to disk."""
 
-	# for now, hard-code no transitions
-	transitions = [None] * (len(ranges) - 1)
+	# validate input lengths match up
+	if not (len(segment_ranges) == len(ranges) == len(transitions) + 1):
+		raise ValueError("Full cut input length mismatch: {} segment ranges, {} time ranges, {} transitions".format(
+			len(segment_ranges),
+			len(ranges),
+			len(transitions),
+		))
 
 	inputs = []
 	for segments, (start, end) in zip(segment_ranges, ranges):
@@ -677,24 +767,59 @@ def full_cut_segments(segment_ranges, ranges, encode_args, stream=False):
 		inputs.append((segments, args))
 
 	filters = []
-	# with no transitions, the output stream is just the first input stream
+	# with no additional ranges, the output stream is just the first input stream
 	output_video_stream = "0:v"
 	output_audio_stream = "0:a"
-	for i, transition in enumerate(transitions):
+	for i, (transition, prev_range) in enumerate(zip(transitions, ranges)):
 		# combine the current output stream with the next input stream
-		input_streams = [
-			output_video_stream, output_audio_stream,
-			f"{i+1}:v", f"{i+1}:a"
-		]
-		input_streams = "".join(f"[{stream}]" for stream in input_streams)
+		prev_video_stream = output_video_stream
+		prev_audio_stream = output_audio_stream
+		next_video_stream = f"{i+1}:v"
+		next_audio_stream = f"{i+1}:a"
+
 		# set new output streams
 		output_video_stream = f"v{i}"
 		output_audio_stream = f"a{i}"
-		outputs = f"[{output_video_stream}][{output_audio_stream}]"
+
+		# small helper for dealing with filter formatting
+		def add_filter(name, inputs, outputs, **kwargs):
+			inputs = "".join(f"[{stream}]" for stream in inputs)
+			outputs = "".join(f"[{stream}]" for stream in outputs)
+			kwargs = ":".join(f"{k}={v}" for k, v in kwargs.items())
+			filters.append(f"{inputs}{name}={kwargs}{outputs}")
+
 		if transition is None:
-			filters.append(f"{input_streams}concat=n=2:v=1:a=1{outputs}")
+			input_streams = [
+				prev_video_stream,
+				prev_audio_stream,
+				next_video_stream,
+				next_audio_stream,
+			]
+			output_streams = [output_video_stream, output_audio_stream]
+			add_filter("concat", input_streams, output_streams, n=2, v=1, a=1)
 		else:
-			raise NotImplementedError
+			video_type, duration = transition
+
+			# transition should start at DURATION seconds before prev_range ends,
+			# which is timed relative to prev_range start. So if prev_range is 60s long
+			# and duration is 2s, we should start at 58s.
+			prev_length = (prev_range[1] - prev_range[0]).total_seconds()
+			offset = prev_length - duration
+			kwargs = {
+				"duration": duration,
+				"offset": offset,
+			}
+			if video_type in CUSTOM_XFADE_TRANSITIONS:
+				kwargs["transition"] = "custom"
+				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+			elif video_type in KNOWN_XFADE_TRANSITIONS:
+				kwargs["transition"] = video_type
+			else:
+				raise ValueError(f"Unknown video transition type: {video_type}")
+			add_filter("xfade", [prev_video_stream, next_video_stream], [output_video_stream], **kwargs)
+
+			# audio cross-fade across the same period
+			add_filter("acrossfade", [prev_audio_stream, next_audio_stream], [output_audio_stream], duration=duration)
 
 	if stream:
 		# When streaming, we can just use a pipe

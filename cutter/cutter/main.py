@@ -419,7 +419,7 @@ class Cutter(object):
 						upload_backend.encoding_settings,
 					))
 					cut = full_cut_segments(
-						job.segment_ranges, job.video_ranges,
+						job.segment_ranges, job.video_ranges, job.video_transitions,
 						upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
 					)
 
