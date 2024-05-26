@@ -11,7 +11,7 @@ import logging
 import os
 import shutil
 from collections import namedtuple
-from contextlib import closing, contextmanager
+from contextlib import contextmanager
 from tempfile import TemporaryFile
 from uuid import uuid4
 
@@ -358,14 +358,12 @@ def streams_info(segment):
 
 
 def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
-	"""Return a Popen object which is ffmpeg cutting the given single segment.
-	This is used when doing a fast cut.
 	"""
-	args = [
-		'ffmpeg',
-		'-hide_banner', '-loglevel', 'error', # suppress noisy output
-		'-i', segment.path,
-	]
+	Wrapper for ffmpeg_cut_many() which cuts a single segment file to stdout,
+	taking care to preserve stream order and other metadata.
+	Used when doing a fast cut.
+	"""
+	args = []
 	# output from ffprobe is generally already sorted but let's be paranoid,
 	# because the order of map args matters.
 	for stream in sorted(streams_info(segment), key=lambda stream: stream['index']):
@@ -384,11 +382,10 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	# as it changes the order that frames go in the file, which messes with our "concatenate the
 	# packets" method of concatenating the video.
 	args += ['-bf', '0']
-	# output to stdout as MPEG-TS
-	args += ['-f', 'mpegts', '-']
-	# run it
-	logging.info("Running segment cut with args: {}".format(" ".join(args)))
-	return subprocess.Popen(args, stdout=subprocess.PIPE)
+	# output as MPEG-TS
+	args += ['-f', 'mpegts']
+
+	return ffmpeg_cut_one([segment], args)
 
 
 def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
@@ -620,31 +617,13 @@ def fast_cut_range(segments, start, end, fixts=None):
 		if segment in (first, last):
 			if fixts:
 				fixts.next()
-			proc = None
-			try:
-				proc = ffmpeg_cut_segment(
-					segment,
-					cut_start if segment == first else None,
-					cut_end if segment == last else None,
-				)
-				with closing(proc.stdout):
-					for chunk in read_chunks(proc.stdout):
-						yield fixts.feed(chunk) if fixts else chunk
-				proc.wait()
-			except Exception as ex:
-				# try to clean up proc, ignoring errors
-				if proc is not None:
-					try:
-						proc.kill()
-					except OSError:
-						pass
-				raise ex
-			else:
-				# check if ffmpeg had errors
-				if proc.returncode != 0:
-					raise Exception(
-						"Error while streaming cut: ffmpeg exited {}".format(proc.returncode)
-					)
+			with ffmpeg_cut_segment(
+				segment,
+				cut_start if segment == first else None,
+				cut_end if segment == last else None,
+			) as ffmpeg:
+				for chunk in read_chunks(ffmpeg.stdout):
+					yield fixts.feed(chunk) if fixts else chunk
 			if fixts:
 				fixts.next()
 		else:
