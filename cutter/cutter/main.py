@@ -418,11 +418,8 @@ class Cutter(object):
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
 						upload_backend.encoding_settings,
 					))
-					if len(job.video_ranges) > 1:
-						raise ValueError("Full cuts do not support multiple ranges")
-					range = job.video_ranges[0]
 					cut = full_cut_segments(
-						job.segment_ranges[0], range.start, range.end,
+						job.segment_ranges, job.video_ranges,
 						upload_backend.encoding_settings, stream=upload_backend.encoding_streamable,
 					)
 

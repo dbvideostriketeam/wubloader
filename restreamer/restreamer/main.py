@@ -400,10 +400,7 @@ def cut(channel, quality):
 		# encode as high-quality, without wasting too much cpu on encoding
 		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
-		if len(ranges) > 1:
-			return "full cut does not support multiple ranges at this time", 400
-		start, end = ranges[0]
-		return Response(full_cut_segments(segment_ranges[0], start, end, encoding_args, stream=stream), mimetype=mimetype)
+		return Response(full_cut_segments(segment_ranges, ranges, encoding_args, stream=stream), mimetype=mimetype)
 	else:
 		return "Unknown type {!r}".format(type), 400
 
