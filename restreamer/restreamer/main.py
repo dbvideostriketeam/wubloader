@@ -415,13 +415,9 @@ def cut(channel, quality):
 			return "Cannot do rough cut with transitions", 400
 		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'fast':
-		if has_transitions:
-			return "Cannot do fast cut with transitions", 400
-		return Response(fast_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
+		return Response(fast_cut_segments(segment_ranges, ranges, transitions), mimetype='video/MP2T')
 	elif type == 'smart':
-		if has_transitions:
-			return "Cannot do smart cut with transitions", 400
-		return Response(smart_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
+		return Response(smart_cut_segments(segment_ranges, ranges, transitions), mimetype='video/MP2T')
 	elif type in ('mpegts', 'mp4'):
 		if type == 'mp4':
 			return "mp4 type has been disabled due to the load it causes", 400

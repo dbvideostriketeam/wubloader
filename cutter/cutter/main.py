@@ -396,23 +396,24 @@ class Cutter(object):
 			nonlocal upload_finished
 
 			try:
-				if upload_backend.encoding_settings in ("fast", "smart", "archive"):
+				if upload_backend.encoding_settings in ("fast", "smart"):
 					self.logger.debug(f"Using {upload_backend.encoding_settings} cut")
-					if any(transition is not None for transition in job.video_transitions):
-						raise ValueError("Fast cuts do not support complex transitions")
-
 					cut_fn = {
 						"fast": fast_cut_segments,
 						"smart": smart_cut_segments,
-						# Note archive cuts return a list of filenames instead of data chunks.
-						# We assume the upload location expects this.
-						# We use segments_path as a tempdir path under the assumption that:
-						# a) it has plenty of space
-						# b) for a Local upload location, it will be on the same filesystem as the
-						#    final desired path.
-						"archive": lambda sr, vr: archive_cut_segments(sr, vr, self.segments_path),
 					}[upload_backend.encoding_settings]
-					cut = cut_fn(job.segment_ranges, job.video_ranges)
+					cut = cut_fn(job.segment_ranges, job.video_ranges, job.video_transitions)
+				elif upload_backend.encoding_settings == "archive":
+					self.logger.debug("Using archive cut")
+					if any(transition is not None for transition in job.video_transitions):
+						raise ValueError("Archive cuts do not support complex transitions")
+					# Note archive cuts return a list of filenames instead of data chunks.
+					# We assume the upload location expects this.
+					# We use segments_path as a tempdir path under the assumption that:
+					# a) it has plenty of space
+					# b) for a Local upload location, it will be on the same filesystem as the
+					#    final desired path.
+					cut = archive_cut_segments(sr, vr, self.segments_path)
 				else:
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
