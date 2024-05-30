@@ -11,16 +11,102 @@ import logging
 import os
 import shutil
 from collections import namedtuple
-from contextlib import closing
+from contextlib import contextmanager
 from tempfile import TemporaryFile
 from uuid import uuid4
 
 import gevent
 from gevent import subprocess
+from gevent.fileobject import FileObject
 
 from .cached_iterator import CachedIterator
 from .stats import timed
 from .fixts import FixTS
+
+
+# These are the set of transition names from the ffmpeg xfade filter that we allow.
+# This is mainly here to prevent someone putting in arbitrary strings and causing weird problems.
+KNOWN_XFADE_TRANSITIONS = [
+	"fade",
+	"wipeleft",
+	"wiperight",
+	"wipeup",
+	"wipedown",
+	"slideleft",
+	"slideright",
+	"slideup",
+	"slidedown",
+	"circlecrop",
+	"rectcrop",
+	"distance",
+	"fadeblack",
+	"fadewhite",
+	"radial",
+	"smoothleft",
+	"smoothright",
+	"smoothup",
+	"smoothdown",
+	"circleopen",
+	"circleclose",
+	"vertopen",
+	"vertclose",
+	"horzopen",
+	"horzclose",
+	"dissolve",
+	"pixelize",
+	"diagtl",
+	"diagtr",
+	"diagbl",
+	"diagbr",
+	"hlslice",
+	"hrslice",
+	"vuslice",
+	"vdslice",
+	"hblur",
+	"fadegrays",
+	"wipetl",
+	"wipetr",
+	"wipebl",
+	"wipebr",
+	"squeezeh",
+	"squeezev",
+	"zoomin",
+	"fadefast",
+	"fadeslow",
+	"hlwind",
+	"hrwind",
+	"vuwind",
+	"vdwind",
+	"coverleft",
+	"coverright",
+	"coverup",
+	"coverdown",
+	"revealleft",
+	"revealright",
+	"revealup",
+	"revealdown",
+]
+
+# These are custom transitions implemented using xfade's custom transition support.
+# It maps from name to the "expr" value to use.
+# In these expressions:
+#  X and Y are pixel coordinates
+#  A and B are the old and new video's pixel values
+#  W and H are screen width and height
+#  P is a "progress" number from 0 to 1 that increases over the course of the wipe
+CUSTOM_XFADE_TRANSITIONS = {
+	# A clock wipe is a 360 degree clockwise sweep around the center of the screen, starting at the top.
+	# It is intended to mimic an analog clock and insinuate a passing of time.
+	# It is implemented by calculating the angle of the point off a center line (using atan2())
+	# then using the new video if progress > that angle (normalized to 0-1).
+	"clockwipe": "if(lt((1-atan2(W/2-X,Y-H/2)/PI) / 2, P), A, B)",
+	# The classic star wipe is an expanding 5-pointed star from the center.
+	# It's mostly a meme.
+	# It is implemented by converting to polar coordinates (distance and angle off center),
+	# then comparing distance to a star formula derived from here: https://math.stackexchange.com/questions/4293250/how-to-write-a-polar-equation-for-a-five-pointed-star
+	# Made by SenseAmidstMadness.
+	"starwipe": "if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)),pow((1-P),2)*(0.75)*1/cos((2*asin(cos(5*(atan2(Y-H/2,X-W/2)+PI/2)))+PI*3)/(10))), B, A)",
+}
 
 
 def unpadded_b64_decode(s):
@@ -356,62 +442,135 @@ def streams_info(segment):
 	return json.loads(output)['streams']
 
 
-def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
-	"""Return a Popen object which is ffmpeg cutting the given single segment.
-	This is used when doing a fast cut.
-	"""
-	args = [
-		'ffmpeg',
-		'-hide_banner', '-loglevel', 'error', # suppress noisy output
-		'-i', segment.path,
-	]
+def get_segment_encode_args(segment, video_stream="0:v", audio_stream="0:a"):
+	"""For a given segment, return ffmpeg args needed to encode something in the same way."""
 	# output from ffprobe is generally already sorted but let's be paranoid,
 	# because the order of map args matters.
+	args = []
 	for stream in sorted(streams_info(segment), key=lambda stream: stream['index']):
-		# map the same stream in the same position from input to output
-		args += ['-map', '0:{}'.format(stream['index'])]
 		if stream['codec_type'] in ('video', 'audio'):
 			# for non-metadata streams, make sure we use the same codec (metadata streams
 			# are a bit weirder, and ffmpeg will do the right thing anyway)
 			args += ['-codec:{}'.format(stream['index']), stream['codec_name']]
+			# map the stream of the correct type into the same position
+			args += ['-map', video_stream if stream['codec_type'] == "video" else audio_stream]
+		else:
+			# map the metadata stream into the same position
+			args += ['-map', '0:{}'.format(stream['index'])]
+	# disable B-frames (frames which contain data needed by earlier frames) as a codec option,
+	# as it changes the order that frames go in the file, which messes with our "concatenate the
+	# packets" method of concatenating the video.
+	args += ['-bf', '0']
+	# output as MPEG-TS
+	args += ['-f', 'mpegts']
+	return args
+
+
+def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
+	"""
+	Wrapper for ffmpeg_cut_many() which cuts a single segment file to stdout,
+	taking care to preserve stream order and other metadata.
+	Used when doing a fast cut.
+	"""
+	logging.debug(f"Will cut segment for range ({cut_start}, {cut_end}): {segment.path}")
+
+	args = get_segment_encode_args(segment)
 	# now add trim args
 	if cut_start:
 		args += ['-ss', str(cut_start)]
 	if cut_end:
 		args += ['-to', str(cut_end)]
-	# disable B-frames (frames which contain data needed by earlier frames) as a codec option,
-	# as it changes the order that frames go in the file, which messes with our "concatenate the
-	# packets" method of concatenating the video.
-	args += ['-bf', '0']
-	# output to stdout as MPEG-TS
-	args += ['-f', 'mpegts', '-']
-	# run it
-	logging.info("Running segment cut with args: {}".format(" ".join(args)))
-	return subprocess.Popen(args, stdout=subprocess.PIPE)
+
+	return ffmpeg_cut_one([segment], args)
 
 
-def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
-	"""Return a Popen object which is ffmpeg cutting from stdin.
-	This is used when doing a full cut.
-	If output_file is not subprocess.PIPE,
-	uses explicit output file object instead of using a pipe,
-	because some video formats require a seekable file.
+def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, offset, prev_cut_end, cut_start, cut_end):
 	"""
-	args = [
+	Wrapper for ffmpeg_cut_many which cuts a transition between two lists of segments.
+	prev_segments is cut at the end according to prev_cut_end, and the transition begins
+	at offset. If offset + duration is not equal to the length of prev_segments after the cut,
+	audio may get out of sync.
+	next_segments is cut at the start and end by cut_start and cut_end, which may be None.
+	Note both end cut values must be relative to the full list of input segments, not just the last segment.
+	"""
+	logging.debug(f"Will cut {duration}s {video_type} from {len(prev_segments)} segments (offset {offset}, end {prev_cut_end}) to {len(next_segments)} segments (cut {cut_start}, {cut_end})")
+
+	# Remove holes
+	prev_segments = [segment for segment in prev_segments if segment is not None]
+	next_segments = [segment for segment in next_segments if segment is not None]
+
+	xfade_kwargs = {
+		"duration": duration,
+		"offset": offset,
+	}
+	if video_type in CUSTOM_XFADE_TRANSITIONS:
+		xfade_kwargs["transition"] = "custom"
+		xfade_kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+	elif video_type in KNOWN_XFADE_TRANSITIONS:
+		xfade_kwargs["transition"] = video_type
+	else:
+		raise ValueError(f"Unknown video transition type: {video_type}")
+	xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
+
+	filters = [
+		f"[0:v][1:v]xfade={xfade_kwargs}[outv]",
+		f"[0:a][1:a]acrossfade=duration={duration}[outa]",
+	]
+
+	# Assume desired encode args are the same for all segments, so pick one arbitarily
+	args = get_segment_encode_args(prev_segments[0], "[outv]", "[outa]")
+	args += [
+		"-filter_complex",
+		"; ".join(filters),
+	]
+
+	prev_args = []
+	if prev_cut_end:
+		prev_args += ["-to", prev_cut_end]
+
+	next_args = []
+	if cut_start:
+		next_args += ["-ss", cut_start]
+	if cut_end:
+		next_args += ["-to", cut_end]
+
+	inputs = [
+		(prev_segments, prev_args),
+		(next_segments, next_args),
+	]
+
+	return ffmpeg_cut_many(inputs, args)
+
+
+def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
+	"""Wrapper for ffmpeg_cut_many() with a simpler API for the single-input case."""
+	return ffmpeg_cut_many([(segments, input_args)], encode_args, output_file=output_file)
+
+
+@contextmanager
+def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
+	"""
+	Context manager that produces a Popen object which is ffmpeg cutting the given inputs.
+
+	INPUTS is a list of (segments, input_args). The list of segments will be fed as input data,
+	preceeded by the given input args.
+	OUTPUT_FILE may be a writable file object (with fileno) or subprocess.PIPE.
+	If subprocess.PIPE, then output can be read from the Popen object's stdout.
+	Using a stdout pipe is preferred but a file can be useful if the output needs to be seekable.
+
+	Upon successful context exit, we block until ffmpeg finishes and raise if anything errored.
+	Upon unsuccessful exit, ffmpeg will be killed if still running.
+	In either case all files will be closed and everything cleaned up.
+	"""
+	BASE_ARGS = [
 		'ffmpeg',
 		'-hide_banner', '-loglevel', 'error', # suppress noisy output
-		'-i', '-',
 	]
-	if cut_start is not None:
-		args += ['-ss', cut_start]
-	if duration is not None:
-		args += ['-t', duration]
-	args += list(encode_args)
 
 	if output_file is subprocess.PIPE:
-		args.append('-') # output to stdout
+		output_args = ['-'] # output to stdout
 	else:
-		args += [
+		output_args = [
 			# We want ffmpeg to write to our tempfile, which is its stdout.
 			# However, it assumes that '-' means the output is not seekable.
 			# We trick it into understanding that its stdout is seekable by
@@ -421,9 +580,64 @@ def ffmpeg_cut_stdin(output_file, cut_start, duration, encode_args):
 			# permission to "overwrite" it.
 			'-y',
 		]
-	args = list(map(str, args))
-	logging.info("Running full cut with args: {}".format(" ".join(args)))
-	return subprocess.Popen(args, stdin=subprocess.PIPE, stdout=output_file)
+
+	input_pipes = []
+	input_feeders = []
+	ffmpeg = None
+	try:
+
+		# Create pipes and feeders, and prepare input args
+		all_input_args = []
+		for segments, input_args in inputs:
+			# prepare the input pipe
+			read_fd, write_fd = os.pipe()
+			logging.debug("Sending as fd {}: {}".format(read_fd, ", ".join(s.path for s in segments)))
+			input_pipes.append(read_fd)
+			# set up the writer to fill the pipe
+			write_file = FileObject(write_fd, 'wb')
+			input_feeder = gevent.spawn(feed_input, segments, write_file)
+			input_feeders.append(input_feeder)
+			# add input file to ffmpeg args
+			all_input_args += input_args + ["-i", "/proc/self/fd/{}".format(read_fd)]
+
+		# Prepare final arg list and spawn the process
+		args = BASE_ARGS + all_input_args + encode_args + output_args
+		args = list(map(str, args))
+		logging.info("Running ffmpeg with args: {}".format(" ".join(args)))
+		ffmpeg = subprocess.Popen(args, stdout=output_file, pass_fds=input_pipes)
+
+		# Close input fds now that the child is holding them.
+		# Note we remove them from the list one at a time so any failure in a close()
+		# call will still close the rest of them during cleanup.
+		while input_pipes:
+			fd = input_pipes.pop()
+			os.close(fd)
+
+		# produce context manager result, everything after this only applies if
+		# the context block succeeds
+		yield ffmpeg
+
+		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
+		if ffmpeg.wait() != 0:
+			raise Exception("Error while cutting: ffmpeg exited {}".format(ffmpeg.returncode))
+		for input_feeder in input_feeders:
+			input_feeder.get() # re-raise any errors from feed_input() calls
+
+	finally:
+		# if something goes wrong, try to clean up ignoring errors
+		for input_feeder in input_feeders:
+			input_feeder.kill()
+		if ffmpeg is not None and ffmpeg.poll() is None:
+			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+				try:
+					action()
+				except (OSError, IOError):
+					pass
+		for fd in input_pipes:
+			try:
+				os.close(fd)
+			except (OSError, IOError):
+				pass
 
 
 def read_chunks(fileobj, chunk_size=16*1024):
@@ -449,30 +663,185 @@ def rough_cut_segments(segment_ranges, ranges):
 	This method works by simply concatenating all the segments, without any re-encoding.
 	"""
 	for segments in segment_ranges:
-		for segment in segments:
-			if segment is None:
-				continue
-			with open(segment.path, 'rb') as f:
-				for chunk in read_chunks(f):
-					yield chunk
+		yield from read_segments(segments)
 
 
 @timed('cut', cut_type='fast', normalize=lambda ret, sr, ranges: range_total(ranges))
-def fast_cut_segments(segment_ranges, ranges):
+def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 	"""Yields chunks of a MPEGTS video file covering the exact timestamp ranges.
 	segments should be a list of segment lists as returned by get_best_segments() for each range.
-	This method works by only cutting the first and last segments of each range,
-	and concatenating everything together. Ranges are cut between with no transitions.
+	This method works by only cutting the first and last segments of each range
+	(or more if there are longer transitions), and concatenating everything together.
 	This only works if the same codec settings etc are used across all segments.
 	This should almost always be true but may cause weird results if not.
 	"""
-	if len(segment_ranges) != len(ranges):
-		raise ValueError("You need to provide one segment list for each range")
-	for segments, (start, end) in zip(segment_ranges, ranges):
-		# We could potentially optimize here by cutting all firsts/lasts in parallel
-		# instead of doing them in order, but that's probably not that helpful and would
-		# greatly complicate things.
-		yield from fast_cut_range(segments, start, end)
+	if not (len(segment_ranges) == len(ranges) == len(transitions) + 1):
+		raise ValueError("Cut input length mismatch: {} segment ranges, {} time ranges, {} transitions".format(
+			len(segment_ranges),
+			len(ranges),
+			len(transitions),
+		))
+
+	# We subdivide each range into a start, middle and end.
+	# The start covers any incoming transition + a partial first segment.
+	# The end covers any outgoing transition + a partial last segment.
+	# The middle is everything else, split on any discontinuities.
+	# Furthermore, one range's start may be cut together with the previous range's end
+	# if there is a transition.
+	# We collect iterators covering all of these sections into a single ordered list.
+	parts = []
+	# In each iteration we handle:
+	# - The transition, including previous range's end + this range's start, if there is one
+	# - Otherwise, we handle this range's start but assume previous range's end is already done
+	# - This range's middle
+	# - This range's end, unless it's part of the next transition.
+	# We pass the previous range's end segments and offset to the next iteration via prev_end
+	prev_end = None # None | (segments, offset, cut_end)
+	for segments, (start, end), in_transition, out_transition in zip(
+		segment_ranges,
+		ranges,
+		# pad transitions with an implicit "hard cut" before and after the actual ranges.
+		[None] + transitions,
+		transitions + [None],
+	):
+		# prev_end should be set if and only if there is an in transition
+		assert (in_transition is None) == (prev_end is None)
+
+		# Determine start and end cut points, unless we start/end with a discontinuity.
+		# For end cut, determine value both relative to last segment (for cutting end only)
+		# and first segment (for cutting with a start transition).
+		cut_start = None
+		start_cut_end = None
+		cut_end = None
+		if segments[0] is not None:
+			cut_start = (start - segments[0].start).total_seconds()
+			start_cut_end = (end - segments[0].start).total_seconds()
+			if cut_start < 0: 
+				raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
+		if segments[-1] is not None:
+			cut_end = (end - segments[-1].start).total_seconds()
+			if cut_end < 0:
+				raise ValueError("Last segment ends before cut end, but no trailing hole indicated")
+
+		# Handle start
+		if in_transition is not None:
+			video_type, duration = in_transition
+			# Get start segments, and split them from the full range of segments
+			# by finding the first segment that starts after the transition ends
+			transition_end = start + datetime.timedelta(seconds=duration)
+			for i, segment in enumerate(segments):
+				if segment is not None and segment.start > transition_end:
+					start_segments = segments[:i]
+					segments = segments[i:]
+					# there are still segments remaining, don't include the end cut
+					start_cut_end = None
+					break
+			else:
+				# Unlikely,but in this case the start transition is the entire range
+				# and we should include the end cut.
+				start_segments = segments
+				segments = []
+			if len(start_segments) == 0:
+				raise ValueError(f"Could not find any video data for {duration}s transition into range ({start}, {end})")
+
+			prev_segments, offset, prev_cut_end = prev_end
+			ffmpeg = ffmpeg_cut_transition(prev_segments, start_segments, video_type, duration, offset, prev_cut_end, cut_start, start_cut_end)
+			parts.append(read_from_stdout(ffmpeg))
+		elif cut_start is not None and cut_start > 0:
+			# Cut start segment, unless it is a discontinuity or doesn't need cutting
+			segment = segments[0]
+			segments = segments[1:]
+			if segments:
+				# There are still segments remaining, so don't apply end cut
+				start_cut_end = None
+			ffmpeg = ffmpeg_cut_segment(segment, cut_start, start_cut_end)
+			parts.append(read_from_stdout(ffmpeg))
+		else:
+			pass # No cutting required at start
+
+		prev_end = None
+
+		# Handle end, but don't append it to parts list just yet.
+		end_cut_part = None
+		if out_transition is not None:
+			video_type, duration = out_transition
+			# Get end segments, and split them from the full range of segments
+			# by finding the last segment that ends before the transition starts
+			transition_start = end - datetime.timedelta(seconds=duration)
+			for i, segment in enumerate(segments):
+				if segment is not None and segment.end >= transition_start:
+					end_segments = segments[i:]
+					segments = segments[:i]
+					break
+			else:
+				raise ValueError(f"Could not find any video data for {duration}s transition out of range ({start}, {end}) that is not already part of another transition, try a full cut?")
+			# offset is how many seconds into end_segments the transition should start.
+			# We know that end_segments is not empty as otherwise we would have hit the for/else condition.
+			# We also know that end_segments[0] is not None as it is one of our conditions for picking it.
+			# It is however possible for end_segments[0] to start AFTER the transition should have started
+			# due to a hole immediately before. In this case the offset will be negative, which would be fine
+			# except it causes the audio to go out of sync because audio is joined with a crossfade that doesn't
+			# take an offset. We would rather error early in this case instead of proceeding with bad data.
+			offset = (transition_start - end_segments[0].start).total_seconds()
+			if offset < 0:
+				raise ValueError(f"Video data not available at the start of a {duration}s transition out of range ({start}, {end}), it was probably already part of an earlier cut or transition. Try a full cut?")
+			# Re-define cut_end to be relative to the start of end_segments
+			cut_end = (end - end_segments[0].start).total_seconds()
+			prev_end = end_segments, offset, cut_end
+		elif segments and cut_end:
+			# Cut end segment, unless it is a discontinuity, doesn't need cutting, or was already
+			# cut as part of start (in which case we have no segments)
+			segment = segments[-1]
+			segments = segments[:-1]
+			ffmpeg = ffmpeg_cut_segment(segment, cut_end=cut_end)
+			end_cut_part = read_from_stdout(ffmpeg)
+
+		# For each remaining segment in the middle, append a part per run without a discontinuity
+		run = []
+		for segment in segments:
+			if segment is None:
+				if run:
+					parts.append(read_segments(run))
+				run = []
+			else:
+				run.append(segment)
+		if run:
+			parts.append(read_segments(run))
+
+		if end_cut_part is not None:
+			parts.append(end_cut_part)
+
+	# after all that, double check the last range had no transition and we carried nothing over
+	assert prev_end is None
+
+	# yield from each part in order, applying fixts if needed
+	fixts = FixTSSequence() if smart else None
+	for part in parts:
+		for i, chunk in enumerate(part):
+			# Since long smart cuts can be CPU and disk bound for quite a while,
+			# yield to give other things a chance to run. Note this will run on the first
+			# iteration so every part switch also introduces an idle yield.
+			if i % 1000 == 0:
+				gevent.idle()
+			yield fixts.feed(chunk) if smart else chunk
+		if fixts:
+			fixts.next()
+
+
+def read_from_stdout(ffmpeg_context):
+	"""Takes a ffmpeg context manager as returned by ffmpeg_cut_many() and its wrapper functions,
+	and yields data chunks from ffmpeg's stdout."""
+	with ffmpeg_context as ffmpeg:
+		yield from read_chunks(ffmpeg.stdout)
+
+
+def read_segments(segments):
+	"""Takes a list of segment files and yields data chunks from each one in order. Ignores holes."""
+	for segment in segments:
+		if segment is None:
+			continue
+		with open(segment.path, 'rb') as f:
+			yield from read_chunks(f)
 
 
 class FixTSSequence:
@@ -496,103 +865,12 @@ class FixTSSequence:
 
 
 @timed('cut', cut_type='smart', normalize=lambda ret, sr, ranges: range_total(ranges))
-def smart_cut_segments(segment_ranges, ranges):
+def smart_cut_segments(segment_ranges, ranges, transitions):
 	"""
 	As per fast_cut_segments(), except we also do a "fix" pass over the resulting video stream
 	to re-time internal timestamps to avoid discontinuities and make sure the video starts at t=0.
 	"""
-	if len(segment_ranges) != len(ranges):
-		raise ValueError("You need to provide one segment list for each range")
-	fixts = FixTSSequence()
-	for segments, (start, end) in zip(segment_ranges, ranges):
-		yield from fast_cut_range(segments, start, end, fixts=fixts)
-
-
-@timed('cut_range', cut_type='fast', normalize=lambda _, segments, start, end, **k: (end - start).total_seconds())
-def fast_cut_range(segments, start, end, fixts=None):
-	"""Does a fast cut for an individual range of segments.
-	If a FixTSSequence is given, fixes timestamps to avoid discontinuities
-	between cut segments and passed through segments.
-	"""
-
-	# how far into the first segment to begin (if no hole at start)
-	cut_start = None
-	if segments[0] is not None:
-		cut_start = (start - segments[0].start).total_seconds()
-		if cut_start < 0:
-			raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
-
-	# how far into the final segment to end (if no hole at end)
-	cut_end = None
-	if segments[-1] is not None:
-		cut_end = (end - segments[-1].start).total_seconds()
-		if cut_end < 0:
-			raise ValueError("Last segment ends before cut end, but no trailing hole indicated")
-
-	# Set first and last only if they actually need cutting.
-	# Note this handles both the cut_start = None (no first segment to cut)
-	# and cut_start = 0 (first segment already starts on time) cases.
-	first = segments[0] if cut_start else None
-	last = segments[-1] if cut_end else None
-
-	for i, segment in enumerate(segments):
-		# Since long smart cuts can be CPU and disk bound for quite a while,
-		# yield to give other things a chance to run.
-		if i % 1000 == 0:
-			gevent.idle()
-
-		if segment is None:
-			logging.debug("Skipping discontinuity while cutting")
-			# TODO: If we want to be safe against the possibility of codecs changing,
-			# we should check the streams_info() after each discontinuity.
-
-			# To keep our output clean, we reset our FixTS so the output doesn't contain
-			# the discontinuity. The video just cuts to the next segment.
-			if fixts:
-				fixts.next()
-			continue
-
-		# note first and last might be the same segment.
-		# note a segment will only match if cutting actually needs to be done
-		# (ie. cut_start or cut_end is not 0)
-		if segment in (first, last):
-			if fixts:
-				fixts.next()
-			proc = None
-			try:
-				proc = ffmpeg_cut_segment(
-					segment,
-					cut_start if segment == first else None,
-					cut_end if segment == last else None,
-				)
-				with closing(proc.stdout):
-					for chunk in read_chunks(proc.stdout):
-						yield fixts.feed(chunk) if fixts else chunk
-				proc.wait()
-			except Exception as ex:
-				# try to clean up proc, ignoring errors
-				if proc is not None:
-					try:
-						proc.kill()
-					except OSError:
-						pass
-				raise ex
-			else:
-				# check if ffmpeg had errors
-				if proc.returncode != 0:
-					raise Exception(
-						"Error while streaming cut: ffmpeg exited {}".format(proc.returncode)
-					)
-			if fixts:
-				fixts.next()
-		else:
-			# no cutting needed, just serve the file
-			with open(segment.path, 'rb') as f:
-				for chunk in read_chunks(f):
-					yield fixts.feed(chunk) if fixts else chunk
-	if fixts:
-		# check for errors and indicate range is finished
-		fixts.next()
+	return fast_cut_segments(segment_ranges, ranges, transitions, smart=True)
 
 
 def feed_input(segments, pipe):
@@ -610,62 +888,120 @@ def feed_input(segments, pipe):
 
 
 @timed('cut_range',
-	cut_type=lambda _, segments, start, end, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
-	normalize=lambda _, segments, start, end, *a, **k: (end - start).total_seconds(),
+	cut_type=lambda _, segment_ranges, ranges, encode_args, stream=False: ("full-streamed" if stream else "full-buffered"),
+	normalize=lambda _, segment_ranges, ranges, *a, **k: range_total(ranges),
 )
-def full_cut_segments(segments, start, end, encode_args, stream=False):
+def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=False):
 	"""If stream=true, assume encode_args gives a streamable format,
 	and begin returning output immediately instead of waiting for ffmpeg to finish
 	and buffering to disk."""
 
-	# Remove holes
-	segments = [segment for segment in segments if segment is not None]
+	# validate input lengths match up
+	if not (len(segment_ranges) == len(ranges) == len(transitions) + 1):
+		raise ValueError("Full cut input length mismatch: {} segment ranges, {} time ranges, {} transitions".format(
+			len(segment_ranges),
+			len(ranges),
+			len(transitions),
+		))
 
-	# how far into the first segment to begin
-	cut_start = max(0, (start - segments[0].start).total_seconds())
-	# duration
-	duration = (end - start).total_seconds()
+	inputs = []
+	for segments, (start, end) in zip(segment_ranges, ranges):
+		# Remove holes
+		segments = [segment for segment in segments if segment is not None]
+		# how far into the first segment to begin
+		cut_start = max(0, (start - segments[0].start).total_seconds())
+		# how long the whole section should be (sets the end cut)
+		duration = (end - start).total_seconds()
+		args = [
+			"-ss", cut_start,
+			"-t", duration,
+		]
+		inputs.append((segments, args))
 
-	ffmpeg = None
-	input_feeder = None
-	try:
+	filters = []
+	# with no additional ranges, the output stream is just the first input stream
+	output_video_stream = "0:v"
+	output_audio_stream = "0:a"
+	for i, (transition, prev_range) in enumerate(zip(transitions, ranges)):
+		# combine the current output stream with the next input stream
+		prev_video_stream = output_video_stream
+		prev_audio_stream = output_audio_stream
+		next_video_stream = f"{i+1}:v"
+		next_audio_stream = f"{i+1}:a"
 
-		if stream:
-			# When streaming, we can just use a pipe
-			tempfile = subprocess.PIPE
+		# set new output streams
+		output_video_stream = f"v{i}"
+		output_audio_stream = f"a{i}"
+
+		# small helper for dealing with filter formatting
+		def add_filter(name, inputs, outputs, **kwargs):
+			inputs = "".join(f"[{stream}]" for stream in inputs)
+			outputs = "".join(f"[{stream}]" for stream in outputs)
+			kwargs = ":".join(f"{k}={v}" for k, v in kwargs.items())
+			filters.append(f"{inputs}{name}={kwargs}{outputs}")
+
+		if transition is None:
+			input_streams = [
+				prev_video_stream,
+				prev_audio_stream,
+				next_video_stream,
+				next_audio_stream,
+			]
+			output_streams = [output_video_stream, output_audio_stream]
+			add_filter("concat", input_streams, output_streams, n=2, v=1, a=1)
 		else:
-			# Some ffmpeg output formats require a seekable file.
-			# For the same reason, it's not safe to begin uploading until ffmpeg
-			# has finished. We create a temporary file for this.
-			tempfile = TemporaryFile()
+			video_type, duration = transition
 
-		ffmpeg = ffmpeg_cut_stdin(tempfile, cut_start, duration, encode_args)
-		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
+			# transition should start at DURATION seconds before prev_range ends,
+			# which is timed relative to prev_range start. So if prev_range is 60s long
+			# and duration is 2s, we should start at 58s.
+			prev_length = (prev_range[1] - prev_range[0]).total_seconds()
+			offset = prev_length - duration
+			kwargs = {
+				"duration": duration,
+				"offset": offset,
+			}
+			if video_type in CUSTOM_XFADE_TRANSITIONS:
+				kwargs["transition"] = "custom"
+				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+			elif video_type in KNOWN_XFADE_TRANSITIONS:
+				kwargs["transition"] = video_type
+			else:
+				raise ValueError(f"Unknown video transition type: {video_type}")
+			add_filter("xfade", [prev_video_stream, next_video_stream], [output_video_stream], **kwargs)
 
-		# When streaming, we can return data as it is available
+			# audio cross-fade across the same period
+			add_filter("acrossfade", [prev_audio_stream, next_audio_stream], [output_audio_stream], duration=duration)
+
+	if stream:
+		# When streaming, we can just use a pipe
+		output_file = subprocess.PIPE
+	else:
+		# Some ffmpeg output formats require a seekable file.
+		# For the same reason, it's not safe to begin uploading until ffmpeg
+		# has finished. We create a temporary file for this.
+		output_file = TemporaryFile()
+
+	args = []
+	if filters:
+		args += [
+			"-filter_complex", "; ".join(filters),
+			"-map", f"[{output_video_stream}]",
+			"-map", f"[{output_audio_stream}]",
+		]
+	args += encode_args
+
+	with ffmpeg_cut_many(inputs, args, output_file) as ffmpeg:
+		# When streaming, we can return data as it is available.
+		# Otherwise, just exit the context manager so tempfile is fully written.
 		if stream:
 			for chunk in read_chunks(ffmpeg.stdout):
 				yield chunk
 
-		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
-		if ffmpeg.wait() != 0:
-			raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
-		input_feeder.get() # re-raise any errors from feed_input()
-
-		# When not streaming, we can only return the data once ffmpeg has exited
-		if not stream:
-			for chunk in read_chunks(tempfile):
-				yield chunk
-	finally:
-		# if something goes wrong, try to clean up ignoring errors
-		if input_feeder is not None:
-			input_feeder.kill()
-		if ffmpeg is not None and ffmpeg.poll() is None:
-			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
-				try:
-					action()
-				except (OSError, IOError):
-					pass
+	# When not streaming, we can only return the data once ffmpeg has exited
+	if not stream:
+		for chunk in read_chunks(output_file):
+			yield chunk
 
 
 @timed('cut', cut_type='archive', normalize=lambda ret, sr, ranges: range_total(ranges))
@@ -690,32 +1026,15 @@ def archive_cut_segments(segment_ranges, ranges, tempdir):
 	for segments in segment_ranges:
 		contiguous_ranges += list(split_contiguous(segments))
 	for segments in contiguous_ranges:
-		ffmpeg = None
-		input_feeder = None
 		tempfile_name = os.path.join(tempdir, "archive-temp-{}.mkv".format(uuid4()))
 		try:
-			tempfile = open(tempfile_name, "wb")
-
-			ffmpeg = ffmpeg_cut_stdin(tempfile, None, None, encode_args)
-			input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
-
-			# since we've now handed off the tempfile fd to ffmpeg, close ours
-			tempfile.close()
-
-			# check if any errors occurred in input writing, or if ffmpeg exited non-success.
-			if ffmpeg.wait() != 0:
-				raise Exception("Error while streaming cut: ffmpeg exited {}".format(ffmpeg.returncode))
-			input_feeder.get() # re-raise any errors from feed_input()
+			with open(tempfile_name, "wb") as tempfile:
+				with ffmpeg_cut_one(segments, encode_args, output_file=tempfile):
+					# We just want ffmpeg to run to completion, which ffmpeg_cut_one()
+					# will do on exit for us.
+					pass
 		except:
-			# if something goes wrong, try to clean up ignoring errors
-			if input_feeder is not None:
-				input_feeder.kill()
-			if ffmpeg is not None and ffmpeg.poll() is None:
-				for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
-					try:
-						action()
-					except (OSError, IOError):
-						pass
+			# if something goes wrong, try to delete the tempfile
 			try:
 				os.remove(tempfile_name)
 			except (OSError, IOError):
@@ -740,38 +1059,18 @@ def render_segments_waveform(segments, size=(1024, 128), scale='sqrt', color='#0
 	# Remove holes
 	segments = [segment for segment in segments if segment is not None]
 
-	ffmpeg = None
-	input_feeder = None
-	try:
-		args = [
-			# create waveform from input audio
-			'-filter_complex',
-			f'[0:a]showwavespic=size={width}x{height}:colors={color}:scale={scale}[out]',
-			# use created waveform as our output
-			'-map', '[out]',
-			# output as png
-			'-f', 'image2', '-c', 'png',
-		]
-		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=None, duration=None, encode_args=args)
-		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
-
+	args = [
+		# create waveform from input audio
+		'-filter_complex',
+		f'[0:a]showwavespic=size={width}x{height}:colors={color}:scale={scale}[out]',
+		# use created waveform as our output
+		'-map', '[out]',
+		# output as png
+		'-f', 'image2', '-c', 'png',
+	]
+	with ffmpeg_cut_one(segments, args) as ffmpeg:
 		for chunk in read_chunks(ffmpeg.stdout):
 			yield chunk
-
-		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
-		if ffmpeg.wait() != 0:
-			raise Exception("Error while rendering waveform: ffmpeg exited {}".format(ffmpeg.returncode))
-		input_feeder.get() # re-raise any errors from feed_input()
-	finally:
-		# if something goes wrong, try to clean up ignoring errors
-		if input_feeder is not None:
-			input_feeder.kill()
-		if ffmpeg is not None and ffmpeg.poll() is None:
-			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
-				try:
-					action()
-				except (OSError, IOError):
-					pass
 
 
 @timed('extract_frame')
@@ -788,36 +1087,17 @@ def extract_frame(segments, timestamp):
 
 	# "cut" input so that first frame is our target frame
 	cut_start = (timestamp - segments[0].start).total_seconds()
+	input_args = ["-ss", cut_start]
 
-	ffmpeg = None
-	input_feeder = None
-	try:
-		args = [
-			# get a single frame
-			'-vframes', '1',
-			# output as png
-			'-f', 'image2', '-c', 'png',
-		]
-		ffmpeg = ffmpeg_cut_stdin(subprocess.PIPE, cut_start=cut_start, duration=None, encode_args=args)
-		input_feeder = gevent.spawn(feed_input, segments, ffmpeg.stdin)
-
+	args = [
+		# get a single frame
+		'-vframes', '1',
+		# output as png
+		'-f', 'image2', '-c', 'png',
+	]
+	with ffmpeg_cut_one(segments, args, input_args=input_args) as ffmpeg:
 		for chunk in read_chunks(ffmpeg.stdout):
 			yield chunk
-
-		# check if any errors occurred in input writing, or if ffmpeg exited non-success.
-		if ffmpeg.wait() != 0:
-			raise Exception("Error while extracting frame: ffmpeg exited {}".format(ffmpeg.returncode))
-		input_feeder.get() # re-raise any errors from feed_input()
-	finally:
-		# if something goes wrong, try to clean up ignoring errors
-		if input_feeder is not None:
-			input_feeder.kill()
-		if ffmpeg is not None and ffmpeg.poll() is None:
-			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
-				try:
-					action()
-				except (OSError, IOError):
-					pass
 
 
 def split_contiguous(segments):
