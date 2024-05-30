@@ -442,6 +442,30 @@ def streams_info(segment):
 	return json.loads(output)['streams']
 
 
+def get_segment_encode_args(segment, video_stream="0:v", audio_stream="0:a"):
+	"""For a given segment, return ffmpeg args needed to encode something in the same way."""
+	# output from ffprobe is generally already sorted but let's be paranoid,
+	# because the order of map args matters.
+	args = []
+	for stream in sorted(streams_info(segment), key=lambda stream: stream['index']):
+		if stream['codec_type'] in ('video', 'audio'):
+			# for non-metadata streams, make sure we use the same codec (metadata streams
+			# are a bit weirder, and ffmpeg will do the right thing anyway)
+			args += ['-codec:{}'.format(stream['index']), stream['codec_name']]
+			# map the stream of the correct type into the same position
+			args += ['-map', video_stream if stream['codec_type'] == "video" else audio_stream]
+		else:
+			# map the metadata stream into the same position
+			args += ['-map', '0:{}'.format(stream['index'])]
+	# disable B-frames (frames which contain data needed by earlier frames) as a codec option,
+	# as it changes the order that frames go in the file, which messes with our "concatenate the
+	# packets" method of concatenating the video.
+	args += ['-bf', '0']
+	# output as MPEG-TS
+	args += ['-f', 'mpegts']
+	return args
+
+
 def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	"""
 	Wrapper for ffmpeg_cut_many() which cuts a single segment file to stdout,
@@ -450,29 +474,72 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	"""
 	logging.debug(f"Will cut segment for range ({cut_start}, {cut_end}): {segment.path}")
 
-	args = []
-	# output from ffprobe is generally already sorted but let's be paranoid,
-	# because the order of map args matters.
-	for stream in sorted(streams_info(segment), key=lambda stream: stream['index']):
-		# map the same stream in the same position from input to output
-		args += ['-map', '0:{}'.format(stream['index'])]
-		if stream['codec_type'] in ('video', 'audio'):
-			# for non-metadata streams, make sure we use the same codec (metadata streams
-			# are a bit weirder, and ffmpeg will do the right thing anyway)
-			args += ['-codec:{}'.format(stream['index']), stream['codec_name']]
+	args = get_segment_encode_args(segment)
 	# now add trim args
 	if cut_start:
 		args += ['-ss', str(cut_start)]
 	if cut_end:
 		args += ['-to', str(cut_end)]
-	# disable B-frames (frames which contain data needed by earlier frames) as a codec option,
-	# as it changes the order that frames go in the file, which messes with our "concatenate the
-	# packets" method of concatenating the video.
-	args += ['-bf', '0']
-	# output as MPEG-TS
-	args += ['-f', 'mpegts']
 
 	return ffmpeg_cut_one([segment], args)
+
+
+def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, offset, prev_cut_end, cut_start, cut_end):
+	"""
+	Wrapper for ffmpeg_cut_many which cuts a transition between two lists of segments.
+	prev_segments is cut at the end according to prev_cut_end, and the transition begins
+	at offset. If offset + duration is not equal to the length of prev_segments after the cut,
+	audio may get out of sync.
+	next_segments is cut at the start and end by cut_start and cut_end, which may be None.
+	Note both end cut values must be relative to the full list of input segments, not just the last segment.
+	"""
+	logging.debug(f"Will cut {duration}s {video_type} from {len(prev_segments)} segments (offset {offset}, end {prev_cut_end}) to {len(next_segments)} segments (cut {cut_start}, {cut_end})")
+
+	# Remove holes
+	prev_segments = [segment for segment in prev_segments if segment is not None]
+	next_segments = [segment for segment in next_segments if segment is not None]
+
+	xfade_kwargs = {
+		"duration": duration,
+		"offset": offset,
+	}
+	if video_type in CUSTOM_XFADE_TRANSITIONS:
+		xfade_kwargs["transition"] = "custom"
+		xfade_kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+	elif video_type in KNOWN_XFADE_TRANSITIONS:
+		xfade_kwargs["transition"] = video_type
+	else:
+		raise ValueError(f"Unknown video transition type: {video_type}")
+	xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
+
+	filters = [
+		f"[0:v][1:v]xfade={xfade_kwargs}[outv]",
+		f"[0:a][1:a]acrossfade=duration={duration}[outa]",
+	]
+
+	# Assume desired encode args are the same for all segments, so pick one arbitarily
+	args = get_segment_encode_args(prev_segments[0], "[outv]", "[outa]")
+	args += [
+		"-filter_complex",
+		"; ".join(filters),
+	]
+
+	prev_args = []
+	if prev_cut_end:
+		prev_args += ["-to", prev_cut_end]
+
+	next_args = []
+	if cut_start:
+		next_args += ["-ss", cut_start]
+	if cut_end:
+		next_args += ["-to", cut_end]
+
+	inputs = [
+		(prev_segments, prev_args),
+		(next_segments, next_args),
+	]
+
+	return ffmpeg_cut_many(inputs, args)
 
 
 def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
@@ -524,6 +591,7 @@ def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
 		for segments, input_args in inputs:
 			# prepare the input pipe
 			read_fd, write_fd = os.pipe()
+			logging.debug("Sending as fd {}: {}".format(read_fd, ", ".join(s.path for s in segments)))
 			input_pipes.append(read_fd)
 			# set up the writer to fill the pipe
 			write_file = FileObject(write_fd, 'wb')
@@ -628,7 +696,7 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 	# - This range's middle
 	# - This range's end, unless it's part of the next transition.
 	# We pass the previous range's end segments and offset to the next iteration via prev_end
-	prev_end = None # None | (segments, offset)
+	prev_end = None # None | (segments, offset, cut_end)
 	for segments, (start, end), in_transition, out_transition in zip(
 		segment_ranges,
 		ranges,
@@ -639,11 +707,15 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 		# prev_end should be set if and only if there is an in transition
 		assert (in_transition is None) == (prev_end is None)
 
-		# Determine start and end cut points, unless we start/end with a discontinuity
+		# Determine start and end cut points, unless we start/end with a discontinuity.
+		# For end cut, determine value both relative to last segment (for cutting end only)
+		# and first segment (for cutting with a start transition).
 		cut_start = None
+		start_cut_end = None
 		cut_end = None
 		if segments[0] is not None:
 			cut_start = (start - segments[0].start).total_seconds()
+			start_cut_end = (end - segments[0].start).total_seconds()
 			if cut_start < 0: 
 				raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
 		if segments[-1] is not None:
@@ -652,7 +724,6 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 				raise ValueError("Last segment ends before cut end, but no trailing hole indicated")
 
 		# Handle start
-		start_cut_end = None
 		if in_transition is not None:
 			video_type, duration = in_transition
 			# Get start segments, and split them from the full range of segments
@@ -662,26 +733,27 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 				if segment is not None and segment.start > transition_end:
 					start_segments = segments[:i]
 					segments = segments[i:]
+					# there are still segments remaining, don't include the end cut
+					start_cut_end = None
 					break
 			else:
 				# Unlikely,but in this case the start transition is the entire range
 				# and we should include the end cut.
 				start_segments = segments
 				segments = []
-				start_cut_end = cut_end
-				cut_end = None
 			if len(start_segments) == 0:
 				raise ValueError(f"Could not find any video data for {duration}s transition into range ({start}, {end})")
-			raise NotImplementedError("no transitions yet")
-			# TODO append ffmpeg with transition, start_segments, prev_end, cut_start, start_cut_end
+
+			prev_segments, offset, prev_cut_end = prev_end
+			ffmpeg = ffmpeg_cut_transition(prev_segments, start_segments, video_type, duration, offset, prev_cut_end, cut_start, start_cut_end)
+			parts.append(read_from_stdout(ffmpeg))
 		elif cut_start is not None and cut_start > 0:
 			# Cut start segment, unless it is a discontinuity or doesn't need cutting
 			segment = segments[0]
 			segments = segments[1:]
-			if not segments:
-				# The whole thing is only one segment, so also apply end cut
-				start_cut_end = cut_end
-				cut_end = None
+			if segments:
+				# There are still segments remaining, so don't apply end cut
+				start_cut_end = None
 			ffmpeg = ffmpeg_cut_segment(segment, cut_start, start_cut_end)
 			parts.append(read_from_stdout(ffmpeg))
 		else:
@@ -700,21 +772,25 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 				if segment is not None and segment.end >= transition_start:
 					end_segments = segments[i:]
 					segments = segments[:i]
+					break
 			else:
-				raise ValueError(f"Could not find any video data for {duration}s transition out of range ({start}, {end}) that is not already part of another transition")
+				raise ValueError(f"Could not find any video data for {duration}s transition out of range ({start}, {end}) that is not already part of another transition, try a full cut?")
 			# offset is how many seconds into end_segments the transition should start.
 			# We know that end_segments is not empty as otherwise we would have hit the for/else condition.
 			# We also know that end_segments[0] is not None as it is one of our conditions for picking it.
 			# It is however possible for end_segments[0] to start AFTER the transition should have started
-			# due to a hole immediately before. Technically a negative offset is still correct in this case,
-			# and ideally would cause ffmpeg to treat the transition as "already in progress" when we start.
-			# I haven't tested this behaviour but the alternative is to just fail so it's worth a shot.
+			# due to a hole immediately before. In this case the offset will be negative, which would be fine
+			# except it causes the audio to go out of sync because audio is joined with a crossfade that doesn't
+			# take an offset. We would rather error early in this case instead of proceeding with bad data.
 			offset = (transition_start - end_segments[0].start).total_seconds()
-			prev_end = end_segments, offset
-		elif cut_end is not None:
+			if offset < 0:
+				raise ValueError(f"Video data not available at the start of a {duration}s transition out of range ({start}, {end}), it was probably already part of an earlier cut or transition. Try a full cut?")
+			# Re-define cut_end to be relative to the start of end_segments
+			cut_end = (end - end_segments[0].start).total_seconds()
+			prev_end = end_segments, offset, cut_end
+		elif segments and cut_end:
 			# Cut end segment, unless it is a discontinuity, doesn't need cutting, or was already
-			# cut as part of start (which sets cut_end to None).
-			assert segments # Either we should still have segments left, or the start cut should have included the end
+			# cut as part of start (in which case we have no segments)
 			segment = segments[-1]
 			segments = segments[:-1]
 			ffmpeg = ffmpeg_cut_segment(segment, cut_end=cut_end)
