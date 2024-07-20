@@ -18,7 +18,7 @@ import common
 import common.dateutil
 from common.database import DBManager, query, get_column_placeholder
 
-from .sheets import Sheets
+from common.sheets import Sheets
 
 sheets_synced = prom.Counter(
 	'sheets_synced',

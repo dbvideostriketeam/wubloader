@@ -1,7 +1,7 @@
 
 import logging
 
-from common.googleapis import GoogleAPIClient
+from .googleapis import GoogleAPIClient
 
 
 class Sheets(object):

@@ -2,7 +2,6 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
-import csv
 import logging
 import time
 from calendar import timegm
@@ -13,6 +12,7 @@ import argh
 
 from .zulip import Client
 from .config import get_config
+from common.sheets import Sheets
 
 logging.basicConfig(level='INFO')
 
@@ -200,28 +200,33 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	send_client.send_to_stream(stream, "Schedule", "\n".join(lines))
 
 
-def parse_schedule(user_ids, schedule_file):
+def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_name):
 	schedule = {}
 	user_ids = {user.lower(): id for user, id in user_ids.items()}
-	with open(schedule_file) as f:
-		for row in csv.reader(f):
-			name = row[0].lower()
-			if name in ["", "Chat Member", "Hour of the Run"] or name.startswith("-") or name.startswith("["):
-				continue
-			if name not in user_ids:
-				logging.warning(f"No user id known for user {name}")
-				continue
-			user_id = user_ids[name]
-			if user_id in schedule:
-				logging.warning(f"Multiple rows for user {name}, merging")
-				_, old_hours = schedule[user_id]
-				merged = [
-					old or new
-					for old, new in zip(old_hours, row[1:])
-				]
-				schedule[user_id] = name, merged
-			else:
-				schedule[user_id] = name, row[1:]
+
+	try:
+		raw_schedule = sheets_client.get_rows(schedule_sheet_id, schedule_sheet_name)
+	except Exception:
+		return None
+
+	for row in raw_schedule:
+		name = row[0].lower()
+		if name in ["", "Chat Member", "Hour of the Run"] or name.startswith("-") or name.startswith("["):
+			continue
+		if name not in user_ids:
+			logging.warning(f"No user id known for user {name}")
+			continue
+		user_id = user_ids[name]
+		if user_id in schedule:
+			logging.warning(f"Multiple rows for user {name}, merging")
+			_, old_hours = schedule[user_id]
+			merged = [
+				old or new
+				for old, new in zip(old_hours, row[1:])
+			]
+			schedule[user_id] = name, merged
+		else:
+			schedule[user_id] = name, row[1:]
 	return schedule
 
 
@@ -250,7 +255,17 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
 	group_ids = config["groups"]
-	schedule = parse_schedule(config["members"], config["schedule"])
+	sheets_client = Sheets(
+		config["google_credentials"]["client_id"],
+		config["google_credentials"]["client_secret"],
+		config["google_credentials"]["refresh_token"],
+	)
+	reload_schedule = lambda: parse_schedule(
+		sheets_client,
+		config["members"],
+		config["schedule_sheet_id"],
+		config["schedule_sheet_name"]
+	)
 	groups_by_shift = {int(id): shifts for id, shifts in config["groups_by_shift"].items()}
 
 	# Accept start time timestamp with or without trailing "Z" indicating UTC.
@@ -259,14 +274,25 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		start_time = start_time[:-1]
 	start_time = timegm(time.strptime(start_time, "%Y-%m-%dT%H:%M:%S"))
 
+	# Attempt to download the schedule
+	schedule = reload_schedule()
+	if schedule is None:
+		raise Exception("Schedule failed to download")
+
 	if hour >= 0:
 		if not no_groups:
 			update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
 		if stream:
 			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		return
+
 	while True:
 		hour = int((time.time() - start_time) / 3600)
+		# Download a new schedule or use the old one if there's a failure
+		new_schedule = reload_schedule()
+		if new_schedule is not None:
+			schedule = new_schedule
+
 		if not no_initial:
 			if not no_groups:
 				update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
