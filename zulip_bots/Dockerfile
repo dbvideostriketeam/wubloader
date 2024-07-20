@@ -15,6 +15,10 @@ RUN pip install gevent==22.10.2
 COPY chat_archiver/girc /tmp/girc
 RUN pip install /tmp/girc && rm -r /tmp/girc
 
+# Install common lib first as it changes less
+COPY common /tmp/common
+RUN pip install /tmp/common && rm -r /tmp/common
+
 # Actual application
 COPY zulip_bots /tmp/zulip_bots
 RUN pip install /tmp/zulip_bots && rm -r /tmp/zulip_bots
