@@ -239,7 +239,12 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			auth used for sending messages
 			defaults to api_user, but you may want a vanity name / avatar
 		start_time: Time of the first hour, as UTC timestamp string
-		schedule: Path to the schedule CSV file
+		schedule_sheet_id: Google Sheet ID
+		schedule_sheet_name: Google Sheet tab name
+		google_credentials: (With Read access to schedule_sheet_id)
+			client_id
+			client_secret
+			refresh_token
 		members:
 			NAME: USER_ID
 		groups:
