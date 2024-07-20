@@ -104,6 +104,18 @@ CREATE TABLE events (
 -- Index on state, since that's almost always what we're querying on besides id
 CREATE INDEX event_state ON events (state);
 
+-- Table for recording each "edit" made to a video, written by thrimshim.
+-- This is mainly a just-in-case thing so we can work out when something was changed,
+-- and change it back if needed. More about accidents than security.
+CREATE TABLE events_edits_audit_log (
+	time TIMESTAMP NOT NULL DEFAULT NOW(),
+	id TEXT NOT NULL,
+	api_action TEXT NOT NULL,
+	editor TEXT NOT NULL,
+	old_data JSONB,
+	new_data JSONB
+);
+
 CREATE TABLE nodes (
 	name TEXT PRIMARY KEY,
 	url TEXT NOT NULL,
