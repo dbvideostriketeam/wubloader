@@ -64,6 +64,15 @@ CREATE TYPE thumbnail_mode as ENUM (
 	'CUSTOM'
 );
 
+CREATE TABLE events_edits_audit_log (
+  timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+  modified_row_id UUID NOT NULL,
+  api_action TEXT NOT NULL,
+  editor TEXT NOT NULL,
+  old_data JSONB,
+  new_data JSONB
+);
+
 CREATE TABLE events (
 	id UUID PRIMARY KEY,
 

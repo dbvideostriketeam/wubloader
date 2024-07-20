@@ -282,172 +282,173 @@ def update_row(ident, editor=None):
 		del new_row[extra]
 
 	# Check a row with id = ident is in the database
-	conn = app.db_manager.get_conn()
-	built_query = sql.SQL("""
-		SELECT id, state, {} 
-		FROM events
-		WHERE id = %s
-	""").format(sql.SQL(', ').join(
-		sql.Identifier(key) for key in sheet_columns
-	))
-	results = database.query(conn, built_query, ident)
-	old_row = results.fetchone()._asdict()
-	if old_row is None:
-		return 'Row {} not found'.format(ident), 404
-	assert old_row['id'] == ident
+	with app.db_manager.get_conn() as conn:
+		built_query = sql.SQL("""
+			SELECT FOR UPDATE id, state, {} 
+			FROM events
+			WHERE id = %s
+		""").format(sql.SQL(', ').join(
+			sql.Identifier(key) for key in sheet_columns
+		))
+		results = database.query(conn, built_query, ident)
+		old_row = results.fetchone()._asdict()
+		if old_row is None:
+			return 'Row {} not found'.format(ident), 404
+		assert old_row['id'] == ident
 
-	is_archive = old_row["sheet_name"] == app.archive_sheet
+		is_archive = old_row["sheet_name"] == app.archive_sheet
 
-	# archive events skip title and description munging
-	if not is_archive:
+		# archive events skip title and description munging
+		if not is_archive:
 
-		playlists = database.query(conn, """ 
-			SELECT playlist_id, name, tags
-			FROM playlists
-			WHERE show_in_description
-		""")
-		# Filter for matching playlists for this video
-		playlists = [
-			playlist for playlist in playlists
-			if all(
-				tag.lower() in [t.lower() for t in old_row['tags']]
-				for tag in playlist.tags
+			playlists = database.query(conn, """ 
+				SELECT playlist_id, name, tags
+				FROM playlists
+				WHERE show_in_description
+			""")
+			# Filter for matching playlists for this video
+			playlists = [
+				playlist for playlist in playlists
+				if all(
+					tag.lower() in [t.lower() for t in old_row['tags']]
+					for tag in playlist.tags
+				)
+			]
+
+			# Include headers and footers
+			new_row['video_title'] = app.title_header + new_row['video_title']
+			description_lines = []
+			if playlists:
+				# NOTE: If you change this format, you need to also change the regex that matches this
+				# on the GET handler.
+				description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
+				description_lines += [
+					"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
+					for playlist in playlists
+				]
+				description_lines.append('') # blank line before footer
+			description_lines.append(app.description_footer)
+			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
+
+		# Validate youtube requirements on title and description
+		if len(new_row['video_title']) > MAX_TITLE_LENGTH:
+			return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
+		if len(new_row['video_description']) > MAX_DESCRIPTION_LENGTH:
+			return 'Description must be {} characters or less, including footer'.format(MAX_DESCRIPTION_LENGTH), 400
+		for char in ['<', '>']:
+			if char in new_row['video_title']:
+				return 'Title may not contain a {} character'.format(char), 400
+			if char in new_row['video_description']:
+				return 'Description may not contain a {} character'.format(char), 400
+		# Validate and convert video ranges and transitions.
+		num_ranges = len(new_row['video_ranges'])
+		if num_ranges == 0:
+			return 'Ranges must contain at least one range', 400
+		if len(new_row['video_transitions']) != num_ranges - 1:
+			return 'There must be exactly {} transitions for {} ranges'.format(
+				num_ranges - 1, num_ranges,
 			)
+		for start, end in new_row['video_ranges']:
+			if start > end:
+				return 'Range start must be less than end', 400
+		# We need these to be tuples not lists for psycopg2 to do the right thing,
+		# but since they come in as JSON they are currently lists.
+		new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
+		new_row['video_transitions'] = [
+			None if transition is None else tuple(transition)
+			for transition in new_row['video_transitions']
 		]
 
-		# Include headers and footers
-		new_row['video_title'] = app.title_header + new_row['video_title']
-		description_lines = []
-		if playlists:
-			# NOTE: If you change this format, you need to also change the regex that matches this
-			# on the GET handler.
-			description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
-			description_lines += [
-				"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
-				for playlist in playlists
-			]
-			description_lines.append('') # blank line before footer
-		description_lines.append(app.description_footer)
-		new_row['video_description'] += "\n\n" + "\n".join(description_lines)
+		# Convert binary fields from base64 and do basic validation of contents
+		if new_row.get('thumbnail_image') is not None:
+			if new_row['thumbnail_mode'] != 'CUSTOM':
+				return 'Can only upload custom image when thumbnail_mode = "CUSTOM"', 400
+			try:
+				new_row['thumbnail_image'] = base64.b64decode(new_row['thumbnail_image'])
+			except binascii.Error:
+				return 'thumbnail_image must be valid base64', 400
+			# check for PNG file header
+			if not new_row['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+				return 'thumbnail_image must be a PNG', 400
 
-	# Validate youtube requirements on title and description
-	if len(new_row['video_title']) > MAX_TITLE_LENGTH:
-		return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
-	if len(new_row['video_description']) > MAX_DESCRIPTION_LENGTH:
-		return 'Description must be {} characters or less, including footer'.format(MAX_DESCRIPTION_LENGTH), 400
-	for char in ['<', '>']:
-		if char in new_row['video_title']:
-			return 'Title may not contain a {} character'.format(char), 400
-		if char in new_row['video_description']:
-			return 'Description may not contain a {} character'.format(char), 400
-	# Validate and convert video ranges and transitions.
-	num_ranges = len(new_row['video_ranges'])
-	if num_ranges == 0:
-		return 'Ranges must contain at least one range', 400
-	if len(new_row['video_transitions']) != num_ranges - 1:
-		return 'There must be exactly {} transitions for {} ranges'.format(
-			num_ranges - 1, num_ranges,
-		)
-	for start, end in new_row['video_ranges']:
-		if start > end:
-			return 'Range start must be less than end', 400
-	# We need these to be tuples not lists for psycopg2 to do the right thing,
-	# but since they come in as JSON they are currently lists.
-	new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
-	new_row['video_transitions'] = [
-		None if transition is None else tuple(transition)
-		for transition in new_row['video_transitions']
-	]
+		if new_row['state'] == 'MODIFIED':
+			if old_row['state'] not in ['DONE', 'MODIFIED']:
+				return 'Video is in state {} and cannot be modified'.format(old_row['state']), 403
+		elif old_row['state'] not in ['UNEDITED', 'EDITED', 'CLAIMED']:
+			return 'Video already published', 403
 
-	# Convert binary fields from base64 and do basic validation of contents
-	if new_row.get('thumbnail_image') is not None:
-		if new_row['thumbnail_mode'] != 'CUSTOM':
-			return 'Can only upload custom image when thumbnail_mode = "CUSTOM"', 400
-		try:
-			new_row['thumbnail_image'] = base64.b64decode(new_row['thumbnail_image'])
-		except binascii.Error:
-			return 'thumbnail_image must be valid base64', 400
-		# check for PNG file header
-		if not new_row['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
-			return 'thumbnail_image must be a PNG', 400
+		# check whether row has been changed in the sheet since editing has begun
+		changes = ''
+		for column in sheet_columns:
+			if isinstance(old_row[column], datetime.datetime):
+				old_row[column] = old_row[column].isoformat()
+			def normalize(value):
+				if isinstance(value, list):
+					return sorted(map(normalize, value))
+				if value is None:
+					return None
+				return value.lower().strip()
+			if normalize(new_row[column]) != normalize(old_row[column]):
+				changes += '{}: {} => {}\n'.format(column, new_row[column], old_row[column])
+		if changes and not override_changes:
+			return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
-	if new_row['state'] == 'MODIFIED':
-		if old_row['state'] not in ['DONE', 'MODIFIED']:
-			return 'Video is in state {} and cannot be modified'.format(old_row['state']), 403
-	elif old_row['state'] not in ['UNEDITED', 'EDITED', 'CLAIMED']:
-		return 'Video already published', 403
-
-	# check whether row has been changed in the sheet since editing has begun
-	changes = ''
-	for column in sheet_columns:
-		if isinstance(old_row[column], datetime.datetime):
-			old_row[column] = old_row[column].isoformat()
-		def normalize(value):
-			if isinstance(value, list):
-				return sorted(map(normalize, value))
-			if value is None:
-				return None
-			return value.lower().strip()
-		if normalize(new_row[column]) != normalize(old_row[column]):
-			changes += '{}: {} => {}\n'.format(column, new_row[column], old_row[column])
-	if changes and not override_changes:
-		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
-
-	if new_row['state'] == 'MODIFIED':
-		# Modifying published rows is more limited, we ignore all other fields.
-		for column in set(modifiable_columns) & set(non_null_columns):
-			if new_row.get(column) is None:
-				missing.append(column)
-		if missing:
-			return 'Fields {} must be non-null for modified video'.format(', '.join(missing)), 400
-		build_query = sql.SQL("""
-			UPDATE events
-			SET last_modified = NOW(), error = NULL, state = 'MODIFIED', {}
-			WHERE id = %(id)s AND state IN ('DONE', 'MODIFIED')
-		""").format(sql.SQL(", ").join(
-			sql.SQL("{} = {}").format(
-				sql.Identifier(column), database.get_column_placeholder(column),
-			) for column in set(modifiable_columns) & set(new_row)
-		))
-		result = database.query(conn, build_query, id=ident, **new_row)
-		if result.rowcount != 1:
-			return 'Video changed state while we were updating - maybe it was reset?', 403
-
-	else:
-		# handle state columns
-		if new_row['state'] == 'EDITED':
-			missing = []
-			for column in non_null_columns:
-				if new_row[column] is None:
+		if new_row['state'] == 'MODIFIED':
+			# Modifying published rows is more limited, we ignore all other fields.
+			for column in set(modifiable_columns) & set(non_null_columns):
+				if new_row.get(column) is None:
 					missing.append(column)
 			if missing:
-				return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
-			if len(new_row.get('video_title', '')) <= len(app.title_header) and not is_archive:
-				return 'Video title must not be blank', 400
-		elif new_row['state'] != 'UNEDITED':
-			return 'Invalid state {}'.format(new_row['state']), 400
-		new_row['uploader'] = None
-		new_row['error'] = None
-		new_row['editor'] = editor
-		new_row['edit_time'] = datetime.datetime.utcnow()
+				return 'Fields {} must be non-null for modified video'.format(', '.join(missing)), 400
+			build_query = sql.SQL("""
+				UPDATE events
+				SET last_modified = NOW(), error = NULL, state = 'MODIFIED', {}
+				WHERE id = %(id)s AND state IN ('DONE', 'MODIFIED')
+			""").format(sql.SQL(", ").join(
+				sql.SQL("{} = {}").format(
+					sql.Identifier(column), database.get_column_placeholder(column),
+				) for column in set(modifiable_columns) & set(new_row)
+			))
+			result = database.query(conn, build_query, id=ident, **new_row)
+			if result.rowcount != 1:
+				return 'Video changed state while we were updating - maybe it was reset?', 403
 
-		# actually update database
-		build_query = sql.SQL("""
-			UPDATE events
-			SET {}
-			WHERE id = %(id)s
-			AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
-		).format(sql.SQL(", ").join(
-			sql.SQL("{} = {}").format(
-				sql.Identifier(column), database.get_column_placeholder(column),
-			) for column in new_row.keys() if column not in sheet_columns
-		))
-		result = database.query(conn, build_query, id=ident, **new_row)
-		if result.rowcount != 1:
-			return 'Video likely already published', 403	
-			
-	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
-	return ''
+		else:
+			# handle state columns
+			if new_row['state'] == 'EDITED':
+				missing = []
+				for column in non_null_columns:
+					if new_row[column] is None:
+						missing.append(column)
+				if missing:
+					return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
+				if len(new_row.get('video_title', '')) <= len(app.title_header) and not is_archive:
+					return 'Video title must not be blank', 400
+			elif new_row['state'] != 'UNEDITED':
+				return 'Invalid state {}'.format(new_row['state']), 400
+			new_row['uploader'] = None
+			new_row['error'] = None
+			new_row['editor'] = editor
+			new_row['edit_time'] = datetime.datetime.utcnow()
+
+			# actually update database
+			build_query = sql.SQL("""
+				UPDATE events
+				SET {}
+				WHERE id = %(id)s
+				AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')"""
+			).format(sql.SQL(", ").join(
+				sql.SQL("{} = {}").format(
+					sql.Identifier(column), database.get_column_placeholder(column),
+				) for column in new_row.keys() if column not in sheet_columns
+			))
+			result = database.query(conn, build_query, id=ident, **new_row)
+			if result.rowcount != 1:
+				return 'Video likely already published', 403
+
+		_write_audit_log(conn, ident, "update-row", editor, old_row, new_row)
+		logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
+		return ''
 
 
 @app.route('/thrimshim/manual-link/<uuid:ident>', methods=['POST'])
@@ -470,26 +471,35 @@ def manual_link(ident, editor=None):
 	else:
 		return 'Upload location must be "manual" or "youtube-manual"', 400
 
-	conn = app.db_manager.get_conn()
-	results = database.query(conn, """
-		SELECT id, state
-		FROM events
-		WHERE id = %s""", ident)
-	old_row = results.fetchone()
-	if old_row is None:
-		return 'Row {} not found'.format(ident), 404
-	if old_row.state != 'UNEDITED':
-		return 'Invalid state {} for manual video link'.format(old_row.state), 403		
-	now = datetime.datetime.utcnow()
-	# note we force thumbnail mode of manual uploads to always be NONE,
-	# since they might not be a video we actually control at all, or might not even be on youtube.
-	results = database.query(conn, """
-		UPDATE events 
-		SET state='DONE', upload_location = %s, video_link = %s, video_id = %s,
-			editor = %s, edit_time = %s, upload_time = %s, thumbnail_mode = 'NONE'
-		WHERE id = %s AND state = 'UNEDITED'
-	""", upload_location, link, video_id, editor, now, now, ident)
-	logging.info("Row {} video_link set to {}".format(ident, link))
+	with app.db_manager.get_conn() as conn:
+		results = database.query(conn, """
+			SELECT id, state
+			FROM events
+			WHERE id = %s""", ident)
+		old_row = results.fetchone()
+		if old_row is None:
+			return 'Row {} not found'.format(ident), 404
+		if old_row.state != 'UNEDITED':
+			return 'Invalid state {} for manual video link'.format(old_row.state), 403
+		now = datetime.datetime.utcnow()
+		# note we force thumbnail mode of manual uploads to always be NONE,
+		# since they might not be a video we actually control at all, or might not even be on youtube.
+		results = database.query(conn, """
+			UPDATE events 
+			SET state='DONE', upload_location = %s, video_link = %s, video_id = %s,
+				editor = %s, edit_time = %s, upload_time = %s, thumbnail_mode = 'NONE'
+			WHERE id = %s AND state = 'UNEDITED'
+		""", upload_location, link, video_id, editor, now, now, ident)
+
+		if results.rowcount > 0:
+			_write_audit_log(conn, ident, "manual-link", editor, new_row={
+				"state": "DONE",
+				"upload_location": upload_location,
+				"video_link": link,
+				"video_id": video_id,
+				"thumbnail_mode": None,
+			})
+			logging.info("Row {} video_link set to {}".format(ident, link))
 	return ''	
 	
 
@@ -503,20 +513,22 @@ def reset_row(ident, editor=None):
 	(state is UNEDITED, EDITED or CLAIMED)
 	"""
 	force = (flask.request.args.get('force', '').lower() == "true")
-	conn = app.db_manager.get_conn()
-	query = """
-		UPDATE events 
-		SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
-			uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL,
-			last_modified = NULL
-		WHERE id = %s {}
-	""".format(
-		"" if force else "AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
-	)
-	results = database.query(conn, query, ident)
-	if results.rowcount != 1:
-		return 'Row id = {} not found or not in cancellable state'.format(ident), 404
-	logging.info("Row {} reset to 'UNEDITED'".format(ident))
+	with app.db_manager.get_conn() as conn:
+		query = """
+			UPDATE events 
+			SET state='UNEDITED', error = NULL, video_id = NULL, video_link = NULL,
+				uploader = NULL, editor = NULL, edit_time = NULL, upload_time = NULL,
+				last_modified = NULL
+			WHERE id = %s {}
+		""".format(
+			"" if force else "AND state IN ('UNEDITED', 'EDITED', 'CLAIMED')",
+		)
+		results = database.query(conn, query, ident)
+		if results.rowcount != 1:
+			return 'Row id = {} not found or not in cancellable state'.format(ident), 404
+
+		_write_audit_log(conn, ident, "reset-row", editor)
+		logging.info("Row {} reset to 'UNEDITED'".format(ident))
 	return ''
 
 
@@ -643,6 +655,13 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 	since_night = timestamp - result.timestamp
 	# Pick PM if night was more than 4h ago.
 	return since_night.total_seconds() > 4*60*60
+
+
+def _write_audit_log(conn, ident, api_action, editor, old_row=None, new_row=None):
+	database.query(conn, """
+				INSERT INTO events_edits_audit_log (modified_row_id, api_action, editor, old_data, new_data)
+				VALUES (%(id)s, %(api_action)%s, %(editor)s, %(old_row)s, %(new_row)s)
+			""", id=ident, api_action=api_action, editor=editor, old_row=old_row, new_row=new_row)
 
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
