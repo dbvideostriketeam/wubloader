@@ -279,24 +279,27 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		start_time = start_time[:-1]
 	start_time = timegm(time.strptime(start_time, "%Y-%m-%dT%H:%M:%S"))
 
-	# Attempt to download the schedule
-	schedule = reload_schedule()
-	if schedule is None:
-		raise Exception("Schedule failed to download")
-
 	if hour >= 0:
+		# Attempt to download the schedule
+		schedule = reload_schedule()
+		if schedule is None:
+			raise Exception("Schedule failed to download")
+
 		if not no_groups:
 			update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
 		if stream:
 			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
 		return
 
+	schedule = None
 	while True:
 		hour = int((time.time() - start_time) / 3600)
 		# Download a new schedule or use the old one if there's a failure
 		new_schedule = reload_schedule()
 		if new_schedule is not None:
 			schedule = new_schedule
+		if schedule is None:
+			raise Exception("Schedule failed to download")
 
 		if not no_initial:
 			if not no_groups:
