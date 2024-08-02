@@ -51,11 +51,11 @@ class PlaylistManager(object):
 		"""
 		logging.info("Checking for new videos")
 		videos = self.get_videos()
-		logging.debug("Found {} eligible videos".format(len(videos)))
+		logging.debug(f"Found {len(videos)} eligible videos")
 
 		logging.info("Getting dynamic playlists")
 		playlist_tags = self.get_playlist_tags()
-		logging.debug("Found {} playlists".format(len(playlist_tags)))
+		logging.debug(f"Found {len(playlist_tags)} playlists")
 
 		# start all workers
 		workers = {}
@@ -67,7 +67,7 @@ class PlaylistManager(object):
 			try:
 				worker.get()
 			except Exception:
-				logging.exception("Failed to update playlist {}".format(playlist_id))
+				logging.exception(f"Failed to update playlist {playlist_id}")
 				self.reset(playlist_id)
 
 	def get_videos(self):
@@ -92,7 +92,9 @@ class PlaylistManager(object):
 		self.dbmanager.put_conn(conn)
 		duplicates = set(playlist_tags) & set(self.static_playlist_tags)
 		if duplicates:
-			raise ValueError("Some playlists are listed in both static and dynamic playlist sources: {}".format(", ".join(duplicates)))
+			raise ValueError(
+				"Some playlists are listed in both static and dynamic playlist sources: {}".format(", ".join(duplicates))
+			)
 		playlist_tags.update(self.static_playlist_tags)
 		return playlist_tags
 
@@ -102,7 +104,7 @@ class PlaylistManager(object):
 			video for video in videos.values()
 			if all(tag in [t.lower() for t in video.tags] for tag in tags)
 		]
-		logging.debug("Found {} matching videos for playlist {}".format(len(matching), playlist_id))
+		logging.debug(f"Found {len(matching)} matching videos for playlist {playlist_id}")
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
 
 		matching_video_ids = {video.video_id for video in matching}
@@ -119,7 +121,7 @@ class PlaylistManager(object):
 		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
 
 		# Insert each new video one at a time
-		logging.debug("Inserting new videos for playlist {}: {}".format(playlist_id, new_videos))
+		logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
 		for video in new_videos:
 			index = self.find_insert_index(videos, self.playlist_state[playlist_id], video)
 			self.insert_into_playlist(playlist_id, video.video_id, index)
@@ -130,15 +132,15 @@ class PlaylistManager(object):
 		If the total length does not match (or we don't have a copy at all),
 		then we do a full refresh.
 		"""
-		logging.debug("Fetching first page of playlist {}".format(playlist_id))
+		logging.debug(f"Fetching first page of playlist {playlist_id}")
 		query = self.api.list_playlist(playlist_id)
 		# See if we can avoid further page fetches.
 		if playlist_id not in self.playlist_state:
-			logging.info("Fetching playlist {} because we don't currently have it".format(playlist_id))
+			logging.info(f"Fetching playlist {playlist_id} because we don't currently have it")
 		elif query.is_complete:
-			logging.debug("First page of {} was entire playlist".format(playlist_id))
+			logging.debug(f"First page of {playlist_id} was entire playlist")
 		elif len(self.playlist_state[playlist_id]) == query.total_size:
-			logging.debug("Skipping fetching of remainder of playlist {}, size matches".format(playlist_id))
+			logging.debug(f"Skipping fetching of remainder of playlist {playlist_id}, size matches")
 			return
 		else:
 			logging.warning("Playlist {} has size mismatch ({} saved vs {} actual), refetching".format(
@@ -178,7 +180,7 @@ class PlaylistManager(object):
 		"""Insert video into given playlist at given index.
 		Makes the API call then also updates our mirrored copy.
 		"""
-		logging.info("Inserting {} at index {} of {}".format(video_id, index, playlist_id))
+		logging.info(f"Inserting {video_id} at index {index} of {playlist_id}")
 		self.api.insert_into_playlist(playlist_id, video_id, index)
 		# Update our copy
 		self.playlist_state.setdefault(playlist_id, []).insert(index, video_id)
