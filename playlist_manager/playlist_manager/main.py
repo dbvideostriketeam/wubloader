@@ -104,18 +104,20 @@ class PlaylistManager(object):
 		]
 		logging.debug("Found {} matching videos for playlist {}".format(len(matching), playlist))
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
-		if not set([v.video_id for v in matching]) - set(self.playlist_state.get(playlist, [])):
+
+		matching_video_ids = {video.video_id for video in matching}
+		playlist_video_ids = set(self.playlist_state.get(playlist, []))
+		if not (matching_video_ids - playlist_video_ids):
 			logging.debug("All videos already in playlist, nothing to do")
 			return
 		# Refresh our playlist state, if necessary.
 		self.refresh_playlist(playlist)
 		# Get an updated list of new videos
-		new_videos = [
-			video for video in matching
-			if video.video_id not in self.playlist_state[playlist]
-		]
+		matching_video_ids = {video.video_id for video in matching}
+		playlist_video_ids = set(self.playlist_state.get(playlist, []))
 		# It shouldn't matter, but just for clarity let's sort them by event order
-		new_videos.sort(key=lambda v: v.start_time)
+		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
+
 		# Insert each new video one at a time
 		logging.debug("Inserting new videos for playlist {}: {}".format(playlist, new_videos))
 		for video in new_videos:
