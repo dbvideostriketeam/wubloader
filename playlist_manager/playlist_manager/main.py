@@ -107,7 +107,7 @@ class PlaylistManager(object):
 		if not set([v.video_id for v in matching]) - set(self.playlist_state.get(playlist, [])):
 			logging.debug("All videos already in playlist, nothing to do")
 			return
-		# Refresh our playlist state, if nessecary.
+		# Refresh our playlist state, if necessary.
 		self.refresh_playlist(playlist)
 		# Get an updated list of new videos
 		new_videos = [
