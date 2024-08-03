@@ -133,6 +133,8 @@
     // Backup options for advanced use, if the smart cut breaks things.
     desertbus_slow: {type: "youtube", cut_type: "full"},
     desertbus_emergency: {type: "youtube", cut_type: "fast"},
+    // Non-uploading backend that lets us modify manually-updated youtube videos
+    "youtube-manual": {type: "youtube", no_uploader: true}.
   },
   default_location:: "desertbus",
   // archive location is the default location for archive events,

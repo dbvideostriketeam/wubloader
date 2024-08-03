@@ -932,6 +932,7 @@ def main(
 	for location, backend_config in config.items():
 		backend_type = backend_config.pop('type')
 		no_updater = backend_config.pop('no_updater', False)
+		no_uploader = backend_config.pop('no_uploader', False)
 		cut_type = backend_config.pop('cut_type', 'full')
 		if backend_type == 'youtube':
 			backend_type = Youtube
@@ -947,7 +948,8 @@ def main(
 			backend.encoding_settings = cut_type
 		elif cut_type != 'full':
 			raise ValueError("Unknown cut type: {!r}".format(cut_type))
-		upload_locations[location] = backend
+		if not no_uploader:
+			upload_locations[location] = backend
 		if backend.needs_transcode:
 			needs_transcode_check[location] = backend
 		if not no_updater:
