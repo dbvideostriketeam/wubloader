@@ -35,6 +35,10 @@ class PlaylistManager(object):
 		else:
 			self.playlist_state.pop(playlist_id, None)
 
+	def get_playlist(self, playlist_id):
+		"""Returns our cached copy of the list of playlist entries."""
+		return self.playlist_state.get(playlist_id, [])
+
 	def run_once(self):
 		"""Do one check of all videos and playlists.
 		At a high level:
@@ -108,7 +112,7 @@ class PlaylistManager(object):
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
 
 		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = set(self.playlist_state.get(playlist_id, []))
+		playlist_video_ids = set(self.get_playlist(playlist_id))
 		if not (matching_video_ids - playlist_video_ids):
 			logging.debug("All videos already in playlist, nothing to do")
 			return
@@ -116,14 +120,14 @@ class PlaylistManager(object):
 		self.refresh_playlist(playlist_id)
 		# Get an updated list of new videos
 		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = set(self.playlist_state.get(playlist_id, []))
+		playlist_video_ids = set(self.get_playlist(playlist_id))
 		# It shouldn't matter, but just for clarity let's sort them by event order
 		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
 
 		# Insert each new video one at a time
 		logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
 		for video in new_videos:
-			index = self.find_insert_index(videos, self.playlist_state[playlist_id], video)
+			index = self.find_insert_index(videos, self.get_playlist(playlist_id), video)
 			self.insert_into_playlist(playlist_id, video.video_id, index)
 
 	def refresh_playlist(self, playlist_id):
@@ -139,12 +143,12 @@ class PlaylistManager(object):
 			logging.info(f"Fetching playlist {playlist_id} because we don't currently have it")
 		elif query.is_complete:
 			logging.debug(f"First page of {playlist_id} was entire playlist")
-		elif len(self.playlist_state[playlist_id]) == query.total_size:
+		elif len(self.get_playlist(playlist_id)) == query.total_size:
 			logging.debug(f"Skipping fetching of remainder of playlist {playlist_id}, size matches")
 			return
 		else:
 			logging.warning("Playlist {} has size mismatch ({} saved vs {} actual), refetching".format(
-				playlist_id, len(self.playlist_state[playlist_id]), query.total_size,
+				playlist_id, len(self.get_playlist(playlist_id)), query.total_size,
 			))
 		# Fetch remaining pages, if any
 		query.fetch_all()
