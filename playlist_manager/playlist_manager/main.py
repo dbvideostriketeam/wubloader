@@ -137,7 +137,7 @@ class PlaylistManager(object):
 		# Insert each new video one at a time
 		logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
 		for video in new_videos:
-			index = self.find_insert_index(videos, self.get_playlist(playlist_id), video)
+			index = self.find_insert_index(videos, playlist_config, self.get_playlist(playlist_id), video)
 			self.insert_into_playlist(playlist_id, video.video_id, index)
 
 	def refresh_playlist(self, playlist_id):
@@ -171,11 +171,17 @@ class PlaylistManager(object):
 			) for item in query.items
 		]
 
-	def find_insert_index(self, videos, playlist, new_video):
+	def find_insert_index(self, videos, playlist_config, playlist, new_video):
 		"""Find the index at which to insert new_video into playlist such that
 		playlist remains sorted (it is assumed to already be sorted).
 		videos should be a mapping from video ids to video info.
 		"""
+		# Handle special cases first.
+		if playlist_config.first_event_id == new_video.id:
+			return 0
+		if playlist_config.last_event_id == new_video.id:
+			return len(playlist)
+
 		# To try to behave as best we can in the presence of mis-sorted playlists,
 		# we walk through the list linearly. We insert immediately before the first
 		# item that should be after us in sort order.
@@ -186,6 +192,18 @@ class PlaylistManager(object):
 				# ignore unknowns
 				continue
 			video = videos[video_id]
+
+			# The starting video of a playlist can have its own times, unaffiliated with other videos
+			if video.id == playlist_config.first_event_id:
+				continue
+			# The new video needs to go before the last video in the playlist.
+			# This will produce incorrect results if the last video is in the wrong position
+			# so we only accept this if the last video is actually in the last position,
+			# otherwise we ignore it.
+			if video.id == playlist_config.last_event_id:
+				if n == len(playlist) - 1:
+					return n
+				continue
 			# if this video is after new video, return this index
 			if new_video.start_time < video.start_time:
 				return n
