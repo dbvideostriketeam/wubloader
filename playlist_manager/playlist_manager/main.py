@@ -133,23 +133,29 @@ class PlaylistManager(object):
 		logging.debug(f"Found {len(matching)} matching videos for playlist {playlist_id}")
 
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
+		playlist = self.get_playlist(playlist_id)
 		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
-		if not (matching_video_ids - playlist_video_ids):
-			logging.debug("All videos already in playlist, nothing to do")
+		playlist_video_ids = {entry.video_id for entry in playlist}
+		new_videos = matching_video_ids - playlist_video_ids
+		reorderings = self.find_playlist_reorderings(videos, playlist, playlist_config)
+		if not (new_videos or reorderings):
+			logging.debug("All videos already correctly ordered in playlist, nothing to do")
 			return
 
 		# Refresh our playlist state, if necessary.
 		self.refresh_playlist(playlist_id)
 
-		# Make sure first/last videos are correctly positioned
-		self.relocate_playlist_ends(videos, playlist)
-
 		# Get an updated list of new videos
+		playlist = self.get_playlist(playlist_id)
 		matching_video_ids = {video.video_id for video in matching}
 		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
 		# It shouldn't matter, but just for clarity let's sort them by event order
 		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
+
+		# Perform any reorderings needed
+		reorderings = self.find_playlist_reorderings(videos, playlist, playlist_config)
+		for entry, index in reorderings:
+			self.reorder_in_playlist(playlist_id, entry, index)
 
 		# Insert each new video one at a time
 		logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
@@ -158,22 +164,28 @@ class PlaylistManager(object):
 			self.insert_into_playlist(playlist_id, video.video_id, index)
 
 
-	def relocate_playlist_ends(self, videos, playlist_id, playlist_config, playlist):
-		"""Move first/last videos to the correct position if needed"""
+	def find_playlist_reorderings(self, videos, playlist, playlist_config):
+		"""Looks through the playlist for videos that should be reordered.
+		Returns a list of (entry, new index) to reorder.
+		Right now this is only checked for the first and last videos as per playlist_config,
+		all other misorderings are ignored."""
+		result = []
 		for index, entry in enumerate(playlist):
 			if entry.video_id not in videos:
+				# Unknown videos should always remain in-place.
 				continue
 			video = videos[video_id]
 
 			if video.id == playlist.first_event_id:
-				index = 0
+				new_index = 0
 			elif video.id == playlist.last_event_id:
-				index = len(playlist) - 1
+				new_index = len(playlist) - 1
 			else:
 				continue
 
-			self.reorder_in_playlist(playlist_id, entry, index)
-
+			if index != new_index:
+				result.append((entry, new_index))
+		return result
 
 	def refresh_playlist(self, playlist_id):
 		"""Check playlist mirror is in a good state, and fetch it if it isn't.
@@ -262,10 +274,6 @@ class PlaylistManager(object):
 		"""
 		playlist = self.get_playlist(playlist_id)
 		assert entry in playlist, f"Tried to move entry {entry} which was not in our copy of {playlist_id}: {playlist}"
-		old_index = playlist.index(entry)
-		if old_index == new_index:
-			logging.debug(f"Not moving {entry.video_id} in {playlist_id} - already in position {new_index}")
-			return
 
 		logging.info(f"Moving {entry.video_id} (entry {entry.entry_id}) to new index {new_index})")
 		try:
@@ -283,7 +291,6 @@ class PlaylistManager(object):
 		# Success, also update our local copy
 		playlist.remove(entry)
 		playlist.insert(new_index, entry)
-
 
 
 class YoutubeAPI(object):
