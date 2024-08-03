@@ -18,6 +18,13 @@ PlaylistConfig = namedtuple("Playlist", ["tags", "first_event_id", "last_event_i
 PlaylistEntry = namedtuple("PlaylistEntry", ["entry_id", "video_id"])
 
 
+class APIException(Exception):
+	"""Thrown when an API call fails. Exposes the HTTP status code."""
+	def __init__(self, message, code):
+		super().__init__(message)
+		self.code = code
+
+
 class PlaylistManager(object):
 
 	def __init__(self, dbmanager, api_client, upload_locations, playlist_tags):
@@ -246,9 +253,9 @@ class YoutubeAPI(object):
 				metric_name="playlist_insert",
 			)
 		if not resp.ok:
-			raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
+			raise APIException("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
 				playlist=playlist_id, video_id=video_id, index=index, resp=resp,
-			))
+			), code=resp.status_code)
 		# TODO return entry_id from resp
 
 	def list_playlist(self, playlist_id):
@@ -272,9 +279,9 @@ class YoutubeAPI(object):
 			metric_name="playlist_list",
 		)
 		if not resp.ok:
-			raise Exception("Failed to list {playlist} (page_token={page_token!r}) with {resp.status_code}: {resp.content}".format(
+			raise APIException("Failed to list {playlist} (page_token={page_token!r}) with {resp.status_code}: {resp.content}".format(
 				playlist=playlist_id, page_token=page_token, resp=resp,
-			))
+			), code=resp.status_code)
 		return resp.json()
 
 
