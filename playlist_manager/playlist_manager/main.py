@@ -142,27 +142,34 @@ class PlaylistManager(object):
 			logging.debug("All videos already correctly ordered in playlist, nothing to do")
 			return
 
-		# Refresh our playlist state, if necessary.
-		self.refresh_playlist(playlist_id)
+		for attempt in range(3):
+			# Refresh our playlist state, if necessary.
+			playlist = self.refresh_playlist(playlist_id)
 
-		# Get an updated list of new videos
-		playlist = self.get_playlist(playlist_id)
-		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
-		# It shouldn't matter, but just for clarity let's sort them by event order
-		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
+			try:
+				# Perform any reorderings needed
+				reorderings = self.find_playlist_reorderings(videos, playlist, playlist_config)
+				for entry, index in reorderings:
+					self.reorder_in_playlist(playlist_id, entry, index)
 
-		# Perform any reorderings needed
-		reorderings = self.find_playlist_reorderings(videos, playlist, playlist_config)
-		for entry, index in reorderings:
-			self.reorder_in_playlist(playlist_id, entry, index)
+				# Get an updated list of new videos
+				matching_video_ids = {video.video_id for video in matching}
+				playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
+				# It shouldn't matter, but just for clarity let's sort them by event order
+				new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
 
-		# Insert each new video one at a time
-		logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
-		for video in new_videos:
-			index = self.find_insert_index(videos, playlist_config, self.get_playlist(playlist_id), video)
-			self.insert_into_playlist(playlist_id, video.video_id, index)
-
+				# Insert each new video one at a time
+				logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
+				for video in new_videos:
+					index = self.find_insert_index(videos, playlist_config, self.get_playlist(playlist_id), video)
+					self.insert_into_playlist(playlist_id, video.video_id, index)
+			except PlaylistOutdated:
+				logging.warning("Restarting playlist update as playlist is out of date")
+				continue
+			break
+		else:
+			# If we reach here, it means all attempts were unsuccessful
+			raise Exception("Got too many playlist-outdated errors despite refreshing. Aborting to prevent runaway quota usage.")
 
 	def find_playlist_reorderings(self, videos, playlist, playlist_config):
 		"""Looks through the playlist for videos that should be reordered.
@@ -217,6 +224,8 @@ class PlaylistManager(object):
 				item['snippet']['resourceId'].get('videoId'),
 			) for item in query.items
 		]
+		# Return the updated copy
+		return self.playlist_state[playlist_id]
 
 	def find_insert_index(self, videos, playlist_config, playlist, new_video):
 		"""Find the index at which to insert new_video into playlist such that
