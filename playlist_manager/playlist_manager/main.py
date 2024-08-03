@@ -14,6 +14,9 @@ from common.database import DBManager, query
 from common.googleapis import GoogleAPIClient
 
 
+PlaylistEntry = namedtuple("PlaylistEntry", ["entry_id", "video_id"])
+
+
 class PlaylistManager(object):
 
 	def __init__(self, dbmanager, api_client, upload_locations, playlist_tags):
@@ -30,7 +33,7 @@ class PlaylistManager(object):
 		if playlist_id is None:
 			# playlist_state represents our mirrored view of the list of items in each playlist.
 			# If a playlist is not present, it means we need to refresh our view of it.
-			# {playlist_id: [video_id]}
+			# {playlist_id: [PlaylistEntry]}
 			self.playlist_state = {}
 		else:
 			self.playlist_state.pop(playlist_id, None)
@@ -112,7 +115,7 @@ class PlaylistManager(object):
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
 
 		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = set(self.get_playlist(playlist_id))
+		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
 		if not (matching_video_ids - playlist_video_ids):
 			logging.debug("All videos already in playlist, nothing to do")
 			return
@@ -120,7 +123,7 @@ class PlaylistManager(object):
 		self.refresh_playlist(playlist_id)
 		# Get an updated list of new videos
 		matching_video_ids = {video.video_id for video in matching}
-		playlist_video_ids = set(self.get_playlist(playlist_id))
+		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
 		# It shouldn't matter, but just for clarity let's sort them by event order
 		new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
 
@@ -154,8 +157,11 @@ class PlaylistManager(object):
 		query.fetch_all()
 		# Update saved copy with video ids
 		self.playlist_state[playlist_id] = [
-			item['snippet']['resourceId'].get('videoId') # api implies it's possible that non-videos are added
-			for item in query.items
+			PlaylistEntry(
+				item['id'],
+				# api implies it's possible that non-videos are added, so videoId might not exist
+				item['snippet']['resourceId'].get('videoId'),
+			) for item in query.items
 		]
 
 	def find_insert_index(self, videos, playlist, new_video):
@@ -168,7 +174,7 @@ class PlaylistManager(object):
 		# item that should be after us in sort order.
 		# Note that we treat unknown items (videos we don't know) as being before us
 		# in sort order, so that we always insert after them.
-		for n, video_id in enumerate(playlist):
+		for n, (_, video_id) in enumerate(playlist):
 			if video_id not in videos:
 				# ignore unknowns
 				continue
@@ -185,9 +191,9 @@ class PlaylistManager(object):
 		Makes the API call then also updates our mirrored copy.
 		"""
 		logging.info(f"Inserting {video_id} at index {index} of {playlist_id}")
-		self.api.insert_into_playlist(playlist_id, video_id, index)
+		entry_id = self.api.insert_into_playlist(playlist_id, video_id, index)
 		# Update our copy
-		self.playlist_state.setdefault(playlist_id, []).insert(index, video_id)
+		self.playlist_state.setdefault(playlist_id, []).insert(index, PlaylistEntry(entry_id, video_id)
 
 
 class YoutubeAPI(object):
@@ -214,10 +220,11 @@ class YoutubeAPI(object):
 				json=json,
 				metric_name="playlist_insert",
 			)
-			if not resp.ok:
-				raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
-					playlist=playlist_id, video_id=video_id, index=index, resp=resp,
-				))
+		if not resp.ok:
+			raise Exception("Failed to insert {video_id} at index {index} of {playlist} with {resp.status_code}: {resp.content}".format(
+				playlist=playlist_id, video_id=video_id, index=index, resp=resp,
+			))
+		# TODO return entry_id from resp
 
 	def list_playlist(self, playlist_id):
 		"""Fetches the first page of playlist contents and returns a ListQuery object.
