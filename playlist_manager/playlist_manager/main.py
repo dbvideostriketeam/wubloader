@@ -18,6 +18,11 @@ PlaylistConfig = namedtuple("Playlist", ["tags", "first_event_id", "last_event_i
 PlaylistEntry = namedtuple("PlaylistEntry", ["entry_id", "video_id"])
 
 
+class PlaylistOutdated(Exception):
+	"""Thrown when a function detects the playlist is not in the state we think it is.
+	This can be safely ignored or used to trigger a retry after refreshing the state."""
+
+
 class APIException(Exception):
 	"""Thrown when an API call fails. Exposes the HTTP status code."""
 	def __init__(self, message, code):
@@ -126,15 +131,20 @@ class PlaylistManager(object):
 			if all(tag in [t.lower() for t in video.tags] for tag in playlist_config.tags)
 		]
 		logging.debug(f"Found {len(matching)} matching videos for playlist {playlist_id}")
-		# If we have nothing to add, short circuit without doing any API calls to save quota.
 
+		# If we have nothing to add, short circuit without doing any API calls to save quota.
 		matching_video_ids = {video.video_id for video in matching}
 		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
 		if not (matching_video_ids - playlist_video_ids):
 			logging.debug("All videos already in playlist, nothing to do")
 			return
+
 		# Refresh our playlist state, if necessary.
 		self.refresh_playlist(playlist_id)
+
+		# Make sure first/last videos are correctly positioned
+		self.relocate_playlist_ends(videos, playlist)
+
 		# Get an updated list of new videos
 		matching_video_ids = {video.video_id for video in matching}
 		playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
@@ -146,6 +156,24 @@ class PlaylistManager(object):
 		for video in new_videos:
 			index = self.find_insert_index(videos, playlist_config, self.get_playlist(playlist_id), video)
 			self.insert_into_playlist(playlist_id, video.video_id, index)
+
+
+	def relocate_playlist_ends(self, videos, playlist_id, playlist_config, playlist):
+		"""Move first/last videos to the correct position if needed"""
+		for index, entry in enumerate(playlist):
+			if entry.video_id not in videos:
+				continue
+			video = videos[video_id]
+
+			if video.id == playlist.first_event_id:
+				index = 0
+			elif video.id == playlist.last_event_id:
+				index = len(playlist) - 1
+			else:
+				continue
+
+			self.reorder_in_playlist(playlist_id, entry, index)
+
 
 	def refresh_playlist(self, playlist_id):
 		"""Check playlist mirror is in a good state, and fetch it if it isn't.
@@ -227,6 +255,36 @@ class PlaylistManager(object):
 		# Update our copy
 		self.playlist_state.setdefault(playlist_id, []).insert(index, PlaylistEntry(entry_id, video_id)
 
+	def reorder_in_playlist(self, playlist_id, entry, new_index):
+		"""Take an existing entry in a given playlist and move it to the new index.
+		Other entries are shifted to compensate (ie. forwards if the entry moved backwards,
+		backwards if the entry moved forwards).
+		"""
+		playlist = self.get_playlist(playlist_id)
+		assert entry in playlist, f"Tried to move entry {entry} which was not in our copy of {playlist_id}: {playlist}"
+		old_index = playlist.index(entry)
+		if old_index == new_index:
+			logging.debug(f"Not moving {entry.video_id} in {playlist_id} - already in position {new_index}")
+			return
+
+		logging.info(f"Moving {entry.video_id} (entry {entry.entry_id}) to new index {new_index})")
+		try:
+			self.api.update_playlist_entry(playlist_id, entry, new_index)
+		except APIException as e:
+			# 404 indicates the entry id no longer exists. Anything else, just raise.
+			if e.code != 404:
+				raise
+			# We know our view of the playlist is wrong, so the safest thing to do is error out
+			# and let higher-level code decide how to start again from the beginning.
+			logging.warning(f"Playlist {playlist_id} no longer contains entry {entry.entry_id}, invalidating cache")
+			self.reset(playlist_id)
+			raise PlaylistOutdated()
+
+		# Success, also update our local copy
+		playlist.remove(entry)
+		playlist.insert(new_index, entry)
+
+
 
 class YoutubeAPI(object):
 	def __init__(self, client):
@@ -257,6 +315,30 @@ class YoutubeAPI(object):
 				playlist=playlist_id, video_id=video_id, index=index, resp=resp,
 			), code=resp.status_code)
 		# TODO return entry_id from resp
+
+	def update_playlist_entry(self, playlist_id, entry, new_index):
+		json = {
+			"id": entry.entry_id,
+			"snippet": {
+				"playlistId": playlist_id,
+				"resourceId": {
+					"kind": "youtube#video",
+					"videoId": entry.video_id,
+				},
+				"position": new_index,
+			},
+		}
+		with self.insert_lock:
+			resp = self.client.request("PUT", "https://www.googleapis.com/youtube/v3/playlistItems",
+				params={"part": "snippet"},
+				json=json,
+				metric_name="playlist_update",
+			)
+		if not resp.ok:
+			raise APIException(
+				f"Failed to update {entry.entry_id} of {playlist_id} to {entry.video_id} at index {new_index} with {resp.status_code}: {resp.content}",
+				code=resp.status_code,
+			)
 
 	def list_playlist(self, playlist_id):
 		"""Fetches the first page of playlist contents and returns a ListQuery object.
