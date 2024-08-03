@@ -14,6 +14,7 @@ from common.database import DBManager, query
 from common.googleapis import GoogleAPIClient
 
 
+PlaylistConfig = namedtuple("Playlist", ["tags", "first_event_id", "last_event_id"])
 PlaylistEntry = namedtuple("PlaylistEntry", ["entry_id", "video_id"])
 
 
@@ -61,13 +62,13 @@ class PlaylistManager(object):
 		logging.debug(f"Found {len(videos)} eligible videos")
 
 		logging.info("Getting dynamic playlists")
-		playlist_tags = self.get_playlist_tags()
-		logging.debug(f"Found {len(playlist_tags)} playlists")
+		playlists = self.get_playlist_config()
+		logging.debug(f"Found {len(playlists)} playlists")
 
 		# start all workers
 		workers = {}
-		for playlist_id, tags in playlist_tags.items():
-			workers[playlist_id] = gevent.spawn(self.update_playlist, playlist_id, tags, videos)
+		for playlist_id, playlist_config in playlists.items():
+			workers[playlist_id] = gevent.spawn(self.update_playlist, playlist_id, playlist_config, videos)
 
 		# check each one for success, reset on failure
 		for playlist_id, worker in workers.items():
@@ -90,26 +91,32 @@ class PlaylistManager(object):
 		self.dbmanager.put_conn(conn)
 		return {video.video_id: video for video in videos}
 
-	def get_playlist_tags(self):
+	def get_playlist_config(self):
 		conn = self.dbmanager.get_conn()
-		playlist_tags = {
-			row.playlist_id: [tag.lower() for tag in row.tags]
-			for row in query(conn, "SELECT playlist_id, tags FROM playlists")
+		playlists = {
+			row.playlist_id: PlaylistConfig(
+				[tag.lower() for tag in row.tags],
+				row.first_event_id,
+				row.last_event_id,
+			) for row in query(conn, "SELECT playlist_id, tags, first_event_id, last_event_id FROM playlists")
 		}
 		self.dbmanager.put_conn(conn)
-		duplicates = set(playlist_tags) & set(self.static_playlist_tags)
+		duplicates = set(playlists) & set(self.static_playlists)
 		if duplicates:
 			raise ValueError(
 				"Some playlists are listed in both static and dynamic playlist sources: {}".format(", ".join(duplicates))
 			)
-		playlist_tags.update(self.static_playlist_tags)
-		return playlist_tags
+		playlists.update({
+			id: PlaylistConfig(tags, None, None)
+			for id, tags in self.static_playlists.items()
+		})
+		return playlists
 
-	def update_playlist(self, playlist_id, tags, videos):
+	def update_playlist(self, playlist_id, playlist_config, videos):
 		# Filter the video list for videos with matching tags
 		matching = [
 			video for video in videos.values()
-			if all(tag in [t.lower() for t in video.tags] for tag in tags)
+			if all(tag in [t.lower() for t in video.tags] for tag in playlist_config.tags)
 		]
 		logging.debug(f"Found {len(matching)} matching videos for playlist {playlist_id}")
 		# If we have nothing to add, short circuit without doing any API calls to save quota.
