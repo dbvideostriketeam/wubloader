@@ -101,8 +101,8 @@ class StreamLogMiddleware:
 					return
 			output[column] = value
 
-		# Section name is sheet name
-		output["sheet_name"] = row["section"]["name"] if row["section"] else "unknown"
+		# Tab name is sheet name
+		output["sheet_name"] = row["tab"]["name"] if row["tab"] else "unknown"
 
 		# Implicit tags
 		output['tags'] += [
