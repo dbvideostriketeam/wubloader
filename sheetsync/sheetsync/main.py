@@ -80,6 +80,7 @@ class SheetSync(object):
 		self.stop = stop
 		self.dbmanager = dbmanager
 		self.create_missing_ids = False
+		self.table = "events"
 		# List of input columns
 		self.input_columns = [
 			'sheet_name'
@@ -152,15 +153,16 @@ class SheetSync(object):
 				wait(self.stop, sync_start, self.RETRY_INTERVAL)
 
 	def get_db_rows(self):
-		"""Return the entire events table as a map {id: row namedtuple}"""
+		"""Return the entire table as a map {id: row namedtuple}"""
 		built_query = sql.SQL("""
-			SELECT {} FROM events
+			SELECT {} FROM {}
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(col) for col in
 				{ "id", "state", "error", "public", "poster_moment", "sheet_name", "category" }
 				| set(self.input_columns)
 				| set(self.output_columns)
 			),
+			sql.Identifier("table"),
 		)
 		result = query(self.conn, built_query)
 		by_id = {}
@@ -190,10 +192,11 @@ class SheetSync(object):
 			# We can ignore it.
 			insert_cols = ['id'] + self.input_columns
 			built_query = sql.SQL("""
-				INSERT INTO events ({})
+				INSERT INTO {} ({})
 				VALUES ({})
 				ON CONFLICT DO NOTHING
 			""").format(
+				sql.Identifier(self.table),
 				sql.SQL(", ").join(sql.Identifier(col) for col in insert_cols),
 				sql.SQL(", ").join(get_column_placeholder(col) for col in insert_cols),
 			)
@@ -231,13 +234,14 @@ class SheetSync(object):
 				sheet_row['id'], ', '.join(changed)
 			))
 			built_query = sql.SQL("""
-				UPDATE events
+				UPDATE {}
 				SET {}
 				WHERE id = %(id)s
 			""").format(sql.SQL(", ").join(
-				sql.SQL("{} = {}").format(
+				[sql.Identifer(self.table)] +
+				[sql.SQL("{} = {}").format(
 					sql.Identifier(col), get_column_placeholder(col)
-				) for col in changed
+				) for col in changed]
 			))
 			query(self.conn, built_query, **sheet_row)
 			rows_changed.labels(self.name, 'input', worksheet).inc()
