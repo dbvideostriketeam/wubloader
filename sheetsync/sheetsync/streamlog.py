@@ -6,6 +6,9 @@ import requests
 
 from common.dateutil import parse_utc_only
 
+from .middleware import Middleware
+
+
 class StreamLogClient():
 	"""Client for Stream Log server"""
 
@@ -41,7 +44,7 @@ class StreamLogClient():
 		return None
 
 
-class StreamLogMiddleware:
+class StreamLogMiddleware(Middleware):
 	def __init__(self, client):
 		self.client = client
 		# Maps DB column names to streamlog fields.
@@ -121,9 +124,3 @@ class StreamLogMiddleware:
 		if key in self.column_encode:
 			value = self.column_encode[key](value)
 		self.client.write_value(row["id"], self.write_map[key], value)
-
-	def mark_modified(self, row):
-		pass # not a concept we have
-
-	def create_row(self, worksheet, id):
-		raise NotImplementedError

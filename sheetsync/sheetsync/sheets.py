@@ -7,6 +7,8 @@ from monotonic import monotonic
 import common
 from common.googleapis import GoogleAPIClient
 
+from .middleware import Middleware
+
 
 class SheetsClient(object):
 	"""Manages Google Sheets API operations"""
@@ -70,7 +72,7 @@ class SheetsClient(object):
 		return ''.join(digits)
 
 
-class SheetsMiddleware():
+class SheetsMiddleware(Middleware):
 	# How many syncs of active sheets to do before checking inactive sheets.
 	# By checking inactive sheets less often, we stay within our API limits.
 	# For example, 4 syncs per inactive check * 5 seconds between syncs = 20s between inactive checks
