@@ -166,16 +166,21 @@ class SheetSync(object):
 		)
 		result = query(self.conn, built_query)
 		by_id = {}
-		counts = defaultdict(lambda: 0)
 		for row in result.fetchall():
 			by_id[row.id] = row
+		self.observe_rows(by_id.values())
+		return by_id
+
+	def observe_rows(self, rows):
+		"""Takes a list of DB rows and updates metrics"""
+		counts = defaultdict(lambda: 0)
+		for row in rows:
 			counts[row.sheet_name, row.category, str(row.poster_moment), row.state, str(bool(row.error))] += 1
 		# Reach into metric internals and forget about all previous values,
 		# or else any values we don't update will remain as a stale count.
 		event_counts._metrics.clear()
 		for labels, count in counts.items():
 			event_counts.labels(self.name, *labels).set(count)
-		return by_id
 
 	def sync_row(self, sheet_row, db_row):
 		"""Take a row dict from the sheet (or None) and a row namedtuple from the database (or None)
