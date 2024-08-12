@@ -265,7 +265,7 @@ class SheetsMiddleware():
 	def create_row(self, worksheet, id):
 		unassigned_rows = self.unassigned_rows.get(worksheet, [])
 		if not unassigned_rows:
-			raise Exception(f"Worksheet {worksheet} has no available space to create a new row in")
+			raise Exception(f"Worksheet {worksheet} has no available space to create a new row in, or it wasn't fetched")
 		index = unassigned_rows.pop(0)
 		row = {
 			"sheet_name": worksheet,

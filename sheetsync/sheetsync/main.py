@@ -68,10 +68,33 @@ def wait(event, base, interval):
 class SheetSync(object):
 
 	# Time between syncs
-	RETRY_INTERVAL = 5
-
+	retry_interval = 5
 	# Time to wait after getting an error
-	ERROR_RETRY_INTERVAL = 10
+	error_retry_interval = 10
+
+	# Whether rows that exist in the database but not the sheet should be created in the sheet
+	create_missing_ids = False
+	# Database table name
+	table = "events"
+	# Columns to read from the sheet and write to the database
+	input_columns = {
+		'sheet_name'
+		'event_start',
+		'event_end',
+		'category',
+		'description',
+		'submitter_winner',
+		'poster_moment',
+		'image_links',
+		'notes',
+		'tags',
+	}
+	# Columns to read from the database and write to the sheet
+	output_columns = {
+		'video_link',
+		'state',
+		'error',
+	}
 
 	def __init__(self, name, middleware, stop, dbmanager, reverse_sync=False):
 		self.name = name
@@ -79,36 +102,14 @@ class SheetSync(object):
 		self.middleware = middleware
 		self.stop = stop
 		self.dbmanager = dbmanager
-		self.create_missing_ids = False
-		self.table = "events"
-		# List of input columns
-		self.input_columns = [
-			'sheet_name'
-			'event_start',
-			'event_end',
-			'category',
-			'description',
-			'submitter_winner',
-			'poster_moment',
-			'image_links',
-			'notes',
-			'tags',
-		]
-		# List of output columns
-		self.output_columns = [
-			'video_link',
-			'state',
-			'error',
-		]
 		if reverse_sync:
 			# Reverse Sync refers to copying all event data from the database into the sheet,
 			# instead of it (mostly) being the other way. In particular:
 			# - All columns become output columns (except sheet_name, which can't be changed)
 			# - We are allowed to create new sheet rows for database events if they don't exist.
 			self.create_missing_ids = True
-			self.output_columns += self.input_columns
-			self.output_columns.remove("sheet_name")
-			self.input_columns = []
+			self.output_columns = (self.output_columns | self.input_columns) - {"sheet_name"}
+			self.input_columns = set()
 
 	def run(self):
 		self.conn = self.dbmanager.get_conn()
@@ -145,12 +146,12 @@ class SheetSync(object):
 				# If we can't re-connect, the program will crash from here,
 				# then restart and wait until it can connect again.
 				self.conn = self.dbmanager.get_conn()
-				wait(self.stop, sync_start, self.ERROR_RETRY_INTERVAL)
+				wait(self.stop, sync_start, self.error_retry_interval)
 			else:
 				self.logger.info("Successful sync")
 				sheets_synced.labels(self.name).inc()
 				sheet_sync_duration.labels(self.name).observe(monotonic() - sync_start)
-				wait(self.stop, sync_start, self.RETRY_INTERVAL)
+				wait(self.stop, sync_start, self.retry_interval)
 
 	def get_db_rows(self):
 		"""Return the entire table as a map {id: row namedtuple}"""
@@ -159,8 +160,8 @@ class SheetSync(object):
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(col) for col in
 				{ "id", "state", "error", "public", "poster_moment", "sheet_name", "category" }
-				| set(self.input_columns)
-				| set(self.output_columns)
+				| self.input_columns
+				| self.output_columns
 			),
 			sql.Identifier("table"),
 		)
@@ -195,7 +196,7 @@ class SheetSync(object):
 			self.logger.info("Inserting new DB row {}".format(sheet_row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
-			insert_cols = ['id'] + self.input_columns
+			insert_cols = {'id'} | self.input_columns
 			built_query = sql.SQL("""
 				INSERT INTO {} ({})
 				VALUES ({})
