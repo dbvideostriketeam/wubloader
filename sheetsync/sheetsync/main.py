@@ -75,36 +75,14 @@ class SheetSync(object):
 	# Whether rows that exist in the database but not the sheet should be created in the sheet
 	create_missing_ids = False
 	# Database table name
-	table = "events"
+	table = NotImplemented
 	# Columns to read from the sheet and write to the database
-	input_columns = {
-		'sheet_name'
-		'event_start',
-		'event_end',
-		'category',
-		'description',
-		'submitter_winner',
-		'poster_moment',
-		'image_links',
-		'notes',
-		'tags',
-	}
+	input_columns = set()
 	# Columns to read from the database and write to the sheet
-	output_columns = {
-		'video_link',
-		'state',
-		'error',
-	}
+	output_columns = set()
 	# Additional columns to read from the database but not write to the sheet,
 	# for metrics purposes.
-	metrics_columns = {
-		"state",
-		"error",
-		"public",
-		"poster_moment",
-		"sheet_name",
-		"category",
-	}
+	metrics_columns = set()
 
 	def __init__(self, name, middleware, stop, dbmanager, reverse_sync=False):
 		self.name = name
@@ -113,7 +91,7 @@ class SheetSync(object):
 		self.stop = stop
 		self.dbmanager = dbmanager
 		if reverse_sync:
-			# Reverse Sync refers to copying all event data from the database into the sheet,
+			# Reverse Sync refers to copying all data from the database into the sheet,
 			# instead of it (mostly) being the other way. In particular:
 			# - All columns become output columns (except sheet_name, which can't be changed)
 			# - We are allowed to create new sheet rows for database events if they don't exist.
@@ -234,16 +212,6 @@ class SheetSync(object):
 		worksheet = sheet_row["sheet_name"]
 		rows_found.labels(self.name, worksheet).inc()
 
-		# If no database error, but we have parse errors, indicate they should be displayed.
-		if db_row.error is None and sheet_row.get('_parse_errors'):
-			db_row = db_row._replace(error=", ".join(sheet_row['_parse_errors']))
-
-		# As a presentation detail, we show any row in state DONE with public = False as
-		# a virtual state UNLISTED instead, to indicate that it probably still requires other
-		# work before being modified to be public = True later.
-		if db_row.state == 'DONE' and not db_row.public:
-			db_row = db_row._replace(state='UNLISTED')
-
 		# Update database with any changed inputs
 		changed = [col for col in self.input_columns if sheet_row.get(col) != getattr(db_row, col)]
 		if changed:
@@ -278,6 +246,50 @@ class SheetSync(object):
 			rows_changed.labels(self.name, 'output', worksheet).inc()
 			self.middleware.mark_modified(sheet_row)
 
+
+class EventsSync(SheetSync):
+	table = "events"
+	input_columns = {
+		'sheet_name'
+		'event_start',
+		'event_end',
+		'category',
+		'description',
+		'submitter_winner',
+		'poster_moment',
+		'image_links',
+		'notes',
+		'tags',
+	}
+	output_columns = {
+		'video_link',
+		'state',
+		'error',
+	}
+	metrics_columns = {
+		"state",
+		"error",
+		"public",
+		"poster_moment",
+		"sheet_name",
+		"category",
+	}
+
+	def sync_row(self, sheet_row, db_row):
+		# Do some special-case transforms for events before syncing
+
+		if db_row is not None:
+			# If no database error, but we have parse errors, indicate they should be displayed.
+			if db_row.error is None and sheet_row is not None and sheet_row.get('_parse_errors'):
+				db_row = db_row._replace(error=", ".join(sheet_row['_parse_errors']))
+
+			# As a presentation detail, we show any row in state DONE with public = False as
+			# a virtual state UNLISTED instead, to indicate that it probably still requires other
+			# work before being modified to be public = True later.
+			if db_row.state == 'DONE' and not db_row.public:
+				db_row = db_row._replace(state='UNLISTED')
+
+		super().sync_row(sheet_row, db_row)
 
 class PlaylistSync:
 
@@ -452,7 +464,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 		else:
 			raise ValueError("Unknown type {!r}".format(config["type"]))
 		workers.append(
-			SheetSync(config["type"], middleware, stop, dbmanager, config.get("reverse_sync", False)),
+			EventsSync(config["type"], middleware, stop, dbmanager, config.get("reverse_sync", False)),
 		)
 
 	jobs = [gevent.spawn(worker.run) for worker in workers]
