@@ -83,11 +83,14 @@ class StreamLogMiddleware:
 		}
 
 	def get_rows(self):
+		all_rows = []
 		for row in self.client.get_rows()["event_log"]:
 			row = self.parse_row(row)
 			# Malformed rows can be skipped, represented as a None result
 			if row is not None:
-				yield row
+				all_rows.append(row)
+		# There's no worksheet concept here so we always return a full sync.
+		return True, all_rows
 
 	def parse_row(self, row):
 		output = {}
