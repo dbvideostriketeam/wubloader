@@ -112,15 +112,24 @@ class SheetSync(object):
 				db_rows = self.get_db_rows()
 				seen = set()
 
-				for row in self.middleware.get_rows():
+				is_full, sheet_rows = self.middleware.get_rows()
+				for row in sheet_rows:
 					if row['id'] in seen:
 						self.logger.error("Duplicate id {}, skipping".format(row['id']))
 						continue
 					seen.add(row['id'])
 					self.sync_row(row, db_rows.get(row['id']))
 
-				for db_row in [r for id, r in db_rows.items() if id not in seen]:
-					self.sync_row(None, db_row)
+				if is_full:
+					# Find rows that were not in the sheet.
+					# Only do this if we did a full sync, otherwise things might be missing
+					# simply because they're in a worksheet we didn't sync.
+					missing = [
+						r for id, r in db_rows.items()
+						if id not in seen
+					]
+					for db_row in missing:
+						self.sync_row(None, db_row)
 
 			except Exception as e:
 				# for HTTPErrors, http response body includes the more detailed error

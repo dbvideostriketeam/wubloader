@@ -149,7 +149,7 @@ class SheetsMiddleware():
 		for quota limit reasons."""
 		if self.sync_count % self.SYNCS_PER_INACTIVE_CHECK == 0:
 			# check all worksheets
-			worksheets = self.worksheets
+			worksheets = list(self.worksheets.keys())
 		else:
 			# only check most recently changed worksheets
 			worksheets = sorted(
@@ -160,10 +160,14 @@ class SheetsMiddleware():
 		return worksheets
 
 	def get_rows(self):
-		"""Fetch all rows of worksheet, parsed into a list of dicts."""
+		"""Fetch all rows of worksheet, parsed into a list of dicts.
+		Return (is_full, all rows).
+		"""
 		# Clear previously seen unassigned rows
 		self.unassigned_rows = {}
-		for worksheet in self.pick_worksheets():
+		worksheets = self.pick_worksheets()
+		all_rows = []
+		for worksheet in worksheets:
 			rows = self.client.get_rows(self.sheet_id, worksheet)
 			for row_index, row in enumerate(rows):
 				# Skip first row (ie. the column titles).
@@ -200,7 +204,9 @@ class SheetsMiddleware():
 					self.write_value(row, "edit_link", edit_link)
 					self.mark_modified(row)
 
-				yield row
+				all_rows.append(row)
+		is_full = sorted(worksheets) == list(self.worksheets.keys()):
+		return is_full, all_rows
 
 	def write_id(self, row):
 		self.client.write_value(
