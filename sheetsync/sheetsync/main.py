@@ -82,6 +82,7 @@ class SheetSync(object):
 		self.create_missing_ids = False
 		# List of input columns
 		self.input_columns = [
+			'sheet_name'
 			'event_start',
 			'event_end',
 			'category',
@@ -101,10 +102,11 @@ class SheetSync(object):
 		if reverse_sync:
 			# Reverse Sync refers to copying all event data from the database into the sheet,
 			# instead of it (mostly) being the other way. In particular:
-			# - All columns become output columns
+			# - All columns become output columns (except sheet_name, which can't be changed)
 			# - We are allowed to create new sheet rows for database events if they don't exist.
 			self.create_missing_ids = True
 			self.output_columns += self.input_columns
+			self.output_columns.remove("sheet_name")
 			self.input_columns = []
 
 	def run(self):
@@ -186,7 +188,7 @@ class SheetSync(object):
 			self.logger.info("Inserting new DB row {}".format(sheet_row['id']))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
-			insert_cols = ['id', 'sheet_name'] + self.input_columns
+			insert_cols = ['id'] + self.input_columns
 			built_query = sql.SQL("""
 				INSERT INTO events ({})
 				VALUES ({})
