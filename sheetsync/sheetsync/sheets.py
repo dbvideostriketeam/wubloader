@@ -82,42 +82,26 @@ class SheetsMiddleware():
 	# Expected quota usage per 100s =
 	#  (100 / RETRY_INTERVAL) * ACTIVE_SHEET_COUNT
 	#  + (100 / RETRY_INTERVAL / SYNCS_PER_INACTIVE_CHECK) * (len(worksheets) - ACTIVE_SHEET_COUNT)
-	# If playlist_worksheet is defined, add 1 to len(worksheets).
 	# For current values, this is 100/5 * 2 + 100/5/4 * 7 = 75
 
-	def __init__(self, client, sheet_id, worksheets, bustime_start, edit_url, allocate_ids=False):
+	# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
+	# id is required.
+	column_map = {
+		"id": NotImplemented,
+	}
+
+	# Maps column names to a function that parses that column's value.
+	# Functions take a single arg (the value to parse) and ValueError is
+	# interpreted as None.
+	# Columns missing from this map default to simply using the string value.
+	column_parsers = {}
+
+	def __init__(self, client, sheet_id, worksheets, allocate_ids=False):
 		self.client = client
 		self.sheet_id = sheet_id
 		# map {worksheet: last modify time}
 		self.worksheets = {w: 0 for w in worksheets}
-		self.bustime_start = bustime_start
-		self.edit_url = edit_url
 		self.allocate_ids = allocate_ids
-		# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
-		# Hard-coded for now, future work: determine this from column headers in sheet
-		self.column_map = {
-			'event_start': 0,
-			'event_end': 1,
-			'category': 2,
-			'description': 3,
-			'submitter_winner': 4,
-			'poster_moment': 5,
-			'image_links': 6,
-			'marked_for_edit': 7,
-			'notes': 8,
-			'tags': 9,
-			'video_link': 11,
-			'state': 12,
-			'edit_link': 13,
-			'error': 14,
-			'id': 15,
-		}
-		# Maps column names to a function that parses that column's value.
-		# Functions take a single arg (the value to parse) and ValueError is
-		# interpreted as None.
-		# Columns missing from this map default to simply using the string value.
-		empty_is_none = lambda v: None if v == "" else v
-		self.column_parsers = {
 			'event_start': lambda v: self.parse_bustime(v),
 			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
 			'poster_moment': lambda v: v == '[\u2713]', # check mark
@@ -131,18 +115,6 @@ class SheetsMiddleware():
 		self.sync_count = 0
 		# tracks empty rows on the sheet for us to create new rows in
 		self.unassigned_rows = {}
-
-	def parse_bustime(self, value, preserve_dash=False):
-		"""Convert from HH:MM or HH:MM:SS format to datetime.
-		If preserve_dash=True and value is "--", returns "--"
-		as a sentinel value instead of None. "" will still result in None.
-		"""
-		if not value.strip():
-			return None
-		if value.strip() == "--":
-			return "--" if preserve_dash else None
-		bustime = common.parse_bustime(value)
-		return common.bustime_to_dt(self.bustime_start, bustime)
 
 	def pick_worksheets(self):
 		"""Returns a list of worksheets to check, which may not be the same every time
@@ -180,7 +152,7 @@ class SheetsMiddleware():
 				# Handle rows without an allocated id
 				if row['id'] is None:
 					# Only assign a row an id if it has a start time and a description
-					if not any(row[col] for col in ["event_start", "description"]):
+					if not self.row_is_non_empty(row):
 						self.unassigned_rows.setdefault(worksheet, []).append(row["index"])
 						continue
 					# If we can't allocate ids, warn and ignore.
@@ -192,21 +164,13 @@ class SheetsMiddleware():
 					logging.info(f"Allocating id for row {worksheet!r}:{row['index']} = {row['id']}")
 					self.write_id(row)
 
-				# Set edit link if marked for editing and start/end set.
-				# This prevents accidents / clicking the wrong row and provides
-				# feedback that sheet sync is still working.
-				# Also clear it if it shouldn't be set.
-				# We do this here instead of in sync_row() because it's Sheets-specific logic
-				# that doesn't depend on the DB event in any way.
-				edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
-				if row['edit_link'] != edit_link:
-					logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
-					self.write_value(row, "edit_link", edit_link)
-					self.mark_modified(row)
-
 				all_rows.append(row)
 		is_full = sorted(worksheets) == list(self.worksheets.keys()):
 		return is_full, all_rows
+
+	def row_is_non_empty(self, row):
+		"""Returns True if row is considered to be non-empty and should have an id assigned."""
+		raise NotImplementedError
 
 	def write_id(self, row):
 		self.client.write_value(
@@ -231,22 +195,6 @@ class SheetsMiddleware():
 					value = None
 					row_dict['_parse_errors'].append("Failed to parse column {}: {}".format(column, e))
 			row_dict[column] = value
-		# As a special case, add some implicit tags to the tags column.
-		# We prepend these to make it slightly more consistent for the editor,
-		# ie. it's always DAY, CATEGORY, POSTER_MOMENT, CUSTOM
-		row_dict['tags'] = (
-			[
-				row_dict['category'], # category name
-				worksheet, # sheet name
-			] + (['Poster Moment'] if row_dict['poster_moment'] else [])
-			+ row_dict['tags']
-		)
-		# As a special case, treat an end time of "--" as equal to the start time.
-		if row_dict["event_end"] == "--":
-			row_dict["event_end"] = row_dict["event_start"]
-		# Always include row index and worksheet
-		row_dict["index"] = row_index
-		row_dict["sheet_name"] = worksheet
 		return row_dict
 
 	def write_value(self, row, key, value):
@@ -281,3 +229,92 @@ class SheetsMiddleware():
 		logging.info(f"Assigning existing id {row['id']} to empty row {worksheet!r}:{row['index']}")
 		self.write_id(row)
 		return row
+
+
+class SheetsEventsMiddleware(SheetsMiddleware):
+	column_map = {
+		'event_start': 0,
+		'event_end': 1,
+		'category': 2,
+		'description': 3,
+		'submitter_winner': 4,
+		'poster_moment': 5,
+		'image_links': 6,
+		'marked_for_edit': 7,
+		'notes': 8,
+		'tags': 9,
+		'video_link': 11,
+		'state': 12,
+		'edit_link': 13,
+		'error': 14,
+		'id': 15,
+	}
+
+	def __init__(self, client, sheet_id, worksheets, bustime_start, edit_url, allocate_ids=False):
+		super().__init__(client, sheet_id, worksheets, allocate_ids)
+		self.bustime_start = bustime_start
+		self.edit_url = edit_url
+		self.allocate_ids = allocate_ids
+
+		# column parsers are defined here so they can reference self
+		empty_is_none = lambda v: None if v == "" else v
+		self.column_parsers = {
+			'event_start': lambda v: self.parse_bustime(v),
+			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
+			'poster_moment': lambda v: v == '[\u2713]', # check mark
+			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
+			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
+			'id': lambda v: v if v.strip() else None,
+			'error': empty_is_none,
+			'video_link': empty_is_none,
+		}
+
+	def parse_bustime(self, value, preserve_dash=False):
+		"""Convert from HH:MM or HH:MM:SS format to datetime.
+		If preserve_dash=True and value is "--", returns "--"
+		as a sentinel value instead of None. "" will still result in None.
+		"""
+		if not value.strip():
+			return None
+		if value.strip() == "--":
+			return "--" if preserve_dash else None
+		bustime = common.parse_bustime(value)
+		return common.bustime_to_dt(self.bustime_start, bustime)
+
+	def row_is_non_empty(self, row):
+		return any(row[col] for col in ["event_start", "description"])
+
+	def parse_row(self, worksheet, row_index, row):
+		row_dict = super().parse_row(worksheet, row_index, row)
+
+		# As a special case, add some implicit tags to the tags column.
+		# We prepend these to make it slightly more consistent for the editor,
+		# ie. it's always DAY, CATEGORY, POSTER_MOMENT, CUSTOM
+		row_dict['tags'] = (
+			[
+				row_dict['category'], # category name
+				worksheet, # sheet name
+			] + (['Poster Moment'] if row_dict['poster_moment'] else [])
+			+ row_dict['tags']
+		)
+
+		# As a special case, treat an end time of "--" as equal to the start time.
+		if row_dict["event_end"] == "--":
+			row_dict["event_end"] = row_dict["event_start"]
+		# Always include row index and worksheet
+		row_dict["index"] = row_index
+		row_dict["sheet_name"] = worksheet
+
+		# Set edit link if marked for editing and start/end set.
+		# This prevents accidents / clicking the wrong row and provides
+		# feedback that sheet sync is still working.
+		# Also clear it if it shouldn't be set.
+		# We do this here instead of in sync_row() because it's Sheets-specific logic
+		# that doesn't depend on the DB event in any way.
+		edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
+		if row['edit_link'] != edit_link:
+			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
+			self.write_value(row, "edit_link", edit_link)
+			self.mark_modified(row)
+
+		return row_dict
