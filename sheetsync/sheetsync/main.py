@@ -17,7 +17,7 @@ import common
 import common.dateutil
 from common.database import DBManager, query, get_column_placeholder
 
-from .sheets import SheetsClient, SheetsMiddleware
+from .sheets import SheetsClient, SheetsEventsMiddleware
 from .streamlog import StreamLogClient, StreamLogMiddleware
 
 sheets_synced = prom.Counter(
@@ -450,7 +450,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 				client_secret=creds['client_secret'],
 				refresh_token=creds['refresh_token'],
 			)
-			middleware = SheetsMiddleware(
+			middleware = SheetsEventsMiddleware(
 				client,
 				config["sheet_id"],
 				config["worksheets"],
