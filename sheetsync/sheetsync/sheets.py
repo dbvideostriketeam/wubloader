@@ -129,6 +129,8 @@ class SheetsMiddleware():
 		}
 		# tracks when to do inactive checks
 		self.sync_count = 0
+		# tracks empty rows on the sheet for us to create new rows in
+		self.unassigned_rows = {}
 
 	def parse_bustime(self, value, preserve_dash=False):
 		"""Convert from HH:MM or HH:MM:SS format to datetime.
@@ -261,7 +263,10 @@ class SheetsMiddleware():
 		self.worksheets[row["sheet_name"]] = monotonic()
 
 	def create_row(self, worksheet, id):
-		index = self.unassigned_rows[worksheet].pop(0)
+		unassigned_rows = self.unassigned_rows.get(worksheet, [])
+		if not unassigned_rows:
+			raise Exception(f"Worksheet {worksheet} has no available space to create a new row in")
+		index = unassigned_rows.pop(0)
 		row = {
 			"sheet_name": worksheet,
 			"id": id,
