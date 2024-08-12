@@ -95,6 +95,16 @@ class SheetSync(object):
 		'state',
 		'error',
 	}
+	# Additional columns to read from the database but not write to the sheet,
+	# for metrics purposes.
+	metrics_columns = {
+		"state",
+		"error",
+		"public",
+		"poster_moment",
+		"sheet_name",
+		"category",
+	}
 
 	def __init__(self, name, middleware, stop, dbmanager, reverse_sync=False):
 		self.name = name
@@ -159,9 +169,10 @@ class SheetSync(object):
 			SELECT {} FROM {}
 		""").format(
 			sql.SQL(", ").join(sql.Identifier(col) for col in
-				{ "id", "state", "error", "public", "poster_moment", "sheet_name", "category" }
+				{"id"}
 				| self.input_columns
 				| self.output_columns
+				| self.metrics_columns
 			),
 			sql.Identifier("table"),
 		)
