@@ -65,9 +65,11 @@ class StreamLogPlaylistsMiddleware(Middleware):
 				# Special case for the "all everything" list, otherwise all playlists have a single tag.
 				"tags": [] if tag["tag"] == "<all>" else [tag["tag"]],
 				"playlist_id": tag["playlist"]
+				"description": tag["description"],
 				"name": "unknown", # TODO missing in StreamLog
 				"show_in_description": False, # TODO missing in StreamLog
-				"description": tag["description"],
+				"first_event_id": None, # TODO missing in StreamLog
+				"last_event_id": None, # TODO missing in StreamLog
 			})
 		return True, rows
 
