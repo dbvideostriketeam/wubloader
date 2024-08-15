@@ -60,11 +60,11 @@ class StreamLogPlaylistsMiddleware(Middleware):
 		for tag in self.client.get_tags():
 			rows.append({
 				"id": tag["id"],
-				"sheet_name": playlists_worksheet,
+				"sheet_name": self.playlists_worksheet,
 				"_parse_errors": [],
 				# Special case for the "all everything" list, otherwise all playlists have a single tag.
 				"tags": [] if tag["tag"] == "<all>" else [tag["tag"]],
-				"playlist_id": tag["playlist"]
+				"playlist_id": tag["playlist"],
 				"description": tag["description"],
 				"name": "unknown", # TODO missing in StreamLog
 				"show_in_description": False, # TODO missing in StreamLog
