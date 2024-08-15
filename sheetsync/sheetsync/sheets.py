@@ -103,8 +103,7 @@ class SheetsMiddleware(Middleware):
 					self.write_id(row)
 
 				all_rows.append(row)
-		is_full = sorted(worksheets) == list(self.worksheets.keys())
-		return is_full, all_rows
+		return worksheets, all_rows
 
 	def row_is_non_empty(self, row):
 		"""Returns True if row is considered to be non-empty and should have an id assigned."""
@@ -218,6 +217,11 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"show_in_description": ENCODE_CHECKMARK,
 	}
 
+	def row_was_expected(self, db_row, worksheets):
+		# Database does not record a worksheet for playlists, we assume there's only one
+		# sheet and so it should always be there.
+		return True
+
 	def row_is_non_empty(self, row):
 		return row["tags"] is not None
 
@@ -283,6 +287,9 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			return ""
 		bustime = common.dt_to_bustime(self.bustime_start, value)
 		return common.format_bustime(bustime, round="minute")
+
+	def row_was_expected(self, db_row, worksheets):
+		return db_row.sheet_name in worksheets
 
 	def row_is_non_empty(self, row):
 		return any(row[col] for col in ["event_start", "description"])

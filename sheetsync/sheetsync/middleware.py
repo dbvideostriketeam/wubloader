@@ -13,11 +13,19 @@ class Middleware:
 				is still required.
 			_parse_errors: A list of error messages encountered when parsing, to be surfaced to the
 				user if possible.
-		In addition to the list of dicts, should return an "is_full" boolean which is True
-		if all rows were fetched or False if only some subset was fetched (eg. for quota management reasons).
-		Returns (is_full, rows).
+		In addition to the list of dicts, should return a list of worksheets fetched from,
+		which is then passed to row_was_expected().
+		Returns (worksheets, rows).
 		"""
 		raise NotImplementedError
+
+	def row_was_expected(self, db_row, worksheets):
+		"""Given a database row and list of worksheets from get_rows(), return whether
+		the given row should have been present in the returned rows, ie. if we expected
+		to find it on one of those worksheets."""
+		# Default to the common case, which is that we always return all data
+		# so the row should always be expected.
+		return True
 
 	def write_value(self, row, key, value):
 		"""Write key=value to the given row. Takes the full row object so any identifying info

@@ -71,7 +71,7 @@ class StreamLogPlaylistsMiddleware(Middleware):
 				"first_event_id": None, # TODO missing in StreamLog
 				"last_event_id": None, # TODO missing in StreamLog
 			})
-		return True, rows
+		return None, rows
 
 	# writing intentionally not implemented
 
@@ -124,8 +124,8 @@ class StreamLogEventsMiddleware(Middleware):
 			# Malformed rows can be skipped, represented as a None result
 			if row is not None:
 				all_rows.append(row)
-		# There's no worksheet concept here so we always return a full sync.
-		return True, all_rows
+		# There's no worksheet concept here so just return None for worksheets.
+		return None, all_rows
 
 	def parse_row(self, row):
 		output = {}
