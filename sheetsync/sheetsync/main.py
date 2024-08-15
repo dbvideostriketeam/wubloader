@@ -171,15 +171,8 @@ class SheetSync(object):
 		return by_id
 
 	def observe_rows(self, rows):
-		"""Takes a list of DB rows and updates metrics"""
-		counts = defaultdict(lambda: 0)
-		for row in rows:
-			counts[row.sheet_name, row.category, str(row.poster_moment), row.state, str(bool(row.error))] += 1
-		# Reach into metric internals and forget about all previous values,
-		# or else any values we don't update will remain as a stale count.
-		event_counts._metrics.clear()
-		for labels, count in counts.items():
-			event_counts.labels(self.name, *labels).set(count)
+		"""Takes a list of DB rows and updates metrics, optional to implement"""
+		pass
 
 	def sync_row(self, sheet_row, db_row):
 		"""Take a row dict from the sheet (or None) and a row namedtuple from the database (or None)
@@ -283,6 +276,16 @@ class EventsSync(SheetSync):
 		"sheet_name",
 		"category",
 	}
+
+	def observe_rows(self, rows):
+		counts = defaultdict(lambda: 0)
+		for row in rows:
+			counts[row.sheet_name, row.category, str(row.poster_moment), row.state, str(bool(row.error))] += 1
+		# Reach into metric internals and forget about all previous values,
+		# or else any values we don't update will remain as a stale count.
+		event_counts._metrics.clear()
+		for labels, count in counts.items():
+			event_counts.labels(self.name, *labels).set(count)
 
 	def sync_row(self, sheet_row, db_row):
 		# Do some special-case transforms for events before syncing
