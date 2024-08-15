@@ -134,7 +134,7 @@
     desertbus_slow: {type: "youtube", cut_type: "full"},
     desertbus_emergency: {type: "youtube", cut_type: "fast"},
     // Non-uploading backend that lets us modify manually-updated youtube videos
-    "youtube-manual": {type: "youtube", no_uploader: true}.
+    "youtube-manual": {type: "youtube", no_uploader: true},
   },
   default_location:: "desertbus",
   // archive location is the default location for archive events,
@@ -462,7 +462,7 @@
           type: "playlists",
           worksheets: [$.playlist_worksheet],
         },
-      ] + (if $.archive_worksheet == null then [] else {
+      ] + (if $.archive_worksheet == null then [] else [
         sync_sheet_base + {
           name: "sheet-archive",
           type: "archive",
@@ -473,7 +473,7 @@
           allocate_ids: true,
           reverse_sync: false,
         }
-      }),
+      ]),
       local sync_streamlog_base = {
         backend: "streamlog",
         creds: "/etc/streamlog-token.txt",
