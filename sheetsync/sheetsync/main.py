@@ -312,9 +312,12 @@ class PlaylistsSync(SheetSync):
 
 	table = "playlists"
 	input_columns = {
-		"playlist_id",
-		"tags",
 		"name",
+		"description",
+		"tags",
+		"playlist_id",
+		"first_event_id",
+		"last_event_id",
 		"show_in_description",
 	}
 

@@ -303,7 +303,7 @@ def update_row(ident, editor=None):
 		playlists = database.query(conn, """ 
 			SELECT playlist_id, name, tags
 			FROM playlists
-			WHERE show_in_description AND tags IS NOT NULL
+			WHERE show_in_description AND tags IS NOT NULL AND playlist_id IS NOT NULL
 		""")
 		# Filter for matching playlists for this video
 		playlists = [

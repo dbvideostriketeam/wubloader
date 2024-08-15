@@ -141,16 +141,24 @@ CREATE TABLE editors (
 	name TEXT NOT NULL
 );
 
+-- A slight misnomer, this is all rows of the tags sheet.
+-- It includes tags that have been promoted to actual playlists, and ones that have not.
 -- Playlists are communicated to playlist manager via this table.
 CREATE TABLE playlists (
-	playlist_id TEXT PRIMARY KEY,
-	name TEXT NOT NULL,
+	id TEXT PRIMARY KEY,
+	-- These are sheet inputs, and aren't used directly by anything (except reverse sync)
+	name TEXT NOT NULL DEFAULT '',
+	description TEXT NOT NULL DEFAULT ''
 	-- When tags is NULL, it indicates tags have not been set and so the playlist should
 	-- match nothing. Conversely, when tags is empty, it indicates the playlist should match everything.
 	tags TEXT[],
-	first_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
-	last_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
-	show_in_description BOOLEAN NOT NULL
+	playlist_id TEXT,
+	show_in_description BOOLEAN NOT NULL DEFAULT FALSE,
+	-- These event ids are references into the events table, but they aren't foreign keys
+	-- because we don't want invalid input to cause integrity errors.
+	-- It's totally safe for these to point to non-existent events, it just does nothing.
+	first_event_id TEXT,
+	last_event_id TEXT
 );
 
 -- This table records time series data gleaned from the bus cam (right now, just the odometer).

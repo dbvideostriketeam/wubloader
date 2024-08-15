@@ -110,7 +110,11 @@ class PlaylistManager(object):
 				[tag.lower() for tag in row.tags],
 				row.first_event_id,
 				row.last_event_id,
-			) for row in query(conn, "SELECT playlist_id, tags, first_event_id, last_event_id FROM playlists WHERE tags IS NOT NULL")
+			) for row in query(conn, """
+				SELECT playlist_id, tags, first_event_id, last_event_id
+				FROM playlists
+				WHERE tags IS NOT NULL AND playlist_id IS NOT NULL
+			""")
 		}
 		self.dbmanager.put_conn(conn)
 		duplicates = set(playlists) & set(self.static_playlists)
