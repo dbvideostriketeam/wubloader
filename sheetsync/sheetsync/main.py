@@ -16,8 +16,9 @@ from requests import HTTPError
 import common
 import common.dateutil
 from common.database import DBManager, query, get_column_placeholder
+from common.sheets import Sheets as SheetsClient
 
-from .sheets import SheetsClient, SheetsEventsMiddleware
+from .sheets import SheetsEventsMiddleware
 from .streamlog import StreamLogClient, StreamLogMiddleware
 
 sheets_synced = prom.Counter(
