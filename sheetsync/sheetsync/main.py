@@ -388,7 +388,7 @@ class SheetSync(object):
 			for col in changed:
 				output = format_output(getattr(event, col))
 				if column_map[col] is None:
-					logging.debug("Tried to update sheet for unmapped column {} = {!r}".format(col, output))
+					logging.warning("Tried to update sheet for unmapped column {} = {!r}".format(col, output))
 					continue
 				self.sheets.write_value(
 					self.sheet_id, worksheet,
