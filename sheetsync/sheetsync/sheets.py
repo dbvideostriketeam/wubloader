@@ -23,6 +23,9 @@ class SheetsMiddleware(Middleware):
 	#  + (100 / RETRY_INTERVAL / SYNCS_PER_INACTIVE_CHECK) * (len(worksheets) - ACTIVE_SHEET_COUNT)
 	# For current values, this is 100/5 * 2 + 100/5/4 * 7 = 75
 
+	# Number of initial rows to ignore as they contain headers
+	header_rows = 1
+
 	# Maps DB column names (or general identifier, for non-DB columns) to sheet column indexes.
 	# id is required.
 	column_map = {
@@ -77,10 +80,10 @@ class SheetsMiddleware(Middleware):
 		for worksheet in worksheets:
 			rows = self.client.get_rows(self.sheet_id, worksheet)
 			for row_index, row in enumerate(rows):
-				# Skip first row (ie. the column titles).
+				# Skip first row or rows (ie. the column titles).
 				# Need to do it inside the loop and not eg. use rows[1:],
 				# because then row_index won't be correct.
-				if row_index == 0:
+				if row_index < self.header_rows:
 					continue
 				row = self.parse_row(worksheet, row_index, row)
 
@@ -116,7 +119,11 @@ class SheetsMiddleware(Middleware):
 
 	def parse_row(self, worksheet, row_index, row):
 		"""Take a row as a sequence of columns, and return a dict {column: value}"""
-		row_dict = {'_parse_errors': []}
+		row_dict = {
+			"sheet_name": worksheet,
+			"index": row_index,
+			'_parse_errors': [],
+		}
 		for column, index in self.column_map.items():
 			if index >= len(row):
 				# Sheets omits trailing columns if they're all empty, so substitute empty string
@@ -286,20 +293,20 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# As a special case, add some implicit tags to the tags column.
 		# We prepend these to make it slightly more consistent for the editor,
 		# ie. it's always DAY, CATEGORY, POSTER_MOMENT, CUSTOM
-		row_dict['tags'] = (
-			[
-				row_dict['category'], # category name
-				worksheet, # sheet name
-			] + (['Poster Moment'] if row_dict['poster_moment'] else [])
-			+ row_dict['tags']
-		)
+		# This is only needed for full events (not the archive sheet),
+		# so only do it if we had a tags column in the first place.
+		if 'tags' in row_dict:
+			row_dict['tags'] = (
+				[
+					row_dict['category'], # category name
+					worksheet, # sheet name
+				] + (['Poster Moment'] if row_dict['poster_moment'] else [])
+				+ row_dict['tags']
+			)
 
 		# As a special case, treat an end time of "--" as equal to the start time.
 		if row_dict["event_end"] == "--":
 			row_dict["event_end"] = row_dict["event_start"]
-		# Always include row index and worksheet
-		row_dict["index"] = row_index
-		row_dict["sheet_name"] = worksheet
 
 		# Set edit link if marked for editing and start/end set.
 		# This prevents accidents / clicking the wrong row and provides
@@ -307,10 +314,30 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# Also clear it if it shouldn't be set.
 		# We do this here instead of in sync_row() because it's Sheets-specific logic
 		# that doesn't depend on the DB event in any way.
-		edit_link = self.edit_url.format(row['id']) if row['marked_for_edit'] == '[+] Marked' else ''
+		edit_link = self.edit_url.format(row['id']) if self.show_edit_url(row) else ''
 		if row['edit_link'] != edit_link:
 			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
 			self.write_value(row, "edit_link", edit_link)
 			self.mark_modified(row)
 
 		return row_dict
+
+	def show_edit_url(self, row):
+		return row['marked_for_edit'] == '[+] Marked'
+
+
+class SheetsArchiveMiddleware(SheetsEventsMiddleware):
+	# Archive sheet is similar to events sheet but is missing some columns.
+	column_map = {
+		'event_start': 0,
+		'event_end': 1,
+		'description': 2,
+		'state': 3,
+		'notes': 4,
+		'edit_link': 6,
+		'error': 7,
+		'id': 8,
+	}
+
+	def show_edit_url(self, row):
+		return row['event_start'] is not None and row['event_end'] is not None

@@ -446,7 +446,7 @@
         backend: "sheets",
         creds: "/etc/sheet-creds.json",
         sheet_id: $.sheet_id,
-        allocate_ids: true,
+        allocate_ids: ! $.sheet_reverse_sync,
         reverse_sync: $.sheet_reverse_sync,
       },
       local sync_sheet = [
@@ -462,7 +462,18 @@
           type: "playlists",
           worksheets: [$.playlist_worksheet],
         },
-      ],
+      ] + (if $.archive_worksheet == null then [] else {
+        sync_sheet_base + {
+          name: "sheet-archive",
+          type: "archive",
+          worksheets: [$.archive_worksheet],
+          edit_url: $.edit_url,
+          bustime_start: $.bustime_start,
+          // archive is never reverse sync
+          allocate_ids: true,
+          reverse_sync: false,
+        }
+      }),
       local sync_streamlog_base = {
         backend: "streamlog",
         creds: "/etc/streamlog-token.txt",

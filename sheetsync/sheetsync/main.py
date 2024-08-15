@@ -17,7 +17,7 @@ import common.dateutil
 from common.database import DBManager, query, get_column_placeholder
 from common.sheets import Sheets as SheetsClient
 
-from .sheets import SheetsEventsMiddleware, SheetsPlaylistsMiddleware
+from .sheets import SheetsEventsMiddleware, SheetsPlaylistsMiddleware, SheetsArchiveMiddleware
 from .streamlog import StreamLogClient, StreamLogEventsMiddleware, StreamLogPlaylistsMiddleware
 
 sheets_synced = prom.Counter(
@@ -304,6 +304,25 @@ class EventsSync(SheetSync):
 		super().sync_row(sheet_row, db_row)
 
 
+class ArchiveSync(EventsSync):
+	# Archive events are a special case of event with less input columns.
+	# The other input columns default to empty string in the database.
+	input_columns = {
+		'sheet_name',
+		'event_start',
+		'event_end',
+		'description',
+		'notes',
+	}
+	output_columns = {
+		'state',
+		'error',
+	}
+	# Slower poll rate than events to avoid using large amounts of quota
+	retry_interval = 20
+	error_retry_interval = 20
+
+
 class PlaylistsSync(SheetSync):
 
 	# Slower poll rate than events to avoid using large amounts of quota
@@ -336,7 +355,7 @@ class PlaylistsSync(SheetSync):
 		Always present:
 			name: A human identifier for this sync operation
 			backend: The data source. One of "sheets" or "streamlog"
-			type: What kind of data is being synced. One of "events" or "playlists"
+			type: What kind of data is being synced. One of "events", "playlists" or "archive"
 		When backend is "sheets":
 			creds: path to credentials JSON file containing "client_id", "client_secret" and "refresh_token"
 			sheet_id: The id of the Google Sheet to use
@@ -346,7 +365,7 @@ class PlaylistsSync(SheetSync):
 			reverse_sync: Boolean, optional. When true, enables an alternate mode
 				where all data is synced from the database to the sheet.
 				Only one sheetsync acting on the same sheet should have this enabled.
-			When type is "events":
+			When type is "events" or "archive":
 				edit_url: a format string for edit links, with {} as a placeholder for id
 				bustime_start: Timestamp string at which bustime is 00:00
 		When backend is "streamlog":
@@ -402,8 +421,12 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 				refresh_token=creds['refresh_token'],
 			)
 			allocate_ids = config.get("allocate_ids", False)
-			if config["type"] == "sheets":
-				middleware = SheetsEventsMiddleware(
+			if config["type"] in ("sheets", "archive"):
+				middleware_cls = {
+					"sheets": SheetsEventsMiddleware,
+					"archive": SheetsArchiveMiddleware,
+				}
+				middleware = middleware_cls(
 					client,
 					config["sheet_id"],
 					config["worksheets"],
@@ -431,6 +454,8 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 				middleware = StreamLogEventsMiddleware(client)
 			elif config["type"] == "playlists":
 				middleware = StreamLogPlaylistsMiddleware(client)
+			elif config["type"] == "archive":
+				raise ValueError("Archive sync is not compatible with streamlog")
 			else:
 				raise ValueError("Unknown type {!r}".format(config["type"]))
 		else:
@@ -439,6 +464,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 		sync_class = {
 			"events": EventsSync,
 			"playlists": PlaylistsSync,
+			"archive": ArchiveSync,
 		}[config["type"]]
 		reverse_sync = config.get("reverse_sync", False)
 		sync = sync_class(config["name"], middleware, stop, dbmanager, reverse_sync)
