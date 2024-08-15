@@ -98,21 +98,17 @@ class SheetsMiddleware(Middleware):
 	# Columns missing from this map default to simply using the string value.
 	column_parsers = {}
 
+	# Maps column names to a function that encodes the value to a string for the spreadsheet,
+	# ie. the inverse of column_parsers.
+	# A column being omitted defaults to NONE_IS_EMPTY, ie. identity function for strings, "" for None.
+	column_encode = {}
+
 	def __init__(self, client, sheet_id, worksheets, allocate_ids=False):
 		self.client = client
 		self.sheet_id = sheet_id
 		# map {worksheet: last modify time}
 		self.worksheets = {w: 0 for w in worksheets}
 		self.allocate_ids = allocate_ids
-			'event_start': lambda v: self.parse_bustime(v),
-			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
-			'poster_moment': lambda v: v == '[\u2713]', # check mark
-			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
-			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
-			'id': lambda v: v if v.strip() else None,
-			'error': empty_is_none,
-			'video_link': empty_is_none,
-		}
 		# tracks when to do inactive checks
 		self.sync_count = 0
 		# tracks empty rows on the sheet for us to create new rows in
@@ -167,7 +163,7 @@ class SheetsMiddleware(Middleware):
 					self.write_id(row)
 
 				all_rows.append(row)
-		is_full = sorted(worksheets) == list(self.worksheets.keys()):
+		is_full = sorted(worksheets) == list(self.worksheets.keys())
 		return is_full, all_rows
 
 	def row_is_non_empty(self, row):
@@ -201,10 +197,7 @@ class SheetsMiddleware(Middleware):
 
 	def write_value(self, row, key, value):
 		"""Write key=value to the given row, as identified by worksheet + row dict."""
-		# You can't write null to a spreadsheet, so cast to empty string instead.
-		# For values where this is needed, they should be parsed so that '' -> None.
-		if value is None:
-			value = ''
+		value = self.column_encode.get(key, NONE_IS_EMPTY)(value)
 		return self.client.write_value(
 			self.sheet_id,
 			row["sheet_name"],
@@ -233,6 +226,58 @@ class SheetsMiddleware(Middleware):
 		return row
 
 
+# Helpers for parsing
+EMPTY_IS_NONE = lambda v: None if v == "" else v
+NONE_IS_EMPTY = lambda v: "" if v is None else v
+PARSE_CHECKMARK = lambda v: v == "[✓]"
+ENCODE_CHECKMARK = lambda v: "[✓]" if v else ""
+
+def check_playlist(playlist_id):
+	playlist_id = playlist_id.strip()
+	if not playlist_id:
+		return None
+	if len(playlist_id) != 34 or not playlist_id.startswith('PL'):
+		raise ValueError("Playlist ID appears to be invalid")
+	return playlist_id
+
+
+class SheetsPlaylistsMiddleware(SheetsMiddleware):
+	column_map = {
+		"tags": 0,
+		"description": 1,
+		"name": 2,
+		"playlist_id": 3,
+		"show_in_description": 4,
+		"first_event_id": 5,
+		"last_event_id": 6,
+		"state": 7,
+		"error": 8,
+		"id": 9,
+	}
+
+	column_parsers = {
+		"tags": lambda v: (
+			None if v.strip() == "" else
+			[] if v == "<all>" else
+			[tag.strip() for tag in v.split(",") if tag.strip()]
+		),
+		"playlist_id": check_playlist,
+		"show_in_description": PARSE_CHECKMARK,
+	}
+
+	column_encode = {
+		"tags": lambda v: (
+			"" if v is None else
+			"<all>" if v == [] else
+			", ".join(v)
+		),
+		"show_in_description": ENCODE_CHECKMARK,
+	}
+
+	def row_is_non_empty(self, row):
+		return row["tags"] is not None
+
+
 class SheetsEventsMiddleware(SheetsMiddleware):
 	column_map = {
 		'event_start': 0,
@@ -256,19 +301,24 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		super().__init__(client, sheet_id, worksheets, allocate_ids)
 		self.bustime_start = bustime_start
 		self.edit_url = edit_url
-		self.allocate_ids = allocate_ids
 
 		# column parsers are defined here so they can reference self
-		empty_is_none = lambda v: None if v == "" else v
 		self.column_parsers = {
-			'event_start': lambda v: self.parse_bustime(v),
+			'event_start': self.parse_bustime,
 			'event_end': lambda v: self.parse_bustime(v, preserve_dash=True),
-			'poster_moment': lambda v: v == '[\u2713]', # check mark
+			'poster_moment': PARSE_CHECKMARK,
 			'image_links': lambda v: [link.strip() for link in v.split()] if v.strip() else [],
 			'tags': lambda v: [tag.strip() for tag in v.split(',') if tag.strip()],
-			'id': lambda v: v if v.strip() else None,
-			'error': empty_is_none,
-			'video_link': empty_is_none,
+			'id': EMPTY_IS_NONE,
+			'error': EMPTY_IS_NONE,
+			'video_link': EMPTY_IS_NONE,
+		}
+		self.column_encode = {
+			"event_start": self.encode_bustime,
+			"event_end": self.encode_bustime,
+			"poster_moment": ENCODE_CHECKMARK,
+			"image_links": lambda v: " ".join(v),
+			"tags": lambda v: ", ".join(v),
 		}
 
 	def parse_bustime(self, value, preserve_dash=False):
@@ -282,6 +332,13 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			return "--" if preserve_dash else None
 		bustime = common.parse_bustime(value)
 		return common.bustime_to_dt(self.bustime_start, bustime)
+
+	def encode_bustime(self, value):
+		"""Inverse of parse_bustime"""
+		if value is None:
+			return ""
+		bustime = common.dt_to_bustime(self.bustime_start, value)
+		return common.format_bustime(bustime, round="minute")
 
 	def row_is_non_empty(self, row):
 		return any(row[col] for col in ["event_start", "description"])
