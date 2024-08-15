@@ -18,9 +18,13 @@ class StreamLogClient():
 		self.event_id = event_id
 		self.session = requests.Session()
 
-	def get_rows(self):
-		"""Return a list of rows, where each row is a dict"""
+	def get_entries(self):
+		"""Return a list of log entries, where each row is a dict"""
 		return self.request("GET", "event", self.event_id, "log")
+
+	def get_tags(self):
+		"""Return a list of dicts representing tags objects"""
+		return self.request("GET", "event", self.event_id, "tags")
 
 	def write_value(self, row_id, key, value):
 		"""Write key=value for the given row, or delete if value=None"""
@@ -44,7 +48,32 @@ class StreamLogClient():
 		return None
 
 
-class StreamLogMiddleware(Middleware):
+class StreamLogPlaylistsMiddleware(Middleware):
+	# There's no point sharing any code with StreamLogEventsMiddleware,
+	# the operations are too different.
+	def __init__(self, client, playlists_worksheet):
+		self.client = client
+		self.playlists_worksheet = playlists_worksheet
+
+	def get_rows(self):
+		rows = []
+		for tag in self.client.get_tags():
+			rows.append({
+				"id": tag["id"],
+				"sheet_name": playlists_worksheet,
+				"_parse_errors": [],
+				# Special case for the "all everything" list, otherwise all playlists have a single tag.
+				"tags": [] if tags["tag"] == "<all>" else [tag["tag"]],
+				"name": "unknown", # TODO missing in StreamLog
+				"show_in_description": False, # TODO missing in StreamLog
+				"description": tag["description"],
+			})
+		return True, rows
+
+	# writing intentionally not implemented
+
+
+class StreamLogEventsMiddleware(Middleware):
 	def __init__(self, client):
 		self.client = client
 		# Maps DB column names to streamlog fields.
@@ -87,7 +116,7 @@ class StreamLogMiddleware(Middleware):
 
 	def get_rows(self):
 		all_rows = []
-		for row in self.client.get_rows()["event_log"]:
+		for row in self.client.get_entries()["event_log"]:
 			row = self.parse_row(row)
 			# Malformed rows can be skipped, represented as a None result
 			if row is not None:
