@@ -441,27 +441,42 @@
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {
-      local sync_sheet = {
-          type: "sheets",
-          creds: "/etc/sheet-creds.json",
-          sheet_id: $.sheet_id,
+      local sync_sheet_base = {
+        name: if $.sheet_reverse_sync then "reverse-" else "",
+        backend: "sheets",
+        creds: "/etc/sheet-creds.json",
+        sheet_id: $.sheet_id,
+        allocate_ids: true,
+        reverse_sync: $.sheet_reverse_sync,
+      },
+      local sync_sheet = [
+        sync_sheet_base + {
+          name+: "sheet-events",
+          type: "events",
           worksheets: $.worksheets,
-          allocate_ids: true,
           edit_url: $.edit_url,
           bustime_start: $.bustime_start,
-          playlist_worksheet: $.playlist_worksheet,
-          reverse_sync: $.sheet_reverse_sync,
+        },
+        sync_sheet_base + {
+          name+: "sheet-playlists",
+          type: "playlists",
+          worksheets: [$.playlist_worksheet],
+        },
+      ],
+      local sync_streamlog_base = {
+        backend: "streamlog",
+        creds: "/etc/streamlog-token.txt",
+        url: $.streamlog_url,
+        event_id: $.streamlog_event,
       },
-      local sync_streamlog = {
-          type: "streamlog",
-          creds: "/etc/streamlog-token.txt",
-          url: $.streamlog_url,
-          event_id: $.streamlog_event,
-      },
-      local config = std.prune([
-          if $.sheet_id != null then sync_sheet,
-          if $.streamlog_url != null then sync_streamlog,
-      ]),
+      local sync_streamlog = [
+        sync_streamlog_base + {name: "streamlog-events", type: "events"},
+        sync_streamlog_base + {name: "streamlog-playlists", type: "playlists"},
+      ],
+      local config = (
+          (if $.sheet_id != null then sync_sheet else [])
+          + (if $.streamlog_url != null then sync_streamlog else [])
+      ),
       image: $.get_image("sheetsync"),
       // Args for the sheetsync
       command: [
