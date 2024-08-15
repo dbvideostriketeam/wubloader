@@ -142,11 +142,12 @@ CREATE TABLE editors (
 );
 
 -- Playlists are communicated to playlist manager via this table.
--- Sheetsync will wipe and re-populate this table periodically to match what is in the sheet
 CREATE TABLE playlists (
 	playlist_id TEXT PRIMARY KEY,
 	name TEXT NOT NULL,
-	tags TEXT[] NOT NULL,
+	-- When tags is NULL, it indicates tags have not been set and so the playlist should
+	-- match nothing. Conversely, when tags is empty, it indicates the playlist should match everything.
+	tags TEXT[],
 	first_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
 	last_event_id UUID REFERENCES events(id) ON DELETE SET NULL,
 	show_in_description BOOLEAN NOT NULL
