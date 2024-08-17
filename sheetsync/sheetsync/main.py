@@ -159,7 +159,7 @@ class SheetSync(object):
 				| self.output_columns
 				| self.metrics_columns
 			),
-			sql.Identifier("table"),
+			sql.Identifier(self.table),
 		)
 		result = query(self.conn, built_query)
 		by_id = {}
@@ -207,7 +207,7 @@ class SheetSync(object):
 				self.logger.info("Skipping db row {} without any matching sheet row".format(db_row.id))
 				return
 			self.logger.info("Adding new row {}".format(db_row.id))
-			sheet_row = self.middleware.create_row(db_row.sheet_name, db_row.id)
+			sheet_row = self.middleware.create_row(db_row)
 
 		worksheet = sheet_row["sheet_name"]
 		rows_found.labels(self.name, worksheet).inc()
@@ -222,12 +222,11 @@ class SheetSync(object):
 				UPDATE {}
 				SET {}
 				WHERE id = %(id)s
-			""").format(sql.SQL(", ").join(
-				[sql.Identifer(self.table)] +
-				[sql.SQL("{} = {}").format(
+			""").format(sql.Identifier(self.table), sql.SQL(", ").join([
+				sql.SQL("{} = {}").format(
 					sql.Identifier(col), get_column_placeholder(col)
-				) for col in changed]
-			))
+				) for col in changed
+			]))
 			query(self.conn, built_query, **sheet_row)
 			rows_changed.labels(self.name, 'input', worksheet).inc()
 			self.middleware.mark_modified(sheet_row)
@@ -250,7 +249,7 @@ class SheetSync(object):
 class EventsSync(SheetSync):
 	table = "events"
 	input_columns = {
-		'sheet_name'
+		'sheet_name',
 		'event_start',
 		'event_end',
 		'category',
@@ -411,19 +410,22 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 	workers = []
 
 	for config in sync_configs:
+		reverse_sync = config.get("reverse_sync", False)
 		if config["backend"] == "sheets":
+			allocate_ids = config.get("allocate_ids", False)
+			if allocate_ids and reverse_sync:
+				raise ValueError("Cannot combine allocate_ids and reverse_sync")
 			creds = json.load(open(config["creds"]))
 			client = SheetsClient(
 				client_id=creds['client_id'],
 				client_secret=creds['client_secret'],
 				refresh_token=creds['refresh_token'],
 			)
-			allocate_ids = config.get("allocate_ids", False)
-			if config["type"] in ("sheets", "archive"):
+			if config["type"] in ("events", "archive"):
 				middleware_cls = {
-					"sheets": SheetsEventsMiddleware,
+					"events": SheetsEventsMiddleware,
 					"archive": SheetsArchiveMiddleware,
-				}
+				}[config["type"]]
 				middleware = middleware_cls(
 					client,
 					config["sheet_id"],
@@ -436,7 +438,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 				middleware = SheetsPlaylistsMiddleware(
 					client,
 					config["sheet_id"],
-					[config["playlist_worksheet"]],
+					config["worksheets"],
 					config.get("allocate_ids", False),
 				)
 			else:
@@ -464,7 +466,6 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 			"playlists": PlaylistsSync,
 			"archive": ArchiveSync,
 		}[config["type"]]
-		reverse_sync = config.get("reverse_sync", False)
 		sync = sync_class(config["name"], middleware, stop, dbmanager, reverse_sync)
 		workers.append(sync)
 
