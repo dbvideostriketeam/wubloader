@@ -3,6 +3,7 @@ import time
 import logging
 
 import gevent
+from requests import HTTPError
 
 from .requests import InstrumentedSession
 
@@ -56,11 +57,13 @@ class GoogleAPIClient(object):
 						expires_in, self.ACCESS_TOKEN_REFRESH_TIME_BEFORE_EXPIRY,
 					))
 				gevent.spawn_later(expires_in - self.ACCESS_TOKEN_REFRESH_TIME_BEFORE_EXPIRY, self.get_access_token)
+			except HTTPError as e:
+				logging.error(f"Failed to fetch access token with {e.response.status_code}, retrying: {e.response.content}")
 			except Exception:
 				logging.exception("Failed to fetch access token, retrying")
-				gevent.sleep(self.ACCESS_TOKEN_ERROR_RETRY_INTERVAL)
 			else:
 				break
+			gevent.sleep(self.ACCESS_TOKEN_ERROR_RETRY_INTERVAL)
 
 	def request(self, method, url, headers={}, **kwargs):
 		# merge in auth header
