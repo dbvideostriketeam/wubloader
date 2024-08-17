@@ -37,7 +37,7 @@ class Middleware:
 		Intended as a way to keep track of recently-changed rows for quota optimization."""
 		pass
 
-	def create_row(self, worksheet, id):
-		"""Create a new row with given id in the given worksheet and return it.
+	def create_row(self, row):
+		"""Create a new blank row with id and worksheet determined from the given db row.
 		Only used for reverse sync."""
 		raise NotImplementedError

@@ -86,6 +86,8 @@ class SheetsMiddleware(Middleware):
 				if row_index < self.header_rows:
 					continue
 				row = self.parse_row(worksheet, row_index, row)
+				if row is None:
+					continue
 
 				# Handle rows without an allocated id
 				if row['id'] is None:
@@ -117,7 +119,8 @@ class SheetsMiddleware(Middleware):
 		)
 
 	def parse_row(self, worksheet, row_index, row):
-		"""Take a row as a sequence of columns, and return a dict {column: value}"""
+		"""Take a row as a sequence of columns, and return a dict {column: value}.
+		May return None to skip the row (used by subclasses)."""
 		row_dict = {
 			"sheet_name": worksheet,
 			"index": row_index,
@@ -154,7 +157,9 @@ class SheetsMiddleware(Middleware):
 		the most-recently-modified queue."""
 		self.worksheets[row["sheet_name"]] = monotonic()
 
-	def create_row(self, worksheet, id):
+	def _create_row(self, worksheet, id):
+		"""Because the way we get the worksheet name differs for events vs playlists,
+		we have the common code here and defer extracting the worksheet and id to per-type implementations"""
 		unassigned_rows = self.unassigned_rows.get(worksheet, [])
 		if not unassigned_rows:
 			raise Exception(f"Worksheet {worksheet} has no available space to create a new row in, or it wasn't fetched")
@@ -185,6 +190,8 @@ def check_playlist(playlist_id):
 
 
 class SheetsPlaylistsMiddleware(SheetsMiddleware):
+	header_rows = 2
+
 	column_map = {
 		"tags": 0,
 		"description": 1,
@@ -206,6 +213,10 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		),
 		"playlist_id": check_playlist,
 		"show_in_description": PARSE_CHECKMARK,
+		"first_event_id": EMPTY_IS_NONE,
+		"last_event_id": EMPTY_IS_NONE,
+		"error": EMPTY_IS_NONE,
+		"id": EMPTY_IS_NONE,
 	}
 
 	column_encode = {
@@ -217,13 +228,27 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"show_in_description": ENCODE_CHECKMARK,
 	}
 
+	def parse_row(self, worksheet, row_index, row):
+		row = super().parse_row(worksheet, row_index, row)
+		if row["id"] == "<ignore>":
+			# Special case, row is marked to be ignored
+			return None
+		return row
+
 	def row_was_expected(self, db_row, worksheets):
 		# Database does not record a worksheet for playlists, we assume there's only one
 		# sheet and so it should always be there.
 		return True
 
 	def row_is_non_empty(self, row):
-		return row["tags"] is not None
+		return row["tags"] is not None or any(
+			row[key] for key in ("description", "name", "playlist_id")
+		)
+
+	def create_row(self, row):
+		# Always create in the first worksheet. We should only have one anyway.
+		worksheet = list(self.worksheets.keys())[0]
+		return self._create_row(worksheet, row.id)
 
 
 class SheetsEventsMiddleware(SheetsMiddleware):
@@ -321,20 +346,32 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# Also clear it if it shouldn't be set.
 		# We do this here instead of in sync_row() because it's Sheets-specific logic
 		# that doesn't depend on the DB event in any way.
-		edit_link = self.edit_url.format(row['id']) if self.show_edit_url(row) else ''
-		if row['edit_link'] != edit_link:
-			logging.info("Updating sheet row {} with edit link {}".format(row['id'], edit_link))
-			self.write_value(row, "edit_link", edit_link)
-			self.mark_modified(row)
+		edit_link = self.edit_url.format(row_dict['id']) if self.show_edit_url(row_dict) else ''
+		if row_dict['edit_link'] != edit_link:
+			logging.info("Updating sheet row {} with edit link {}".format(row_dict['id'], edit_link))
+			self.write_value(row_dict, "edit_link", edit_link)
+			self.mark_modified(row_dict)
 
 		return row_dict
 
 	def show_edit_url(self, row):
 		return row['marked_for_edit'] == '[+] Marked'
 
+	def write_value(self, row, key, value):
+		# Undo the implicitly added tags
+		if key == "tags":
+			value = value[2:]
+			if row["poster_moment"]:
+				value = value[1:]
+		return super().write_value(row, key, value)
+
+	def create_row(self, row):
+		return self._create_row(row.sheet_name, row.id)
+
 
 class SheetsArchiveMiddleware(SheetsEventsMiddleware):
 	# Archive sheet is similar to events sheet but is missing some columns.
+	header_rows = 3
 	column_map = {
 		'event_start': 0,
 		'event_end': 1,
