@@ -453,7 +453,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0):
 			if config["type"] == "events":
 				middleware = StreamLogEventsMiddleware(client)
 			elif config["type"] == "playlists":
-				middleware = StreamLogPlaylistsMiddleware(client)
+				middleware = StreamLogPlaylistsMiddleware(client, "Tags")
 			elif config["type"] == "archive":
 				raise ValueError("Archive sync is not compatible with streamlog")
 			else:
