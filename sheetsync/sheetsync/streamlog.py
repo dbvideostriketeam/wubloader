@@ -58,19 +58,25 @@ class StreamLogPlaylistsMiddleware(Middleware):
 	def get_rows(self):
 		rows = []
 		for tag in self.client.get_tags():
-			rows.append({
+			row = {
 				"id": tag["id"],
 				"sheet_name": self.playlists_worksheet,
 				"_parse_errors": [],
 				# Special case for the "all everything" list, otherwise all playlists have a single tag.
 				"tags": [] if tag["tag"] == "<all>" else [tag["tag"]],
-				"playlist_id": tag["playlist"],
 				"description": tag["description"],
-				"name": "unknown", # TODO missing in StreamLog
-				"show_in_description": False, # TODO missing in StreamLog
+				"playlist_id": None,
+				"name": None,
+				"show_in_description": None,
 				"first_event_id": None, # TODO missing in StreamLog
 				"last_event_id": None, # TODO missing in StreamLog
-			})
+			}
+			playlist = tag["playlist"]
+			if playlist is not None:
+				row["playlist_id"] = playlist["id"]
+				row["name"] = playlist["title"]
+				row["show_in_description"] = playlist["shows_in_video_descriptions"]
+			rows.append(row)
 		return None, rows
 
 	# writing intentionally not implemented
