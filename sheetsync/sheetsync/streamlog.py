@@ -118,7 +118,7 @@ class StreamLogEventsMiddleware(Middleware):
 		}
 		# Maps DB column names to the url part you need to write to to set it.
 		self.write_map = {
-			"state": "video_state",
+			"state": "video_processing_state",
 			"error": "video_errors",
 			"video_link": "video",
 		}
