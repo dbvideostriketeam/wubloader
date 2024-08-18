@@ -182,7 +182,7 @@ class SheetSync(object):
 			assert sheet_row
 			worksheet = sheet_row["sheet_name"]
 			# No row currently in DB, create it.
-			self.logger.info("Inserting new DB row {}".format(sheet_row['id']))
+			self.logger.info("Inserting new DB row {}: {}".format(sheet_row['id'], sheet_row))
 			# Insertion conflict just means that another sheet sync beat us to the insert.
 			# We can ignore it.
 			insert_cols = {'id'} | self.input_columns
