@@ -358,12 +358,10 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		return row['marked_for_edit'] == '[+] Marked'
 
 	def write_value(self, row, key, value):
-		# Temp for debug:
-		logging.info(f"Writing {key} = {value!r} for row: {row}")
 		# Undo the implicitly added tags
 		if key == "tags":
 			value = value[2:]
-			if row["poster_moment"]:
+			if row.get("poster_moment"):
 				value = value[1:]
 		return super().write_value(row, key, value)
 
