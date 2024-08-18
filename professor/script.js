@@ -97,7 +97,8 @@ function fillLineInfo(line_json) {
 
 function initializePlayer() {
     videojs.getPlayer("player").src([
-        {src: `/professor/desertbus/line/${line_id}/playlist.m3u8`}
+        //{src: `/professor/desertbus/line/${line_id}/playlist.m3u8`}
+        {src: `/playlist/desertbus/source.m3u8?start=${line.start_time}&end=${line.end_time}`}
     ]);
     videojs.getPlayer("player").addRemoteTextTrack({
         kind: "captions",

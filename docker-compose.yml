@@ -9,24 +9,122 @@ services:
     networks:
       - default
       - wubloader_default
+      - traefik_network
+    labels:
+      - "traefik.docker.network=traefik_network"
+      - "traefik.http.routers.buscribe-router.rule=Host(`wubloader.raptorpond.com`)"
+      - "traefik.http.routers.buscribe-redirect.rule=Host(`wubloader.raptorpond.com`)"
+      - "traefik.http.routers.buscribe-redirect.entrypoints=web"
+      - "traefik.http.routers.buscribe-router.tls=true"
+      - "traefik.http.routers.buscribe-router.tls.certresolver=leresolver"
+      - "traefik.http.middlewares.buscribe-redirectscheme.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.buscribe-redirectscheme.redirectscheme.permanent=true"
+      - "traefik.http.routers.buscribe-redirect.middlewares=buscribe-redirectscheme@docker"
     restart: "on-failure"
 
-  buscribelrr:
+      #  buscribelrr:
+      #    image: buscribe:0.0.0
+      #    command: [ "loadingreadyrun",
+      #               "--start-time=2022-11-11T12:00:00Z",
+      #               "--end-time=2022-11-20T22:00:00Z",
+      #               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_lrr",
+      #               "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
+      #    volumes:
+      #      - /srv/wubloader/segments:/mnt
+
+      #  buscribedb:
+      #    image: buscribe:0.0.0
+      #    command: [ "desertbus",
+      #               "--start-time=2023-11-10T12:00:00Z",
+      #               "--end-time=2023-11-15T00:00:00Z",
+      #               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+      #               "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
+      #    volumes:
+      #      - /srv/wubloader/segments:/mnt
+
+  buscribedb0:
     image: buscribe:0.0.0
-    command: [ "loadingreadyrun",
-               "--start-time='2021-11-05T00:00",
-               "--end-time='2021-11-30T00:00",
-               "--database=postgresql://vst:flnMSYPRf@mula.lan:6543/buscribe_lrr",
+    command: [ "desertbus",
+               "--start-time-override=2023-11-19T00:00:00Z",
+               "--end-time=2023-11-19T06:00:00Z",
+               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
                "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
     volumes:
       - /srv/wubloader/segments:/mnt
 
-  buscribeapilrr:
+  buscribedb1:
+    image: buscribe:0.0.0
+    command: [ "desertbus",
+               "--start-time-override=2023-11-18T06:00:00Z",
+               "--end-time=2023-11-18T12:00:00Z",
+               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+               "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
+    volumes:
+      - /srv/wubloader/segments:/mnt
+
+  buscribedb2:
+    image: buscribe:0.0.0
+    command: [ "desertbus",
+               "--start-time-override=2023-11-18T12:00:00Z",
+               "--end-time=2023-11-18T18:00:00Z",
+               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+               "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
+    volumes:
+      - /srv/wubloader/segments:/mnt
+
+  buscribedb3:
+    image: buscribe:0.0.0
+    command: [ "desertbus",
+               "--start-time-override=2023-11-18T18:00:00Z",
+               "--end-time=2023-11-19T00:00:00Z",
+               "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+               "--model=/usr/share/buscribe/vosk-model-en-us-0.22/" ]
+    volumes:
+      - /srv/wubloader/segments:/mnt
+
+        #  buscribeapilrr:
+        #    image: buscribe-api:0.0.0
+        #    command: [
+        #        "loadingreadyrun",
+        #        "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_lrr",
+        #        "--bustime-start=2023-11-11T22:00:00Z" ]
+
+  buscribeapidb:
     image: buscribe-api:0.0.0
     command: [
-        "--database=postgresql://vst:flnMSYPRf@mula.lan:6543/buscribe_lrr",
-        "--bustime-start=2021-11-13T02:00:00" ]
+        "desertbus",
+        "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+        "--bustime-start=2023-11-11T22:00:00Z" ]
+    volumes:
+      - /srv/wubloader/segments:/mnt
+
+  professorapidb:
+    image: professor-api:0.0.0
+    command: [
+        "--database=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_db",
+        "--bustime-start=2023-11-11T22:00:00Z" ]
+
+  postgres:
+    image: postgres:13
+    ports:
+      - "7654:5432"
+    environment:
+      - POSTGRES_USER=vst
+      - POSTGRES_DB=postgres
+      - POSTGRES_PASSWORD=flnMSYPRf
+    volumes:
+      - /srv/buscribe/postgres:/var/lib/postgresql/data
+    restart: "unless-stopped"
+
+  postgres-prometheus:
+    image: quay.io/prometheuscommunity/postgres-exporter
+    ports:
+      - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://vst:flnMSYPRf@postgres:5432/buscribe_lrr?sslmode=disable
 
 networks:
   wubloader_default:
+    external: true
+  traefik_network:
     external: true

@@ -1,9 +1,9 @@
-FROM debian:latest
+FROM debian:11
 
 RUN apt update &&\
     apt install -y python3 libpq-dev python3-pip curl unzip ffmpeg
 
-COPY ../common /tmp/common
+COPY common /tmp/common
 RUN pip install /tmp/common && rm -r /tmp/common
 
 COPY buscribe /tmp/buscribe

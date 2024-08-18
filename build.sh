@@ -2,7 +2,7 @@
 
 VERSION=0.0.0
 
-bash fetch_models.sh
+#bash fetch_models.sh
 
 docker build -f buscribe/Dockerfile -t buscribe:$VERSION .
 docker build -f buscribe-api/Dockerfile -t buscribe-api:$VERSION .

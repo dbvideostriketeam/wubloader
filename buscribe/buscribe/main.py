@@ -27,13 +27,15 @@ from buscribe.recognizer import BuscribeRecognizer
           help='Start time of the transcript. Buscript will try to start reading 2 min before this time, if available, '
                'to prime the model. The transcripts for that time will not be written to the database. If not given '
                'transcription will start after last already transcribed line.')
+@argh.arg('--start-time-override',
+          help='Ignore database and force override the start time.')
 @argh.arg('--end-time',
           help='End of transcript. If not given continues to transcribe live.')
 @argh.arg('--base-dir',
           help='Directory from which segments will be grabbed. Default is current working directory.')
 def main(channel, database="", base_dir=".",
          model="/usr/share/buscribe/vosk-model-en-us-0.21/", spk_model="/usr/share/buscribe/vosk-model-spk-0.4/",
-         start_time=None, end_time=None):
+         start_time=None, end_time=None, start_time_override=None):
     SAMPLE_RATE = 48000
     segments_dir = os.path.join(base_dir, channel, "source")
 
@@ -46,8 +48,11 @@ def main(channel, database="", base_dir=".",
     logging.info("Figuring out starting time...")
     db_start_time = get_end_of_transcript(db_cursor)
 
-    # Database start time takes priority
-    if db_start_time is not None:
+    # ~~Database start time takes priority~~
+    # Overrride takes priority
+    if start_time_override is not None:
+        start_time = dateutil.parse(start_time_override)
+    elif db_start_time is not None:
         start_time = db_start_time
     elif start_time is not None:
         start_time = dateutil.parse(start_time)
@@ -56,9 +61,12 @@ def main(channel, database="", base_dir=".",
         logging.error("Couldn't figure out start time!")
         db_conn.close()
         exit(1)
+    logging.info("Start time: {}".format(start_time))
 
     if end_time is not None:
         end_time = dateutil.parse(end_time)
+
+    logging.info("End time: {}".format(end_time))
 
     logging.info("Loading models...")
     recognizer = BuscribeRecognizer(SAMPLE_RATE, model, spk_model)
