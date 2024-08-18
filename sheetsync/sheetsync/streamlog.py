@@ -97,7 +97,7 @@ class StreamLogEventsMiddleware(Middleware):
 			'notes': 'notes_to_editor',
 			'tags': 'tags',
 			'video_link': 'video_link',
-			'state': 'video_state',
+			'state': 'video_processing_state',
 			'error': 'video_errors',
 			'id': 'id',
 		}
