@@ -66,8 +66,8 @@ class StreamLogPlaylistsMiddleware(Middleware):
 				"tags": [] if tag["tag"] == "<all>" else [tag["tag"]],
 				"description": tag["description"],
 				"playlist_id": None,
-				"name": None,
-				"show_in_description": None,
+				"name": "",
+				"show_in_description": False,
 				"first_event_id": None, # TODO missing in StreamLog
 				"last_event_id": None, # TODO missing in StreamLog
 			}
@@ -107,13 +107,13 @@ class StreamLogEventsMiddleware(Middleware):
 			'event_start': parse_utc_only,
 			'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
 			'category': lambda v: v["name"],
-			'state': lambda v: None if v is None else v.upper(),
+			'state': lambda v: v.upper() if v else None,
 			'error': lambda v: None if v == '' else v,
 		}
 		# Maps DB column names to an encode function to convert from internal format to streamlog.
 		# Omitted columns act as the identity function.
 		self.column_encode = {
-			'state': lambda v: v[0].upper() + v[1:].lower(), # Titlecase
+			'state': lambda v: v[0].upper() + v[1:].lower() if v else None, # Titlecase
 			'error': lambda v: '' if v == None else v,
 		}
 		# Maps DB column names to the url part you need to write to to set it.
