@@ -109,6 +109,7 @@ class StreamLogEventsMiddleware(Middleware):
 			'category': lambda v: v["name"],
 			'state': lambda v: v.upper() if v else None,
 			'error': lambda v: None if v == '' else v,
+			'tags': lambda v: [tag["tag"] for tag in v],
 		}
 		# Maps DB column names to an encode function to convert from internal format to streamlog.
 		# Omitted columns act as the identity function.
