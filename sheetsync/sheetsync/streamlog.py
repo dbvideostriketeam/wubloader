@@ -150,10 +150,10 @@ class StreamLogEventsMiddleware(Middleware):
 		output["sheet_name"] = row["tab"]["name"] if row["tab"] else "unknown"
 
 		# Implicit tags
-		output['tags'] += [
+		output['tags'] = [
 			output['category'],
 			output["sheet_name"],
-		]
+		] + output['tags']
 		if output["poster_moment"]:
 			output['tags'] += 'Poster Moment'
 
