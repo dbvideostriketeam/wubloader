@@ -131,7 +131,13 @@ class StreamLogEventsMiddleware(Middleware):
 			# Keep track of how many levels of sub-entry each entry is
 			entries_by_id[entry["id"]] = entry
 			parent = entry["parent"]
-			entry["depth"] = 0 if parent is None else entries_by_id[parent]["depth"] + 1
+			if parent is None:
+				entry["depth"] = 0
+			elif parent in entries_by_id:
+				entry["depth"] = entries_by_id[parent]["depth"] + 1
+			else:
+				logging.warning("Entry {entry['id']} has unknown or out-of-order parent {parent}")
+				entry["depth"] = 0
 
 			row = self.parse_row(entry)
 			# Malformed rows can be skipped, represented as a None result
