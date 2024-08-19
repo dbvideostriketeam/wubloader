@@ -12,12 +12,12 @@ import gevent
 import gevent.backdoor
 from gevent.pywsgi import WSGIServer
 import prometheus_client
-import psycopg2
 from psycopg2 import sql
 
 import common
 from common import database, dateutil
 from common.flask_stats import request_stats, after_request
+from common.segments import KNOWN_XFADE_TRANSITIONS, CUSTOM_XFADE_TRANSITIONS
 
 import google.oauth2.id_token
 import google.auth.transport.requests
@@ -142,6 +142,21 @@ def get_defaults():
 		"title_max_length": MAX_TITLE_LENGTH - len(app.title_header),
 		"upload_locations": app.upload_locations,
 	})
+
+
+@app.route('/thrimshim/transitions')
+@request_stats
+def get_transitions():
+	"""Get info on available transitions. Returns a list of {name, description}."""
+	items = [
+		(name, description) for name, description in KNOWN_XFADE_TRANSITIONS.items()
+	] + [
+		(name, description) for name, (description, expr) in CUSTOM_XFADE_TRANSITIONS.items()
+	]
+	return [
+		{"name": name, "description": description}
+		for name, description in items
+	]
 
 
 @app.route('/thrimshim/<ident>', methods=['GET'])
