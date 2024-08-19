@@ -126,8 +126,14 @@ class StreamLogEventsMiddleware(Middleware):
 
 	def get_rows(self):
 		all_rows = []
-		for row in self.client.get_entries()["event_log"]:
-			row = self.parse_row(row)
+		entries_by_id = {}
+		for entry in self.client.get_entries()["event_log"]:
+			# Keep track of how many levels of sub-entry each entry is
+			entries_by_id[entry["id"]] = entry
+			parent = entry["parent"]
+			entry["depth"] = 0 if parent is None else entries_by_id[parent]["depth"] + 1
+
+			row = self.parse_row(entry)
 			# Malformed rows can be skipped, represented as a None result
 			if row is not None:
 				all_rows.append(row)
@@ -156,6 +162,12 @@ class StreamLogEventsMiddleware(Middleware):
 		] + output['tags']
 		if output["poster_moment"]:
 			output['tags'] += 'Poster Moment'
+
+		# Convey parent info
+		if row["depth"] > 0:
+			output["description"] = "^" * row["depth"] + " " + output["description"]
+			pre_note = f"Part of event {output['parent']}"
+			output["notes"] = f"{pre_note}. {output['notes']}" if output["notes"] else pre_note
 
 		return output
 
