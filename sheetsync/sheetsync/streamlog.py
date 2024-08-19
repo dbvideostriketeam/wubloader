@@ -136,7 +136,7 @@ class StreamLogEventsMiddleware(Middleware):
 			elif parent in entries_by_id:
 				entry["depth"] = entries_by_id[parent]["depth"] + 1
 			else:
-				logging.warning("Entry {entry['id']} has unknown or out-of-order parent {parent}")
+				logging.warning(f"Entry {entry['id']} has unknown or out-of-order parent {parent}")
 				entry["depth"] = 0
 
 			row = self.parse_row(entry)
