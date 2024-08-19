@@ -25,87 +25,93 @@ from .fixts import FixTS
 
 
 # These are the set of transition names from the ffmpeg xfade filter that we allow.
-# This is mainly here to prevent someone putting in arbitrary strings and causing weird problems.
-KNOWN_XFADE_TRANSITIONS = [
-	"fade",
-	"wipeleft",
-	"wiperight",
-	"wipeup",
-	"wipedown",
-	"slideleft",
-	"slideright",
-	"slideup",
-	"slidedown",
-	"circlecrop",
-	"rectcrop",
-	"distance",
-	"fadeblack",
-	"fadewhite",
-	"radial",
-	"smoothleft",
-	"smoothright",
-	"smoothup",
-	"smoothdown",
-	"circleopen",
-	"circleclose",
-	"vertopen",
-	"vertclose",
-	"horzopen",
-	"horzclose",
-	"dissolve",
-	"pixelize",
-	"diagtl",
-	"diagtr",
-	"diagbl",
-	"diagbr",
-	"hlslice",
-	"hrslice",
-	"vuslice",
-	"vdslice",
-	"hblur",
-	"fadegrays",
-	"wipetl",
-	"wipetr",
-	"wipebl",
-	"wipebr",
-	"squeezeh",
-	"squeezev",
-	"zoomin",
-	"fadefast",
-	"fadeslow",
-	"hlwind",
-	"hrwind",
-	"vuwind",
-	"vdwind",
-	"coverleft",
-	"coverright",
-	"coverup",
-	"coverdown",
-	"revealleft",
-	"revealright",
-	"revealup",
-	"revealdown",
-]
+# This is mainly here to prevent someone putting in arbitrary strings and causing weird problems,
+# and to provide descriptions.
+# See https://trac.ffmpeg.org/wiki/Xfade for examples.
+KNOWN_XFADE_TRANSITIONS = {
+	"fade": "A simple cross-fade.",
+	"fadeblack": "A fade to black then to the new video.",
+	"fadewhite": "A fade to white then fade to the new video.",
+	"fadegrays": "The old video fades to grayscale then to the new video.",
+	"wipeleft": "A wipe from right to left.",
+	"wiperight": "A wipe from left to right.",
+	"wipeup": "A wipe from bottom to top.",
+	"wipedown": "A wipe from top to bottom.",
+	"slideleft": "The old video slides left as the new video comes in from the right.",
+	"slideright": "The old video slides right as the new video comes in from the left.",
+	"slideup": "The old video slides up as the new video comes in from the bottom.",
+	"slidedown": "The old video slides down as the new video comes in from the top.",
+	"circlecrop": "Circular black mask comes in from edges to center, then out again with new video.",
+	"rectcrop": "Rectangular black mask comes in from edges to center, then out again with new video.",
+	"distance": "???",
+	"radial": "Similar to clock wipe, but with a cross-fading line.",
+	"smoothleft": "Similar to wipe left, but with a cross-fading line.",
+	"smoothright": "Similar to wipe right, but with a cross-fading line.",
+	"smoothup": "Similar to wipe up, but with a cross-fading line.",
+	"smoothdown": "Similar to wipe down, but with a cross-fading line.",
+	"circleopen": "Circular wipe from outside in, with a cross-fading line.",
+	"circleclose": "Circular wipe from inside out, with a cross-fading line.",
+	"vertopen": "Wipe from center to either side, with a cross-fading line.",
+	"vertclose": "Wipe from either side to center, with a cross-fading line.",
+	"horzopen": "Wipe from center to top and bottom, with a cross-fading line.",
+	"horzclose": "Wipe from top and bottom to center, with a cross-fading line.",
+	"dissolve": "Similar to a fade, but each pixel changes instantly, more pixels change over time.",
+	"pixelize": "Pixelates the image, switches to new video, then unpixelates.",
+	# TODO the rest later
+	"diagtl": "",
+	"diagtr": "",
+	"diagbl": "",
+	"diagbr": "",
+	"hlslice": "",
+	"hrslice": "",
+	"vuslice": "",
+	"vdslice": "",
+	"hblur": "",
+	"wipetl": "",
+	"wipetr": "",
+	"wipebl": "",
+	"wipebr": "",
+	"squeezeh": "",
+	"squeezev": "",
+	"zoomin": "",
+	"hlwind": "",
+	"hrwind": "",
+	"vuwind": "",
+	"vdwind": "",
+	"coverleft": "",
+	"coverright": "",
+	"coverup": "",
+	"coverdown": "",
+	"revealleft": "",
+	"revealright": "",
+	"revealup": "",
+	"revealdown": "",
+	"fadefast": "???",
+	"fadeslow": "???",
+}
 
 # These are custom transitions implemented using xfade's custom transition support.
-# It maps from name to the "expr" value to use.
+# It maps from name to (description, expr).
 # In these expressions:
 #  X and Y are pixel coordinates
 #  A and B are the old and new video's pixel values
 #  W and H are screen width and height
 #  P is a "progress" number from 0 to 1 that increases over the course of the wipe
 CUSTOM_XFADE_TRANSITIONS = {
-	# A clock wipe is a 360 degree clockwise sweep around the center of the screen, starting at the top.
-	# It is intended to mimic an analog clock and insinuate a passing of time.
-	# It is implemented by calculating the angle of the point off a center line (using atan2())
-	# then using the new video if progress > that angle (normalized to 0-1).
-	"clockwipe": "if(lt((1-atan2(W/2-X,Y-H/2)/PI) / 2, P), A, B)",
-	# The classic star wipe is an expanding 5-pointed star from the center.
-	# It's mostly a meme.
-	# It is implemented by converting to polar coordinates (distance and angle off center),
-	# then comparing distance to a star formula derived from here: https://math.stackexchange.com/questions/4293250/how-to-write-a-polar-equation-for-a-five-pointed-star
-	# Made by SenseAmidstMadness.
-	"starwipe": "if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)),pow((1-P),2)*(0.75)*1/cos((2*asin(cos(5*(atan2(Y-H/2,X-W/2)+PI/2)))+PI*3)/(10))), B, A)",
+	"clockwipe": (
+		"A 360 degree clockwise sweep around the center of the screen, starting at the top.\n"
+		"Intended to mimic an analog clock and insinuate a passing of time.",
+		# Implemented by calculating the angle of the point off a center line (using atan2())
+		# then using the new video if progress > that angle (normalized to 0-1).
+		"if(lt((1-atan2(W/2-X,Y-H/2)/PI) / 2, P), A, B)",
+	),
+	"starwipe": (
+		"Wipe using an expanding 5-pointed star from the center. Mostly a meme.",
+		# Implemented by converting to polar coordinates (distance and angle off center),
+		# then comparing distance to a star formula derived from here: https://math.stackexchange.com/questions/4293250/how-to-write-a-polar-equation-for-a-five-pointed-star
+		# Made by SenseAmidstMadness.
+		"if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)),pow((1-P),2)*(0.75)*1/cos((2*asin(cos(5*(atan2(Y-H/2,X-W/2)+PI/2)))+PI*3)/(10))), B, A)",
+	),
 }
 
 
@@ -505,7 +511,8 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 	}
 	if video_type in CUSTOM_XFADE_TRANSITIONS:
 		xfade_kwargs["transition"] = "custom"
-		xfade_kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+		description, expr = CUSTOM_XFADE_TRANSITIONS[video_type]
+		xfade_kwargs["expr"] = f"'{expr}'" # wrap in '' for quoting
 	elif video_type in KNOWN_XFADE_TRANSITIONS:
 		xfade_kwargs["transition"] = video_type
 	else:
