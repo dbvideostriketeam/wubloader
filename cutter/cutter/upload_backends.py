@@ -121,6 +121,8 @@ class Youtube(UploadBackend):
 			to make much difference.
 		mime_type: You must set this to the correct mime type for the encoded video.
 			Default is video/MP2T, suitable for fast cuts or -f mpegts.
+		unlisted_only: If set to true, rejects any videos which are set to be public.
+			Intended as a safety feature when testing.
 	"""
 
 	needs_transcode = True
@@ -138,7 +140,7 @@ class Youtube(UploadBackend):
 	]
 
 	def __init__(self, credentials, category_id=23, language="en", use_yt_recommended_encoding=False,
-		mime_type='video/MP2T'):
+		mime_type='video/MP2T', unlisted_only=False):
 		self.logger = logging.getLogger(type(self).__name__)
 		self.client = GoogleAPIClient(
 			credentials['client_id'],
@@ -148,11 +150,14 @@ class Youtube(UploadBackend):
 		self.category_id = category_id
 		self.language = language
 		self.mime_type = mime_type
+		self.unlisted_only = unlisted_only
 		if use_yt_recommended_encoding:
 			self.encoding_settings = self.recommended_settings
 			self.encoding_streamable = False
 
 	def upload_video(self, title, description, tags, public, data):
+		if public and self.unlisted_only:
+			raise UploadError("Public video but unlisted-only was requested")
 		json = {
 			'snippet': {
 				'title': title,
