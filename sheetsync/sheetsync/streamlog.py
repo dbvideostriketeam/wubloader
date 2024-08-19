@@ -172,7 +172,7 @@ class StreamLogEventsMiddleware(Middleware):
 		# Convey parent info
 		if row["depth"] > 0:
 			output["description"] = "^" * row["depth"] + " " + output["description"]
-			pre_note = f"Part of event {output['parent']}"
+			pre_note = f"Part of event {row['parent']}"
 			output["notes"] = f"{pre_note}. {output['notes']}" if output["notes"] else pre_note
 
 		return output
