@@ -428,8 +428,8 @@ class Cutter(object):
 					yield chunk
 			except Exception as ex:
 				self.logger.exception("Error occurred while trying to cut job {}".format(format_job(job)))
-				# Assumed error is not retryable
-				raise UploadError("Error while cutting: {}".format(ex), retryable=False)
+				# Assumed error is not retryable. Exception chaining preserves original error message.
+				raise UploadError("Unhandled exception while cutting", retryable=False) from ex
 
 			# The data is now fully uploaded, but the request is not finalized.
 			# We now set the DB state to finalized so we know about failures during this
