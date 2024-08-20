@@ -89,15 +89,15 @@ def get_duration(job):
 	# Each range overlaps the previous by duration, so we add all the ranges
 	# then subtract all the durations.
 	without_transitions = sum([
-		range.end - range.start
+		(range.end - range.start).total_seconds()
 		for range in job.video_ranges
-	], datetime.timedelta())
+	])
 	overlap = sum([
 		transition.duration
 		for transition in job.video_transitions
 		if transition is not None
-	], datetime.timedelta())
-	return (without_transitions - overlap).total_seconds()
+	])
+	return without_transitions - overlap
 
 
 def format_job(job):

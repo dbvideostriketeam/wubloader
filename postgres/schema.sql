@@ -16,7 +16,7 @@ CREATE TYPE video_range as (
 
 CREATE TYPE video_transition as (
 	type TEXT,
-	duration INTERVAL
+	duration DOUBLE PRECISON
 );
 
 CREATE TYPE thumbnail_mode as ENUM (
