@@ -926,6 +926,9 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 		inputs.append((segments, args))
 
 	filters = []
+	# We need to keep track of the full video length so transitions start at the correct time.
+	# This variable tracks the start of prev_range relative to the start of the output video.
+	prev_video_start_offset = 0
 	# with no additional ranges, the output stream is just the first input stream
 	output_video_stream = "0:v"
 	output_audio_stream = "0:a"
@@ -947,6 +950,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 			kwargs = ":".join(f"{k}={v}" for k, v in kwargs.items())
 			filters.append(f"{inputs}{name}={kwargs}{outputs}")
 
+		prev_length = (prev_range[1] - prev_range[0]).total_seconds()
 		if transition is None:
 			input_streams = [
 				prev_video_stream,
@@ -956,14 +960,16 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 			]
 			output_streams = [output_video_stream, output_audio_stream]
 			add_filter("concat", input_streams, output_streams, n=2, v=1, a=1)
+			prev_video_start_offset += prev_length
 		else:
 			video_type, duration = transition
 
-			# transition should start at DURATION seconds before prev_range ends,
-			# which is timed relative to prev_range start. So if prev_range is 60s long
+			# Transition should start at DURATION seconds before prev_range ends.
+			# We know when prev_range begins from prev_video_start_offset.
+			# So if prev_range is 40s long, prev_range starts at 20s,
 			# and duration is 2s, we should start at 58s.
-			prev_length = (prev_range[1] - prev_range[0]).total_seconds()
-			offset = prev_length - duration
+			# This is also the start time of the next range.
+			offset = prev_video_start_offset + prev_length - duration
 			kwargs = {
 				"duration": duration,
 				"offset": offset,
@@ -979,6 +985,8 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 
 			# audio cross-fade across the same period
 			add_filter("acrossfade", [prev_audio_stream, next_audio_stream], [output_audio_stream], duration=duration)
+
+			prev_video_start_offset = offset
 
 	if stream:
 		# When streaming, we can just use a pipe
