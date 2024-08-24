@@ -288,7 +288,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		}
 		self.column_encode = {
 			"event_start": self.encode_bustime,
-			"event_end": self.encode_bustime,
+			"event_end": lambda v: ("--" if v[0] else self.encode_bustime(v[1])),
 			"poster_moment": ENCODE_CHECKMARK,
 			"image_links": lambda v: " ".join(v),
 			"tags": lambda v: ", ".join(v),
@@ -336,9 +336,14 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 				+ row_dict['tags']
 			)
 
-		# As a special case, treat an end time of "--" as equal to the start time.
-		if row_dict["event_end"] == "--":
-			row_dict["event_end"] = row_dict["event_start"]
+		# As a special case, transform event_end into (dashed, value) form
+		# where value = event_start if dashed is true.
+		event_end = row_dict["event_end"]
+		row_dict["event_end"] = (
+			(True, row_dict["event_start"])
+			if event_end == "--"
+			else (False, event_end)
+		)
 
 		# Set edit link if marked for editing and start/end set.
 		# This prevents accidents / clicking the wrong row and provides
@@ -384,4 +389,4 @@ class SheetsArchiveMiddleware(SheetsEventsMiddleware):
 	}
 
 	def show_edit_url(self, row):
-		return row['event_start'] is not None and row['event_end'] is not None
+		return row['event_start'] is not None and row['event_end'][1] is not None

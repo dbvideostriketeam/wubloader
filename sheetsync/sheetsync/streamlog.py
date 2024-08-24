@@ -105,7 +105,11 @@ class StreamLogEventsMiddleware(Middleware):
 		# Omitted columns act as the identity function.
 		self.column_decode = {
 			'event_start': parse_utc_only,
-			'event_end': lambda v: parse_utc_only(v["time"]) if v["type"] == "Time" else None,
+			'event_end': lambda v: (
+				parse_utc_only(v["time"]) if v["type"] == "Time"
+				else "--" if v["type"] == "NoTime"
+				else None
+			),
 			'category': lambda v: v["name"],
 			'state': lambda v: v.upper() if v else None,
 			'error': lambda v: None if v == '' else v,
@@ -160,6 +164,15 @@ class StreamLogEventsMiddleware(Middleware):
 
 		# Tab name is sheet name
 		output["sheet_name"] = row["tab"]["name"] if row["tab"] else "unknown"
+
+		# Transform event_end into (dashed, value) form
+		# where value = event_start if dashed is true.
+		event_end = output["event_end"]
+		output["event_end"] = (
+			(True, output["event_start"])
+			if event_end == "--"
+			else (False, event_end)
+		)
 
 		# Implicit tags
 		implicit_tags = [

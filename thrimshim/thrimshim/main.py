@@ -180,6 +180,8 @@ def get_row(ident):
 	response['id'] = str(response['id'])	
 	if response["video_channel"] is None:
 		response["video_channel"] = app.default_channel
+	# Unwrap end time (dashed, value) to just value
+	response["event_end"] = response["event_end"][1]
 	title_header = "" if is_archive else app.title_header
 	response["title_prefix"] = title_header
 	response["title_max_length"] = MAX_TITLE_LENGTH - len(title_header)
@@ -394,6 +396,9 @@ def update_row(ident, editor=None):
 	# check whether row has been changed in the sheet since editing has begun
 	changes = ''
 	for column in sheet_columns:
+		if column == "event_end":
+			# convert (dashed, value) to value
+			old_row[column] = old_row[column][1]
 		if isinstance(old_row[column], datetime.datetime):
 			old_row[column] = old_row[column].isoformat()
 		def normalize(value):
@@ -408,6 +413,7 @@ def update_row(ident, editor=None):
 		return 'Sheet columns have changed since editing has begun. Please review changes\n' + changes, 409
 
 	if new_row['state'] == 'MODIFIED':
+		missing = []
 		# Modifying published rows is more limited, we ignore all other fields.
 		for column in set(modifiable_columns) & set(non_null_columns):
 			if new_row.get(column) is None:

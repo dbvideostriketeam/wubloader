@@ -26,12 +26,24 @@ CREATE TYPE thumbnail_mode as ENUM (
 	'CUSTOM'
 );
 
+-- The end time for an event can be unset, "--" or a timestamp.
+-- If dashed is true, value should be the same as start time (which may be NULL if start time is unset).
+-- Otherwise value is the value (which may be NULL if end time is unset).
+-- dashed should be non-NULL.
+CREATE TYPE end_time AS (
+	dashed BOOLEAN,
+	value TIMESTAMP
+)
+
 CREATE TABLE events (
 	id TEXT PRIMARY KEY,
 
 	sheet_name TEXT NOT NULL,
 	event_start TIMESTAMP,
-	event_end TIMESTAMP,
+	event_end end_time DEFAULT ROW(false, NULL) CHECK (
+		event_end.dashed IS NOT NULL
+		AND (event_end.dashed != TRUE OR event_end.value IS NOT DISTINCT FROM event_start)
+	),
 	category TEXT NOT NULL DEFAULT '',
 	description TEXT NOT NULL DEFAULT '',
 	submitter_winner TEXT NOT NULL DEFAULT '',
