@@ -17,6 +17,7 @@ from psycogreen.gevent import patch_psycopg
 COMPOSITE_TYPES = [
 	"video_range",
 	"video_transition",
+	"end_time",
 ]
 COLUMN_CASTS = {
 	"video_ranges": "video_range[]",
