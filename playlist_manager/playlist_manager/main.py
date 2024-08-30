@@ -97,7 +97,7 @@ class PlaylistManager(object):
 		# the next time.
 		conn = self.dbmanager.get_conn()
 		videos = query(conn, """
-			SELECT video_id, tags, COALESCE((video_ranges[1]).start, event_start) AS start_time
+			SELECT id, video_id, tags, COALESCE((video_ranges[1]).start, event_start) AS start_time
 			FROM events
 			WHERE state = 'DONE' AND upload_location = ANY (%s) AND public
 		""", self.upload_locations)
@@ -118,14 +118,14 @@ class PlaylistManager(object):
 			""")
 		}
 		self.dbmanager.put_conn(conn)
-		duplicates = set(playlists) & set(self.static_playlists)
+		duplicates = set(playlists) & set(self.static_playlist_tags)
 		if duplicates:
 			raise ValueError(
 				"Some playlists are listed in both static and dynamic playlist sources: {}".format(", ".join(duplicates))
 			)
 		playlists.update({
 			id: PlaylistConfig(tags, None, None)
-			for id, tags in self.static_playlists.items()
+			for id, tags in self.static_playlist_tags.items()
 		})
 		return playlists
 
@@ -158,16 +158,22 @@ class PlaylistManager(object):
 					self.reorder_in_playlist(playlist_id, entry, index)
 
 				# Get an updated list of new videos
+				playlist = self.get_playlist(playlist_id)
 				matching_video_ids = {video.video_id for video in matching}
-				playlist_video_ids = {entry.video_id for entry in self.get_playlist(playlist_id)}
+				playlist_video_ids = {entry.video_id for entry in playlist}
 				# It shouldn't matter, but just for clarity let's sort them by event order
-				new_videos = sorted(matching_video_ids - playlist_video_ids, key=lambda v: v.start_time)
+				new_videos = sorted(
+					matching_video_ids - playlist_video_ids,
+					key=lambda video_id: videos[video_id].start_time,
+				)
 
 				# Insert each new video one at a time
 				logging.debug(f"Inserting new videos for playlist {playlist_id}: {new_videos}")
-				for video in new_videos:
-					index = self.find_insert_index(videos, playlist_config, self.get_playlist(playlist_id), video)
-					self.insert_into_playlist(playlist_id, video.video_id, index)
+				for video_id in new_videos:
+					# Note we update the cached playlist after each loop as it is modified by insertions.
+					playlist = self.get_playlist(playlist_id)
+					index = self.find_insert_index(videos, playlist_config, playlist, videos[video_id])
+					self.insert_into_playlist(playlist_id, video_id, index)
 			except PlaylistOutdated:
 				logging.warning("Restarting playlist update as playlist is out of date")
 				continue
@@ -188,9 +194,9 @@ class PlaylistManager(object):
 				continue
 			video = videos[entry.video_id]
 
-			if video.id == playlist.first_event_id:
+			if video.id == playlist_config.first_event_id:
 				new_index = 0
-			elif video.id == playlist.last_event_id:
+			elif video.id == playlist_config.last_event_id:
 				new_index = len(playlist) - 1
 			else:
 				continue
