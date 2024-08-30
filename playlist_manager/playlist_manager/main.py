@@ -437,6 +437,7 @@ def main(
 	playlists,
 	upload_location_allowlist="youtube",
 	interval=600,
+	once=False,
 	metrics_port=8007,
 	backdoor_port=0,
 ):
@@ -452,6 +453,7 @@ def main(
 	upload_location.
 
 	interval is how often to check for new videos, default every 10min.
+	If --once is given, interval is ignored and we exit after one check.
 	"""
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
@@ -475,12 +477,15 @@ def main(
 	dbmanager = DBManager(dsn=dbconnect)
 	manager = PlaylistManager(dbmanager, client, upload_locations, playlists)
 
-	while not stop.is_set():
-		try:
-			manager.run_once()
-		except Exception:
-			logging.exception("Failed to run playlist manager")
-			manager.reset()
-		stop.wait(interval) # wait for interval, or until stopping
+	if once:
+		manager.run_once()
+	else:
+		while not stop.is_set():
+			try:
+				manager.run_once()
+			except Exception:
+				logging.exception("Failed to run playlist manager")
+				manager.reset()
+			stop.wait(interval) # wait for interval, or until stopping
 
 	logging.info("Stopped")
