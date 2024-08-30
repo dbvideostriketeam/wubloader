@@ -2,6 +2,7 @@
 import logging
 import json
 import signal
+from collections import namedtuple
 
 import argh
 import gevent
@@ -185,7 +186,7 @@ class PlaylistManager(object):
 			if entry.video_id not in videos:
 				# Unknown videos should always remain in-place.
 				continue
-			video = videos[video_id]
+			video = videos[entry.video_id]
 
 			if video.id == playlist.first_event_id:
 				new_index = 0
@@ -277,8 +278,10 @@ class PlaylistManager(object):
 		"""
 		logging.info(f"Inserting {video_id} at index {index} of {playlist_id}")
 		entry_id = self.api.insert_into_playlist(playlist_id, video_id, index)
-		# Update our copy
-		self.playlist_state.setdefault(playlist_id, []).insert(index, PlaylistEntry(entry_id, video_id)
+		# Update our copy, if we have one (which we should)
+		if playlist_id in self.playlist_state:
+			playlist = self.get_playlist(playlist_id)
+			playlist.insert(index, PlaylistEntry(entry_id, video_id))
 
 	def reorder_in_playlist(self, playlist_id, entry, new_index):
 		"""Take an existing entry in a given playlist and move it to the new index.
