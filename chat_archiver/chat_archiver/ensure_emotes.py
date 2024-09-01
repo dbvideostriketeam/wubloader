@@ -4,7 +4,6 @@ gevent.monkey.patch_all()
 
 import argh
 import logging
-import json
 
 from chat_archiver.main import ensure_emotes, wait_for_ensure_emotes
 
