@@ -25,6 +25,8 @@ from monotonic import monotonic
 import prometheus_client as prom
 import requests
 
+from .keyed_group import KeyedGroup
+
 
 # These are known to arrive up to MAX_DELAY after their actual time
 DELAYED_COMMANDS = [
@@ -306,47 +308,40 @@ class Archiver(object):
 		self.client.stop()
 
 
-_EMOTES_RUNNING = {} # map (base_dir, emote id, theme, scale) -> in-progress greenlet fetching that path
+_EMOTES_RUNNING = KeyedGroup()
 def ensure_emotes(base_dir, emote_ids):
 	"""Tries to download given emote from twitch if it doesn't already exist.
 	This happens in the background and errors are ignored.
 	"""
 	def _ensure_emote(emote_id, theme, scale):
+		url = "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/{}/{}".format(emote_id, theme, scale)
+		path = os.path.join(base_dir, "emotes", emote_id, "{}-{}".format(theme, scale))
+		if os.path.exists(path):
+			logging.debug("Emote {} already exists".format(path))
+			return
+		logging.info("Fetching emote from {}".format(url))
 		try:
-			url = "https://static-cdn.jtvnw.net/emoticons/v2/{}/default/{}/{}".format(emote_id, theme, scale)
-			path = os.path.join(base_dir, "emotes", emote_id, "{}-{}".format(theme, scale))
-			if os.path.exists(path):
-				logging.debug("Emote {} already exists".format(path))
-				return
-			logging.info("Fetching emote from {}".format(url))
-			try:
-				response = requests.get(url)
-			except Exception:
-				logging.warning("Exception while fetching emote from {}".format(url), exc_info=True)
-				return
-			if not response.ok:
-				logging.warning("Error {} while fetching emote from {}: {}".format(response.status_code, url, response.text))
-				return
-			atomic_write(path, response.content)
-			logging.info("Saved emote {}".format(path))
-		finally:
-			assert _EMOTES_RUNNING[base_dir, emote_id, theme, scale] is gevent.getcurrent()
-			del _EMOTES_RUNNING[base_dir, emote_id, theme, scale]
+			response = requests.get(url)
+		except Exception:
+			logging.warning("Exception while fetching emote from {}".format(url), exc_info=True)
+			return
+		if not response.ok:
+			logging.warning("Error {} while fetching emote from {}: {}".format(response.status_code, url, response.text))
+			return
+		atomic_write(path, response.content)
+		logging.info("Saved emote {}".format(path))
 
 	for emote_id in emote_ids:
 		for theme in ('light', 'dark'):
 			for scale in ('1.0', '2.0', '3.0'):
 				# to prevent downloading the same emote twice because the first download isn't finished yet,
-				# check if it's already running.
+				# use a KeyedGroup.
 				key = base_dir, emote_id, theme, scale
-				if key not in _EMOTES_RUNNING:
-					_EMOTES_RUNNING[key] = gevent.spawn(_ensure_emote, emote_id, theme, scale)
-				else:
-					logging.debug("Skipping checking emote with key {} - already running".format(key))
+				_EMOTES_RUNNING.spawn(key, _ensure_emote, emote_id, theme, scale)
 
 
 def wait_for_ensure_emotes():
-	gevent.wait(_EMOTES_RUNNING.values())
+	_EMOTES_RUNNING.wait()
 
 
 def write_batch(path, batch_time, messages, size_histogram=None):
