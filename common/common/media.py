@@ -51,6 +51,9 @@ class BadScheme(Rejected):
 class WrongContent(Rejected):
 	"""Response was not a video or image"""
 
+class FailedResponse(Rejected):
+	"""Got a 4xx response, probably a bad link"""
+
 
 def check_for_media(output_dir, url):
 	"""Returns True if we have at least one version of content for the given url already."""
@@ -219,7 +222,10 @@ def _request(url, max_size, content_types):
 	if resp.get_redirect_location():
 		return resp
 
-	if resp.status != 200:
+	# 4xx errors are non-retryable, anything else is.
+	if 400 <= resp.status < 500:
+		raise FailedResponse(f"Url returned {resp.status} response: {url}")
+	elif not (200 <= resp.status < 300):
 		raise Exception(f"Url returned {resp.status} response: {url}")
 
 	content_type = resp.getheader("content-type")
