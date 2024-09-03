@@ -220,6 +220,8 @@
     token_path: "./chat_token.txt",
     // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
     backfill: true,
+    // Whether to enable downloading of media (images, videos, etc) that is posted in chat.
+    download_media: true,
     // Channels to watch. Defaults to "all twitch channels in $.channels" but you can add extras.
     channels: [
       std.split(c, '!')[0]
@@ -614,7 +616,11 @@
     [if $.enabled.chat_archiver then "chat_archiver"]: {
       image: $.get_image("chat_archiver"),
       restart: "always",
-      command: [$.chat_archiver.user, "/token"] + $.chat_archiver.channels + ["--name", $.localhost],
+      command:
+        [$.chat_archiver.user, "/token"]
+        + $.chat_archiver.channels
+        + ["--name", $.localhost]
+        + (if $.chat_archiver.download_media then ["--download-media"] else []),
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
       environment: $.env,
