@@ -180,6 +180,11 @@
   // Extra directories (besides segments) to backfill
   backfill_dirs:: ["emotes"],
 
+  // Enable saving of media (images and videos - this can be large) and backfilling
+  // them from other nodes.
+  download_media:: false,
+  backfill_media:: $.download_media,
+
   // The spreadsheet id and worksheet names for sheet sync to act on
   // Set to null to disable syncing from sheets.
   sheet_id:: "your_id_here",
@@ -221,7 +226,7 @@
     // Whether to enable backfilling of chat archives to this node (if backfiller enabled)
     backfill: true,
     // Whether to enable downloading of media (images, videos, etc) that is posted in chat.
-    download_media: true,
+    download_media: $.download_media,
     // Channels to watch. Defaults to "all twitch channels in $.channels" but you can add extras.
     channels: [
       std.split(c, '!')[0]
@@ -367,7 +372,10 @@
       [
         "--base-dir", "/mnt",
         "--qualities", std.join(",", $.qualities + (if $.chat_archiver.backfill then ["chat"] else [])),
-        "--extras", std.join(",", $.backfill_dirs),
+        "--extras", std.join(",",
+          $.backfill_dirs
+          + (if $.backfill_media then ["media"] else [])
+        ),
         "--static-nodes", std.join(",", $.peers),
         "--backdoor-port", std.toString($.backdoor_port),
         "--node-database", $.db_connect,
