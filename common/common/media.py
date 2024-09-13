@@ -14,7 +14,7 @@ import prometheus_client as prom
 import urllib3.connection
 from ipaddress import ip_address
 
-from . import atomic_write, ensure_directory, jitter
+from . import atomic_write, ensure_directory, jitter, listdir
 from .stats import timed
 
 
@@ -50,6 +50,12 @@ class BadScheme(Rejected):
 
 class WrongContent(Rejected):
 	"""Response was not a video or image"""
+
+
+def check_for_media(output_dir, url):
+	"""Returns True if we have at least one version of content for the given url already."""
+	url_dir = get_url_dir(output_dir, url)
+	return any(filename.endswith(".metadata.json") for filename in listdir(url_dir))
 
 
 @timed()
