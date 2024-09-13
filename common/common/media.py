@@ -64,7 +64,7 @@ def download_media(
 	output_dir,
 	max_size=128*2**20, # 128MiB
 	timeout=60,
-	content_types=("image", "video"),
+	content_types=("image", "video", "application/pdf"),
 	max_redirects=5,
 	retries=3,
 	retry_interval=1,
