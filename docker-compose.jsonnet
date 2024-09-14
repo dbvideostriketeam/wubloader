@@ -180,10 +180,14 @@
   // Extra directories (besides segments) to backfill
   backfill_dirs:: ["emotes"],
 
-  // Enable saving of media (images and videos - this can be large) and backfilling
-  // them from other nodes.
-  download_media:: false,
+  // Enable saving of media (images and videos - this can be large), either globally or split into
+  // three options:
+  // - From chat messages (in chat_archiver.download_media)
+  // - From the image links column in the sheet (using sheetsync)
+  // - Backfilled from other nodes
+  download_media:: true,
   backfill_media:: $.download_media,
+  download_sheet_links:: $.download_media,
 
   // The spreadsheet id and worksheet names for sheet sync to act on
   // Set to null to disable syncing from sheets.
@@ -466,6 +470,7 @@
           worksheets: $.worksheets,
           edit_url: $.edit_url,
           bustime_start: $.bustime_start,
+          download_media: $.download_sheet_links,
         },
         sync_sheet_base + {
           name+: "sheet-playlists",
@@ -491,7 +496,7 @@
         event_id: $.streamlog_event,
       },
       local sync_streamlog = [
-        sync_streamlog_base + {name: "streamlog-events", type: "events"},
+        sync_streamlog_base + {name: "streamlog-events", type: "events", download_media: $.download_sheet_links},
         sync_streamlog_base + {name: "streamlog-playlists", type: "playlists"},
       ],
       local config = (
@@ -503,11 +508,15 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
-      ] + std.map(std.manifestJson, config),
-      // Mount the creds file(s) into /etc
+      ]
+      + (if $.download_sheet_links then ["--media-dir=/mnt"] else [])
+      + std.map(std.manifestJson, config),
       volumes: std.prune([
+        // Mount the creds file(s) into /etc
         if $.sheet_id != null then "%s:/etc/sheet-creds.json" % $.sheet_creds_file,
         if $.streamlog_url != null then "%s:/etc/streamlog-token.txt" % $.streamlog_creds_file,
+        // Mount the segments media directory
+        if $.download_sheet_links then "%s/media:/mnt" % $.segments_path,
       ]),
       // If the application crashes, restart it.
       restart: "on-failure",
