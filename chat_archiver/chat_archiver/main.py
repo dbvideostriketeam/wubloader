@@ -354,7 +354,7 @@ URL_REGEX = re.compile(r"""
 	# Previous char is not a letter. This prevents eg. "foohttp://example.com"
 	# Also disallows / as the previous character, otherwise "file:///foo.bar/baz"
 	# can match on the "foo.bar/baz" part.
-	(?<! \w | / )
+	(?<! [\w/] )
 	# optional scheme, which must be http or https (we don't want other schemes)
 	(?P<scheme> https?:// )?
 	# Hostname, which must contain a dot. Single-part hostnames like "localhost" are valid
@@ -372,8 +372,8 @@ URL_REGEX = re.compile(r"""
 	# like that even though it's encoded when actually sent as a URL.
 	# Restricting this to letters prevents things like non-breaking spaces causing problems.
 	# For the same reason we also allow {} and [] which seem to show up often in paths.
-	(?P<path> / (\w | [!#$%&'()*+,./:;=?@_~{}-] | \[ | \] )* )?
-""", re.ASCII | re.VERBOSE | re.IGNORECASE)
+	(?P<path> / [\w!#$%&'()*+,./:;=?@_~{}\[\]-]* )?
+""", re.VERBOSE | re.IGNORECASE)
 
 
 _IMAGE_LINKS_RUNNING = KeyedGroup()
