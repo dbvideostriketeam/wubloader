@@ -16,7 +16,7 @@ CREATE TYPE video_range as (
 
 CREATE TYPE video_transition as (
 	type TEXT,
-	duration DOUBLE PRECISON
+	duration DOUBLE PRECISION
 );
 
 CREATE TYPE thumbnail_mode as ENUM (
@@ -33,7 +33,7 @@ CREATE TYPE thumbnail_mode as ENUM (
 CREATE TYPE end_time AS (
 	dashed BOOLEAN,
 	value TIMESTAMP
-)
+);
 
 CREATE TABLE events (
 	id TEXT PRIMARY KEY,
@@ -41,8 +41,8 @@ CREATE TABLE events (
 	sheet_name TEXT NOT NULL,
 	event_start TIMESTAMP,
 	event_end end_time DEFAULT ROW(false, NULL) CHECK (
-		event_end.dashed IS NOT NULL
-		AND (event_end.dashed != TRUE OR event_end.value IS NOT DISTINCT FROM event_start)
+		(event_end).dashed IS NOT NULL
+		AND ((event_end).dashed != TRUE OR (event_end).value IS NOT DISTINCT FROM event_start)
 	),
 	category TEXT NOT NULL DEFAULT '',
 	description TEXT NOT NULL DEFAULT '',
