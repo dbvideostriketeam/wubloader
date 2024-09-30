@@ -12,7 +12,7 @@ RUN pip install /tmp/common && rm -r /tmp/common
 
 # Install actual application
 RUN apk add postgresql-dev postgresql-libs
-COPY professor-api /tmp/professor-api
+COPY buscribe/professor-api /tmp/professor-api
 RUN pip install /tmp/professor-api && rm -r /tmp/professor-api
 
 ENTRYPOINT ["python3", "-m", "professor_api"]

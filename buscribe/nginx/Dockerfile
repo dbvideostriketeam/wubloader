@@ -1,5 +1,5 @@
 FROM nginx:latest
 
-COPY buscribe-web /usr/share/nginx/html/buscribe
-COPY professor /usr/share/nginx/html/professor
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
+COPY buscribe/buscribe-web /usr/share/nginx/html/buscribe
+COPY buscribe/professor /usr/share/nginx/html/professor
+COPY buscribe/nginx/nginx.conf /etc/nginx/nginx.conf

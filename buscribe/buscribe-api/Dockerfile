@@ -12,7 +12,7 @@ RUN pip install /tmp/common && rm -r /tmp/common
 
 # Install actual application
 RUN apk add postgresql-dev postgresql-libs
-COPY buscribe-api /tmp/buscribe-api
+COPY buscribe/buscribe-api /tmp/buscribe-api
 RUN pip install /tmp/buscribe-api && cp -r /tmp/buscribe-api/templates /templates \
     && rm -r /tmp/buscribe-api
 
