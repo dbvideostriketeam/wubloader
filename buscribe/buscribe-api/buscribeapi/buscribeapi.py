@@ -1,63 +1,10 @@
-from datetime import timedelta
 
-import common
 import flask as flask
 from common import dateutil, database, format_bustime, dt_to_bustime, bustime_to_dt, parse_bustime
 from dateutil.parser import ParserError
-from flask import request, jsonify, Response, render_template
+from flask import request, jsonify
 
 app = flask.Flask('buscribe')
-
-
-@app.template_filter()
-def convert_vtt_timedelta(delta: timedelta):
-    """Converts a timedelta to a VTT compatible format."""
-    return f'{delta.days * 24 + delta.seconds // 3600:02}:{(delta.seconds % 3600) // 60:02}:{delta.seconds % 60:02}.{delta.microseconds // 1000:03}'
-
-
-@app.template_filter()
-def create_seconds_timedelta(seconds):
-    """Converts a float of seconds to a timedelta."""
-    return timedelta(seconds=seconds)
-
-
-@app.route('/buscribe/vtt')
-def get_vtt():
-    """Returns WebVTT subtitle file for the period between start_time and end_time.
-
-    Times are relative to --bustime-start.
-
-    TODO: Figure out proper offsets."""
-    try:
-        start_time_string = request.args.get('start_time')
-        start_time = dateutil.parse(start_time_string)
-    except ParserError:
-        return "Invalid start time!", 400
-    except KeyError:
-        return "Missing start time!", 400
-
-    try:
-        end_time_string = request.args['end_time']
-        end_time = dateutil.parse(end_time_string)
-    except ParserError:
-        return "Invalid end time!", 400
-    except KeyError:
-        return "Missing end time!", 400
-
-    db_conn = app.db_manager.get_conn()
-
-    segments = common.get_best_segments(app.segments_dir,
-                                        start_time,
-                                        end_time)
-    segments_start_time = segments[0].start
-
-    results = fetch_lines(db_conn, start_time, end_time)
-
-    return Response(
-        render_template("busubs.jinja", results=results, start_time=segments_start_time,
-                        duration_extend=timedelta(seconds=0.3)),
-        mimetype="text/vtt"
-    )
 
 
 @app.route('/buscribe/json')
