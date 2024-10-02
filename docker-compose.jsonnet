@@ -31,6 +31,7 @@
     schedulebot: false,
     tootbot: false,
     twitchbot: false,
+    pubbot: false,
     bus_analyzer: false,
     graphs: false,
   },
@@ -295,6 +296,11 @@
     zulip_email: "twitch-chat-bot@chat.videostrike.team",
     zulip_api_key: "",
     args:: [],
+  },
+
+  pubbot:: {
+    zulip_email: "blog-bot@chat.videostrike.team",
+    zulip_api_key: "",
   },
 
   // template for donation data urls
@@ -659,7 +665,7 @@
       environment: $.env,
     },
 
-    local bot_service(name, config, args, subcommand=null) = {
+    local bot_service(name, config, args=[], subcommand=null) = {
       image: $.get_image("zulip_bots"),
       restart: "always",
       entrypoint: ["python3", "-m", "zulip_bots.%s" % name]
@@ -686,7 +692,14 @@
     [if $.enabled.twitchbot then "twitchbot"]:
       bot_service("twitchbot", $.twitchbot + {
         zulip_url: $.zulip_url,
-      }, $.tootbot.args),
+      }),
+
+    [if $.enabled.pubbot then "pubbot"]:
+      bot_service("pubbot", $.pubbot + {
+        zulip_url: $.zulip_url,
+      }, ["/mnt/pubnub-log.json"]) + {
+        volumes: ["%s:/mnt" % $.segments_path],
+      },
 
   },
 
