@@ -1363,50 +1363,54 @@ function addRangeDefinition() {
 	rangeContainer.appendChild(newRangeDOM);
 }
 
-function rangeDefinitionDOM() {
-	const rangeContainer = document.createElement("div");
-	rangeContainer.classList.add("range-definition-removable");
+function makeElement(tag, classes = [], values = {}) {
+	const element = document.createElement(tag);
+	for (const cls of classes) {
+		element.classList.add(cls);
+	}
+	for (const [key, value] of Object.entries(values)) {
+		element[key] = value;
+	}
+	return element;
+}
 
-	const rangeTimesContainer = document.createElement("div");
-	rangeTimesContainer.classList.add("range-definition-times");
-	const rangeStart = document.createElement("input");
-	rangeStart.type = "text";
-	rangeStart.classList.add("range-definition-start");
-	const rangeStartSet = document.createElement("img");
-	rangeStartSet.src = "images/pencil.png";
-	rangeStartSet.alt = "Set range start point to the current video time";
-	rangeStartSet.title = rangeStartSet.alt;
-	rangeStartSet.classList.add("range-definition-set-start");
-	rangeStartSet.classList.add("click");
-	const rangeStartPlay = document.createElement("img");
-	rangeStartPlay.src = "images/play_to.png";
-	rangeStartPlay.alt = "Play from start point";
-	rangeStartPlay.title = rangeStartPlay.alt;
-	rangeStartPlay.classList.add("range-definition-play-start");
-	rangeStartPlay.classList.add("click");
-	const rangeTimeGap = document.createElement("div");
-	rangeTimeGap.classList.add("range-definition-between-time-gap");
-	const rangeEnd = document.createElement("input");
-	rangeEnd.type = "text";
-	rangeEnd.classList.add("range-definition-end");
-	const rangeEndSet = document.createElement("img");
-	rangeEndSet.src = "images/pencil.png";
-	rangeEndSet.alt = "Set range end point to the current video time";
-	rangeEndSet.title = rangeEndSet.alt;
-	rangeEndSet.classList.add("range-definition-set-end");
-	rangeEndSet.classList.add("click");
-	const rangeEndPlay = document.createElement("img");
-	rangeEndPlay.src = "images/play_to.png";
-	rangeEndPlay.alt = "Play from end point";
-	rangeEndPlay.title = rangeEndPlay.alt;
-	rangeEndPlay.classList.add("range-definition-play-end");
-	rangeEndPlay.classList.add("click");
-	const removeRange = document.createElement("img");
-	removeRange.alt = "Remove range";
-	removeRange.title = removeRange.alt;
-	removeRange.src = "images/minus.png";
-	removeRange.classList.add("range-definition-remove");
-	removeRange.classList.add("click");
+function rangeDefinitionDOM() {
+	// Shortcut builder for image-based buttons
+	const button = (cls, src, alt) => makeElement("img", [cls, "click"], {
+		src, alt, title: alt,
+	});
+
+	const rangeContainer = makeElement("div", ["range-definition-removable"]);
+
+	const rangeTimesContainer = makeElement("div", ["range-definition-times"]);
+	const rangeStart = makeElement("input", ["range-definition-start"], {type: "text"});
+	const rangeStartSet = button(
+		"range-definition-set-start",
+		"images/pencil.png",
+		"Set range start point to the current video time",
+	);
+	const rangeStartPlay = button(
+		"range-definition-play-start",
+		"images/play_to.png",
+		"Play from start point",
+	);
+	const rangeTimeGap = makeElement("div", ["range-definition-between-time-gap"]);
+	const rangeEnd = makeElement("input", ["range-definition-end"], {type: "text"});
+	const rangeEndSet = button(
+		"range-definition-set-end",
+		"images/pencil.png",
+		"Set range end point to the current video time",
+	);
+	const rangeEndPlay = button(
+		"range-definition-play-end",
+		"images/play_to.png",
+		"Play from end point",
+	);
+	const removeRange = button(
+		"range-definition-remove",
+		"images/minus.png",
+		"Remove range",
+	);
 
 	if (canEditVideo()) {
 		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
@@ -1449,37 +1453,37 @@ function rangeDefinitionDOM() {
 		removeRange.classList.add("hidden");
 	}
 
-	const currentRangeMarker = document.createElement("img");
-	currentRangeMarker.alt = "Range affected by keyboard shortcuts";
-	currentRangeMarker.title = "Range affected by keyboard shortcuts";
-	currentRangeMarker.src = "images/arrow.png";
-	currentRangeMarker.classList.add("range-definition-current");
-	currentRangeMarker.classList.add("hidden");
+	const currentRangeMarkerAlt = "Range affected by keyboard shortcuts";
+	const currentRangeMarker = makeElement("img", ["range-definition-current", "hidden"], {
+		src: "images/arrow.png",
+		alt: currentRangeMarkerAlt,
+		title: currentRangeMarkerAlt,
+	});
 
-	rangeTimesContainer.appendChild(rangeStart);
-	rangeTimesContainer.appendChild(rangeStartSet);
-	rangeTimesContainer.appendChild(rangeStartPlay);
-	rangeTimesContainer.appendChild(rangeTimeGap);
-	rangeTimesContainer.appendChild(rangeEnd);
-	rangeTimesContainer.appendChild(rangeEndSet);
-	rangeTimesContainer.appendChild(rangeEndPlay);
-	rangeTimesContainer.appendChild(removeRange);
-	rangeTimesContainer.appendChild(currentRangeMarker);
+	rangeTimesContainer.append(
+		rangeStart,
+		rangeStartSet,
+		rangeStartPlay,
+		rangeTimeGap,
+		rangeEnd,
+		rangeEndSet,
+		rangeEndPlay,
+		removeRange,
+		currentRangeMarker,
+	);
 
-	const rangeChaptersContainer = document.createElement("div");
+	const rangeChaptersContainer = makeElement("div", ["range-definition-chapter-markers"]);
 	const enableChaptersElem = document.getElementById("enable-chapter-markers");
 	const chaptersEnabled = enableChaptersElem.checked;
-	rangeChaptersContainer.classList.add("range-definition-chapter-markers");
 	if (!chaptersEnabled) {
 		rangeChaptersContainer.classList.add("hidden");
 	}
 
-	const rangeAddChapterElem = document.createElement("img");
-	rangeAddChapterElem.src = "images/plus.png";
-	rangeAddChapterElem.alt = "Add chapter marker";
-	rangeAddChapterElem.title = "Add chapter marker";
-	rangeAddChapterElem.classList.add("add-range-definition-chapter-marker");
-	rangeAddChapterElem.classList.add("click");
+	const rangeAddChapterElem = button(
+		"add-range-definition-chapter-marker",
+		"images/plus.png",
+		"Add chapter marker",
+	);
 	if (!chaptersEnabled) {
 		rangeAddChapterElem.classList.add("hidden");
 	}
@@ -1489,9 +1493,11 @@ function rangeDefinitionDOM() {
 		rangeAddChapterElem.classList.add("hidden");
 	}
 
-	rangeContainer.appendChild(rangeTimesContainer);
-	rangeContainer.appendChild(rangeChaptersContainer);
-	rangeContainer.appendChild(rangeAddChapterElem);
+	rangeContainer.append(
+		rangeTimesContainer,
+		rangeChaptersContainer,
+		rangeAddChapterElem,
+	);
 
 	return rangeContainer;
 }
