@@ -246,6 +246,14 @@ a.click {
 	gap: 1px;
 }
 
+.range-transition-duration-section {
+	display: inline-block;
+}
+
+.range-transition-duration {
+	width: 50px;
+}
+
 .range-definition-times {
 	display: flex;
 	align-items: center;

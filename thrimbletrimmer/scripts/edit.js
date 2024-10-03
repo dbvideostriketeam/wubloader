@@ -1382,6 +1382,35 @@ function rangeDefinitionDOM() {
 
 	const rangeContainer = makeElement("div", ["range-definition-removable"]);
 
+	const transitionContainer = makeElement("div", ["range-transition"]);
+
+	const transitionType = makeElement("select", ["range-transition-type"]);
+	// Always add the special-case hard cut option first.
+	transitionType.append(
+		makeElement("option", [], {
+			value: "",
+			textContent: "cut",
+			title: "A hard cut with no transition. Duration is ignored.",
+		}),
+		...(videoInfo.transitions ?? []).map(
+			type => makeElement("option", [], {
+				value: type.name,
+				textContent: type.name,
+				title: type.description,
+			})
+		),
+	);
+	const transitionDurationSection = makeElement("div", ["range-transition-duration-section"]);
+	if (transitionType.value == "") {
+		transitionDurationSection.classList.add("hidden");
+	}
+	const transitionDuration = makeElement("input", ["range-transition-duration"], {
+		type: "text",
+		value: "1",
+	});
+	transitionDurationSection.append(" over ", transitionDuration, " seconds");
+	transitionContainer.append("Transition: ", transitionType, transitionDurationSection);
+
 	const rangeTimesContainer = makeElement("div", ["range-definition-times"]);
 	const rangeStart = makeElement("input", ["range-definition-start"], {type: "text"});
 	const rangeStartSet = button(
@@ -1494,6 +1523,7 @@ function rangeDefinitionDOM() {
 	}
 
 	rangeContainer.append(
+		transitionContainer,
 		rangeTimesContainer,
 		rangeChaptersContainer,
 		rangeAddChapterElem,
