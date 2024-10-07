@@ -947,10 +947,31 @@ async function sendVideoData(newState, overrideChanges) {
 	submissionResponseElem.innerText = "Submitting video...";
 
 	const rangesData = [];
+	const transitions = [];
 	let chaptersData = [];
 	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
 	let rangeStartInFinalVideo = 0;
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
+		// First range container has no transition.
+		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
+		if (transitionTypeElements.length > 0) {
+			const transitionType = transitionTypeElements[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			if (transitionType === "") {
+				transitions.push(null);
+			} else {
+				// parseFloat() ignores trailing invalid chars, Number() returns 0 for empty string,
+				// but 0 is an error here anyway.
+				// Note that !(x > 0) is not equivalent to (x <= 0) due to NaN.
+				const transitionDuration = Number(transitionDurationStr);
+				if ( !(transitionDuration > 0) ) {
+					addError(`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`);
+					return;
+				}
+				transitions.push([transitionType, transitionDuration])
+			}
+		}
+
 		const rangeStartHuman =
 			rangeContainer.getElementsByClassName("range-definition-start")[0].value;
 		const rangeEndHuman = rangeContainer.getElementsByClassName("range-definition-end")[0].value;
@@ -1039,14 +1060,9 @@ async function sendVideoData(newState, overrideChanges) {
 	const videoHasHours = finalVideoDuration >= 3600;
 
 	const ranges = [];
-	const transitions = [];
 	for (const range of rangesData) {
 		ranges.push([range.start, range.end]);
-		// In the future, handle transitions
-		transitions.push(null);
 	}
-	// The first range will never have a transition defined, so remove that one
-	transitions.shift();
 
 	if (chaptersData.length > 0) {
 		if (chaptersData[0].start !== 0) {
@@ -1487,10 +1503,14 @@ function rangeDefinitionDOM() {
 		} else {
 			transitionDurationSection.classList.remove("hidden");
 		}
+		handleFieldChange();
 	});
 	const transitionDuration = makeElement("input", ["range-transition-duration"], {
 		type: "text",
 		value: "1",
+	});
+	transitionDuration.addEventListener("change", (event) => {
+		handleFieldChange();
 	});
 	transitionDurationSection.append(" over ", transitionDuration, " seconds");
 	transitionContainer.append("Transition: ", transitionType, transitionDurationSection);
