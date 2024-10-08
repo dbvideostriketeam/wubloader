@@ -46,13 +46,13 @@ def cors(app):
 		return app(environ, _start_response)
 	return handle
 
-
-def authenticate(f):
-	"""Authenticate a token against the database.
+def authenticate_artist(f):
+	""""Authenticate a token against the database to authenticate an artist
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
+    
 	@wraps(f)
-	def auth_wrapper(*args, **kwargs):
+	def artist_auth_wrapper(*args, **kwargs):
 		if app.no_authentication:
 			return f(*args, editor='NOT_AUTH', **kwargs)
 
@@ -72,21 +72,58 @@ def authenticate(f):
 		email = idinfo['email'].lower()
 		conn = app.db_manager.get_conn()
 		results = database.query(conn, """
-			SELECT email
-			FROM editors
-			WHERE lower(email) = %s""", email)
+			SELECT email, artist 
+			FROM roles
+			WHERE lower(email) = %s AND artist""", email)
 		row = results.fetchone()
 		if row is None:
 			return 'Unknown user. Access denied.', 403
 
 		return f(*args, editor=email, **kwargs)
 
-	return auth_wrapper
+	return artist_auth_wrapper
+
+
+def authenticate_editor(f):
+	"""Authenticate a token against the database to authenticate an editor.
+
+	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
+	@wraps(f)
+	def editor_auth_wrapper(*args, **kwargs):
+		if app.no_authentication:
+			return f(*args, editor='NOT_AUTH', **kwargs)
+
+		try:
+			userToken = flask.request.json['token']
+		except (KeyError, TypeError):
+			return 'User token required', 401
+		# check whether token is valid
+		try:
+			idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
+			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+				raise ValueError('Wrong issuer.')
+		except ValueError:
+			return 'Invalid token. Access denied.', 403
+
+		# check whether user is in the database
+		email = idinfo['email'].lower()
+		conn = app.db_manager.get_conn()
+		results = database.query(conn, """
+			SELECT email, editor
+			FROM roles
+			WHERE lower(email) = %s AND editor""", email)
+		row = results.fetchone()
+		if row is None:
+			return 'Unknown user. Access denied.', 403
+
+		return f(*args, editor=email, **kwargs)
+
+	return editor_auth_wrapper
 
 
 @app.route('/thrimshim/auth-test', methods=['POST'])
 @request_stats
-@authenticate
+@authenticate_editor
 def test(editor=None):
 	return json.dumps(editor)
 
@@ -264,7 +301,7 @@ def get_row(ident):
 
 @app.route('/thrimshim/<ident>', methods=['POST'])
 @request_stats
-@authenticate
+@authenticate_editor
 def update_row(ident, editor=None):
 	"""Updates row of database with id = ident with the edit columns in new_row."""
 	new_row = flask.request.json
@@ -482,7 +519,7 @@ def update_row(ident, editor=None):
 
 @app.route('/thrimshim/manual-link/<ident>', methods=['POST'])
 @request_stats
-@authenticate
+@authenticate_editor
 def manual_link(ident, editor=None):
 	"""Manually set a video_link if the state is 'UNEDITED' or 'DONE' and the
 	upload_location is 'manual' or 'youtube-manual'."""
@@ -537,7 +574,7 @@ def manual_link(ident, editor=None):
 
 @app.route('/thrimshim/reset/<ident>', methods=['POST'])
 @request_stats
-@authenticate
+@authenticate_editor
 def reset_row(ident, editor=None):
 	"""Clear state and video_link columns and reset state to 'UNEDITED'.
 	If force is 'true', it will do so regardless of current state.
