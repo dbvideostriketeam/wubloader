@@ -122,9 +122,11 @@ CREATE TABLE nodes (
 	backfill_from BOOLEAN NOT NULL DEFAULT TRUE
 );
 
-CREATE TABLE editors (
+CREATE TABLE roles (
 	email TEXT PRIMARY KEY,
-	name TEXT NOT NULL
+	name TEXT NOT NULL,
+	editor BOOLEAN NOT NULL DEFAULT FALSE,
+	artist BOOLEAN NOT NULL DEFAULT FALSE
 );
 
 -- A slight misnomer, this is all rows of the tags sheet.
