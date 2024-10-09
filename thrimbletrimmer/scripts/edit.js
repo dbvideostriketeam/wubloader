@@ -1439,10 +1439,17 @@ function rangeDefinitionDOM() {
 		}),
 	);
 	updateTransitionTypes([transitionType]);
-	const transitionDurationSection = makeElement("div", ["range-transition-duration-section"]);
-	if (transitionType.value == "") {
-		transitionDurationSection.classList.add("hidden");
-	}
+
+	// Duration always starts hidden because type always starts as cut.
+	const transitionDurationSection = makeElement("div", ["range-transition-duration-section", "hidden"]);
+	// Add/remove hidden when type changes
+	transitionType.addEventListener("change", (event) => {
+		if (transitionType.value === "") {
+			transitionDurationSection.classList.add("hidden");
+		} else {
+			transitionDurationSection.classList.remove("hidden");
+		}
+	});
 	const transitionDuration = makeElement("input", ["range-transition-duration"], {
 		type: "text",
 		value: "1",
