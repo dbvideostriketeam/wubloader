@@ -1315,7 +1315,7 @@ function handleLeavePage(event) {
 	return event.returnValue;
 }
 
-function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
+function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, quality) {
 	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
 	for (const range of timeRanges) {
 		let timeRangeString = "";
@@ -1328,6 +1328,9 @@ function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
 		}
 		queryParts.push(`range=${timeRangeString}`);
 	}
+	for (const transition of transitions) {
+		queryParts.push(`transition=${transition}`);
+	}
 
 	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
 	return downloadURL;
@@ -1338,7 +1341,25 @@ function updateDownloadLink() {
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 
 	const timeRanges = [];
+	const transitions = [];
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
+		// First range container has no transition.
+		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
+		if (transitionTypeElements.length > 0) {
+			const transitionType = transitionTypeElements[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			if (transitionType === "") {
+				transitions.push("");
+			} else {
+				let transitionDuration = Number(transitionDurationStr);
+				// We don't have a sensible way to error out here, so default invalid durations to 1s
+				if ( !(transitionDuration > 0) ) {
+					transitionDuration = 1;
+				}
+				transitions.push(`${transitionType},${transitionDuration}`);
+			}
+		}
+
 		const startField = rangeContainer.getElementsByClassName("range-definition-start")[0];
 		const endField = rangeContainer.getElementsByClassName("range-definition-end")[0];
 		const timeRangeData = {};
@@ -1355,6 +1376,7 @@ function updateDownloadLink() {
 
 	const downloadURL = generateDownloadURL(
 		timeRanges,
+		transitions,
 		downloadType,
 		allowHoles,
 		videoInfo.video_quality,
@@ -1506,6 +1528,7 @@ function rangeDefinitionDOM() {
 		} else {
 			transitionDurationSection.classList.remove("hidden");
 		}
+		updateDownloadLink();
 		handleFieldChange();
 	});
 	const transitionDuration = makeElement("input", ["range-transition-duration"], {
@@ -1513,6 +1536,7 @@ function rangeDefinitionDOM() {
 		value: "1",
 	});
 	transitionDuration.addEventListener("change", (event) => {
+		updateDownloadLink();
 		handleFieldChange();
 	});
 	transitionDurationSection.append(" over ", transitionDuration, " seconds");
