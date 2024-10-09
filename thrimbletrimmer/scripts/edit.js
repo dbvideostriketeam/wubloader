@@ -1,6 +1,7 @@
 var googleUser = null;
 var videoInfo;
 var currentRange = 1;
+let knownTransitions = [];
 let globalPageState = 0;
 
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
@@ -141,6 +142,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	});
 
+	loadTransitions(); // Intentionally not awaiting, fire and forget
 	await loadVideoInfo();
 
 	document.getElementById("stream-time-setting-start-pad").addEventListener("click", (_event) => {
@@ -360,6 +362,49 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		googleSignOut();
 	});
 });
+
+
+async function loadTransitions() {
+	const response = await fetch("/thrimshim/transitions");
+	if (!response.ok) {
+		addError("Failed to fetch possible transition types. This probably means the wubloader host is down.");
+		return;
+	}
+	knownTransitions = await response.json();
+	updateTransitionTypes();
+}
+
+// Update the given list of transition type <select> tags (or all of them if not given)
+// to contain the full list of known transitions.
+// We're careful to update description etc in place if one already exists,
+// as this might happen when loading an already-edited video.
+function updateTransitionTypes(
+	elements = document.getElementsByClassName("range-transition-type"),
+) {
+	for (const select of elements) {
+		// For each transition type, we look for it in the current select tag.
+		// If it's there, then we update it and move it to the bottom.
+		// Otherwise, we create a new one and append it.
+		// That way anything already selected stays selected but is moved into the proper place.
+		// This isn't particularly efficient, but it doesn't really matter.
+		for (const type of knownTransitions) {
+			let option;
+			for (const child of select.children) {
+				if (child.value === type.name) {
+					option = child;
+					break;
+				}
+			}
+			if (option === undefined) {
+				option = document.createElement("option");
+				option.value = type.name;
+			}
+			option.textContent = type.name;
+			option.title = type.description;
+			select.append(option);
+		}
+	}
+}
 
 async function loadVideoInfo() {
 	const queryParams = new URLSearchParams(window.location.search);
@@ -1392,14 +1437,8 @@ function rangeDefinitionDOM() {
 			textContent: "cut",
 			title: "A hard cut with no transition. Duration is ignored.",
 		}),
-		...(videoInfo.transitions ?? []).map(
-			type => makeElement("option", [], {
-				value: type.name,
-				textContent: type.name,
-				title: type.description,
-			})
-		),
 	);
+	updateTransitionTypes([transitionType]);
 	const transitionDurationSection = makeElement("div", ["range-transition-duration-section"]);
 	if (transitionType.value == "") {
 		transitionDurationSection.classList.add("hidden");
