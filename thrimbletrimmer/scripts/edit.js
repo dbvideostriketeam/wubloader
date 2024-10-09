@@ -946,6 +946,11 @@ async function sendVideoData(newState, overrideChanges) {
 	submissionResponseElem.classList.value = ["submission-response-pending"];
 	submissionResponseElem.innerText = "Submitting video...";
 
+	function submissionError(message) {
+		submissionResponseElem.innerText = message;
+		submissionResponseElem.classList.value = ["submission-response-error"];
+	}
+
 	const rangesData = [];
 	const transitions = [];
 	let chaptersData = [];
@@ -965,7 +970,7 @@ async function sendVideoData(newState, overrideChanges) {
 				// Note that !(x > 0) is not equivalent to (x <= 0) due to NaN.
 				const transitionDuration = Number(transitionDurationStr);
 				if ( !(transitionDuration > 0) ) {
-					addError(`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`);
+					submissionError(`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`);
 					return;
 				}
 				transitions.push([transitionType, transitionDuration])
@@ -984,7 +989,6 @@ async function sendVideoData(newState, overrideChanges) {
 		const rangeEndSubmit = wubloaderTimeFromVideoPlayerTime(rangeEndPlayer);
 
 		if (edited && (!rangeStartSubmit || !rangeEndSubmit)) {
-			submissionResponseElem.classList.value = ["submission-response-error"];
 			let errorMessage;
 			if (!rangeStartSubmit && !rangeEndSubmit) {
 				errorMessage = `The range endpoints "${rangeStartSubmit}" and "${rangeEndSubmit}" are not valid.`;
@@ -993,14 +997,12 @@ async function sendVideoData(newState, overrideChanges) {
 			} else {
 				errorMessage = `The range endpoint "${rangeEndSubmit}" is not valid.`;
 			}
-			submissionResponseElem.innerText = errorMessage;
+			submissionError(errorMessage);
 			return;
 		}
 
 		if (edited && rangeEndPlayer < rangeStartPlayer) {
-			submissionResponseElem.innerText =
-				"One or more ranges has an end time prior to its start time.";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("One or more ranges has an end time prior to its start time.");
 			return;
 		}
 
@@ -1024,15 +1026,13 @@ async function sendVideoData(newState, overrideChanges) {
 				const startFieldTime = videoPlayerTimeFromVideoHumanTime(startField.value);
 				if (startFieldTime === null) {
 					if (edited) {
-						submissionResponseElem.innerText = `Unable to parse chapter start time: ${startField.value}`;
-						submissionResponseElem.classList.value = ["submission-response-error"];
+						submissionError(`Unable to parse chapter start time: ${startField.value}`);
 						return;
 					}
 					continue;
 				}
 				if (startFieldTime < rangeStartPlayer || startFieldTime > rangeEndPlayer) {
-					submissionResponseElem.innerText = `The chapter at "${startField.value}" is outside its containing time range.`;
-					submissionResponseElem.classList.value = ["submission-response-error"];
+					submissionError(`The chapter at "${startField.value}" is outside its containing time range.`);
 					return;
 				}
 				const chapterStartTime = rangeStartInFinalVideo + startFieldTime - rangeStartPlayer;
@@ -1051,9 +1051,7 @@ async function sendVideoData(newState, overrideChanges) {
 				enableChaptersElem.checked &&
 				rangeContainer.getElementsByClassName("range-definition-chapter-marker-start").length > 0
 			) {
-				submissionResponseElem.classList.value = ["submission-response-error"];
-				submissionResponseElem.innerText =
-					"Chapter markers can't be saved for ranges without valid endpoints.";
+				submissionError("Chapter markers can't be saved for ranges without valid endpoints.");
 				return;
 			}
 		}
@@ -1069,16 +1067,13 @@ async function sendVideoData(newState, overrideChanges) {
 
 	if (chaptersData.length > 0) {
 		if (chaptersData[0].start !== 0) {
-			submissionResponseElem.innerText =
-				"The first chapter must start at the beginning of the video";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("The first chapter must start at the beginning of the video");
 			return;
 		}
 		let lastChapterStart = 0;
 		for (let chapterIndex = 1; chapterIndex < chaptersData.length; chapterIndex++) {
 			if (edited && chaptersData[chapterIndex].start - lastChapterStart < 10) {
-				submissionResponseElem.innerText = "Chapters must be at least 10 seconds apart";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("Chapters must be at least 10 seconds apart");
 				return;
 			}
 			lastChapterStart = chaptersData[chapterIndex].start;
@@ -1102,8 +1097,7 @@ async function sendVideoData(newState, overrideChanges) {
 			document.getElementById("video-info-thumbnail-time").value,
 		);
 		if (thumbnailTime === null) {
-			submissionResponseElem.innerText = "The thumbnail time is invalid";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("The thumbnail time is invalid");
 			return;
 		}
 	}
@@ -1114,9 +1108,7 @@ async function sendVideoData(newState, overrideChanges) {
 		const fileInput = document.getElementById("video-info-thumbnail-custom");
 		if (fileInput.files.length === 0) {
 			if (!videoInfo.thumbnail_image) {
-				submissionResponseElem.innerText =
-					"A thumbnail file was not provided for the custom thumbnail";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("A thumbnail file was not provided for the custom thumbnail");
 				return;
 			}
 			thumbnailImage = videoInfo.thumbnail_image;
@@ -1134,14 +1126,11 @@ async function sendVideoData(newState, overrideChanges) {
 			await loadPromise;
 			const fileLoadData = fileReader.result;
 			if (fileLoadData.error) {
-				submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError(`An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`);
 				return;
 			}
 			if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
-				submissionResponseElem.innerHTML =
-					"An error occurred converting the uploaded image to base64.";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("An error occurred converting the uploaded image to base64.");
 				return;
 			}
 			thumbnailImage = fileLoadData.substring(22);
