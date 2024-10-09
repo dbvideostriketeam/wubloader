@@ -969,6 +969,9 @@ async function sendVideoData(newState, overrideChanges) {
 					return;
 				}
 				transitions.push([transitionType, transitionDuration])
+				// Since we're overlapping with the previous range, this range's start time is
+				// actually earlier. This matters for chapter markers.
+				rangeStartInFinalVideo -= transitionDuration;
 			}
 		}
 
