@@ -651,6 +651,44 @@ async function initializeVideoInfo() {
 				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
 					addRangeDefinition();
 				}
+				const rangeContainer = rangeDefinitionsContainer.children[rangeIndex];
+
+				// Update transition data before converting into player time,
+				// as this can affect the conversion.
+				// Note that the Nth range is associated here with the (N-1)th transition
+				// and so we skip this entirely for N = 0.
+				if (rangeIndex > 0) {
+					const transition = videoInfo.video_transitions[rangeIndex - 1];
+					const transitionType = rangeContainer.getElementsByClassName("range-transition-type")[0];
+					const transitionDuration = rangeContainer.getElementsByClassName("range-transition-duration")[0];
+					const transitionDurationSection = rangeContainer.getElementsByClassName("range-transition-duration-section")[0];
+					if (transition === null) {
+						transitionType.value = "";
+						transitionDuration.value = "";
+						transitionDurationSection.classList.add("hidden");
+					} else {
+						const [type, duration] = transition;
+						// Check if the option is present. If not, create it with no description.
+						let found = false;
+						for (const option of transitionType.children) {
+							if (option.value === type) {
+								found = true;
+								break;
+							}
+						}
+						if (!found) {
+							const option = document.createElement("option");
+							option.value = type;
+							option.textContent = type;
+							transitionType.append(option)
+						}
+						// Set type and duration.
+						transitionType.value = type;
+						transitionDuration.value = duration.toString();
+						transitionDurationSection.classList.remove("hidden");
+					}
+				}
+
 				const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
 				const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
 				const startPlayerTime = videoPlayerTimeFromWubloaderTime(startWubloaderTime);
