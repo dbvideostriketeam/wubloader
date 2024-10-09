@@ -1,6 +1,7 @@
 var googleUser = null;
 var videoInfo;
 var currentRange = 1;
+let knownTransitions = [];
 let globalPageState = 0;
 
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
@@ -141,6 +142,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	});
 
+	loadTransitions(); // Intentionally not awaiting, fire and forget
 	await loadVideoInfo();
 
 	document.getElementById("stream-time-setting-start-pad").addEventListener("click", (_event) => {
@@ -360,6 +362,49 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		googleSignOut();
 	});
 });
+
+
+async function loadTransitions() {
+	const response = await fetch("/thrimshim/transitions");
+	if (!response.ok) {
+		addError("Failed to fetch possible transition types. This probably means the wubloader host is down.");
+		return;
+	}
+	knownTransitions = await response.json();
+	updateTransitionTypes();
+}
+
+// Update the given list of transition type <select> tags (or all of them if not given)
+// to contain the full list of known transitions.
+// We're careful to update description etc in place if one already exists,
+// as this might happen when loading an already-edited video.
+function updateTransitionTypes(
+	elements = document.getElementsByClassName("range-transition-type"),
+) {
+	for (const select of elements) {
+		// For each transition type, we look for it in the current select tag.
+		// If it's there, then we update it and move it to the bottom.
+		// Otherwise, we create a new one and append it.
+		// That way anything already selected stays selected but is moved into the proper place.
+		// This isn't particularly efficient, but it doesn't really matter.
+		for (const type of knownTransitions) {
+			let option;
+			for (const child of select.children) {
+				if (child.value === type.name) {
+					option = child;
+					break;
+				}
+			}
+			if (option === undefined) {
+				option = document.createElement("option");
+				option.value = type.name;
+			}
+			option.textContent = type.name;
+			option.title = type.description;
+			select.append(option);
+		}
+	}
+}
 
 async function loadVideoInfo() {
 	const queryParams = new URLSearchParams(window.location.search);
@@ -606,6 +651,44 @@ async function initializeVideoInfo() {
 				if (rangeIndex >= rangeDefinitionsContainer.children.length) {
 					addRangeDefinition();
 				}
+				const rangeContainer = rangeDefinitionsContainer.children[rangeIndex];
+
+				// Update transition data before converting into player time,
+				// as this can affect the conversion.
+				// Note that the Nth range is associated here with the (N-1)th transition
+				// and so we skip this entirely for N = 0.
+				if (rangeIndex > 0) {
+					const transition = videoInfo.video_transitions[rangeIndex - 1];
+					const transitionType = rangeContainer.getElementsByClassName("range-transition-type")[0];
+					const transitionDuration = rangeContainer.getElementsByClassName("range-transition-duration")[0];
+					const transitionDurationSection = rangeContainer.getElementsByClassName("range-transition-duration-section")[0];
+					if (transition === null) {
+						transitionType.value = "";
+						transitionDuration.value = "";
+						transitionDurationSection.classList.add("hidden");
+					} else {
+						const [type, duration] = transition;
+						// Check if the option is present. If not, create it with no description.
+						let found = false;
+						for (const option of transitionType.children) {
+							if (option.value === type) {
+								found = true;
+								break;
+							}
+						}
+						if (!found) {
+							const option = document.createElement("option");
+							option.value = type;
+							option.textContent = type;
+							transitionType.append(option)
+						}
+						// Set type and duration.
+						transitionType.value = type;
+						transitionDuration.value = duration.toString();
+						transitionDurationSection.classList.remove("hidden");
+					}
+				}
+
 				const startWubloaderTime = videoInfo.video_ranges[rangeIndex][0];
 				const endWubloaderTime = videoInfo.video_ranges[rangeIndex][1];
 				const startPlayerTime = videoPlayerTimeFromWubloaderTime(startWubloaderTime);
@@ -863,11 +946,40 @@ async function sendVideoData(newState, overrideChanges) {
 	submissionResponseElem.classList.value = ["submission-response-pending"];
 	submissionResponseElem.innerText = "Submitting video...";
 
+	function submissionError(message) {
+		submissionResponseElem.innerText = message;
+		submissionResponseElem.classList.value = ["submission-response-error"];
+	}
+
 	const rangesData = [];
+	const transitions = [];
 	let chaptersData = [];
 	const chaptersEnabled = document.getElementById("enable-chapter-markers").checked;
 	let rangeStartInFinalVideo = 0;
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
+		// First range container has no transition.
+		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
+		if (transitionTypeElements.length > 0) {
+			const transitionType = transitionTypeElements[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			if (transitionType === "") {
+				transitions.push(null);
+			} else {
+				// parseFloat() ignores trailing invalid chars, Number() returns 0 for empty string,
+				// but 0 is an error here anyway.
+				// Note that !(x > 0) is not equivalent to (x <= 0) due to NaN.
+				const transitionDuration = Number(transitionDurationStr);
+				if ( !(transitionDuration > 0) ) {
+					submissionError(`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`);
+					return;
+				}
+				transitions.push([transitionType, transitionDuration])
+				// Since we're overlapping with the previous range, this range's start time is
+				// actually earlier. This matters for chapter markers.
+				rangeStartInFinalVideo -= transitionDuration;
+			}
+		}
+
 		const rangeStartHuman =
 			rangeContainer.getElementsByClassName("range-definition-start")[0].value;
 		const rangeEndHuman = rangeContainer.getElementsByClassName("range-definition-end")[0].value;
@@ -877,7 +989,6 @@ async function sendVideoData(newState, overrideChanges) {
 		const rangeEndSubmit = wubloaderTimeFromVideoPlayerTime(rangeEndPlayer);
 
 		if (edited && (!rangeStartSubmit || !rangeEndSubmit)) {
-			submissionResponseElem.classList.value = ["submission-response-error"];
 			let errorMessage;
 			if (!rangeStartSubmit && !rangeEndSubmit) {
 				errorMessage = `The range endpoints "${rangeStartSubmit}" and "${rangeEndSubmit}" are not valid.`;
@@ -886,14 +997,12 @@ async function sendVideoData(newState, overrideChanges) {
 			} else {
 				errorMessage = `The range endpoint "${rangeEndSubmit}" is not valid.`;
 			}
-			submissionResponseElem.innerText = errorMessage;
+			submissionError(errorMessage);
 			return;
 		}
 
 		if (edited && rangeEndPlayer < rangeStartPlayer) {
-			submissionResponseElem.innerText =
-				"One or more ranges has an end time prior to its start time.";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("One or more ranges has an end time prior to its start time.");
 			return;
 		}
 
@@ -917,15 +1026,13 @@ async function sendVideoData(newState, overrideChanges) {
 				const startFieldTime = videoPlayerTimeFromVideoHumanTime(startField.value);
 				if (startFieldTime === null) {
 					if (edited) {
-						submissionResponseElem.innerText = `Unable to parse chapter start time: ${startField.value}`;
-						submissionResponseElem.classList.value = ["submission-response-error"];
+						submissionError(`Unable to parse chapter start time: ${startField.value}`);
 						return;
 					}
 					continue;
 				}
 				if (startFieldTime < rangeStartPlayer || startFieldTime > rangeEndPlayer) {
-					submissionResponseElem.innerText = `The chapter at "${startField.value}" is outside its containing time range.`;
-					submissionResponseElem.classList.value = ["submission-response-error"];
+					submissionError(`The chapter at "${startField.value}" is outside its containing time range.`);
 					return;
 				}
 				const chapterStartTime = rangeStartInFinalVideo + startFieldTime - rangeStartPlayer;
@@ -944,9 +1051,7 @@ async function sendVideoData(newState, overrideChanges) {
 				enableChaptersElem.checked &&
 				rangeContainer.getElementsByClassName("range-definition-chapter-marker-start").length > 0
 			) {
-				submissionResponseElem.classList.value = ["submission-response-error"];
-				submissionResponseElem.innerText =
-					"Chapter markers can't be saved for ranges without valid endpoints.";
+				submissionError("Chapter markers can't be saved for ranges without valid endpoints.");
 				return;
 			}
 		}
@@ -956,27 +1061,19 @@ async function sendVideoData(newState, overrideChanges) {
 	const videoHasHours = finalVideoDuration >= 3600;
 
 	const ranges = [];
-	const transitions = [];
 	for (const range of rangesData) {
 		ranges.push([range.start, range.end]);
-		// In the future, handle transitions
-		transitions.push(null);
 	}
-	// The first range will never have a transition defined, so remove that one
-	transitions.shift();
 
 	if (chaptersData.length > 0) {
 		if (chaptersData[0].start !== 0) {
-			submissionResponseElem.innerText =
-				"The first chapter must start at the beginning of the video";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("The first chapter must start at the beginning of the video");
 			return;
 		}
 		let lastChapterStart = 0;
 		for (let chapterIndex = 1; chapterIndex < chaptersData.length; chapterIndex++) {
 			if (edited && chaptersData[chapterIndex].start - lastChapterStart < 10) {
-				submissionResponseElem.innerText = "Chapters must be at least 10 seconds apart";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("Chapters must be at least 10 seconds apart");
 				return;
 			}
 			lastChapterStart = chaptersData[chapterIndex].start;
@@ -1000,8 +1097,7 @@ async function sendVideoData(newState, overrideChanges) {
 			document.getElementById("video-info-thumbnail-time").value,
 		);
 		if (thumbnailTime === null) {
-			submissionResponseElem.innerText = "The thumbnail time is invalid";
-			submissionResponseElem.classList.value = ["submission-response-error"];
+			submissionError("The thumbnail time is invalid");
 			return;
 		}
 	}
@@ -1012,9 +1108,7 @@ async function sendVideoData(newState, overrideChanges) {
 		const fileInput = document.getElementById("video-info-thumbnail-custom");
 		if (fileInput.files.length === 0) {
 			if (!videoInfo.thumbnail_image) {
-				submissionResponseElem.innerText =
-					"A thumbnail file was not provided for the custom thumbnail";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("A thumbnail file was not provided for the custom thumbnail");
 				return;
 			}
 			thumbnailImage = videoInfo.thumbnail_image;
@@ -1032,14 +1126,11 @@ async function sendVideoData(newState, overrideChanges) {
 			await loadPromise;
 			const fileLoadData = fileReader.result;
 			if (fileLoadData.error) {
-				submissionResponseElem.innerText = `An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`;
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError(`An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`);
 				return;
 			}
 			if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
-				submissionResponseElem.innerHTML =
-					"An error occurred converting the uploaded image to base64.";
-				submissionResponseElem.classList.value = ["submission-response-error"];
+				submissionError("An error occurred converting the uploaded image to base64.");
 				return;
 			}
 			thumbnailImage = fileLoadData.substring(22);
@@ -1213,7 +1304,7 @@ function handleLeavePage(event) {
 	return event.returnValue;
 }
 
-function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
+function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, quality) {
 	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
 	for (const range of timeRanges) {
 		let timeRangeString = "";
@@ -1226,6 +1317,9 @@ function generateDownloadURL(timeRanges, downloadType, allowHoles, quality) {
 		}
 		queryParts.push(`range=${timeRangeString}`);
 	}
+	for (const transition of transitions) {
+		queryParts.push(`transition=${transition}`);
+	}
 
 	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
 	return downloadURL;
@@ -1236,7 +1330,25 @@ function updateDownloadLink() {
 	const allowHoles = document.getElementById("advanced-submission-option-allow-holes").checked;
 
 	const timeRanges = [];
+	const transitions = [];
 	for (const rangeContainer of document.getElementById("range-definitions").children) {
+		// First range container has no transition.
+		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
+		if (transitionTypeElements.length > 0) {
+			const transitionType = transitionTypeElements[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			if (transitionType === "") {
+				transitions.push("");
+			} else {
+				let transitionDuration = Number(transitionDurationStr);
+				// We don't have a sensible way to error out here, so default invalid durations to 1s
+				if ( !(transitionDuration > 0) ) {
+					transitionDuration = 1;
+				}
+				transitions.push(`${transitionType},${transitionDuration}`);
+			}
+		}
+
 		const startField = rangeContainer.getElementsByClassName("range-definition-start")[0];
 		const endField = rangeContainer.getElementsByClassName("range-definition-end")[0];
 		const timeRangeData = {};
@@ -1253,6 +1365,7 @@ function updateDownloadLink() {
 
 	const downloadURL = generateDownloadURL(
 		timeRanges,
+		transitions,
 		downloadType,
 		allowHoles,
 		videoInfo.video_quality,
@@ -1363,50 +1476,90 @@ function addRangeDefinition() {
 	rangeContainer.appendChild(newRangeDOM);
 }
 
-function rangeDefinitionDOM() {
-	const rangeContainer = document.createElement("div");
-	rangeContainer.classList.add("range-definition-removable");
+function makeElement(tag, classes = [], values = {}) {
+	const element = document.createElement(tag);
+	for (const cls of classes) {
+		element.classList.add(cls);
+	}
+	for (const [key, value] of Object.entries(values)) {
+		element[key] = value;
+	}
+	return element;
+}
 
-	const rangeTimesContainer = document.createElement("div");
-	rangeTimesContainer.classList.add("range-definition-times");
-	const rangeStart = document.createElement("input");
-	rangeStart.type = "text";
-	rangeStart.classList.add("range-definition-start");
-	const rangeStartSet = document.createElement("img");
-	rangeStartSet.src = "images/pencil.png";
-	rangeStartSet.alt = "Set range start point to the current video time";
-	rangeStartSet.title = rangeStartSet.alt;
-	rangeStartSet.classList.add("range-definition-set-start");
-	rangeStartSet.classList.add("click");
-	const rangeStartPlay = document.createElement("img");
-	rangeStartPlay.src = "images/play_to.png";
-	rangeStartPlay.alt = "Play from start point";
-	rangeStartPlay.title = rangeStartPlay.alt;
-	rangeStartPlay.classList.add("range-definition-play-start");
-	rangeStartPlay.classList.add("click");
-	const rangeTimeGap = document.createElement("div");
-	rangeTimeGap.classList.add("range-definition-between-time-gap");
-	const rangeEnd = document.createElement("input");
-	rangeEnd.type = "text";
-	rangeEnd.classList.add("range-definition-end");
-	const rangeEndSet = document.createElement("img");
-	rangeEndSet.src = "images/pencil.png";
-	rangeEndSet.alt = "Set range end point to the current video time";
-	rangeEndSet.title = rangeEndSet.alt;
-	rangeEndSet.classList.add("range-definition-set-end");
-	rangeEndSet.classList.add("click");
-	const rangeEndPlay = document.createElement("img");
-	rangeEndPlay.src = "images/play_to.png";
-	rangeEndPlay.alt = "Play from end point";
-	rangeEndPlay.title = rangeEndPlay.alt;
-	rangeEndPlay.classList.add("range-definition-play-end");
-	rangeEndPlay.classList.add("click");
-	const removeRange = document.createElement("img");
-	removeRange.alt = "Remove range";
-	removeRange.title = removeRange.alt;
-	removeRange.src = "images/minus.png";
-	removeRange.classList.add("range-definition-remove");
-	removeRange.classList.add("click");
+function rangeDefinitionDOM() {
+	// Shortcut builder for image-based buttons
+	const button = (cls, src, alt) => makeElement("img", [cls, "click"], {
+		src, alt, title: alt,
+	});
+
+	const rangeContainer = makeElement("div", ["range-definition-removable"]);
+
+	const transitionContainer = makeElement("div", ["range-transition"]);
+
+	const transitionType = makeElement("select", ["range-transition-type"]);
+	// Always add the special-case hard cut option first.
+	transitionType.append(
+		makeElement("option", [], {
+			value: "",
+			textContent: "cut",
+			title: "A hard cut with no transition. Duration is ignored.",
+		}),
+	);
+	updateTransitionTypes([transitionType]);
+
+	// Duration always starts hidden because type always starts as cut.
+	const transitionDurationSection = makeElement("div", ["range-transition-duration-section", "hidden"]);
+	// Add/remove hidden when type changes
+	transitionType.addEventListener("change", (event) => {
+		if (transitionType.value === "") {
+			transitionDurationSection.classList.add("hidden");
+		} else {
+			transitionDurationSection.classList.remove("hidden");
+		}
+		updateDownloadLink();
+		handleFieldChange();
+	});
+	const transitionDuration = makeElement("input", ["range-transition-duration"], {
+		type: "text",
+		value: "1",
+	});
+	transitionDuration.addEventListener("change", (event) => {
+		updateDownloadLink();
+		handleFieldChange();
+	});
+	transitionDurationSection.append(" over ", transitionDuration, " seconds");
+	transitionContainer.append("Transition: ", transitionType, transitionDurationSection);
+
+	const rangeTimesContainer = makeElement("div", ["range-definition-times"]);
+	const rangeStart = makeElement("input", ["range-definition-start"], {type: "text"});
+	const rangeStartSet = button(
+		"range-definition-set-start",
+		"images/pencil.png",
+		"Set range start point to the current video time",
+	);
+	const rangeStartPlay = button(
+		"range-definition-play-start",
+		"images/play_to.png",
+		"Play from start point",
+	);
+	const rangeTimeGap = makeElement("div", ["range-definition-between-time-gap"]);
+	const rangeEnd = makeElement("input", ["range-definition-end"], {type: "text"});
+	const rangeEndSet = button(
+		"range-definition-set-end",
+		"images/pencil.png",
+		"Set range end point to the current video time",
+	);
+	const rangeEndPlay = button(
+		"range-definition-play-end",
+		"images/play_to.png",
+		"Play from end point",
+	);
+	const removeRange = button(
+		"range-definition-remove",
+		"images/minus.png",
+		"Remove range",
+	);
 
 	if (canEditVideo()) {
 		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
@@ -1449,37 +1602,37 @@ function rangeDefinitionDOM() {
 		removeRange.classList.add("hidden");
 	}
 
-	const currentRangeMarker = document.createElement("img");
-	currentRangeMarker.alt = "Range affected by keyboard shortcuts";
-	currentRangeMarker.title = "Range affected by keyboard shortcuts";
-	currentRangeMarker.src = "images/arrow.png";
-	currentRangeMarker.classList.add("range-definition-current");
-	currentRangeMarker.classList.add("hidden");
+	const currentRangeMarkerAlt = "Range affected by keyboard shortcuts";
+	const currentRangeMarker = makeElement("img", ["range-definition-current", "hidden"], {
+		src: "images/arrow.png",
+		alt: currentRangeMarkerAlt,
+		title: currentRangeMarkerAlt,
+	});
 
-	rangeTimesContainer.appendChild(rangeStart);
-	rangeTimesContainer.appendChild(rangeStartSet);
-	rangeTimesContainer.appendChild(rangeStartPlay);
-	rangeTimesContainer.appendChild(rangeTimeGap);
-	rangeTimesContainer.appendChild(rangeEnd);
-	rangeTimesContainer.appendChild(rangeEndSet);
-	rangeTimesContainer.appendChild(rangeEndPlay);
-	rangeTimesContainer.appendChild(removeRange);
-	rangeTimesContainer.appendChild(currentRangeMarker);
+	rangeTimesContainer.append(
+		rangeStart,
+		rangeStartSet,
+		rangeStartPlay,
+		rangeTimeGap,
+		rangeEnd,
+		rangeEndSet,
+		rangeEndPlay,
+		removeRange,
+		currentRangeMarker,
+	);
 
-	const rangeChaptersContainer = document.createElement("div");
+	const rangeChaptersContainer = makeElement("div", ["range-definition-chapter-markers"]);
 	const enableChaptersElem = document.getElementById("enable-chapter-markers");
 	const chaptersEnabled = enableChaptersElem.checked;
-	rangeChaptersContainer.classList.add("range-definition-chapter-markers");
 	if (!chaptersEnabled) {
 		rangeChaptersContainer.classList.add("hidden");
 	}
 
-	const rangeAddChapterElem = document.createElement("img");
-	rangeAddChapterElem.src = "images/plus.png";
-	rangeAddChapterElem.alt = "Add chapter marker";
-	rangeAddChapterElem.title = "Add chapter marker";
-	rangeAddChapterElem.classList.add("add-range-definition-chapter-marker");
-	rangeAddChapterElem.classList.add("click");
+	const rangeAddChapterElem = button(
+		"add-range-definition-chapter-marker",
+		"images/plus.png",
+		"Add chapter marker",
+	);
 	if (!chaptersEnabled) {
 		rangeAddChapterElem.classList.add("hidden");
 	}
@@ -1489,9 +1642,12 @@ function rangeDefinitionDOM() {
 		rangeAddChapterElem.classList.add("hidden");
 	}
 
-	rangeContainer.appendChild(rangeTimesContainer);
-	rangeContainer.appendChild(rangeChaptersContainer);
-	rangeContainer.appendChild(rangeAddChapterElem);
+	rangeContainer.append(
+		transitionContainer,
+		rangeTimesContainer,
+		rangeChaptersContainer,
+		rangeAddChapterElem,
+	);
 
 	return rangeContainer;
 }
