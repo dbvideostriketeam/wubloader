@@ -17,7 +17,7 @@ RUN cd /tmp \
 COPY common /tmp/common
 RUN pip install /tmp/common && rm -r /tmp/common
 
-COPY buscribe/buscribe /tmp/buscribe
+COPY buscribe /tmp/buscribe
 RUN pip install /tmp/buscribe && rm -r /tmp/buscribe
 
 ENTRYPOINT ["python3", "-m", "buscribe", "--base-dir", "/mnt"]
