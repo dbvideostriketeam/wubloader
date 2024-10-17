@@ -1,3 +1,0 @@
-# buscribe
-
-Transcription for DB
