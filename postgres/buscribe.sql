@@ -1,22 +1,3 @@
-BEGIN TRANSACTION;
-
-DROP TABLE IF EXISTS buscribe_verified_lines;
-DROP TABLE IF EXISTS buscribe_line_speakers;
-DROP TABLE IF EXISTS buscribe_speakers;
-DROP TABLE IF EXISTS buscribe_verifiers;
-DROP TABLE IF EXISTS buscribe_transcriptions;
-
-ROLLBACK;
-
-BEGIN TRANSACTION;
-
-TRUNCATE buscribe_verified_lines RESTART IDENTITY CASCADE;
-TRUNCATE buscribe_line_speakers RESTART IDENTITY CASCADE;
-TRUNCATE buscribe_speakers RESTART IDENTITY CASCADE;
-TRUNCATE buscribe_verifiers RESTART IDENTITY CASCADE;
-TRUNCATE buscribe_transcriptions RESTART IDENTITY CASCADE;
-
-ROLLBACK;
 
 CREATE TABLE buscribe_transcriptions
 (
@@ -43,19 +24,12 @@ CREATE TABLE buscribe_speakers
 
 CREATE TABLE buscribe_verifiers
 (
---     id    SERIAL PRIMARY KEY,
     email TEXT PRIMARY KEY,
     name  TEXT NOT NULL
 );
 
--- For testing
--- INSERT INTO buscribe_verifiers(email, name)
--- VALUES ('placeholder@example.com', 'Place Holder'),
---        ('aguy@example.com', 'Arnold Guyana');
-
 CREATE TABLE buscribe_line_speakers
 (
---     id       BIGSERIAL PRIMARY KEY,
     line     BIGINT NOT NULL REFERENCES buscribe_transcriptions,
     speaker  BIGINT NOT NULL REFERENCES buscribe_speakers,
     verifier text   NOT NULL REFERENCES buscribe_verifiers,
@@ -71,7 +45,6 @@ CREATE TABLE buscribe_line_inferred_speakers
 
 CREATE TABLE buscribe_verified_lines
 (
---     id            BIGSERIAL PRIMARY KEY,
     line          BIGINT NOT NULL REFERENCES buscribe_transcriptions,
     verified_line TEXT   NOT NULL,
     verifier      text REFERENCES buscribe_verifiers,
@@ -81,10 +54,6 @@ CREATE TABLE buscribe_verified_lines
 -- Indexed with C weight (0.2 vs default 0.1)
 CREATE INDEX buscribe_verified_lines_idx ON buscribe_verified_lines USING
     GIN (setweight(to_tsvector('english', verified_line), 'C'));
-
-BEGIN;
-
-DROP VIEW buscribe_all_transcriptions;
 
 CREATE VIEW buscribe_all_transcriptions AS
 SELECT buscribe_transcriptions.id,
@@ -126,8 +95,6 @@ FROM buscribe_transcriptions
              INNER JOIN buscribe_speakers ON buscribe_line_inferred_speakers.speaker = buscribe_speakers.id
     GROUP BY line
 ) AS speakers ON id = speakers.line;
-
-ROLLBACK;
 
 CREATE VIEW buscribe_all_transcriptions2 AS
 SELECT buscribe_transcriptions.id,
