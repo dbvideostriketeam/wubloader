@@ -7,7 +7,7 @@ from flask import request, jsonify
 app = flask.Flask('buscribe')
 
 
-@app.route('/buscribe/json')
+@app.route('/buscribe-api/json')
 def get_json():
     """Searches the line database for *query*, with optional start_time and end_time boundaries.
 
