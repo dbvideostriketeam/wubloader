@@ -37,20 +37,16 @@ def servelet(server):
     logging.info('Starting WSGI server.')
     server.serve_forever()
 
-@argh.arg('channel',
-          help="Twitch channel to transcribe.")
 @argh.arg('--host',
           help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
 @argh.arg('--port',
-          help='Port server will listen on. Default is 8004.')
+          help='Port server will listen on.')
 @argh.arg('--database',
           help='Postgres connection string, which is either a space-separated list of key=value pairs, or a URI like: '
                'postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE')
 @argh.arg('--bustime-start',
           help='The start time in UTC for the event, for UTC-Bustime conversion')
-@argh.arg('--base-dir',
-          help='Directory from which segments will be grabbed. Default is current working directory.')
-def main(channel, database="", host='0.0.0.0', port=8010, bustime_start=None, base_dir=None):
+def main(database="", host='0.0.0.0', port=8010, bustime_start=None):
     if bustime_start is None:
         logging.error("Missing --bustime-start!")
         exit(1)
@@ -62,8 +58,6 @@ def main(channel, database="", host='0.0.0.0', port=8010, bustime_start=None, ba
     except ParserError:
         logging.error("Invalid --bustime-start!")
         exit(1)
-
-    app.segments_dir = os.path.join(base_dir, channel, "source")
 
     app.db_manager = DBManager(dsn=database)
 
