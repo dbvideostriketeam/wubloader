@@ -20,7 +20,7 @@ from buscribe.recognizer import BuscribeRecognizer
           help='Postgres conection string for database to write transcribed lines to. Either a space-separated list of '
                'key=value pairs, or a URI like: postgresql://USER:PASSWORD@HOST/DBNAME?KEY=VALUE .')
 @argh.arg('--model',
-          help='Path to STT model files. Defaults to /usr/share/buscribe/vosk-model-en-us-0.21/')
+          help='Path to STT model files. Defaults to /usr/share/buscribe/vosk-model-en-us-0.22/')
 @argh.arg('--spk-model',
           help='Path to speaker recognition model files. Defaults to /usr/share/buscribe/vosk-model-spk-0.4/')
 @argh.arg('--start-time',
@@ -34,7 +34,7 @@ from buscribe.recognizer import BuscribeRecognizer
 @argh.arg('--base-dir',
           help='Directory from which segments will be grabbed. Default is current working directory.')
 def main(channel, database="", base_dir=".",
-         model="/usr/share/buscribe/vosk-model-en-us-0.21/", spk_model="/usr/share/buscribe/vosk-model-spk-0.4/",
+         model="/usr/share/buscribe/vosk-model-en-us-0.22/", spk_model="/usr/share/buscribe/vosk-model-spk-0.4/",
          start_time=None, end_time=None, start_time_override=None):
     SAMPLE_RATE = 48000
     segments_dir = os.path.join(base_dir, channel, "source")

@@ -25,6 +25,8 @@
     thrimshim: true,
     segment_coverage: true,
     playlist_manager: false,
+    buscribe: false,
+    buscribe_api: false,
     nginx: true,
     postgres: false,
     chat_archiver: false,
@@ -76,6 +78,7 @@
     segment_coverage: 8006,
     playlist_manager: 8007,
     chat_archiver: 8008,
+    buscribe_api: 8010,
     nginx: 80,
     nginx_ssl: 443,
     postgres: 5432,
@@ -117,6 +120,8 @@
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_readonly_user:: "readonly", // if empty, don't have a readonly account
   db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
+  db_buscribe_user:: "buscribe", // if empty, buscribe database is not created and buscribe cannot be used.
+  db_buscribe_password:: "transcription", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_standby:: false, // set to true to have this database replicate another server
 
   // Path to a file containing a twitch OAuth token to use when downloading streams.
@@ -242,6 +247,14 @@
 
   // The channel to use for bus_analyzer
   bus_channel:: "buscam",
+
+  // The channel to run buscribe on. Future work: Have it run for more than one channel.
+  buscribe_channel:: $.clean_channels[0],
+  // Don't transcribe anything older than this time.
+  // Note that if the database is not empty this time is ignored and buscribe continues
+  // from the last known time.
+  // Typically we set this to 1 month before bustime_start.
+  buscribe_start:: "1970-01-01T00:00:00Z",
 
   zulip_url:: "https://chat.videostrike.team",
 
@@ -591,6 +604,7 @@
         segment_coverage: 8006,
         playlist_manager: 8007,
         chat_archiver: 8008,
+        buscribe_api: 8010,
       },
       image: $.get_image("nginx"),
       restart: "on-failure",
@@ -630,6 +644,8 @@
         REPLICATION_PASSWORD: $.db_replication_password,
         READONLY_USER: $.db_readonly_user,
         READONLY_PASSWORD: $.db_readonly_password,
+        BUSCRIBE_USER: $.db_buscribe_user,
+        BUSCRIBE_PASSWORD: $.db_buscribe_password,
         MASTER_NODE: $.db_args.host,
       },
       volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
@@ -647,6 +663,24 @@
       volumes: ["%s:/mnt" % $.segments_path, "%s:/token" % $.chat_archiver.token_path],
       [if "chat_archiver" in $.ports then "ports"]: ["%s:8008" % $.ports.chat_archiver],
       environment: $.env,
+    },
+
+    [if $.enabled.buscribe then "buscribe"]: {
+      image: $.get_image("buscribe"),
+      restart: "always",
+      command: [
+        $.buscribe_channel,
+        "--database", $.db_connect,
+        "--start-time", $.buscribe_start,
+      ],
+      volumes: ["%s:/mnt" % $.segments_path],
+    },
+
+    [if $.enabled.buscribe_api then "buscribe_api"]: {
+      image: $.get_image("buscribe_api"),
+      restart: "always",
+      "--database", $.db_connect,
+      "--bustime-start", $.bustime_start,
     },
 
     [if $.enabled.bus_analyzer then "bus_analyzer"]: {
