@@ -324,7 +324,8 @@ def update_row(ident, editor=None):
 	# and are a subset of edit_columns.
 	modifiable_columns = [
 		'video_title', 'video_description', 'video_tags', 'public',
-		'thumbnail_mode', 'thumbnail_time', 'thumbnail_template', 'thumbnail_image',
+		'thumbnail_mode', 'thumbnail_time', 'thumbnail_template',
+		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
 	assert set(modifiable_columns) - set(edit_columns) == set()
 
@@ -605,6 +606,171 @@ def _write_audit_log(conn, ident, api_action, editor, old_row=None, new_row=None
 		INSERT INTO events_edits_audit_log (id, api_action, editor, old_data, new_data)
 		VALUES (%(id)s, %(api_action)s, %(editor)s, %(old_row)s, %(new_row)s)
 	""", id=ident, api_action=api_action, editor=editor, old_row=to_json(old_row), new_row=to_json(new_row))
+
+
+@app.route('/thrimshim/templates')
+@request_stats
+def list_templates():
+	"""List names of thumbnail templates in the database."""
+	with app.db_manager.get_conn() as conn:
+		query = """
+			SELECT name, description, attribution, crop, location FROM templates ORDER BY name
+		"""
+		results = database.query(conn, query)
+		return json.dumps([row._asdict() for row in results.fetchall()])
+
+
+@app.route('/thrimshim/template/<name>.png')
+@request_stats
+def get_template(name):
+	"""Get a thumbnail template in PNG form"""
+	with app.db_manager.get_conn() as conn:
+		query = """
+			SELECT image FROM templates WHERE name = %s 
+		"""
+		results = database.query(conn, query, name)
+		row = results.fetchone()
+		if row is None:
+			return 'Template {} not found'.format(name), 404
+
+		image = row[0]
+		return flask.Response(image, mimetype='image/png')
+
+
+@app.route('/thrimshim/template-metadata/<name>')
+@request_stats
+def get_template_metadata(name):
+	"""Get the metadata for a thumbnail as JSON"""
+	with app.db_manager.get_conn() as conn:
+		query = """
+			SELECT name, description, attribution, crop, location FROM templates WHERE name = %s 
+		"""
+		results = database.query(conn, query, name)
+		row = results.fetchone()
+		if row is None:
+			return 'Template {} not found'.format(name), 404
+		return json.dumps(row._asdict())
+
+
+@app.route('/thrimshim/add-template', methods=['POST'])
+@request_stats
+def add_template(artist=None):
+	"""Add a template to the database"""
+	new_template = flask.request.json
+
+	columns = ['name', 'image', 'description', 'attribution', 'crop', 'location']
+	#check for missing fields
+	missing = set(columns) - set(new_template)
+	if missing:
+		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
+	# delete any extras
+	extras = set(new_template) - set(columns)
+	for extra in extras:
+		del new_template[extra]
+
+	#convert and validate template image
+	try:
+		new_template['image'] = base64.b64decode(new_template['image'])
+	except binascii.Error:
+		return 'Template image must be valid base64', 400
+	# check for PNG file header
+	if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+		return 'Template image must be a PNG', 400	
+
+	with app.db_manager.get_conn() as conn:
+
+		#check if name is already in the database
+		query = sql.SQL("""
+			SELECT name FROM events WHERE name = %s 
+		""")
+		results = database.query(conn, query, new_template['name'])
+		if results.fetchone() is not None:
+			return 'Template with name {} already exists'.format(new_template['name']), 400
+
+		query = sql.SQL("""
+			INSERT INTO templates ({})
+			VALUES ({})
+		""").format(
+				sql.SQL(", ").join(sql.Identifier(column) for column in columns),
+				sql.SQL(", ").join(database.get_column_placeholder(column) for column in columns),
+			)
+		database.query(conn, query, **new_template)
+	
+	return ''
+
+@app.route('/thrimshim/update-template/<name>', methods=['POST'])
+@request_stats
+def update_template(name, artist=None):
+	"""Update a template in the database"""
+	new_template = flask.request.json
+
+	columns = ['name', 'image', 'description', 'attribution', 'crop', 'location']
+	#check for missing fields
+	missing = set(columns) - set(new_template)
+	if missing:
+		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
+	# delete any extras
+	extras = set(new_template) - set(columns)
+	for extra in extras:
+		del new_template[extra]
+
+	#convert and validate template image
+	try:
+		new_template['image'] = base64.b64decode(new_template['image'])
+	except binascii.Error:
+		return 'Template image must be valid base64', 400
+	# check for PNG file header
+	if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+		return 'Template image must be a PNG', 400
+
+	with app.db_manage.get_conn() as conn:
+		#check if template is in database
+		query = sql.SQL("""
+			SELECT name FROM events WHERE name = %s 
+		""")
+		results = database.query(conn, query, name)
+		if results.fetchone() is None:
+			return 'Template with name {} does not exist'.format(name), 400
+		# check if new name is in database
+		query = sql.SQL("""
+			SELECT name FROM events WHERE name = %s 
+		""")
+		results = database.query(conn, query, new_template['name'])
+		if results.fetchone() is not None:
+			return 'Template with name {} already exists'.format(new_template['name']), 400
+
+		query = sql.SQL("""
+			UPDATE templates
+			SET {}
+			WHERE name = %(old_name)s
+		""").format(sql.SQL(", ").join(
+				sql.SQL("{} = {}").format(
+					sql.Identifier(column), database.get_column_placeholder(column),
+				) for column in columns))
+		database.query(conn, query, old_name=name, **new_template)
+
+	return '', 200
+
+
+@app.route('/thrimshim/event-thumbnail/<ident>.png')
+@request_stats
+def get_thumbnail(ident):
+	"Get the thumbnail for an event in PNG form"
+	with app.db_manager.get_conn() as conn:
+		query = """
+			SELECT thumbnail_mode, thumbnail_image FROM events WHERE id = %s 
+		"""
+		results = database.query(conn, query, ident)
+		row = results.fetchone()
+		if row is None:
+			return 'Event {} not found'.format(ident), 404
+		event = row._asdict()
+
+		if event['thumbnail_mode'] != 'NONE' and event['thumbnail_image']:
+			return flask.Response(event['thumbnail_image'], mimetype='image/png')
+		else:
+			return '', 200
+			
 
 
 @app.route('/thrimshim/bus/<channel>')

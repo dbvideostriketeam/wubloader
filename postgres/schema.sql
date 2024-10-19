@@ -89,6 +89,8 @@ CREATE TABLE events (
 		OR thumbnail_mode = 'NONE'
 		OR thumbnail_last_written IS NOT NULL
 	),
+	thumbnail_crop INTEGER[], -- left, upper, right, and lower pixel coordinates to crop the selected frame
+	thumbnail_location INTEGER[], -- left, top, right, bottom pixel coordinates to position the cropped frame
 	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
@@ -172,4 +174,17 @@ CREATE TABLE bus_data (
 	clock INTEGER,
 	timeofday TEXT,
 	PRIMARY KEY (channel, timestamp, segment)
+);
+
+-- This table stores video thumbnail templates and their associated metadata
+-- attribution: any attribution to be auto included in the video description. If empty, do not add an attribution
+-- crop: left, upper, right, and lower pixel coordinates to crop the selected frame
+-- location: left, top, right, bottom pixel coordinates to position the cropped frame
+CREATE TABLE templates (
+	name TEXT PRIMARY KEY,
+	image BYTEA NOT NULL,
+	description TEXT NOT NULL DEFAULT '',
+	attribution TEXT NOT NULL DEFAULT '',
+	crop INTEGER[] NOT NULL,
+	location INTEGER[] NOT NULL 
 );
