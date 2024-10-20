@@ -72,6 +72,8 @@ CUT_JOB_PARAMS = [
 	"thumbnail_time",
 	"thumbnail_template",
 	"thumbnail_image",
+	"thumbnail_crop",
+	"thumbnail_location",
 ]
 CutJob = namedtuple('CutJob', [
 	"id",
@@ -81,6 +83,24 @@ CutJob = namedtuple('CutJob', [
 	"thumbnail_segments",
 	# params which map directly from DB columns
 ] + CUT_JOB_PARAMS)
+
+def get_template(dbmanager, name, crop, location):
+	"""Fetch the thumbnail template and any missing parameters from the database"""
+	with dbmanager.get_conn() as conn:
+		query = """
+			SELECT image, crop, location FROM templates WHERE name = %s
+		"""
+		results = database.query(conn, query, name)
+		row = results.fetchone()
+		if row is None:
+			raise ValueError('Template {} not found'.format(name))
+		row = row._asdict()
+		if not crop:
+			crop = row['crop']
+		if not location:
+			location = row['location']
+
+		return row['image'], crop, location
 
 
 def get_duration(job):
@@ -456,7 +476,8 @@ class Cutter(object):
 			if job.thumbnail_mode == 'BARE':
 				image_data = frame
 			elif job.thumbnail_mode == 'TEMPLATE':
-				image_data = compose_thumbnail_template(self.segments_path, job.thumbnail_template, frame)
+				template, crop, location = get_template(self.dbmanager, job.thumbnail_template, job.thumbnail_crop, job.thumbnail_location)
+				image_data = compose_thumbnail_template(template, frame, crop, location)
 			else:
 				# shouldn't be able to happen given database constraints
 				assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
@@ -707,6 +728,8 @@ UPDATE_JOB_PARAMS = [
 	"thumbnail_time",
 	"thumbnail_template",
 	"thumbnail_image",
+	"thumbnail_crop",
+	"thumbnail_location",
 	"thumbnail_last_written",
 ]
 
@@ -766,7 +789,8 @@ class VideoUpdater(object):
 								if job.thumbnail_mode == 'BARE':
 									thumbnail_image = frame
 								elif job.thumbnail_mode == 'TEMPLATE':
-									thumbnail_image = compose_thumbnail_template(self.segments_path, job.thumbnail_template, frame)
+									template, crop, location = get_template(self.dbmanager, job.thumbnail_template, job.thumbnail_crop, job.thumbnail_location)
+									thumbnail_image = compose_thumbnail_template(template, frame, crop, location)
 								else:
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
 								updates['thumbnail_image'] = thumbnail_image

@@ -8,6 +8,7 @@ import os
 import subprocess
 from uuid import uuid4
 
+import base64
 import gevent
 import gevent.backdoor
 import gevent.event
@@ -15,7 +16,7 @@ import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
 
-from common import dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
+from common import database, dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
 from common.images import compose_thumbnail_template
 from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files, get_best_segments_for_frame
@@ -172,20 +173,6 @@ def list_extras(dir):
 		for file in files:
 			result.append(os.path.normpath(os.path.join(relpath, file)))
 	return json.dumps(result)
-
-
-@app.route('/thumbnail-templates')
-def list_thumbnail_templates():
-	"""List available thumbnail templates. Returns a JSON list of names."""
-	path = os.path.join(
-		app.static_folder,
-		"thumbnail_templates",
-	)
-	return json.dumps([
-		os.path.splitext(filename)[0]
-		for filename in listdir(path)
-		if os.path.splitext(filename)[1] == ".png"
-	])
 
 
 def time_range_for_quality(channel, quality):
@@ -493,23 +480,43 @@ def get_frame(channel, quality):
 
 @app.route('/thumbnail/<channel>/<quality>.png')
 @request_stats
-@has_path_args
 def get_thumbnail(channel, quality):
 	"""
 	Returns a PNG image which is a preview of how a thumbnail will be generated.
-	Params:
-		timestamp: Required. The frame to use as the thumbnail image.
-			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
-		template: Required. The template name to use.
-			Must be one of the template names (without file extension) as returned
-			by GET /files/thumbnail_templates
 	"""
-	template_name = request.args['template']
-	template_path = os.path.join(app.static_folder, "thumbnail_templates", f"{template_name}.png")
-	if not os.path.exists(template_path):
-		return "No such template", 404
 
-	timestamp = dateutil.parse_utc_only(request.args['timestamp'])
+	template_params = request.json
+
+	if template_params['image']:
+		template = base64.b64decode(template_params['image'])
+
+		crop = template_params['crop']
+		location = template_params['location']
+
+	else:
+		if app.db_manager is None:
+			return 'A database connection is required to generate thumbnails', 501
+
+		with app.db_manager.get_conn() as conn:
+			query = """
+				SELECT image, crop, location FROM templates WHERE name = %s
+			"""
+			results = database.query(conn, query, template_params['name'])
+			row = results.fetchone()
+			if row is None:
+				return 'Template {} not found'.format(template_params['name']), 404
+			row = row._asdict()
+			template = row['image']
+			if not template_params['crop']:
+				crop = row['crop']
+			else:
+				crop = template_params['crop']
+			if not template_params['location']:
+				location = row['location']
+			else:
+				location = template_params['location']
+
+	timestamp = dateutil.parse_utc_only(template_params['timestamp'])
 
 	hours_path = os.path.join(app.static_folder, channel, quality)
 	if not os.path.isdir(hours_path):
@@ -520,7 +527,7 @@ def get_thumbnail(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	frame = b''.join(extract_frame(segments, timestamp))
-	template = compose_thumbnail_template(app.static_folder, template_name, frame)
+	template = compose_thumbnail_template(template, frame, crop, location)
 
 	return Response(template, mimetype='image/png')
 
@@ -656,12 +663,17 @@ def generate_videos(channel, quality):
 	return ''
 
 
-def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0):
+def main(host='0.0.0.0', port=8000, base_dir='.', backdoor_port=0, connection_string=''):
 	app.static_folder = base_dir
 	server = WSGIServer((host, port), cors(app))
 
 	PromLogCountsHandler.install()
 	install_stacksampler()
+
+	if connection_string:
+		app.db_manager = database.DBManager(dsn=connection_string)
+	else:
+		app.db_manager = None
 
 	if backdoor_port:
 		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
