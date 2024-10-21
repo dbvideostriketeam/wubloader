@@ -200,9 +200,7 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"show_in_description": 4,
 		"first_event_id": 5,
 		"last_event_id": 6,
-		"state": 7,
-		"error": 8,
-		"id": 9,
+		"id": 7,
 	}
 
 	column_parsers = {
@@ -215,7 +213,6 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"show_in_description": PARSE_CHECKMARK,
 		"first_event_id": EMPTY_IS_NONE,
 		"last_event_id": EMPTY_IS_NONE,
-		"error": EMPTY_IS_NONE,
 		"id": EMPTY_IS_NONE,
 	}
 
