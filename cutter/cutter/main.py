@@ -18,7 +18,7 @@ from psycopg2 import sql
 import common
 from common.database import DBManager, query, get_column_placeholder
 from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles, get_best_segments_for_frame
-from common.images import compose_thumbnail_template
+from common.images import compose_thumbnail_template, get_template
 from common.stats import timed
 
 from .upload_backends import Youtube, Local, LocalArchive, UploadError
@@ -83,25 +83,6 @@ CutJob = namedtuple('CutJob', [
 	"thumbnail_segments",
 	# params which map directly from DB columns
 ] + CUT_JOB_PARAMS)
-
-def get_template(dbmanager, name, crop, location):
-	"""Fetch the thumbnail template and any missing parameters from the database"""
-	with dbmanager.get_conn() as conn:
-		query = """
-			SELECT image, crop, location FROM templates WHERE name = %s
-		"""
-		results = database.query(conn, query, name)
-		row = results.fetchone()
-		if row is None:
-			raise ValueError('Template {} not found'.format(name))
-		row = row._asdict()
-		if not crop:
-			crop = row['crop']
-		if not location:
-			location = row['location']
-
-		return row['image'], crop, location
-
 
 def get_duration(job):
 	"""Get total video duration of a job, in seconds"""

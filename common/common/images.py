@@ -4,25 +4,43 @@ from io import BytesIO
 
 from PIL import Image
 
+from common import database
 
-"""
-A thumbnail template consists of a byte stream representation of a PNG template image along with two 4-tuples [left x, top y, right x, bottom y] describing the crop and location of the frame. 
 
-To create a thumbnail, the input frame is first cropped to the bounds of the "crop" box,
-then resized to the size of the "location" box, then pasted underneath the template image at that
-location within the template image.
+def get_template(dbmanager, name, crop=None, location=None):
+	"""Fetch the thumbnail template and any missing parameters from the database"""
+	with dbmanager.get_conn() as conn:
+		query = """
+			SELECT image, crop, location FROM templates WHERE name = %s
+		"""
+		results = database.query(conn, query, name)
+		row = results.fetchone()
+		if row is None:
+			raise ValueError('Template {} not found'.format(name))
+		row = row._asdict()
+		if not crop:
+			crop = row['crop']
+		if not location:
+			location = row['location']
 
-For example
-crop = (50, 100, 1870, 980)
-location = (320, 180, 1600, 900)
-would crop the input frame from (50, 100) to (1870, 980), resize it to 720x1280,
-and place it at (320, 180).
+		return row['image'], crop, location
 
-If the original frame and the template differ in size, the frame is first resized to the template.
-This allows you to work with a consistent coordinate system regardless of the input frame size.
-"""
 
 def compose_thumbnail_template(template_data, frame_data, crop, location):
+	"""
+	A thumbnail template consists of a byte stream representation of a PNG template image along with two 4-tuples [left x, top y, right x, bottom y] describing the crop and location of the frame. 
+
+	To create a thumbnail, the input frame is first cropped to the bounds of the "crop" box, then resized to the size of the "location" box, then pasted underneath the template image at that
+location within the template image.
+
+	For example
+	crop = (50, 100, 1870, 980)
+	location = (320, 180, 1600, 900)
+	would crop the input frame from (50, 100) to (1870, 980), resize it to 720x1280, and place it at (320, 180).
+
+	If the original frame and the template differ in size, the frame is first resized to the template.
+	This allows you to work with a consistent coordinate system regardless of the input frame size.
+	"""
 
 	# PIL can't load an image from a byte string directly, we have to pretend to be a file
 	template = Image.open(BytesIO(template_data))
@@ -66,4 +84,4 @@ def cli(template, frame, crop, location):
 
 if __name__ == '__main__':
 	import argh
-	argh.dispatch_command(cli)		
+	argh.dispatch_command(cli)
