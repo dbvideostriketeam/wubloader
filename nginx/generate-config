@@ -19,8 +19,10 @@ LOCATIONS=$(
 	[ -n "$SERVICES" ] && echo "$SERVICES" | while read name port; do
 		# restreamer is the catch-all
 		[ "$name" == "restreamer" ] && generate_location / "http://restreamer:$port"
-		# thrimshim takes any calls to thrimshim/
-		[ "$name" == "thrimshim" ] && generate_location /thrimshim "http://thrimshim:$port"
+		# thrimshim and buscribe-api take any calls to SERVICE/
+		if [ "$name" == "thrimshim" ] || [ "$name" == "buscribe_api" ]; then
+			generate_location "/$name" "http://$name:$port"
+		fi
 		# all services have metrics under /metrics/SERVICE, except for thrimebletrimmer
 		generate_location "/metrics/$name" "http://$name:$port/metrics"
 	done
