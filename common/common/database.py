@@ -41,16 +41,22 @@ class DBManager(object):
 	for easy creation of new connections, and sets some defaults before
 	returning them.
 
+	By default, assumes it is connecting to the main wubloader database
+	and registers known composite types (so they get returned as namedtuples).
+	If you don't want this (eg. you're not connecting to the main database),
+	set register_types=False.
+
 	It has the ability to serve as a primitive connection pool, as getting a
 	new conn will return existing conns it knows about first, but you
 	should use a real conn pool for any non-trivial use.
 
 	Returned conns are set to seralizable isolation level, autocommit, and use
 	NamedTupleCursor cursors."""
-	def __init__(self, connect_timeout=30, **connect_kwargs):
+	def __init__(self, connect_timeout=30, register_types=True, **connect_kwargs):
 		patch_psycopg()
 		self.conns = []
 		self.connect_timeout = connect_timeout
+		self.register_types = register_types
 		self.connect_kwargs = connect_kwargs
 
 	def put_conn(self, conn):
@@ -67,8 +73,9 @@ class DBManager(object):
 		# searches or targetted single-row updates.
 		conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 		conn.autocommit = True
-		for composite in COMPOSITE_TYPES:
-			psycopg2.extras.register_composite(composite, conn)
+		if self.register_types:
+			for composite in COMPOSITE_TYPES:
+				psycopg2.extras.register_composite(composite, conn)
 		return conn
 
 

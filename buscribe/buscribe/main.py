@@ -40,7 +40,7 @@ def main(channel, database="", base_dir=".",
     segments_dir = os.path.join(base_dir, channel, "source")
 
     logging.debug("Grabbing database...")
-    db_manager = DBManager(dsn=database)
+    db_manager = DBManager(dsn=database, register_types=False)
     db_conn = db_manager.get_conn()
     db_cursor = db_conn.cursor()
     logging.debug("Got database cursor.")
