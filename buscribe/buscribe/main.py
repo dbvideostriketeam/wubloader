@@ -87,7 +87,7 @@ def main(channel, database="", base_dir=".",
 
     gevent.signal_handler(signal.SIGTERM, stop)
 
-    while start_time < end_time:
+    while end_time is None or start_time < end_time:
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
                                             start_time,
