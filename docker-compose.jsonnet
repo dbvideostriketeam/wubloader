@@ -120,6 +120,7 @@
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_readonly_user:: "readonly", // if empty, don't have a readonly account
   db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
+  db_buscribe_dbname:: "buscribe",
   db_buscribe_user:: "buscribe", // if empty, buscribe database is not created and buscribe cannot be used.
   db_buscribe_password:: "transcription", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_standby:: false, // set to true to have this database replicate another server
@@ -331,10 +332,16 @@
   // Now for the actual docker-compose config
 
   // The connection string for the database. Constructed from db_args.
-  db_connect:: std.join(" ", [
-    "%s='%s'" % [key, $.db_args[key]]
-    for key in std.objectFields($.db_args)
+  make_db_connect(args):: std.join(" ", [
+    "%s='%s'" % [key, args[key]]
+    for key in std.objectFields(args)
   ]),
+  db_connect:: $.make_db_connect($.db_args),
+  db_connect_buscribe:: $.make_db_connect($.db_args + {
+    user: $.db_buscribe_user,
+    password: $.db_buscribe_password,
+    dbname: $.db_buscribe_dbname,
+  }),
 
   // Cleaned up version of $.channels without importance/type markers.
   // General form is CHANNEL[!][:TYPE:URL].
@@ -644,6 +651,7 @@
         REPLICATION_PASSWORD: $.db_replication_password,
         READONLY_USER: $.db_readonly_user,
         READONLY_PASSWORD: $.db_readonly_password,
+        BUSCRIBE_DB: $.db_buscribe_dbname,
         BUSCRIBE_USER: $.db_buscribe_user,
         BUSCRIBE_PASSWORD: $.db_buscribe_password,
         MASTER_NODE: $.db_args.host,
@@ -670,7 +678,7 @@
       restart: "always",
       command: [
         $.buscribe_channel,
-        "--database", $.db_connect,
+        "--database", $.db_connect_buscribe,
         "--start-time", $.buscribe_start,
       ],
       volumes: ["%s:/mnt" % $.segments_path],
@@ -679,8 +687,10 @@
     [if $.enabled.buscribe_api then "buscribe_api"]: {
       image: $.get_image("buscribe_api"),
       restart: "always",
-      "--database", $.db_connect,
-      "--bustime-start", $.bustime_start,
+      command: [
+        "--database", $.db_connect_buscribe,
+        "--bustime-start", $.bustime_start,
+      ],
     },
 
     [if $.enabled.bus_analyzer then "bus_analyzer"]: {
