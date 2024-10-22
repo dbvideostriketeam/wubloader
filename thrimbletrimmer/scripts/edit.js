@@ -272,9 +272,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		});
 
 	const thumbnailTemplateSelection = document.getElementById("video-info-thumbnail-template");
-	const thumbnailTemplatesListResponse = await fetch("/thumbnail-templates");
+	const thumbnailTemplatesListResponse = await fetch("/thrimshim/templates");
 	if (thumbnailTemplatesListResponse.ok) {
-		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
+		const thumbnailTemplatesList = (await thumbnailTemplatesListResponse.json()).map(t => t.name);
 		thumbnailTemplatesList.sort();
 		for (const templateName of thumbnailTemplatesList) {
 			const templateOption = document.createElement("option");
