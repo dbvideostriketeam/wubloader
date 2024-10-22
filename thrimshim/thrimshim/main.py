@@ -46,77 +46,66 @@ def cors(app):
 		return app(environ, _start_response)
 	return handle
 
-def authenticate_artist(f):
-	""""Authenticate a token against the database to authenticate an artist
+
+def check_user(request, role):
+	""""Authenticate a token against the database to authenticate a user.
 
 	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
-    
+	try:
+		userToken = request.json['token']
+	except (KeyError, TypeError):
+		return 'User token required', 401
+	# check whether token is valid
+	try:
+		idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
+		if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
+			raise ValueError('Wrong issuer.')
+	except ValueError:
+		return 'Invalid token. Access denied.', 403
+
+	# check whether user is in the database
+	email = idinfo['email'].lower()
+	conn = app.db_manager.get_conn()
+	query = """
+		SELECT email, %(role)s 
+		FROM roles
+		WHERE lower(email) = %(email)s AND %(role)
+	"""
+	results = database.query(conn, query, email=email, role=role)
+	row = results.fetchone()
+	if row is None:
+		return 'Unknown user. Access denied.', 403
+	return email, 200
+
+
+def authenticate_artist(f):
+	""""Authenticate an artist."""
 	@wraps(f)
 	def artist_auth_wrapper(*args, **kwargs):
 		if app.no_authentication:
 			return f(*args, editor='NOT_AUTH', **kwargs)
 
-		try:
-			userToken = flask.request.json['token']
-		except (KeyError, TypeError):
-			return 'User token required', 401
-		# check whether token is valid
-		try:
-			idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
-			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-				raise ValueError('Wrong issuer.')
-		except ValueError:
-			return 'Invalid token. Access denied.', 403
+		message, code = check_user(flask.request, 'artist')
+		if code != 200:
+			return message, code
 
-		# check whether user is in the database
-		email = idinfo['email'].lower()
-		conn = app.db_manager.get_conn()
-		results = database.query(conn, """
-			SELECT email, artist 
-			FROM roles
-			WHERE lower(email) = %s AND artist""", email)
-		row = results.fetchone()
-		if row is None:
-			return 'Unknown user. Access denied.', 403
-
-		return f(*args, editor=email, **kwargs)
+		return f(*args, artist=message, **kwargs)
 
 	return artist_auth_wrapper
 
 
 def authenticate_editor(f):
-	"""Authenticate a token against the database to authenticate an editor.
-
-	Reference: https://developers.google.com/identity/sign-in/web/backend-auth"""
+	"""Authenticate an editor."""
 	@wraps(f)
 	def editor_auth_wrapper(*args, **kwargs):
 		if app.no_authentication:
 			return f(*args, editor='NOT_AUTH', **kwargs)
 
-		try:
-			userToken = flask.request.json['token']
-		except (KeyError, TypeError):
-			return 'User token required', 401
-		# check whether token is valid
-		try:
-			idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
-			if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
-				raise ValueError('Wrong issuer.')
-		except ValueError:
-			return 'Invalid token. Access denied.', 403
+		message, code = check_user(flask.request, 'editor')
+		if code != 200:
+			return message, code
 
-		# check whether user is in the database
-		email = idinfo['email'].lower()
-		conn = app.db_manager.get_conn()
-		results = database.query(conn, """
-			SELECT email, editor
-			FROM roles
-			WHERE lower(email) = %s AND editor""", email)
-		row = results.fetchone()
-		if row is None:
-			return 'Unknown user. Access denied.', 403
-
-		return f(*args, editor=email, **kwargs)
+		return f(*args, editor=message, **kwargs)
 
 	return editor_auth_wrapper
 
@@ -515,7 +504,7 @@ def update_row(ident, editor=None):
 		_write_audit_log(conn, ident, "update-row", editor, old_row, new_row)
 
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
-	return ''
+	return '', 201
 
 
 @app.route('/thrimshim/manual-link/<ident>', methods=['POST'])
@@ -651,18 +640,13 @@ def get_template_metadata(name):
 			return 'Template {} not found'.format(name), 404
 		return json.dumps(row._asdict())
 
-
-@app.route('/thrimshim/add-template', methods=['POST'])
-@request_stats
-def add_template(artist=None):
-	"""Add a template to the database"""
-	new_template = flask.request.json
+def validate_template(new_template):
 
 	columns = ['name', 'image', 'description', 'attribution', 'crop', 'location']
 	#check for missing fields
 	missing = set(columns) - set(new_template)
 	if missing:
-		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
+		return None, 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
 	# delete any extras
 	extras = set(new_template) - set(columns)
 	for extra in extras:
@@ -672,13 +656,24 @@ def add_template(artist=None):
 	try:
 		new_template['image'] = base64.b64decode(new_template['image'])
 	except binascii.Error:
-		return 'Template image must be valid base64', 400
+		return None, 'Template image must be valid base64', 400
 	# check for PNG file header
 	if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
-		return 'Template image must be a PNG', 400	
+		return None, 'Template image must be a PNG', 400
+
+	return columns, new_template, 200
+
+
+@app.route('/thrimshim/add-template', methods=['POST'])
+@request_stats
+def add_template(artist=None):
+	"""Add a template to the database"""
+	columns, message, code = validate_template(flask.request.json)
+	if code != 200:
+		return message, code
+	new_template = message
 
 	with app.db_manager.get_conn() as conn:
-
 		#check if name is already in the database
 		query = sql.SQL("""
 			SELECT name FROM events WHERE name = %s 
@@ -696,32 +691,16 @@ def add_template(artist=None):
 			)
 		database.query(conn, query, **new_template)
 	
-	return ''
+	return '', 201
 
 @app.route('/thrimshim/update-template/<name>', methods=['POST'])
 @request_stats
 def update_template(name, artist=None):
 	"""Update a template in the database"""
-	new_template = flask.request.json
-
-	columns = ['name', 'image', 'description', 'attribution', 'crop', 'location']
-	#check for missing fields
-	missing = set(columns) - set(new_template)
-	if missing:
-		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
-	# delete any extras
-	extras = set(new_template) - set(columns)
-	for extra in extras:
-		del new_template[extra]
-
-	#convert and validate template image
-	try:
-		new_template['image'] = base64.b64decode(new_template['image'])
-	except binascii.Error:
-		return 'Template image must be valid base64', 400
-	# check for PNG file header
-	if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
-		return 'Template image must be a PNG', 400
+	columns, message, code = validate_template(flask.request.json)
+	if code != 200:
+		return message, code
+	new_template = message
 
 	with app.db_manage.get_conn() as conn:
 		#check if template is in database
@@ -769,7 +748,7 @@ def get_thumbnail(ident):
 		if event['thumbnail_mode'] != 'NONE' and event['thumbnail_image']:
 			return flask.Response(event['thumbnail_image'], mimetype='image/png')
 		else:
-			return '', 200
+			return '', 404
 			
 
 

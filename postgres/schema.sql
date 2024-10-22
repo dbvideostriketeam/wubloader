@@ -89,8 +89,14 @@ CREATE TABLE events (
 		OR thumbnail_mode = 'NONE'
 		OR thumbnail_last_written IS NOT NULL
 	),
-	thumbnail_crop INTEGER[], -- left, upper, right, and lower pixel coordinates to crop the selected frame
-	thumbnail_location INTEGER[], -- left, top, right, bottom pixel coordinates to position the cropped frame
+	thumbnail_crop INTEGER[] CHECK (
+		cardinality(thumbnail_crop) = 4
+		OR thumbnail_crop IS NULL
+	), -- left, upper, right, and lower pixel coordinates to crop the selected frame
+	thumbnail_location INTEGER[] CHECK (
+		cardinality(thumbnail_crop) = 4
+		OR thumbnail_crop IS NULL
+	), -- left, top, right, bottom pixel coordinates to position the cropped frame
 	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
@@ -185,6 +191,8 @@ CREATE TABLE templates (
 	image BYTEA NOT NULL,
 	description TEXT NOT NULL DEFAULT '',
 	attribution TEXT NOT NULL DEFAULT '',
-	crop INTEGER[] NOT NULL,
-	location INTEGER[] NOT NULL 
+	crop INTEGER[] NOT NULL CHECK (
+		cardinality(thumbnail_crop) = 4),
+	location INTEGER[] NOT NULL CHECK (
+		cardinality(thumbnail_crop) = 4), 
 );

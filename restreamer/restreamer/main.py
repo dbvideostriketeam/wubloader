@@ -8,7 +8,6 @@ import os
 import subprocess
 from uuid import uuid4
 
-import base64
 import gevent
 import gevent.backdoor
 import gevent.event
@@ -18,7 +17,7 @@ from gevent.pywsgi import WSGIServer
 
 from common import database, dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
-from common.images import compose_thumbnail_template
+from common.images import compose_thumbnail_template, get_template
 from common.segments import smart_cut_segments, feed_input, render_segments_waveform, extract_frame, list_segment_files, get_best_segments_for_frame
 from common.chat import get_batch_file_range, merge_messages
 from common.cached_iterator import CachedIterator
@@ -480,43 +479,53 @@ def get_frame(channel, quality):
 
 @app.route('/thumbnail/<channel>/<quality>.png')
 @request_stats
-def get_thumbnail(channel, quality):
+@has_path_args
+def get_thumbnail_named_template(channel, quality):
 	"""
 	Returns a PNG image which is a preview of how a thumbnail will be generated.
+	Params:
+		timestamp: Required. The frame to use as the thumbnail image.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+		template: Required. The template name to use.
+			Must be one of the template names as returned by GET /thrimshim/templates
+		crop: Left, upper, right, and lower pixel coordinates to crop the selected frame.
+			Default is to use the crop in the database.
+		location: Left, top, right, bottom pixel coordinates to position the cropped frame.
+			Default is to use the location in the databse.
+	"""
+	crop = request.args.get('crop', None)
+	location = request.args.get('location', None)
+	if app.db_manager is None:
+		return 'A database connection is required to generate thumbnails', 501
+	try:
+		template, crop, location = get_template(app.db_manager, request.args['template'], crop, location)
+	except ValueError:
+		return 'Template {} not found'.format(request.args['template']), 404
+	return get_thumbnail(channel, quality, request.args['timestamp'], template, crop, location)
+
+
+@app.route('/thumbnail/<channel>/<quality>.png', methods=['POST'])
+@request_stats
+@has_path_args
+def get_thumbnail_uploaded_template(channel, quality):
+	"""
+	Returns a PNG image which is a preview of how a thumbnail will be generated.
+	Params:
+		timestamp: Required. The frame to use as the thumbnail image.
+			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
+		crop: Required. Left, upper, right, and lower pixel coordinates to crop the selected frame.
+		location: Required. Left, top, right, bottom pixel coordinates to position the cropped frame.
+	"""	
+	template = request.body
+	return get_thumbnail(channel, quality, request.args['timestamp'], template, request.args['crop'], request.args['location'])
+
+
+def get_thumbnail(channel, quality, timestamp, template, crop, location):
+	"""
+	Generates a PNG thumbnail by combining a frame at timestamp with the template.
 	"""
 
-	template_params = request.json
-
-	if template_params['image']:
-		template = base64.b64decode(template_params['image'])
-
-		crop = template_params['crop']
-		location = template_params['location']
-
-	else:
-		if app.db_manager is None:
-			return 'A database connection is required to generate thumbnails', 501
-
-		with app.db_manager.get_conn() as conn:
-			query = """
-				SELECT image, crop, location FROM templates WHERE name = %s
-			"""
-			results = database.query(conn, query, template_params['name'])
-			row = results.fetchone()
-			if row is None:
-				return 'Template {} not found'.format(template_params['name']), 404
-			row = row._asdict()
-			template = row['image']
-			if not template_params['crop']:
-				crop = row['crop']
-			else:
-				crop = template_params['crop']
-			if not template_params['location']:
-				location = row['location']
-			else:
-				location = template_params['location']
-
-	timestamp = dateutil.parse_utc_only(template_params['timestamp'])
+	timestamp = dateutil.parse_utc_only(timestamp)
 
 	hours_path = os.path.join(app.static_folder, channel, quality)
 	if not os.path.isdir(hours_path):
