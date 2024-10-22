@@ -27,7 +27,7 @@ function query(text, start_time, end_time) {
 
     const channel = document.getElementById("channel_select").value;
 
-    fetch(`/buscribe-api/${channel}/json?${query_string}`)
+    fetch(`/buscribe_api/${channel}/json?${query_string}`)
         .then(response => response.json())
         .then(fillResults)
 

@@ -12,8 +12,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 
 # Install actual application
 RUN apk add postgresql-dev postgresql-libs
-COPY buscribe-api /tmp/buscribe-api
-RUN pip install /tmp/buscribe-api && cp -r /tmp/buscribe-api/templates /templates \
-    && rm -r /tmp/buscribe-api
+COPY buscribe_api /tmp/buscribe_api
+RUN pip install /tmp/buscribe_api && cp -r /tmp/buscribe_api/templates /templates \
+    && rm -r /tmp/buscribe_api
 
-ENTRYPOINT ["python3", "-m", "buscribeapi", "--base-dir", "/mnt"]
+ENTRYPOINT ["python3", "-m", "buscribeapi"]

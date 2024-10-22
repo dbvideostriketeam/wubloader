@@ -14,7 +14,7 @@ cd "$(dirname "$(realpath "$0")")"
 COMPONENTS=(
 	backfiller
 	buscribe
-	buscribe-api
+	buscribe_api
 	chat_archiver
 	cutter
 	downloader

@@ -7,8 +7,9 @@ from flask import request, jsonify
 app = flask.Flask('buscribe')
 
 
-@app.route('/buscribe-api/json')
-def get_json():
+# WARNING: Channel is currently ignored. Multi-channel support will come later.
+@app.route('/buscribe_api/<channel>/json')
+def get_json(channel):
     """Searches the line database for *query*, with optional start_time and end_time boundaries.
 
     Search is done using PostgreSQL websearch_to_tsquery()

@@ -59,7 +59,7 @@ def main(database="", host='0.0.0.0', port=8010, bustime_start=None):
         logging.error("Invalid --bustime-start!")
         exit(1)
 
-    app.db_manager = DBManager(dsn=database)
+    app.db_manager = DBManager(dsn=database, register_types=False)
 
     stopping = gevent.event.Event()
 
