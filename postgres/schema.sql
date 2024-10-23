@@ -191,8 +191,6 @@ CREATE TABLE templates (
 	image BYTEA NOT NULL,
 	description TEXT NOT NULL DEFAULT '',
 	attribution TEXT NOT NULL DEFAULT '',
-	crop INTEGER[] NOT NULL CHECK (
-		cardinality(thumbnail_crop) = 4),
-	location INTEGER[] NOT NULL CHECK (
-		cardinality(thumbnail_crop) = 4) 
+	crop INTEGER[] NOT NULL CHECK (cardinality(crop) = 4),
+	location INTEGER[] NOT NULL CHECK (cardinality(location) = 4)
 );
