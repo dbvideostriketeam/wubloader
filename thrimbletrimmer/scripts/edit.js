@@ -2,6 +2,7 @@ var googleUser = null;
 var videoInfo;
 var currentRange = 1;
 let knownTransitions = [];
+let thumbnailTemplates = {};
 let globalPageState = 0;
 
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
@@ -228,6 +229,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		handleFieldChange(event);
 	});
 	document
+		.getElementById("video-info-thumbnail-template")
+		.addEventListener("change", thumbnailTemplateChanged);
+	document
 		.getElementById("video-info-thumbnail-mode")
 		.addEventListener("change", updateThumbnailInputState);
 	document
@@ -267,26 +271,49 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				return;
 			}
 			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
-			imageElement.src = `/thumbnail/${globalStreamName}/source.png?timestamp=${imageTime}&template=${imageTemplate}`;
+			const [crop, loc] = getTemplatePosition();
+			const queryParts = [
+				`timestamp=${imageTime}`,
+				`template=${imageTemplate}`,
+				`crop=${crop.join(",")}`,
+				`location=${loc.join(",")}`,
+			];
+			imageElement.src = `/thumbnail/${globalStreamName}/source.png?${queryParts.join("&")}`;
 			imageElement.classList.remove("hidden");
 		});
 
 	const thumbnailTemplateSelection = document.getElementById("video-info-thumbnail-template");
 	const thumbnailTemplatesListResponse = await fetch("/thrimshim/templates");
 	if (thumbnailTemplatesListResponse.ok) {
-		const thumbnailTemplatesList = (await thumbnailTemplatesListResponse.json()).map(t => t.name);
-		thumbnailTemplatesList.sort();
-		for (const templateName of thumbnailTemplatesList) {
+		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
+		const templateNames = thumbnailTemplatesList.map(t => t.name);
+		templateNames.sort();
+		for (const template of thumbnailTemplatesList) {
+			thumbnailTemplates[template.name] = template;
+		}
+		for (const templateName of templateNames) {
 			const templateOption = document.createElement("option");
 			templateOption.innerText = templateName;
 			templateOption.value = templateName;
+			templateOption.title = thumbnailTemplates[templateName].description;
 			if (templateName === videoInfo.thumbnail_template) {
 				templateOption.selected = true;
 			}
 			thumbnailTemplateSelection.appendChild(templateOption);
 		}
+		thumbnailTemplateChanged();
 	} else {
 		addError("Failed to load thumbnail templates list");
+	}
+	if (videoInfo.thumbnail_crop !== null) {
+		for (let i = 0; i < 4; i++) {
+			document.getElementById(`video-info-thumbnail-crop-${i}`).value = videoInfo.thumbnail_crop[i];
+		}
+	}
+	if (videoInfo.thumbnail_location !== null) {
+		for (let i = 0; i < 4; i++) {
+			document.getElementById(`video-info-thumbnail-location-${i}`).value = videoInfo.thumbnail_location[i];
+		}
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
 	updateThumbnailInputState();
@@ -841,6 +868,7 @@ function updateThumbnailInputState(event) {
 	} else if (newValue === "TEMPLATE") {
 		unhideIDs.push("video-info-thumbnail-template-options");
 		unhideIDs.push("video-info-thumbnail-time-options");
+		unhideIDs.push("video-info-thumbnail-position-options");
 		unhideIDs.push("video-info-thumbnail-template-preview");
 	} else if (newValue === "CUSTOM") {
 		unhideIDs.push("video-info-thumbnail-custom-options");
@@ -854,6 +882,38 @@ function updateThumbnailInputState(event) {
 	for (elemID of unhideIDs) {
 		document.getElementById(elemID).classList.remove("hidden");
 	}
+}
+
+function thumbnailTemplateChanged(event) {
+	handleFieldChange(event);
+
+	const newTemplate = document.getElementById("video-info-thumbnail-template").value;
+	for (const field of ["crop", "location"]) {
+		const newValue = thumbnailTemplates[newTemplate][field];
+		for (let i = 0; i < 4; i++) {
+			document.getElementById(`video-info-thumbnail-${field}-${i}`).value = newValue[i];
+		}
+	}
+}
+
+// Returns [crop, location], with either being null on error.
+function getTemplatePosition() {
+	const ret = [];
+
+	for (const field of ["crop", "location"]) {
+		let values = [null, null, null, null];
+		for (let i = 0; i < 4; i++) {
+			const value = parseInt(document.getElementById(`video-info-thumbnail-${field}-${i}`).value);
+			if (isNaN(value)) {
+				values = null;
+				break;
+			}
+			values[i] = value;
+		}
+		ret.push(values);
+	}
+
+	return ret;
 }
 
 function getStartTime() {
@@ -1092,6 +1152,8 @@ async function sendVideoData(newState, overrideChanges) {
 	let thumbnailTemplate = null;
 	let thumbnailTime = null;
 	let thumbnailImage = null;
+	let thumbnailCrop = null;
+	let thumbnailLocation = null;
 	if (thumbnailMode === "BARE" || thumbnailMode === "TEMPLATE") {
 		thumbnailTime = wubloaderTimeFromVideoHumanTime(
 			document.getElementById("video-info-thumbnail-time").value,
@@ -1103,6 +1165,11 @@ async function sendVideoData(newState, overrideChanges) {
 	}
 	if (thumbnailMode === "TEMPLATE") {
 		thumbnailTemplate = document.getElementById("video-info-thumbnail-template").value;
+		[thumbnailCrop, thumbnailLocation] = getTemplatePosition();
+		if (thumbnailCrop === null || thumbnailLocation === null) {
+			submissionError("The thumbnail crop/location options are invalid");
+			return;
+		}
 	}
 	if (thumbnailMode === "CUSTOM") {
 		const fileInput = document.getElementById("video-info-thumbnail-custom");
@@ -1164,6 +1231,8 @@ async function sendVideoData(newState, overrideChanges) {
 		state: newState,
 		thumbnail_mode: thumbnailMode,
 		thumbnail_template: thumbnailTemplate,
+		thumbnail_crop: thumbnailCrop,
+		thumbnail_location: thumbnailLocation,
 		thumbnail_time: thumbnailTime,
 		thumbnail_image: thumbnailImage,
 
