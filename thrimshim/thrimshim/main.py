@@ -303,7 +303,8 @@ def update_row(ident, editor=None):
 		'video_description', 'video_tags', 'thumbnail_mode', 'public'
 	]
 	edit_columns = non_null_columns + [
-		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template', 'thumbnail_image'
+		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template',
+		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
 	sheet_columns = [
 		'sheet_name', 'event_start', 'event_end',
