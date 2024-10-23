@@ -10,8 +10,10 @@ setup(
 		"flask",
 		"gevent",
 		"monotonic",
-		"prometheus-client",
 		"Pillow", # for thumbnail templates
+		"prometheus-client",
+		"psycogreen",
+		"psycopg2",
 		"wubloader-common",
 	],
 )
