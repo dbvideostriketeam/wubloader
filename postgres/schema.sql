@@ -194,5 +194,5 @@ CREATE TABLE templates (
 	crop INTEGER[] NOT NULL CHECK (
 		cardinality(thumbnail_crop) = 4),
 	location INTEGER[] NOT NULL CHECK (
-		cardinality(thumbnail_crop) = 4), 
+		cardinality(thumbnail_crop) = 4) 
 );
