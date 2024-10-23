@@ -363,6 +363,10 @@ input.range-definition-chapter-marker-description {
 	margin: 2px 0;
 }
 
+.video-info-thumbnail-position {
+	width: 50px;
+}
+
 #video-info-thumbnail-template-preview-image {
 	max-width: 320px;
 }

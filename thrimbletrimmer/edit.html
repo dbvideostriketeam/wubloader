@@ -252,6 +252,31 @@
 							id="video-info-thumbnail-time-play"
 						/>
 					</div>
+					<div class="video-info-thumbnail-mode-options" id="video-info-thumbnail-position-options">
+						<details>
+							<summary>Advanced Templating Options</summary>
+							Crop specifies the region of the video frame to capture. <br/>
+							Location specifies the region within the template image where the cropped image will be placed. <br/>
+							Regions are given as pixel coordinates of the top-left and bottom-right corners. <br/>
+							Note that if the regions are different sizes, the image will be stretched. <br/>
+
+							Crop:
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-0" />
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-1" />
+							to
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-2" />
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-3" />
+							<br/>
+
+							Location:
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-0" />
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-1" />
+							to
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-2" />
+							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-3" />
+							<br/>
+						</details>
+					</div>
 					<div
 						class="hidden video-info-thumbnail-mode-options"
 						id="video-info-thumbnail-custom-options"
