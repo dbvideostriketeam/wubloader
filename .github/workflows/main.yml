@@ -24,19 +24,21 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - downloader
-          - restreamer
           - backfiller
-          - thrimshim
-          - cutter
-          - sheetsync
-          - nginx
-          - postgres
-          - segment_coverage
-          - playlist_manager
-          - chat_archiver
-          - zulip_bots
           - bus_analyzer
+          - buscribe
+          - buscribe_api
+          - chat_archiver
+          - cutter
+          - downloader
+          - nginx
+          - playlist_manager
+          - postgres
+          - restreamer
+          - segment_coverage
+          - sheetsync
+          - thrimshim
+          - zulip_bots
     steps:
       - name: Check out repo
         uses: actions/checkout@v2
