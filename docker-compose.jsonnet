@@ -270,8 +270,10 @@
       email: "schedule-bot@chat.videostrike.team",
       api_key: "",
     },
-    // Path to the schedule CSV
-    schedule_path:: "",
+    // Creds for accessing the schedule google sheet
+    schedule_sheet_id: "",
+    schedule_sheet_name: "All-Everything",
+    google_credentials: import "./google_creds.json",
     // Map from group names to zulip internal ids
     groups: {
       Sheeter: 16,
