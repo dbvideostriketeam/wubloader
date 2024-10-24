@@ -458,6 +458,7 @@ class Cutter(object):
 				image_data = frame
 			elif job.thumbnail_mode == 'TEMPLATE':
 				template, crop, location = get_template(self.dbmanager, job.thumbnail_template, job.thumbnail_crop, job.thumbnail_location)
+				self.logging.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 				image_data = compose_thumbnail_template(template, frame, crop, location)
 			else:
 				# shouldn't be able to happen given database constraints
@@ -771,6 +772,7 @@ class VideoUpdater(object):
 									thumbnail_image = frame
 								elif job.thumbnail_mode == 'TEMPLATE':
 									template, crop, location = get_template(self.dbmanager, job.thumbnail_template, job.thumbnail_crop, job.thumbnail_location)
+									self.logging.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 									thumbnail_image = compose_thumbnail_template(template, frame, crop, location)
 								else:
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)

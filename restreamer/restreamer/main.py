@@ -501,6 +501,7 @@ def get_thumbnail_named_template(channel, quality):
 		template, crop, location = get_template(app.db_manager, request.args['template'], crop, location)
 	except ValueError:
 		return 'Template {} not found'.format(request.args['template']), 404
+	logging.info('Generating thumbnail from the video frame at {} using {} as template'.format(request.args['timestamp'], request.args['template']))
 	return get_thumbnail(channel, quality, request.args['timestamp'], template, crop, location)
 
 
@@ -517,6 +518,7 @@ def get_thumbnail_uploaded_template(channel, quality):
 		location: Required. Left, top, right, bottom pixel coordinates to position the cropped frame.
 	"""	
 	template = request.body
+	logging.info('Generating thumbnail from the video frame at {} using a custom template'.format(request.args['timestamp']))
 	return get_thumbnail(channel, quality, request.args['timestamp'], template, request.args['crop'], request.args['location'])
 
 
