@@ -261,24 +261,37 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
-		.addEventListener("click", (_event) => {
+		.addEventListener("click", async (_event) => {
 			const imageElement = document.getElementById("video-info-thumbnail-template-preview-image");
-			const timeEntryElement = document.getElementById("video-info-thumbnail-time");
-			const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
-			if (imageTime === null) {
-				imageElement.classList.add("hidden");
-				addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
-				return;
+			const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+
+			if (thumbnailMode === "ONEOFF") {
+				try {
+					const data = await renderThumbnail();
+					imageElement.src = `data:image/png;base64,${data}`;
+				} catch (e) {
+					imageElement.classList.add("hidden");
+					addError(`${e}`);
+					return;
+				}
+			} else {
+				const timeEntryElement = document.getElementById("video-info-thumbnail-time");
+				const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
+				if (imageTime === null) {
+					imageElement.classList.add("hidden");
+					addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
+					return;
+				}
+				const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
+				const [crop, loc] = getTemplatePosition();
+				const query = new URLSearchParams({
+					timestamp: imageTime,
+					template: imageTemplate,
+					crop: crop.join(","),
+					location: loc.join(","),
+				});
+				imageElement.src = `/thumbnail/${globalStreamName}/source.png?${query}`;
 			}
-			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
-			const [crop, loc] = getTemplatePosition();
-			const query = new URLSearchParams({
-				timestamp: imageTime,
-				template: imageTemplate,
-				crop: crop.join(","),
-				location: loc.join(","),
-			});
-			imageElement.src = `/thumbnail/${globalStreamName}/source.png?${query}`;
 			imageElement.classList.remove("hidden");
 		});
 
@@ -870,6 +883,11 @@ function updateThumbnailInputState(event) {
 		unhideIDs.push("video-info-thumbnail-time-options");
 		unhideIDs.push("video-info-thumbnail-position-options");
 		unhideIDs.push("video-info-thumbnail-template-preview");
+	} else if (newValue === "ONEOFF") {
+		unhideIDs.push("video-info-thumbnail-time-options");
+		unhideIDs.push("video-info-thumbnail-position-options");
+		unhideIDs.push("video-info-thumbnail-custom-options");
+		unhideIDs.push("video-info-thumbnail-template-preview");
 	} else if (newValue === "CUSTOM") {
 		unhideIDs.push("video-info-thumbnail-custom-options");
 	}
@@ -1148,7 +1166,7 @@ async function sendVideoData(newState, overrideChanges) {
 		videoDescription = videoDescription + CHAPTER_MARKER_DELIMITER + chapterTextList.join("\n");
 	}
 
-	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+	let thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
 	let thumbnailTemplate = null;
 	let thumbnailTime = null;
 	let thumbnailImage = null;
@@ -1171,37 +1189,17 @@ async function sendVideoData(newState, overrideChanges) {
 			return;
 		}
 	}
-	if (thumbnailMode === "CUSTOM") {
-		const fileInput = document.getElementById("video-info-thumbnail-custom");
-		if (fileInput.files.length === 0) {
-			if (!videoInfo.thumbnail_image) {
-				submissionError("A thumbnail file was not provided for the custom thumbnail");
-				return;
-			}
-			thumbnailImage = videoInfo.thumbnail_image;
-		} else {
-			const fileHandle = fileInput.files[0];
-			const fileReader = new FileReader();
-			let loadPromiseResolve;
-			const loadPromise = new Promise((resolve, _reject) => {
-				loadPromiseResolve = resolve;
-			});
-			fileReader.addEventListener("loadend", (event) => {
-				loadPromiseResolve();
-			});
-			fileReader.readAsDataURL(fileHandle);
-			await loadPromise;
-			const fileLoadData = fileReader.result;
-			if (fileLoadData.error) {
-				submissionError(`An error (${fileLoadData.error.name}) occurred loading the custom thumbnail: ${fileLoadData.error.message}`);
-				return;
-			}
-			if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
-				submissionError("An error occurred converting the uploaded image to base64.");
-				return;
-			}
-			thumbnailImage = fileLoadData.substring(22);
+	try {
+		if (thumbnailMode === "ONEOFF") {
+			thumbnailImage = await renderThumbnail();
+			thumbnailMode = "CUSTOM";
 		}
+		if (thumbnailMode === "CUSTOM") {
+			thumbnailImage = await uploadedImageToBase64();
+		}
+	} catch (e) {
+		submissionError(`${e}`);
+		return;
 	}
 
 	const videoTitle = document.getElementById("video-info-title").value;
@@ -1395,6 +1393,82 @@ function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, 
 
 	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${query.toString()}`;
 	return downloadURL;
+}
+
+// Reads file data from the custom thumbnail upload input, and returns base64 string.
+// Throws on error.
+async function uploadedImageToBase64() {
+	const fileInput = document.getElementById("video-info-thumbnail-custom");
+	if (fileInput.files.length === 0) {
+		throw new Error("A file was not provided for the thumbnail");
+	}
+
+	const fileHandle = fileInput.files[0];
+	const fileReader = new FileReader();
+	let loadPromiseResolve;
+	const loadPromise = new Promise((resolve, _reject) => { 
+		loadPromiseResolve = resolve;
+	});
+	fileReader.addEventListener("loadend", (event) => { 
+		loadPromiseResolve();
+	});  
+	fileReader.readAsDataURL(fileHandle);
+	await loadPromise;
+
+	const fileLoadData = fileReader.result;
+	if (fileLoadData.error) {
+		throw new Error(
+			`An error (${fileLoadData.error.name}) occurred loading the thumbnail: ${fileLoadData.error.message}`
+		);
+	}    
+	if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
+		throw new Error("An error occurred converting the uploaded image to base64.");
+	}    
+	return fileLoadData.substring(22);
+}
+
+// Submits a thumbnail to restreamer to be rendered, and returns the result as base64.
+// Throws on error.
+async function renderThumbnail() {
+	const thumbnailTime = wubloaderTimeFromVideoHumanTime(
+		document.getElementById("video-info-thumbnail-time").value,
+	);
+	if (thumbnailTime === null) {
+		throw new Error("The thumbnail time is invalid");
+	}
+	const [thumbnailCrop, thumbnailLocation] = getTemplatePosition();
+	if (thumbnailCrop === null || thumbnailLocation === null) {
+		throw new Error("The thumbnail crop/location options are invalid");
+	}
+	const query = new URLSearchParams({
+		timestamp: thumbnailTime,
+		crop: thumbnailCrop.join(","),
+		location: thumbnailLocation.join(","),
+	});
+	const templateData = await uploadedImageToBase64();
+	// Client-side javascript makes it shockingly hard to correctly decode base64.
+	// See https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
+	// The "cleanest" solution is to "fetch" the data URL containing base64 data.
+	const datares = await fetch(`data:application/octet-stream;base64,${templateData}`);
+	const body = new Uint8Array(await datares.arrayBuffer());
+	const res = await fetch(`/thumbnail/${globalStreamName}/source.png?${query}`, {
+		method: "POST",
+		body,
+	});
+	if (!res.ok) {
+		throw new Error(`Rendering thumbnail failed with ${res.status} ${res.statusText}`);
+	}
+	// Converting the result into base64 is similarly painful.
+	const blob = await res.blob();
+	const data = await new Promise(resolve => {
+		const reader = new FileReader();
+		reader.onload = () => resolve(reader.result);
+		reader.readAsDataURL(blob);
+	});
+	if (data.substring(0, 22) !== "data:image/png;base64,") {
+		throw new Error("An error occurred converting the uploaded image to base64.");
+	}    
+	return data.substring(22);
 }
 
 function updateDownloadLink() {
