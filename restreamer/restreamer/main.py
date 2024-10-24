@@ -520,7 +520,7 @@ def get_thumbnail_uploaded_template(channel, quality):
 		location: Required. Left, top, right, bottom pixel coordinates to position the cropped frame.
 			Should be a comma-seperated list of numbers.
 	"""	
-	template = request.body
+	template = request.data
 	return get_thumbnail(channel, quality, request.args['timestamp'], template, request.args['crop'], request.args['location'])
 
 
