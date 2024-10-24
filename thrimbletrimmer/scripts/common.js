@@ -445,25 +445,25 @@ function videoHumanTimeFromDateTime(dateTime) {
 function assembleVideoPlaylistURL(basePlaylistURL) {
 	let playlistURL = basePlaylistURL;
 
-	const queryStringParts = startAndEndTimeQueryStringParts();
-	if (queryStringParts) {
-		playlistURL += "?" + queryStringParts.join("&");
+	const query = startAndEndTimeQuery();
+	if (query.toString() !== "") {
+		playlistURL += "?" + query.toString();
 	}
 	return playlistURL;
 }
 
-function startAndEndTimeQueryStringParts() {
+function startAndEndTimeQuery() {
 	const startTime = getStartTime();
 	const endTime = getEndTime();
 
-	let queryStringParts = [];
+	const query = new URLSearchParams();
 	if (startTime) {
-		queryStringParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
+		query.append("start", wubloaderTimeFromDateTime(startTime));
 	}
 	if (endTime) {
-		queryStringParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
+		query.append("end", wubloaderTimeFromDateTime(endTime));
 	}
-	return queryStringParts;
+	return query;
 }
 
 function getSegmentList() {

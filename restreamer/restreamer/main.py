@@ -489,8 +489,10 @@ def get_thumbnail_named_template(channel, quality):
 		template: Required. The template name to use.
 			Must be one of the template names as returned by GET /thrimshim/templates
 		crop: Left, upper, right, and lower pixel coordinates to crop the selected frame.
+			Should be a comma-seperated list of numbers.
 			Default is to use the crop in the database.
 		location: Left, top, right, bottom pixel coordinates to position the cropped frame.
+			Should be a comma-seperated list of numbers.
 			Default is to use the location in the databse.
 	"""
 	crop = request.args.get('crop', None)
@@ -514,7 +516,9 @@ def get_thumbnail_uploaded_template(channel, quality):
 		timestamp: Required. The frame to use as the thumbnail image.
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 		crop: Required. Left, upper, right, and lower pixel coordinates to crop the selected frame.
+			Should be a comma-seperated list of numbers.
 		location: Required. Left, top, right, bottom pixel coordinates to position the cropped frame.
+			Should be a comma-seperated list of numbers.
 	"""	
 	template = request.body
 	return get_thumbnail(channel, quality, request.args['timestamp'], template, request.args['crop'], request.args['location'])
@@ -526,6 +530,9 @@ def get_thumbnail(channel, quality, timestamp, template, crop, location):
 	"""
 
 	timestamp = dateutil.parse_utc_only(timestamp)
+
+	crop = [int(n) for n in crop.split(",")]
+	location = [int(n) for n in location.split(",")]
 
 	hours_path = os.path.join(app.static_folder, channel, quality)
 	if not os.path.isdir(hours_path):
