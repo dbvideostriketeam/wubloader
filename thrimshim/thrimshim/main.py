@@ -607,6 +607,7 @@ def list_templates():
 			SELECT name, description, attribution, crop, location FROM templates ORDER BY name
 		"""
 		results = database.query(conn, query)
+		logging.info('List of thumbnail templates fetched')
 		return json.dumps([row._asdict() for row in results.fetchall()])
 
 
@@ -624,6 +625,7 @@ def get_template(name):
 			return 'Template {} not found'.format(name), 404
 
 		image = row[0]
+		logging.info('Thumbnail image of {} fetched'.format(name))
 		return flask.Response(image, mimetype='image/png')
 
 
@@ -639,6 +641,7 @@ def get_template_metadata(name):
 		row = results.fetchone()
 		if row is None:
 			return 'Template {} not found'.format(name), 404
+		logging.info('Thumbnail metadata of {} fetched'.format(name))
 		return json.dumps(row._asdict())
 
 def validate_template(new_template):
@@ -692,6 +695,7 @@ def add_template(artist=None):
 			)
 		database.query(conn, query, **new_template)
 	
+	logging.info('Thumbnail template {} added'.format(new_template['name']))
 	return '', 201
 
 @app.route('/thrimshim/update-template/<name>', methods=['POST'])
@@ -729,6 +733,10 @@ def update_template(name, artist=None):
 				) for column in columns))
 		database.query(conn, query, old_name=name, **new_template)
 
+	if name == new_template['name']:
+		logging.info('Thumbnail template {} updated'.format(name))
+	else:
+		logging.info('Thumbnail template {} renamed to {} and updated'.format(name, new_template['name']))
 	return '', 200
 
 
@@ -747,6 +755,7 @@ def get_thumbnail(ident):
 		event = row._asdict()
 
 		if event['thumbnail_mode'] != 'NONE' and event['thumbnail_image']:
+			logging.info('Thumbnail for event {} fetched'.format(ident))
 			return flask.Response(event['thumbnail_image'], mimetype='image/png')
 		else:
 			return '', 404
