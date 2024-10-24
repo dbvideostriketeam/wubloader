@@ -272,13 +272,13 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
 			const [crop, loc] = getTemplatePosition();
-			const queryParts = [
-				`timestamp=${imageTime}`,
-				`template=${imageTemplate}`,
-				`crop=${crop.join(",")}`,
-				`location=${loc.join(",")}`,
-			];
-			imageElement.src = `/thumbnail/${globalStreamName}/source.png?${queryParts.join("&")}`;
+			const query = new URLSearchParams({
+				timestamp: imageTime,
+				template: imageTemplate,
+				crop: crop.join(","),
+				location: loc.join(","),
+			});
+			imageElement.src = `/thumbnail/${globalStreamName}/source.png?${query}`;
 			imageElement.classList.remove("hidden");
 		});
 
@@ -831,8 +831,8 @@ function updateWaveform() {
 	let waveformURL =
 		"/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?size=1920x125&";
 
-	const queryStringParts = startAndEndTimeQueryStringParts();
-	waveformURL += queryStringParts.join("&");
+	const query = startAndEndTimeQuery();
+	waveformURL += query.toString();
 
 	const waveformElem = document.getElementById("waveform");
 	waveformElem.src = waveformURL;
@@ -1374,7 +1374,10 @@ function handleLeavePage(event) {
 }
 
 function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, quality) {
-	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
+	const query = new URLSearchParams({
+		type: downloadType,
+		allow_holes: allowHoles,
+	});
 	for (const range of timeRanges) {
 		let timeRangeString = "";
 		if (range.hasOwnProperty("start")) {
@@ -1384,13 +1387,13 @@ function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, 
 		if (range.hasOwnProperty("end")) {
 			timeRangeString += range.end;
 		}
-		queryParts.push(`range=${timeRangeString}`);
+		query.append("range", timeRangeString);
 	}
 	for (const transition of transitions) {
-		queryParts.push(`transition=${transition}`);
+		query.append("transition", transition);
 	}
 
-	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
+	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${query.toString()}`;
 	return downloadURL;
 }
 

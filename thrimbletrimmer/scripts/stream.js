@@ -121,28 +121,32 @@ async function updateTimeSettings() {
 
 	const startTime = getStartTime();
 	const endTime = getEndTime();
-	const queryParts = [];
-	queryParts.push(`stream=${globalStreamName}`);
-	queryParts.push(`start=${wubloaderTimeFromDateTime(startTime)}`);
+	const query = new URLSearchParams({
+		stream: globalStreamName,
+		start: wubloaderTimeFromDateTime(startTime),
+	});
 	if (endTime) {
-		queryParts.push(`end=${wubloaderTimeFromDateTime(endTime)}`);
+		query.append("end", wubloaderTimeFromDateTime(endTime));
 	}
-	document.getElementById("stream-time-link").href = `?${queryParts.join("&")}`;
+	document.getElementById("stream-time-link").href = `?${query}`;
 }
 
 function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quality) {
 	const startURLTime = wubloaderTimeFromDateTime(startTime);
 	const endURLTime = wubloaderTimeFromDateTime(endTime);
 
-	const queryParts = [`type=${downloadType}`, `allow_holes=${allowHoles}`];
+	const query = new URLSearchParams({
+		type: downloadType,
+		allow_holes: allowHoles
+	});
 	if (startURLTime) {
-		queryParts.push(`start=${startURLTime}`);
+		query.append("start", startURLTime);
 	}
 	if (endURLTime) {
-		queryParts.push(`end=${endURLTime}`);
+		query.append("end", endURLTime);
 	}
 
-	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${queryParts.join("&")}`;
+	const downloadURL = `/cut/${globalStreamName}/${quality}.ts?${query}`;
 	return downloadURL;
 }
 
