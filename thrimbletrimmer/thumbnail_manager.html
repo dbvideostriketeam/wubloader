@@ -1,0 +1,60 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>VST Thumbnail Template Management</title>
+
+		<meta
+			name="google-signin-client_id"
+			content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com"
+		/>
+		<script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+
+	</head>
+	<body>
+			Create New Template
+		<div id="new-template-box">
+
+				<div>
+					<label for="new-template-name">Template name:</label>
+					<input type="text" id="new-template-name">
+			
+					<label for="new-template-image">Template image:</label>
+					<input type="file" id="new-template-image" accept="image/png" />
+					<br/>
+
+					<label for="new-template-description">Description:</label>
+					<textarea id="new-template-description"></textarea>
+					<br/>
+
+					<label for="new-template-attibution">Attribution:</label>
+					<textarea id="new-template-attibution"></textarea>
+					<br/>
+
+					Crop:
+					<input type="text" id="new-thumbnail-crop-0" />
+					<input type="text" id="new-thumbnail-crop-1" />
+					to
+					<input type="text" id="new-thumbnail-crop-2" />
+					<input type="text" id="new-thumbnail-crop-3" />
+					<br/>
+
+					Location:
+					<input type="text" id="new-thumbnail-location-0" />
+					<input type="text" id="new-thumbnail-location-1" />
+					to
+					<input type="text" id="new-thumbnail-location-2" />
+					<input type="text" id="new-thumbnail-location-3" />
+					<br/>
+
+					<button id="create-template">Create</button>
+
+		</div>
+
+		<div id="google-authentication">
+			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
+			<a href="#" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
+		</div>
+
+	</body>
+</html>
