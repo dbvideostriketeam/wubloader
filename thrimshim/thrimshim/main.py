@@ -67,9 +67,9 @@ def check_user(request, role):
 	email = idinfo['email'].lower()
 	conn = app.db_manager.get_conn()
 	query = """
-		SELECT email, %(role)s 
+		SELECT 1
 		FROM roles
-		WHERE lower(email) = %(email)s AND %(role)
+		WHERE lower(email) = %(email)s AND %(role)s
 	"""
 	results = database.query(conn, query, email=email, role=role)
 	row = results.fetchone()
