@@ -273,7 +273,7 @@
     // Creds for accessing the schedule google sheet
     schedule_sheet_id: "",
     schedule_sheet_name: "All-Everything",
-    google_credentials: import "./google_creds.json",
+    google_credentials_file: "./google_creds.json",
     // Map from group names to zulip internal ids
     groups: {
       Sheeter: 16,
@@ -726,8 +726,9 @@
         url: $.zulip_url,
         start_time: $.bustime_start,
         schedule: "/schedule",
+        google_credentials_file: "/creds.json",
       }, $.schedulebot.args) + {
-        volumes: ["%s:/schedule" % $.schedulebot.schedule_path],
+        volumes: ["%s:/creds.json" % $.schedulebot.google_credentials_file],
       },
 
     [if $.enabled.tootbot then "tootbot"]:

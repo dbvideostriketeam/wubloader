@@ -2,6 +2,7 @@
 import gevent.monkey
 gevent.monkey.patch_all()
 
+import json
 import logging
 import time
 from calendar import timegm
@@ -241,10 +242,11 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		start_time: Time of the first hour, as UTC timestamp string
 		schedule_sheet_id: Google Sheet ID
 		schedule_sheet_name: Google Sheet tab name
-		google_credentials: (With Read access to schedule_sheet_id)
-			client_id
-			client_secret
-			refresh_token
+		google_credentials_file: (With Read access to schedule_sheet_id)
+			Path to json file containing at least:
+				client_id
+				client_secret
+				refresh_token
 		members:
 			NAME: USER_ID
 		groups:
@@ -260,10 +262,12 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	send_auth = config.get("send_user", config["api_user"])
 	send_client = Client(config["url"], send_auth["email"], send_auth["api_key"])
 	group_ids = config["groups"]
+	with open(config["google_credentials_file"]) as f:
+		sheets_creds = json.load(f)
 	sheets_client = Sheets(
-		config["google_credentials"]["client_id"],
-		config["google_credentials"]["client_secret"],
-		config["google_credentials"]["refresh_token"],
+		sheets_creds["client_id"],
+		sheets_creds["client_secret"],
+		sheets_creds["refresh_token"],
 	)
 	reload_schedule = lambda: parse_schedule(
 		sheets_client,
