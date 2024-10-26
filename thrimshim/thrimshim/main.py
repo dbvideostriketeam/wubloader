@@ -66,12 +66,12 @@ def check_user(request, role):
 	# check whether user is in the database
 	email = idinfo['email'].lower()
 	conn = app.db_manager.get_conn()
-	query = """
+	query = sql.SQL("""
 		SELECT 1
 		FROM roles
-		WHERE lower(email) = %(email)s AND %(role)s
-	"""
-	results = database.query(conn, query, email=email, role=role)
+		WHERE lower(email) = %(email)s AND {}
+	""").format(sql.Identifier(role))
+	results = database.query(conn, query, email=email)
 	row = results.fetchone()
 	if row is None:
 		return 'Unknown user. Access denied.', 403
