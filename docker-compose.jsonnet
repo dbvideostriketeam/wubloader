@@ -13,6 +13,7 @@
   // you're actually running, and must manually re-pull to get an updated copy.
   image_tag:: std.extVar("tag"),
   database_tag:: "bb05e37", // tag for DB, which changes less and restarts are disruptive
+  buscribe_tag:: std.extVar("tag"), // tag for buscribe, which changes less and takes ages to build
   image_base:: "ghcr.io/dbvideostriketeam", // Change this to use images from a different source than the main one
 
   // For each service, whether to deploy that service.
@@ -676,7 +677,7 @@
     },
 
     [if $.enabled.buscribe then "buscribe"]: {
-      image: $.get_image("buscribe"),
+      image: $.get_image("buscribe", $.buscribe_tag),
       restart: "always",
       command: [
         $.buscribe_channel,
