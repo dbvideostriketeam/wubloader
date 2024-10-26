@@ -198,9 +198,9 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"name": 2,
 		"playlist_id": 3,
 		"show_in_description": 4,
-		"first_event_id": 5,
-		"last_event_id": 6,
-		"id": 7,
+		"first_event_id": 6,
+		"last_event_id": 7,
+		"id": 8,
 	}
 
 	column_parsers = {
