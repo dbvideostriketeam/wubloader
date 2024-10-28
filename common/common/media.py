@@ -11,7 +11,9 @@ from uuid import uuid4
 
 import gevent
 import prometheus_client as prom
+import requests
 import urllib3.connection
+from gevent.pool import Pool
 from ipaddress import ip_address
 
 from . import atomic_write, ensure_directory, jitter, listdir
@@ -99,6 +101,9 @@ def download_media(
 					gevent.sleep(jitter(retry_interval))
 
 				try:
+					if download_imgur_url(output_dir, max_size, url):
+						return
+
 					resp = _request(urls[-1], max_size, content_types)
 
 					new_url = resp.get_redirect_location()
@@ -190,6 +195,29 @@ def _save_response(output_dir, urls, resp, max_size, chunk_size):
 		atomic_write(metadata_path, json.dumps(metadata, indent=4))
 
 
+def _save_content(output_dir, urls, ext, content):
+	"""Alternate version of _save_response() for cases where content is explicitly generated
+	instead of coming from a response."""
+	url_dir = get_url_dir(output_dir, urls[0])
+	if isinstance(content, str):
+		content = content.encode()
+	hash = sha256(content)
+	filename = f"{hash_to_path(hash)}.{ext}"
+	filepath = os.path.join(url_dir, filename)
+	if not os.path.exists(filepath):
+		atomic_write(filepath, content)
+	metadata_path = os.path.join(url_dir, f"{hash_to_path(hash)}.metadata.json")
+	if not os.path.exists(metadata_path):
+		metadata = {
+			"url": urls[0],
+			"filename": filename,
+			"redirects": urls[1:],
+			"fetched_by": socket.gethostname(),
+			"fetch_time": time.time(),
+		}
+		atomic_write(metadata_path, json.dumps(metadata, indent=4))
+
+
 def _request(url, max_size, content_types):
 	"""Do the actual request and return a vetted response object, which is either the content
 	(status 200) or a redirect.
@@ -245,3 +273,110 @@ def _request(url, max_size, content_types):
 			raise TooLarge(f"Content length {length} is too large for url {url}")
 
 	return resp
+
+
+def download_imgur_url(output_dir, max_size, url):
+	"""Links to imgur require special handling to resolve the actual image.
+	Handles URLs like the following:
+		i.stack.imgur.com/ID.png
+		imgur.com/ID
+		i.imgur.com/ID.EXT
+			These map to actual media and are stored in the usual way.
+		imgur.com/a/ID
+		imgur.com/gallery/ID
+			These map to collections of media.
+			Under the original URL we store a json file that lists imgur.com/ID urls
+			of the contents of the collection. Those urls are then downloaded and stored
+			in the usual way.
+	"""
+	parsed = urllib.parse.urlparse(url)
+	if parsed.hostname not in ("imgur.com", "i.stack.imgur.com"):
+		# not an imgur link that needs special handling
+		return False
+	match = re.match(r"^/([^/.]+)(?:\.([a-z]+))?$", parsed.path)
+	if match:
+		id, ext = match.groups()
+		if ext is None:
+			# Try to get a video ("gif") first, if that 400s then get a png.
+			try:
+				download_imgur_image(output_dir, max_size, url, id, "mp4")
+			except requests.HTTPError:
+				download_imgur_image(output_dir, max_size, url, id, "png")
+		else:
+			download_imgur_image(output_dir, max_size, url, id, ext)
+		return True
+	elif parsed.path.startswith("/a/"):
+		contents = download_imgur_album(parsed.path.removeprefix("/a/"))
+	elif parsed.path.startwith("/gallery/"):
+		contents = download_imgur_gallery(parsed.path.removeprefix("/gallery/"))
+	else:
+		# no match, treat like non-imgur link
+		return False
+
+	# Common part for albums and galleries
+	pool = Pool(16)
+	jobs = []
+	for id, ext in contents:
+		job = pool.spawn(download_imgur_image, output_dir, max_size, f"https://imgur.com/{id}", id, ext)
+		jobs.append(job)
+	gevent.wait(jobs)
+	failed = [g.exception for g in jobs if g.exception is not None]
+
+	# Save the album after trying to download things (so it will be retried until we get this far)
+	# but only raise for image download errors after, so we at least know about everything that
+	# succeeded.
+	contents_urls = [f"https://imgur.com/{id}.{ext}" for id, ext in contents]
+	_save_content(output_dir, [url], "json", json.dumps(contents_urls))
+
+	if failed:
+		raise ExceptionGroup(failed)
+
+	return True
+
+
+def imgur_request(url):
+	resp = requests.get(url, allow_redirects=False, timeout=30)
+	if 300 <= resp.status_code < 400:
+		# imgur redirects you if the resource is gone instead of 404ing, treat this as non-retryable
+		raise Rejected(f"imgur returned redirect for {url!r}")
+	# other errors are retryable
+	resp.raise_for_status()
+	return resp
+
+
+def download_imgur_album(url, id):
+	"""Fetch imgur album and return a list of (id, ext) contents"""
+	url = f"https://api.imgur.com/post/v1/albums/{id}?client_id=546c25a59c58ad7&include=media,adconfig,account"
+	data = imgur_request(url).json()
+	result = []
+	for item in data.get("media", []):
+		result.append((item["id"], item["ext"]))
+	return result
+
+
+def download_imgur_gallery(url, id):
+	"""Fetch imgur gallery and return a list of (id, ext) contents"""
+	# The gallery JSON is contained in a <script> tag like this:
+	# <script>window.postDataJSON=...</script>
+	# where ... is a json string.
+	html = imgur_request(f"https://imgur.com/gallery/{id}").content
+	regex = r'<script>window.postDataJSON=("(?:[^"\\]|\\.)*")'
+	match = re.search(regex, html)
+	# If we can't find a match, assume we got served a 404 page instead.
+	if not match:
+		raise Rejected(f"Could not load gallery for {url!r}")
+	data = match.group(1)
+	# TODO python3 equivalent?
+	data = data[1:-1].decode("string-escape") # remove quotes and unescape contents
+	data = json.loads(data)
+	result = []
+	for item in data.get("media", []):
+		result.append((item["id"], item["ext"]))
+	return result
+
+
+def download_imgur_image(output_dir, max_size, url, id, ext):
+	"""Fetch imgur image and save it as per download_media()"""
+	image_url = f"https://i.imgur.com/{id}.{ext}"
+	resp = imgur_request(image_url)
+	_save_response(output_dir, [url, image_url], resp, max_size, 64*1024)
