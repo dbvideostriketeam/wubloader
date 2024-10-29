@@ -1,0 +1,38 @@
+#!/bin/bash
+
+if [ "$#" -lt 1 ]; then
+	echo "USAGE: $0 PLAYLIST_ID" >&2
+	echo "List all videos that should be in the playlist with the given youtube playlist id." >&2
+	exit 1
+fi
+
+PLAYLIST_ID="$1"
+# This should match $.youtube_upload_locations in docker-compose.jsonnet
+UPLOAD_LOCATIONS="('desertbus', 'desertbus_slow', 'desertbus_emergency', 'youtube-manual')"
+
+docker-compose exec postgres psql -U postgres wubloader -qtAF ' -> ' <<-EOF
+	SELECT
+		COALESCE((video_ranges[1]).start, events.event_start) as start_time,
+		events.video_title,
+		-- Calculate video duration as sum(range lengths) - sum(transition durations)
+		(
+			(SELECT SUM(r.end - r.start) FROM UNNEST(video_ranges) r)
+			- '1 second'::interval * COALESCE(
+				(SELECT SUM(t.duration) FROM UNNEST(video_transitions) t),
+				0
+			)
+		) as duration
+	FROM events
+	-- Join on "all tags in playlists.tags are in events.tags", aka. playlists.tags is subset of events.tags
+	JOIN playlists ON events.tags @> playlists.tags
+	WHERE
+		playlists.playlist_id = '"$PLAYLIST_ID"'
+		AND events.state = 'DONE'
+		AND events.public
+		AND events.upload_location IN $UPLOAD_LOCATIONS
+	ORDER BY
+		events.id = playlists.first_event_id DESC, -- true means first
+		events.id = playlists.last_event_id ASC, -- false means first
+		start_time
+	;
+EOF
