@@ -371,6 +371,18 @@ input.range-definition-chapter-marker-description {
 	max-width: 320px;
 }
 
+#video-info-thumbnail-template-video-source-image {
+	max-width: 640px;
+}
+
+#video-info-thumbnail-template-overlay-image {
+	max-width: 640px;
+}
+
+.video-info-thumbnail-advanced-crop-flex-wrapper {
+	display: flex;
+}
+
 .submission-response-error {
 	white-space: pre-wrap;
 }

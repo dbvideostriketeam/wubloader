@@ -15,6 +15,10 @@ const PAGE_STATE = {
 	CONFIRMING: 3,
 };
 
+// References to Jcrop "stages" for the advanced thumbnail editor crop tool
+var videoFrameStage;
+var templateStage;
+
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
 	globalLoadChatWorker.onmessage = (event) => {
@@ -258,6 +262,42 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				videoPlayer.currentTime = thumbnailTime;
 			});
 	}
+
+	document
+		.getElementById("video-info-thumbnail-template-source-image-update")
+		.addEventListener("click", async (_event) => {
+			const videoFrameImageElement = document.getElementById("video-info-thumbnail-template-video-source-image");
+
+			const timeEntryElement = document.getElementById("video-info-thumbnail-time");
+			const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
+			if (imageTime === null) {
+				videoFrameImageElement.classList.add("hidden");
+				addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
+				return;
+			}
+			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
+			const videoFrameQuery = new URLSearchParams({
+				timestamp: imageTime,
+			});
+			videoFrameImageElement.src = `/frame/${globalStreamName}/source.png?${videoFrameQuery}`;
+			videoFrameImageElement.classList.remove("hidden");
+
+			const templateImageElement = document.getElementById("video-info-thumbnail-template-overlay-image");
+
+			templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
+			templateImageElement.classList.remove("hidden");
+
+			createTemplateCropWidgets();
+		});
+
+	document.getElementById("video-info-thumbnail-crop-0").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-crop-1").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-crop-2").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-crop-3").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-location-0").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-location-1").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-location-2").addEventListener("input", updateTemplateCropWidgets);
+	document.getElementById("video-info-thumbnail-location-3").addEventListener("input", updateTemplateCropWidgets);
 
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
@@ -2155,4 +2195,71 @@ function canEditMetadata() {
 
 function isNonVideoInput(element) {
 	return element.id.startsWith("data-correction-force-reset");
+}
+
+/** 
+ * Helper function to create the Jcrop widgets the first time the user chooses
+ * to load the advanced template cropping tool images in a given session. 
+ */
+function createTemplateCropWidgets() {
+	if (videoFrameStage == null) {
+		videoFrameStage = Jcrop.attach('video-info-thumbnail-template-video-source-image');
+		videoFrameStage.listen('crop.update',function(widget,e){
+			const pos = widget.pos;
+			const fieldX1 = document.getElementById("video-info-thumbnail-crop-0");
+			const fieldY1 = document.getElementById("video-info-thumbnail-crop-1");
+			const fieldX2 = document.getElementById("video-info-thumbnail-crop-2");
+			const fieldY2 = document.getElementById("video-info-thumbnail-crop-3");
+			fieldX1.value = pos.x*2;
+			fieldY1.value = pos.y*2;
+			fieldX2.value = (pos.x+pos.w)*2;
+			fieldY2.value = (pos.y+pos.h)*2;
+		});
+	}
+	if (templateStage == null) {
+		templateStage = Jcrop.attach('video-info-thumbnail-template-overlay-image');
+		templateStage.listen('crop.change',function(widget,e){
+			const pos = widget.pos;
+			const fieldX1 = document.getElementById("video-info-thumbnail-location-0");
+			const fieldY1 = document.getElementById("video-info-thumbnail-location-1");
+			const fieldX2 = document.getElementById("video-info-thumbnail-location-2");
+			const fieldY2 = document.getElementById("video-info-thumbnail-location-3");
+			fieldX1.value = pos.x*2;
+			fieldY1.value = pos.y*2;
+			fieldX2.value = (pos.x+pos.w)*2;
+			fieldY2.value = (pos.y+pos.h)*2;
+		});
+	}
+
+	updateTemplateCropWidgets();
+}
+
+/**
+ * Helper function to update the Jcrop widgets (creating them if needed) based
+ * on the current values in the advanced template cropping text input fields.
+ */
+function updateTemplateCropWidgets() {
+	const videoFieldX1 = document.getElementById("video-info-thumbnail-crop-0");
+	const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
+	const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
+	const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
+	const videoFrameRect = Jcrop.Rect.create(videoFieldX1.value/2, videoFieldY1.value/2, (videoFieldX2.value-videoFieldX1.value)/2, (videoFieldY2.value-videoFieldY1.value)/2);
+	if (videoFrameStage.active == null) {
+		videoFrameStage.newWidget(videoFrameRect);
+	} else {
+		videoFrameStage.active.pos = videoFrameRect;
+		videoFrameStage.active.render();
+	}
+
+	const templateFieldX1 = document.getElementById("video-info-thumbnail-location-0");
+	const templateFieldY1 = document.getElementById("video-info-thumbnail-location-1");
+	const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
+	const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
+	const templateRect = Jcrop.Rect.create(templateFieldX1.value/2, templateFieldY1.value/2, (templateFieldX2.value-templateFieldX1.value)/2, (templateFieldY2.value-templateFieldY1.value)/2);
+	if (templateStage.active == null) {
+		templateStage.newWidget(templateRect);
+	} else {
+		templateStage.active.pos = templateRect;
+		templateStage.active.render();
+	}
 }
