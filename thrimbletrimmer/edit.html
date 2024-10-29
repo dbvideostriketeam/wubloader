@@ -18,6 +18,8 @@
 			content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com"
 		/>
 		<script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+		<link rel="stylesheet" href="https://unpkg.com/jcrop/dist/jcrop.css">
+		<script src="https://unpkg.com/jcrop"></script>
 	</head>
 	<body>
 		<div id="errors"></div>
@@ -261,21 +263,46 @@
 							Regions are given as pixel coordinates of the top-left and bottom-right corners. <br/>
 							Note that if the regions are different sizes, the image will be stretched. <br/>
 
-							Crop:
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-0" />
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-1" />
-							to
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-2" />
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-3" />
+							<button id="video-info-thumbnail-template-source-image-update">
+								Update Source Images
+							</button>
 							<br/>
-
-							Location:
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-0" />
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-1" />
-							to
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-2" />
-							<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-3" />
-							<br/>
+							
+							<div class="video-info-thumbnail-advanced-crop-flex-wrapper">
+								<div class="video-info-thumbnail-advanced-crop-flex-item">
+									<img
+										id="video-info-thumbnail-template-video-source-image"
+										class="hidden"
+										alt="Thumbnail preview image"
+										height="360" width="640"
+									/>
+									<br/>
+									Crop:
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-0" />
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-1" />
+									to
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-2" />
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-3" />
+									<br/>
+								</div>
+								
+								<div class="video-info-thumbnail-advanced-crop-flex-item">
+									<img
+										id="video-info-thumbnail-template-overlay-image"
+										class="hidden"
+										alt="Thumbnail preview image"
+										height="360" width="640"
+									/>
+									<br/>
+									Location:
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-0" />
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-1" />
+									to
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-2" />
+									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-3" />
+									<br/>
+								</div>
+							</div>
 						</details>
 					</div>
 					<div
