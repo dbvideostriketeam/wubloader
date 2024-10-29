@@ -36,6 +36,7 @@
     twitchbot: false,
     pubbot: false,
     blogbot: false,
+    prizebot: false,
     bus_analyzer: false,
     graphs: false,
   },
@@ -347,6 +348,15 @@
     # The ids of any prizes to watch
     prize_ids: [],
   },
+
+  prizebot:: {
+    email: "blog-bot@chat.videostrike.team",
+    api_key: "",
+    state: "/prizebot_state.json",
+    // Path in host fs for the state file.
+    // Must exist and be initialized to "{}"
+    state_path:: "./prizebot_state.json",
+  }
 
   // template for donation data urls
   donation_url_template:: "https://example.com/DB{}/DB{}.json",
@@ -787,6 +797,14 @@
       }, ["--save-dir", "/mnt/blogs"]) + {
         volumes: ["%s:/mnt" % $.segments_path],
       },
+
+    [if $.enabled.prizebot then "prizebot"]:
+      bot_service("prizebot", $.prizebot + {
+        url: $.zulip_url,
+      }) + {
+        volumes: ["%s:%s" % [$.prizebot.state_path, $.prizebot.state]],
+      },
+
   },
 
 }
