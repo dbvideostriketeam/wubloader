@@ -394,6 +394,7 @@
       command: [
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
+        "--connection-string", $.db_connect,
       ],
       environment: $.env,
     },
