@@ -280,7 +280,6 @@ def download_imgur_url(output_dir, max_size, url):
 	Handles URLs like the following:
 		i.stack.imgur.com/ID.png
 		imgur.com/ID
-		i.imgur.com/ID.EXT
 			These map to actual media and are stored in the usual way.
 		imgur.com/a/ID
 		imgur.com/gallery/ID
@@ -288,6 +287,9 @@ def download_imgur_url(output_dir, max_size, url):
 			Under the original URL we store a json file that lists imgur.com/ID urls
 			of the contents of the collection. Those urls are then downloaded and stored
 			in the usual way.
+	Notably this function doesn't need to handle URLs like:
+		i.imgur.com/ID.EXT
+	as this is already a direct image link, so we can just use the normal handling.
 	"""
 	parsed = urllib.parse.urlparse(url)
 	if parsed.hostname not in ("imgur.com", "i.stack.imgur.com"):
