@@ -287,6 +287,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
 			templateImageElement.classList.remove("hidden");
 
+			const aspectRatioControls = document.getElementById("video-info-thumbnail-aspect-ratio-controls");
+			aspectRatioControls.classList.remove("hidden");
+
 			createTemplateCropWidgets();
 		});
 
@@ -298,6 +301,36 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document.getElementById("video-info-thumbnail-location-1").addEventListener("input", updateTemplateCropWidgets);
 	document.getElementById("video-info-thumbnail-location-2").addEventListener("input", updateTemplateCropWidgets);
 	document.getElementById("video-info-thumbnail-location-3").addEventListener("input", updateTemplateCropWidgets);
+
+	document.getElementById("video-info-thumbnail-lock-aspect-ratio").addEventListener("change", updateTemplateCropAspectRatio);
+
+	document.getElementById("video-info-thumbnail-aspect-ratio-match-right").addEventListener("click", function(){
+		// Calculate and copy the aspect ratio from the video field to the template
+		const videoFieldX1 = document.getElementById("video-info-thumbnail-crop-0");
+		const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
+		const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
+		const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
+		const videoFieldAspectRatio = (videoFieldX2.value-videoFieldX1.value)/(videoFieldY2.value-videoFieldY1.value);
+
+		templateStage.setOptions({aspectRatio: videoFieldAspectRatio});
+
+		// Re-apply the locked/unlocked status
+		updateTemplateCropAspectRatio();
+	});
+
+	document.getElementById("video-info-thumbnail-aspect-ratio-match-left").addEventListener("click", function(){
+		// Calculate and copy the aspect ratio from the template to the video field
+		const templateFieldX1 = document.getElementById("video-info-thumbnail-location-0");
+		const templateFieldY1 = document.getElementById("video-info-thumbnail-location-1");
+		const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
+		const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
+		const templateFieldAspectRatio = (templateFieldX2.value-templateFieldX1.value)/(templateFieldY2.value-templateFieldY1.value);
+
+		videoFrameStage.setOptions({aspectRatio: templateFieldAspectRatio});
+
+		// Re-apply the locked/unlocked status
+		updateTemplateCropAspectRatio();
+	});
 
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
@@ -2211,29 +2244,37 @@ function createTemplateCropWidgets() {
 			const fieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-crop-3");
 			// 640x320 -> 1920x1080
-			fieldX1.value = pos.x*3;
-			fieldY1.value = pos.y*3;
-			fieldX2.value = (pos.x+pos.w)*3;
-			fieldY2.value = (pos.y+pos.h)*3;
+			fieldX1.value = Math.round(pos.x*3);
+			fieldY1.value = Math.round(pos.y*3);
+			fieldX2.value = Math.round((pos.x+pos.w)*3);
+			fieldY2.value = Math.round((pos.y+pos.h)*3);
+		});
+		videoFrameStage.listen('crop.change',function(widget,e){
+			// This only fires when the user is finished dragging, not every time the size
+			// of the cropped area updates. This avoids the template area updating every
+			// instant due to minute changes in the aspect ratio, which causes it to shrink
+			// while resizing.
+			updateTemplateCropAspectRatio();
 		});
 	}
 	if (templateStage == null) {
 		templateStage = Jcrop.attach('video-info-thumbnail-template-overlay-image');
-		templateStage.listen('crop.change',function(widget,e){
+		templateStage.listen('crop.update',function(widget,e){
 			const pos = widget.pos;
 			const fieldX1 = document.getElementById("video-info-thumbnail-location-0");
 			const fieldY1 = document.getElementById("video-info-thumbnail-location-1");
 			const fieldX2 = document.getElementById("video-info-thumbnail-location-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-location-3");
 			// 640x320 -> 1280x720
-			fieldX1.value = pos.x*2;
-			fieldY1.value = pos.y*2;
-			fieldX2.value = (pos.x+pos.w)*2;
-			fieldY2.value = (pos.y+pos.h)*2;
+			fieldX1.value = Math.round(pos.x*2);
+			fieldY1.value = Math.round(pos.y*2);
+			fieldX2.value = Math.round((pos.x+pos.w)*2);
+			fieldY2.value = Math.round((pos.y+pos.h)*2);
 		});
 	}
 
 	updateTemplateCropWidgets();
+	updateTemplateCropAspectRatio();
 }
 
 /**
@@ -2265,5 +2306,23 @@ function updateTemplateCropWidgets() {
 	} else {
 		templateStage.active.pos = templateRect;
 		templateStage.active.render();
+	}
+
+	updateTemplateCropAspectRatio();
+}
+
+function updateTemplateCropAspectRatio() {
+	const aspectRatioCheckbox = document.getElementById("video-info-thumbnail-lock-aspect-ratio");
+	if (aspectRatioCheckbox.checked) {
+		const videoFieldX1 = document.getElementById("video-info-thumbnail-crop-0");
+		const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
+		const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
+		const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
+		const videoFieldAspectRatio = (videoFieldX2.value-videoFieldX1.value)/(videoFieldY2.value-videoFieldY1.value);
+		videoFrameStage.setOptions({aspectRatio: videoFieldAspectRatio});
+		templateStage.setOptions({aspectRatio: videoFieldAspectRatio});
+	} else {
+		videoFrameStage.setOptions({aspectRatio: null});
+		templateStage.setOptions({aspectRatio: null});
 	}
 }
