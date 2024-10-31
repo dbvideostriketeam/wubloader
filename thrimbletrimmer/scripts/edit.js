@@ -16,8 +16,8 @@ const PAGE_STATE = {
 };
 
 // References to Jcrop "stages" for the advanced thumbnail editor crop tool
-var videoFrameStage;
-var templateStage;
+let videoFrameStage;
+let templateStage;
 
 window.addEventListener("DOMContentLoaded", async (event) => {
 	commonPageSetup();
