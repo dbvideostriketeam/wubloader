@@ -37,9 +37,6 @@ location within the template image.
 	crop = (50, 100, 1870, 980)
 	location = (320, 180, 1600, 900)
 	would crop the input frame from (50, 100) to (1870, 980), resize it to 720x1280, and place it at (320, 180).
-
-	If the original frame and the template differ in size, the frame is first resized to the template.
-	This allows you to work with a consistent coordinate system regardless of the input frame size.
 	"""
 
 	# PIL can't load an image from a byte string directly, we have to pretend to be a file
@@ -52,14 +49,9 @@ location within the template image.
 
 	# Create a new blank image of the same size as the template
 	result = Image.new('RGBA', template.size)
-	# If the frame is not the same size, scale it so it is.
+	# Insert the frame at the desired location, cropping and scaling.
 	# For choice of rescaling filter, pick LANCZOS (aka. ANTIALIAS) as it is highest quality
 	# and we don't really care about performance.
-	if frame.size != template.size:
-		frame = frame.resize(template.size, Image.LANCZOS)
-	# Insert the frame at the desired location, cropping and scaling.
-	# Technically we might end up resizing twice here which is bad for quality,
-	# but the case of frame size != template size should be rare enough that it doesn't matter.
 	frame = frame.crop(crop).resize(location_size, Image.LANCZOS)
 	result.paste(frame, location)
 	# Place the template "on top", letting the frame be seen only where the template's alpha
@@ -72,6 +64,7 @@ location within the template image.
 	result.save(buf, format='png')
 	buf.seek(0)
 	return buf.read()
+
 
 def cli(template, frame, crop, location):
 	with open(template, "rb") as f:
