@@ -381,6 +381,18 @@ input.range-definition-chapter-marker-description {
 
 .video-info-thumbnail-advanced-crop-flex-wrapper {
 	display: flex;
+	align-items: center;
+}
+
+.video-info-thumbnail-advanced-crop-flex-column {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+}
+
+.video-info-thumbnail-advanced-crop-flex-column div {
+	margin: 0.5em;
 }
 
 .submission-response-error {
