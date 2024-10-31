@@ -2210,10 +2210,11 @@ function createTemplateCropWidgets() {
 			const fieldY1 = document.getElementById("video-info-thumbnail-crop-1");
 			const fieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-crop-3");
-			fieldX1.value = pos.x*2;
-			fieldY1.value = pos.y*2;
-			fieldX2.value = (pos.x+pos.w)*2;
-			fieldY2.value = (pos.y+pos.h)*2;
+			// 640x320 -> 1920x1080
+			fieldX1.value = pos.x*3;
+			fieldY1.value = pos.y*3;
+			fieldX2.value = (pos.x+pos.w)*3;
+			fieldY2.value = (pos.y+pos.h)*3;
 		});
 	}
 	if (templateStage == null) {
@@ -2224,6 +2225,7 @@ function createTemplateCropWidgets() {
 			const fieldY1 = document.getElementById("video-info-thumbnail-location-1");
 			const fieldX2 = document.getElementById("video-info-thumbnail-location-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-location-3");
+			// 640x320 -> 1280x720
 			fieldX1.value = pos.x*2;
 			fieldY1.value = pos.y*2;
 			fieldX2.value = (pos.x+pos.w)*2;
@@ -2243,7 +2245,8 @@ function updateTemplateCropWidgets() {
 	const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
 	const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 	const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
-	const videoFrameRect = Jcrop.Rect.create(videoFieldX1.value/2, videoFieldY1.value/2, (videoFieldX2.value-videoFieldX1.value)/2, (videoFieldY2.value-videoFieldY1.value)/2);
+	// Video frame: 640x360 -> 1920x1080
+	const videoFrameRect = Jcrop.Rect.create(videoFieldX1.value/3, videoFieldY1.value/3, (videoFieldX2.value-videoFieldX1.value)/3, (videoFieldY2.value-videoFieldY1.value)/3);
 	if (videoFrameStage.active == null) {
 		videoFrameStage.newWidget(videoFrameRect);
 	} else {
@@ -2255,6 +2258,7 @@ function updateTemplateCropWidgets() {
 	const templateFieldY1 = document.getElementById("video-info-thumbnail-location-1");
 	const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
 	const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
+	// Template: 640x360 -> 1280x720
 	const templateRect = Jcrop.Rect.create(templateFieldX1.value/2, templateFieldY1.value/2, (templateFieldX2.value-templateFieldX1.value)/2, (templateFieldY2.value-templateFieldY1.value)/2);
 	if (templateStage.active == null) {
 		templateStage.newWidget(templateRect);
