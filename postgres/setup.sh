@@ -51,10 +51,10 @@ if [ -a /mnt/wubloader/nodes.csv ]; then
 	EOF
 fi
 
-if [ -a /mnt/wubloader/editors.csv ]; then
-	echo "Loading editors from editors.csv"
+if [ -a /mnt/wubloader/roles.csv ]; then
+	echo "Loading roles from roles.csv"
 	sql "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOF
-	COPY editors FROM '/mnt/wubloader/editors.csv' DELIMITER ',' CSV HEADER;
+	COPY roles FROM '/mnt/wubloader/roles.csv' DELIMITER ',' CSV HEADER;
 	EOF
 fi
 
