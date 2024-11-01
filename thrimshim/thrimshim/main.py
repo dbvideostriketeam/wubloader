@@ -670,6 +670,7 @@ def validate_template(new_template):
 
 @app.route('/thrimshim/add-template', methods=['POST'])
 @request_stats
+@authenticate_artist
 def add_template(artist=None):
 	"""Add a template to the database"""
 	columns, message, code = validate_template(flask.request.json)
@@ -700,6 +701,7 @@ def add_template(artist=None):
 
 @app.route('/thrimshim/update-template/<name>', methods=['POST'])
 @request_stats
+@authenticate_artist
 def update_template(name, artist=None):
 	"""Update a template in the database"""
 	columns, message, code = validate_template(flask.request.json)
