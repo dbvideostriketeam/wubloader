@@ -198,6 +198,7 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"name": 2,
 		"playlist_id": 3,
 		"show_in_description": 4,
+		"default_template": 5,
 		"first_event_id": 6,
 		"last_event_id": 7,
 		"id": 8,
@@ -327,6 +328,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		if 'tags' in row_dict:
 			row_dict['tags'] = (
 				[
+					calculate_shift(row_dict['event_start'])
 					row_dict['category'], # category name
 					worksheet, # sheet name
 				] + (['Poster Moment'] if row_dict['poster_moment'] else [])

@@ -155,7 +155,9 @@ CREATE TABLE playlists (
 	-- because we don't want invalid input to cause integrity errors.
 	-- It's totally safe for these to point to non-existent events, it just does nothing.
 	first_event_id TEXT,
-	last_event_id TEXT
+	last_event_id TEXT,
+	-- name of the thumbnail template to be applied by default to this tag
+	default_template TEXT NOT NULL DEFAULT ''
 );
 
 -- This table records time series data gleaned from the bus cam (right now, just the odometer).
