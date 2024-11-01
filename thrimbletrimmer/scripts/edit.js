@@ -222,9 +222,11 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	}
 
-	document.getElementById("range-definition-chapter-marker-first-description").addEventListener("input", (event) => {
-		validateChapterDescription(event.target);
-	});
+	document
+		.getElementById("range-definition-chapter-marker-first-description")
+		.addEventListener("input", (event) => {
+			validateChapterDescription(event.target);
+		});
 	document.getElementById("video-info-title").addEventListener("input", (event) => {
 		validateVideoTitle();
 		document.getElementById("video-info-title-abbreviated").innerText =
@@ -269,7 +271,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	document
 		.getElementById("video-info-thumbnail-template-source-image-update")
 		.addEventListener("click", async (_event) => {
-			const videoFrameImageElement = document.getElementById("video-info-thumbnail-template-video-source-image");
+			const videoFrameImageElement = document.getElementById(
+				"video-info-thumbnail-template-video-source-image",
+			);
 
 			const timeEntryElement = document.getElementById("video-info-thumbnail-time");
 			const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
@@ -285,55 +289,84 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			videoFrameImageElement.src = `/frame/${globalStreamName}/source.png?${videoFrameQuery}`;
 			videoFrameImageElement.classList.remove("hidden");
 
-			const templateImageElement = document.getElementById("video-info-thumbnail-template-overlay-image");
+			const templateImageElement = document.getElementById(
+				"video-info-thumbnail-template-overlay-image",
+			);
 
 			templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
 			templateImageElement.classList.remove("hidden");
 
-			const aspectRatioControls = document.getElementById("video-info-thumbnail-aspect-ratio-controls");
+			const aspectRatioControls = document.getElementById(
+				"video-info-thumbnail-aspect-ratio-controls",
+			);
 			aspectRatioControls.classList.remove("hidden");
 
 			createTemplateCropWidgets();
 		});
 
-	document.getElementById("video-info-thumbnail-crop-0").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-crop-1").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-crop-2").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-crop-3").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-location-0").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-location-1").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-location-2").addEventListener("input", updateTemplateCropWidgets);
-	document.getElementById("video-info-thumbnail-location-3").addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-crop-0")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-crop-1")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-crop-2")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-crop-3")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-location-0")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-location-1")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-location-2")
+		.addEventListener("input", updateTemplateCropWidgets);
+	document
+		.getElementById("video-info-thumbnail-location-3")
+		.addEventListener("input", updateTemplateCropWidgets);
 
-	document.getElementById("video-info-thumbnail-lock-aspect-ratio").addEventListener("change", updateTemplateCropAspectRatio);
+	document
+		.getElementById("video-info-thumbnail-lock-aspect-ratio")
+		.addEventListener("change", updateTemplateCropAspectRatio);
 
-	document.getElementById("video-info-thumbnail-aspect-ratio-match-right").addEventListener("click", function(){
-		// Calculate and copy the aspect ratio from the video field to the template
-		const videoFieldX1 = document.getElementById("video-info-thumbnail-crop-0");
-		const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
-		const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
-		const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
-		const videoFieldAspectRatio = (videoFieldX2.value-videoFieldX1.value)/(videoFieldY2.value-videoFieldY1.value);
+	document
+		.getElementById("video-info-thumbnail-aspect-ratio-match-right")
+		.addEventListener("click", function () {
+			// Calculate and copy the aspect ratio from the video field to the template
+			const videoFieldX1 = document.getElementById("video-info-thumbnail-crop-0");
+			const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
+			const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
+			const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
+			const videoFieldAspectRatio =
+				(videoFieldX2.value - videoFieldX1.value) / (videoFieldY2.value - videoFieldY1.value);
 
-		templateStage.setOptions({aspectRatio: videoFieldAspectRatio});
+			templateStage.setOptions({ aspectRatio: videoFieldAspectRatio });
 
-		// Re-apply the locked/unlocked status
-		updateTemplateCropAspectRatio();
-	});
+			// Re-apply the locked/unlocked status
+			updateTemplateCropAspectRatio();
+		});
 
-	document.getElementById("video-info-thumbnail-aspect-ratio-match-left").addEventListener("click", function(){
-		// Calculate and copy the aspect ratio from the template to the video field
-		const templateFieldX1 = document.getElementById("video-info-thumbnail-location-0");
-		const templateFieldY1 = document.getElementById("video-info-thumbnail-location-1");
-		const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
-		const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
-		const templateFieldAspectRatio = (templateFieldX2.value-templateFieldX1.value)/(templateFieldY2.value-templateFieldY1.value);
+	document
+		.getElementById("video-info-thumbnail-aspect-ratio-match-left")
+		.addEventListener("click", function () {
+			// Calculate and copy the aspect ratio from the template to the video field
+			const templateFieldX1 = document.getElementById("video-info-thumbnail-location-0");
+			const templateFieldY1 = document.getElementById("video-info-thumbnail-location-1");
+			const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
+			const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
+			const templateFieldAspectRatio =
+				(templateFieldX2.value - templateFieldX1.value) /
+				(templateFieldY2.value - templateFieldY1.value);
 
-		videoFrameStage.setOptions({aspectRatio: templateFieldAspectRatio});
+			videoFrameStage.setOptions({ aspectRatio: templateFieldAspectRatio });
 
-		// Re-apply the locked/unlocked status
-		updateTemplateCropAspectRatio();
-	});
+			// Re-apply the locked/unlocked status
+			updateTemplateCropAspectRatio();
+		});
 
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
@@ -375,7 +408,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	const thumbnailTemplatesListResponse = await fetch("/thrimshim/templates");
 	if (thumbnailTemplatesListResponse.ok) {
 		const thumbnailTemplatesList = await thumbnailTemplatesListResponse.json();
-		const templateNames = thumbnailTemplatesList.map(t => t.name);
+		const templateNames = thumbnailTemplatesList.map((t) => t.name);
 		templateNames.sort();
 		for (const template of thumbnailTemplatesList) {
 			thumbnailTemplates[template.name] = template;
@@ -401,7 +434,8 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	}
 	if (videoInfo.thumbnail_location !== null) {
 		for (let i = 0; i < 4; i++) {
-			document.getElementById(`video-info-thumbnail-location-${i}`).value = videoInfo.thumbnail_location[i];
+			document.getElementById(`video-info-thumbnail-location-${i}`).value =
+				videoInfo.thumbnail_location[i];
 		}
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
@@ -479,11 +513,12 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 });
 
-
 async function loadTransitions() {
 	const response = await fetch("/thrimshim/transitions");
 	if (!response.ok) {
-		addError("Failed to fetch possible transition types. This probably means the wubloader host is down.");
+		addError(
+			"Failed to fetch possible transition types. This probably means the wubloader host is down.",
+		);
 		return;
 	}
 	knownTransitions = await response.json();
@@ -776,8 +811,12 @@ async function initializeVideoInfo() {
 				if (rangeIndex > 0) {
 					const transition = videoInfo.video_transitions[rangeIndex - 1];
 					const transitionType = rangeContainer.getElementsByClassName("range-transition-type")[0];
-					const transitionDuration = rangeContainer.getElementsByClassName("range-transition-duration")[0];
-					const transitionDurationSection = rangeContainer.getElementsByClassName("range-transition-duration-section")[0];
+					const transitionDuration = rangeContainer.getElementsByClassName(
+						"range-transition-duration",
+					)[0];
+					const transitionDurationSection = rangeContainer.getElementsByClassName(
+						"range-transition-duration-section",
+					)[0];
 					if (transition === null) {
 						transitionType.value = "";
 						transitionDuration.value = "";
@@ -796,7 +835,7 @@ async function initializeVideoInfo() {
 							const option = document.createElement("option");
 							option.value = type;
 							option.textContent = type;
-							transitionType.append(option)
+							transitionType.append(option);
 						}
 						// Set type and duration.
 						transitionType.value = type;
@@ -1062,11 +1101,13 @@ function validateChapterDescription(chapterDescField) {
 	if (chapterDesc.indexOf("<") !== -1 || chapterDesc.indexOf(">") !== -1) {
 		chapterDescField.classList.add("input-error");
 		chapterDescField.title = "Chapter description may not contain angle brackets (< or >)";
-	} else if (Array.from(chapterDesc).some(c => c.charCodeAt(0) > 127)) { // any char is non-ascii
+	} else if (Array.from(chapterDesc).some((c) => c.charCodeAt(0) > 127)) {
+		// any char is non-ascii
 		// We don't know what chars are safe outside the ascii range, so we just warn on any of them.
 		// We know emoji are not safe.
 		chapterDescField.classList.add("input-error");
-		chapterDescField.title = "Chapter descriptions with non-ascii characters may cause issues; proceed with caution";
+		chapterDescField.title =
+			"Chapter descriptions with non-ascii characters may cause issues; proceed with caution";
 	} else {
 		chapterDescField.classList.remove("input-error");
 		chapterDescField.title = "";
@@ -1115,7 +1156,9 @@ async function sendVideoData(newState, overrideChanges) {
 		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
 		if (transitionTypeElements.length > 0) {
 			const transitionType = transitionTypeElements[0].value;
-			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName(
+				"range-transition-duration",
+			)[0].value;
 			if (transitionType === "") {
 				transitions.push(null);
 			} else {
@@ -1123,11 +1166,13 @@ async function sendVideoData(newState, overrideChanges) {
 				// but 0 is an error here anyway.
 				// Note that !(x > 0) is not equivalent to (x <= 0) due to NaN.
 				const transitionDuration = Number(transitionDurationStr);
-				if ( !(transitionDuration > 0) ) {
-					submissionError(`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`);
+				if (!(transitionDuration > 0)) {
+					submissionError(
+						`Couldn't submit edits: Invalid transition duration: "${transitionDurationStr}"`,
+					);
 					return;
 				}
-				transitions.push([transitionType, transitionDuration])
+				transitions.push([transitionType, transitionDuration]);
 				// Since we're overlapping with the previous range, this range's start time is
 				// actually earlier. This matters for chapter markers.
 				rangeStartInFinalVideo -= transitionDuration;
@@ -1186,7 +1231,9 @@ async function sendVideoData(newState, overrideChanges) {
 					continue;
 				}
 				if (startFieldTime < rangeStartPlayer || startFieldTime > rangeEndPlayer) {
-					submissionError(`The chapter at "${startField.value}" is outside its containing time range.`);
+					submissionError(
+						`The chapter at "${startField.value}" is outside its containing time range.`,
+					);
 					return;
 				}
 				const chapterStartTime = rangeStartInFinalVideo + startFieldTime - rangeStartPlayer;
@@ -1482,24 +1529,24 @@ async function uploadedImageToBase64() {
 	const fileHandle = fileInput.files[0];
 	const fileReader = new FileReader();
 	let loadPromiseResolve;
-	const loadPromise = new Promise((resolve, _reject) => { 
+	const loadPromise = new Promise((resolve, _reject) => {
 		loadPromiseResolve = resolve;
 	});
-	fileReader.addEventListener("loadend", (event) => { 
+	fileReader.addEventListener("loadend", (event) => {
 		loadPromiseResolve();
-	});  
+	});
 	fileReader.readAsDataURL(fileHandle);
 	await loadPromise;
 
 	const fileLoadData = fileReader.result;
 	if (fileLoadData.error) {
 		throw new Error(
-			`An error (${fileLoadData.error.name}) occurred loading the thumbnail: ${fileLoadData.error.message}`
+			`An error (${fileLoadData.error.name}) occurred loading the thumbnail: ${fileLoadData.error.message}`,
 		);
-	}    
+	}
 	if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
 		throw new Error("An error occurred converting the uploaded image to base64.");
-	}    
+	}
 	return fileLoadData.substring(22);
 }
 
@@ -1536,14 +1583,14 @@ async function renderThumbnail() {
 	}
 	// Converting the result into base64 is similarly painful.
 	const blob = await res.blob();
-	const data = await new Promise(resolve => {
+	const data = await new Promise((resolve) => {
 		const reader = new FileReader();
 		reader.onload = () => resolve(reader.result);
 		reader.readAsDataURL(blob);
 	});
 	if (data.substring(0, 22) !== "data:image/png;base64,") {
 		throw new Error("An error occurred converting the uploaded image to base64.");
-	}    
+	}
 	return data.substring(22);
 }
 
@@ -1558,13 +1605,15 @@ function updateDownloadLink() {
 		const transitionTypeElements = rangeContainer.getElementsByClassName("range-transition-type");
 		if (transitionTypeElements.length > 0) {
 			const transitionType = transitionTypeElements[0].value;
-			const transitionDurationStr = rangeContainer.getElementsByClassName("range-transition-duration")[0].value;
+			const transitionDurationStr = rangeContainer.getElementsByClassName(
+				"range-transition-duration",
+			)[0].value;
 			if (transitionType === "") {
 				transitions.push("");
 			} else {
 				let transitionDuration = Number(transitionDurationStr);
 				// We don't have a sensible way to error out here, so default invalid durations to 1s
-				if ( !(transitionDuration > 0) ) {
+				if (!(transitionDuration > 0)) {
 					transitionDuration = 1;
 				}
 				transitions.push(`${transitionType},${transitionDuration}`);
@@ -1711,9 +1760,12 @@ function makeElement(tag, classes = [], values = {}) {
 
 function rangeDefinitionDOM() {
 	// Shortcut builder for image-based buttons
-	const button = (cls, src, alt) => makeElement("img", [cls, "click"], {
-		src, alt, title: alt,
-	});
+	const button = (cls, src, alt) =>
+		makeElement("img", [cls, "click"], {
+			src,
+			alt,
+			title: alt,
+		});
 
 	const rangeContainer = makeElement("div", ["range-definition-removable"]);
 
@@ -1731,7 +1783,10 @@ function rangeDefinitionDOM() {
 	updateTransitionTypes([transitionType]);
 
 	// Duration always starts hidden because type always starts as cut.
-	const transitionDurationSection = makeElement("div", ["range-transition-duration-section", "hidden"]);
+	const transitionDurationSection = makeElement("div", [
+		"range-transition-duration-section",
+		"hidden",
+	]);
 	// Add/remove hidden when type changes
 	transitionType.addEventListener("change", (event) => {
 		if (transitionType.value === "") {
@@ -1754,7 +1809,7 @@ function rangeDefinitionDOM() {
 	transitionContainer.append("Transition: ", transitionType, transitionDurationSection);
 
 	const rangeTimesContainer = makeElement("div", ["range-definition-times"]);
-	const rangeStart = makeElement("input", ["range-definition-start"], {type: "text"});
+	const rangeStart = makeElement("input", ["range-definition-start"], { type: "text" });
 	const rangeStartSet = button(
 		"range-definition-set-start",
 		"images/pencil.png",
@@ -1766,7 +1821,7 @@ function rangeDefinitionDOM() {
 		"Play from start point",
 	);
 	const rangeTimeGap = makeElement("div", ["range-definition-between-time-gap"]);
-	const rangeEnd = makeElement("input", ["range-definition-end"], {type: "text"});
+	const rangeEnd = makeElement("input", ["range-definition-end"], { type: "text" });
 	const rangeEndSet = button(
 		"range-definition-set-end",
 		"images/pencil.png",
@@ -1777,11 +1832,7 @@ function rangeDefinitionDOM() {
 		"images/play_to.png",
 		"Play from end point",
 	);
-	const removeRange = button(
-		"range-definition-remove",
-		"images/minus.png",
-		"Remove range",
-	);
+	const removeRange = button("range-definition-remove", "images/minus.png", "Remove range");
 
 	if (canEditVideo()) {
 		rangeStartSet.addEventListener("click", getRangeSetClickHandler("start"));
@@ -2233,26 +2284,26 @@ function isNonVideoInput(element) {
 	return element.id.startsWith("data-correction-force-reset");
 }
 
-/** 
+/**
  * Helper function to create the Jcrop widgets the first time the user chooses
- * to load the advanced template cropping tool images in a given session. 
+ * to load the advanced template cropping tool images in a given session.
  */
 function createTemplateCropWidgets() {
 	if (videoFrameStage == null) {
-		videoFrameStage = Jcrop.attach('video-info-thumbnail-template-video-source-image');
-		videoFrameStage.listen('crop.update',function(widget,e){
+		videoFrameStage = Jcrop.attach("video-info-thumbnail-template-video-source-image");
+		videoFrameStage.listen("crop.update", function (widget, e) {
 			const pos = widget.pos;
 			const fieldX1 = document.getElementById("video-info-thumbnail-crop-0");
 			const fieldY1 = document.getElementById("video-info-thumbnail-crop-1");
 			const fieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-crop-3");
 			// 640x320 -> 1920x1080
-			fieldX1.value = Math.round(pos.x*3);
-			fieldY1.value = Math.round(pos.y*3);
-			fieldX2.value = Math.round((pos.x+pos.w)*3);
-			fieldY2.value = Math.round((pos.y+pos.h)*3);
+			fieldX1.value = Math.round(pos.x * 3);
+			fieldY1.value = Math.round(pos.y * 3);
+			fieldX2.value = Math.round((pos.x + pos.w) * 3);
+			fieldY2.value = Math.round((pos.y + pos.h) * 3);
 		});
-		videoFrameStage.listen('crop.change',function(widget,e){
+		videoFrameStage.listen("crop.change", function (widget, e) {
 			// This only fires when the user is finished dragging, not every time the size
 			// of the cropped area updates. This avoids the template area updating every
 			// instant due to minute changes in the aspect ratio, which causes it to shrink
@@ -2261,18 +2312,18 @@ function createTemplateCropWidgets() {
 		});
 	}
 	if (templateStage == null) {
-		templateStage = Jcrop.attach('video-info-thumbnail-template-overlay-image');
-		templateStage.listen('crop.update',function(widget,e){
+		templateStage = Jcrop.attach("video-info-thumbnail-template-overlay-image");
+		templateStage.listen("crop.update", function (widget, e) {
 			const pos = widget.pos;
 			const fieldX1 = document.getElementById("video-info-thumbnail-location-0");
 			const fieldY1 = document.getElementById("video-info-thumbnail-location-1");
 			const fieldX2 = document.getElementById("video-info-thumbnail-location-2");
 			const fieldY2 = document.getElementById("video-info-thumbnail-location-3");
 			// 640x320 -> 1280x720
-			fieldX1.value = Math.round(pos.x*2);
-			fieldY1.value = Math.round(pos.y*2);
-			fieldX2.value = Math.round((pos.x+pos.w)*2);
-			fieldY2.value = Math.round((pos.y+pos.h)*2);
+			fieldX1.value = Math.round(pos.x * 2);
+			fieldY1.value = Math.round(pos.y * 2);
+			fieldX2.value = Math.round((pos.x + pos.w) * 2);
+			fieldY2.value = Math.round((pos.y + pos.h) * 2);
 		});
 	}
 
@@ -2290,7 +2341,12 @@ function updateTemplateCropWidgets() {
 	const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 	const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
 	// Video frame: 640x360 -> 1920x1080
-	const videoFrameRect = Jcrop.Rect.create(videoFieldX1.value/3, videoFieldY1.value/3, (videoFieldX2.value-videoFieldX1.value)/3, (videoFieldY2.value-videoFieldY1.value)/3);
+	const videoFrameRect = Jcrop.Rect.create(
+		videoFieldX1.value / 3,
+		videoFieldY1.value / 3,
+		(videoFieldX2.value - videoFieldX1.value) / 3,
+		(videoFieldY2.value - videoFieldY1.value) / 3,
+	);
 	if (videoFrameStage.active == null) {
 		videoFrameStage.newWidget(videoFrameRect);
 	} else {
@@ -2303,7 +2359,12 @@ function updateTemplateCropWidgets() {
 	const templateFieldX2 = document.getElementById("video-info-thumbnail-location-2");
 	const templateFieldY2 = document.getElementById("video-info-thumbnail-location-3");
 	// Template: 640x360 -> 1280x720
-	const templateRect = Jcrop.Rect.create(templateFieldX1.value/2, templateFieldY1.value/2, (templateFieldX2.value-templateFieldX1.value)/2, (templateFieldY2.value-templateFieldY1.value)/2);
+	const templateRect = Jcrop.Rect.create(
+		templateFieldX1.value / 2,
+		templateFieldY1.value / 2,
+		(templateFieldX2.value - templateFieldX1.value) / 2,
+		(templateFieldY2.value - templateFieldY1.value) / 2,
+	);
 	if (templateStage.active == null) {
 		templateStage.newWidget(templateRect);
 	} else {
@@ -2321,11 +2382,12 @@ function updateTemplateCropAspectRatio() {
 		const videoFieldY1 = document.getElementById("video-info-thumbnail-crop-1");
 		const videoFieldX2 = document.getElementById("video-info-thumbnail-crop-2");
 		const videoFieldY2 = document.getElementById("video-info-thumbnail-crop-3");
-		const videoFieldAspectRatio = (videoFieldX2.value-videoFieldX1.value)/(videoFieldY2.value-videoFieldY1.value);
-		videoFrameStage.setOptions({aspectRatio: videoFieldAspectRatio});
-		templateStage.setOptions({aspectRatio: videoFieldAspectRatio});
+		const videoFieldAspectRatio =
+			(videoFieldX2.value - videoFieldX1.value) / (videoFieldY2.value - videoFieldY1.value);
+		videoFrameStage.setOptions({ aspectRatio: videoFieldAspectRatio });
+		templateStage.setOptions({ aspectRatio: videoFieldAspectRatio });
 	} else {
-		videoFrameStage.setOptions({aspectRatio: null});
-		templateStage.setOptions({aspectRatio: null});
+		videoFrameStage.setOptions({ aspectRatio: null });
+		templateStage.setOptions({ aspectRatio: null });
 	}
 }
