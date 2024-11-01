@@ -132,7 +132,7 @@ CREATE TABLE nodes (
 
 CREATE TABLE roles (
 	-- email should always be lowercase since that's how the auth function compares it
-	email TEXT PRIMARY KEY CHECK email = lower(email),
+	email TEXT PRIMARY KEY CHECK (email = lower(email)),
 	name TEXT NOT NULL,
 	editor BOOLEAN NOT NULL DEFAULT FALSE,
 	artist BOOLEAN NOT NULL DEFAULT FALSE
