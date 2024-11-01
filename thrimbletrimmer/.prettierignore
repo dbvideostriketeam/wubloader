@@ -1,2 +1,4 @@
 scripts/hls.min.js
 scripts/luxon.min.js
+scripts/jcrop.js
+styles/jcrop.css
