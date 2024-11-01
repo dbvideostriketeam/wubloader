@@ -687,7 +687,7 @@ def add_template(artist=None):
 	with app.db_manager.get_conn() as conn:
 		#check if name is already in the database
 		query = sql.SQL("""
-			SELECT name FROM events WHERE name = %s 
+			SELECT name FROM templates WHERE name = %s 
 		""")
 		results = database.query(conn, query, new_template['name'])
 		if results.fetchone() is not None:
@@ -718,14 +718,14 @@ def update_template(name, artist=None):
 	with app.db_manage.get_conn() as conn:
 		#check if template is in database
 		query = sql.SQL("""
-			SELECT name FROM events WHERE name = %s 
+			SELECT name FROM templates WHERE name = %s 
 		""")
 		results = database.query(conn, query, name)
 		if results.fetchone() is None:
 			return 'Template with name {} does not exist'.format(name), 400
 		# check if new name is in database
 		query = sql.SQL("""
-			SELECT name FROM events WHERE name = %s 
+			SELECT name FROM templates WHERE name = %s 
 		""")
 		results = database.query(conn, query, new_template['name'])
 		if results.fetchone() is not None:
