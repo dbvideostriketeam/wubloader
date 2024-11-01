@@ -137,7 +137,7 @@ function generateDownloadURL(startTime, endTime, downloadType, allowHoles, quali
 
 	const query = new URLSearchParams({
 		type: downloadType,
-		allow_holes: allowHoles
+		allow_holes: allowHoles,
 	});
 	if (startURLTime) {
 		query.append("start", startURLTime);

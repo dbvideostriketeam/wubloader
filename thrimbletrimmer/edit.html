@@ -5,7 +5,7 @@
 		<title>VST Video Editor</title>
 
 		<link rel="stylesheet" href="styles/thrimbletrimmer.css" />
-		<link rel="stylesheet" href="styles/jcrop.css">
+		<link rel="stylesheet" href="styles/jcrop.css" />
 
 		<script src="scripts/hls.min.js"></script>
 		<script src="scripts/luxon.min.js"></script>
@@ -258,15 +258,17 @@
 					<div class="video-info-thumbnail-mode-options" id="video-info-thumbnail-position-options">
 						<details>
 							<summary>Advanced Templating Options</summary>
-							Crop specifies the region of the video frame to capture. <br/>
-							Location specifies the region within the template image where the cropped image will be placed. <br/>
-							Regions are given as pixel coordinates of the top-left and bottom-right corners. <br/>
-							Note that if the regions are different sizes, the image will be stretched. <br/>
+							Crop specifies the region of the video frame to capture. <br />
+							Location specifies the region within the template image where the cropped image will
+							be placed. <br />
+							Regions are given as pixel coordinates of the top-left and bottom-right corners.
+							<br />
+							Note that if the regions are different sizes, the image will be stretched. <br />
 
 							<button id="video-info-thumbnail-template-source-image-update">
 								Update Source Images
 							</button>
-							<br/>
+							<br />
 
 							<div class="video-info-thumbnail-advanced-crop-flex-wrapper">
 								<div class="video-info-thumbnail-advanced-crop-flex-item">
@@ -274,23 +276,41 @@
 										id="video-info-thumbnail-template-video-source-image"
 										class="hidden"
 										alt="Thumbnail preview image"
-										height="360" width="640"
+										height="360"
+										width="640"
 									/>
-									<br/>
+									<br />
 									Crop:
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-0" />
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-1" />
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-crop-0"
+									/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-crop-1"
+									/>
 									to
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-2" />
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-crop-3" />
-									<br/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-crop-2"
+									/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-crop-3"
+									/>
+									<br />
 								</div>
 
-								<div class="video-info-thumbnail-advanced-crop-flex-item hidden" id="video-info-thumbnail-aspect-ratio-controls">
+								<div
+									class="video-info-thumbnail-advanced-crop-flex-item hidden"
+									id="video-info-thumbnail-aspect-ratio-controls"
+								>
 									<div class="video-info-thumbnail-advanced-crop-flex-column">
-										<div>
-											Aspect Ratio
-										</div>
+										<div>Aspect Ratio</div>
 										<div>
 											<button id="video-info-thumbnail-aspect-ratio-match-right">
 												--Match-&gt;
@@ -303,7 +323,7 @@
 										</div>
 										<div>
 											<label>
-												<input type="checkbox" id="video-info-thumbnail-lock-aspect-ratio">
+												<input type="checkbox" id="video-info-thumbnail-lock-aspect-ratio" />
 												Lock
 											</label>
 										</div>
@@ -315,19 +335,35 @@
 										id="video-info-thumbnail-template-overlay-image"
 										class="hidden"
 										alt="Thumbnail preview image"
-										height="360" width="640"
+										height="360"
+										width="640"
 									/>
-									<br/>
+									<br />
 									Location:
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-0" />
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-1" />
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-location-0"
+									/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-location-1"
+									/>
 									to
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-2" />
-									<input type="text" class="video-info-thumbnail-position" id="video-info-thumbnail-location-3" />
-									<br/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-location-2"
+									/>
+									<input
+										type="text"
+										class="video-info-thumbnail-position"
+										id="video-info-thumbnail-location-3"
+									/>
+									<br />
 								</div>
 							</div>
-
 						</details>
 					</div>
 					<div
