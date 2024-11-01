@@ -236,28 +236,30 @@ def get_row(ident):
 	if is_archive:
 		response["allow_holes"] = True
 
-	# pick default thumbnail template based on start time.
-	# pick default frame time as the middle of the video.
-	# ignore both if video has no start time yet.
-	# or for archive events, no thumbnail.
-	DEFAULT_TEMPLATES = [
-		"zeta-right",
-		"dawnguard-right",
-		"alphaflight-right",
-		"nightwatch-right",
-	]
 	if is_archive:
 		response["thumbnail_mode"] = "NONE"
 	elif response['event_start'] is not None:
 		start = response['event_start']
-		if response['thumbnail_template'] is None:
-			# RDPs default to the RDP template. Others use the current shift.
-			if response['category'] == "RDP":
-				response['thumbnail_template'] = "rdp"
-			else:
-				pst_hour = (start.hour - 8) % 24
-				shift = int(pst_hour / 6)
-				response['thumbnail_template'] = DEFAULT_TEMPLATES[shift]
+
+		# use tags to determine default thumbnail template
+		if response['thumbnail_template'] is None
+			conn = app.db_manager.get_conn()
+			query = """
+				SELECT name, default_template
+				FROM playlists
+					"""
+			results = database.query(conn, query)
+			default_templates = {}
+			for row in results:
+				row = row._asdict:
+				if row['name'] and row['default_template']:
+					default_templates[row['name']] = row['default_template']
+
+			for tag in response['tags'][::-1]:
+				if tag in default_templates:
+					response['thumbnail_template'] = default_templates[tag]
+	
+		# pick default frame time as the middle of the video.
 		if response['thumbnail_time'] is None:
 			if response['event_end'] is not None:
 				# take full duration, and add half to start to get halfway
