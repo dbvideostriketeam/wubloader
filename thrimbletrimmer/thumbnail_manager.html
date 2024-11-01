@@ -9,50 +9,138 @@
 			content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com"
 		/>
 		<script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+		<link rel="stylesheet" href="styles/thumbnails.css" />
+		<script src="scripts/thumbnails.js"></script>
 	</head>
 	<body>
-		<h1>Create New Template</h1>
-		<div id="new-template-box">
-			<div>
-				<label for="new-template-name">Template name:</label>
-				<input type="text" id="new-template-name">
-		
-				<label for="new-template-image">Template image:</label>
-				<input type="file" id="new-template-image" accept="image/png" />
-				<br/>
+		<div id="template-list">
+			<h1>Template List</h1>
+			<table id="template-list-data">
+				<tr>
+					<th>Name</th>
+					<th>Description</th>
+					<th>Attribution</th>
+					<th>Crop Coordinates</th>
+					<th>Location Coordinates</th>
+					<th>Preview</th>
+				</tr>
+			</table>
+		</div>
 
-				<label for="new-template-description">Description:</label>
-				<textarea id="new-template-description"></textarea>
-				<br/>
+		<div id="template-new">
+			<h1>Add New Template</h1>
+			<ul id="template-new-errors"></ul>
+			<form id="template-new-form">
+				<div id="template-new-form-fields">
+					<div>
+						<label for="template-new-name">Name:</label>
+						<input type="text" name="name" id="template-new-name" />
+					</div>
+					<div>
+						<label for="template-new-image">Image:</label>
+						<input type="file" id="template-new-image" name="image" accept="image/png" />
+					</div>
+					<div>
+						<label for="template-new-description">Description:</label>
+						<textarea id="template-new-description" name="description"></textarea>
+					</div>
+					<div>
+						<label for="template-new-attribution">Attribution:</label>
+						<input type="text" id="template-new-attribution" name="attribution" />
+					</div>
+					<div>
+						<span>Crop:</span>
+						<span>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-crop-x-start"
+								name="cropxstart"
+								placeholder="X"
+								min="0"
+								step="1"
+							/>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-crop-y-start"
+								name="cropystart"
+								placeholder="Y"
+								min="0"
+								step="1"
+							/>
+							to
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-crop-x-end"
+								name="cropxend"
+								placeholder="X"
+								min="0"
+								step="1"
+							/>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-crop-y-end"
+								name="cropyend"
+								placeholder="Y"
+								min="0"
+								step="1"
+							/>
+						</span>
+					</div>
+					<div>
+						<span>Location:</span>
+						<span>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-location-x-start"
+								name="locxstart"
+								placeholder="X"
+								min="0"
+								step="1"
+							/>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-location-y-start"
+								name="locystart"
+								placeholder="Y"
+								min="0"
+								step="1"
+							/>
+							to
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-location-x-end"
+								name="locxend"
+								placeholder="X"
+								min="0"
+								step="1"
+							/>
+							<input
+								type="number"
+								class="template-new-coord"
+								id="template-new-location-y-end"
+								name="locyend"
+								placeholder="Y"
+								min="0"
+								step="1"
+							/>
+						</span>
+					</div>
+				</div>
 
-				<label for="new-template-attibution">Attribution:</label>
-				<textarea id="new-template-attibution"></textarea>
-				<br/>
-
-				Crop:
-				<input type="text" id="new-thumbnail-crop-0" />
-				<input type="text" id="new-thumbnail-crop-1" />
-				to
-				<input type="text" id="new-thumbnail-crop-2" />
-				<input type="text" id="new-thumbnail-crop-3" />
-				<br/>
-
-				Location:
-				<input type="text" id="new-thumbnail-location-0" />
-				<input type="text" id="new-thumbnail-location-1" />
-				to
-				<input type="text" id="new-thumbnail-location-2" />
-				<input type="text" id="new-thumbnail-location-3" />
-				<br/>
-
-				<button id="create-template">Create</button>
-			</div>
+				<button type="submit">Add Template</button>
+			</form>
 		</div>
 
 		<div id="google-authentication">
 			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
 			<a href="#" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
 		</div>
-
 	</body>
 </html>
