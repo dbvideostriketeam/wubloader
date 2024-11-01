@@ -222,6 +222,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	}
 
+	document.getElementById("range-definition-chapter-marker-first-description").addEventListener("input", (event) => {
+		validateChapterDescription(event.target);
+	});
 	document.getElementById("video-info-title").addEventListener("input", (event) => {
 		validateVideoTitle();
 		document.getElementById("video-info-title-abbreviated").innerText =
