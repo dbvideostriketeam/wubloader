@@ -375,6 +375,7 @@ class PlaylistsSync(SheetSync):
 		"first_event_id",
 		"last_event_id",
 		"show_in_description",
+		"default_template",
 	}
 
 
