@@ -1,0 +1,38 @@
+.hidden {
+	display: none;
+}
+
+#template-list-data {
+	border-collapse: collapse;
+}
+
+#template-list-data td {
+	border: 1px solid #000;
+	padding: 2px;
+}
+
+.template-list-preview {
+	width: 480px;
+}
+
+#template-new-errors {
+	color: #c00;
+}
+
+#template-new-form-fields {
+	display: grid;
+	grid-template-columns: max-content max-content;
+	gap: 1px;
+}
+
+#template-new-form-fields > div {
+	display: contents;
+}
+
+.template-new-coord {
+	width: 50px;
+}
+
+#google-authentication {
+	margin-top: 5px;
+}
