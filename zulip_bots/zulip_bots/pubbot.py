@@ -99,7 +99,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
 				increase_str = "" if increase is None else " (+${:.2f})".format(msg["d"] - total)
-				giveaway = get_giveaway()
+				giveaway = None
 				entries_str = ""
 				if increase is not None and giveaway is not None:
 					amount = giveaway["amount"]
