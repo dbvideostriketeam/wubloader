@@ -15,7 +15,7 @@ def stream():
 	tt = 0
 	tr = 0
 	while True:
-		resp = session.get("https://ps8.pndsn.com/v2/subscribe/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/db_total%2Cdb_vue/0",
+		resp = session.get("https://ps8.pndsn.com/v2/subscribe/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/total:RZZQRDQNLNLW/0",
 			params={
 				"tt": tt,
 				"tr": tr,
