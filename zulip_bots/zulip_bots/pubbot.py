@@ -15,7 +15,8 @@ def stream():
 	tt = 0
 	tr = 0
 	while True:
-		resp = session.get("https://ps8.pndsn.com/v2/subscribe/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/total:RZZQRDQNLNLW/0",
+		channels = ",".join(["total:JNQGRZPRCSSJ", "total:RZZQRDQNLNLW"])
+		resp = session.get(f"https://ps8.pndsn.com/v2/subscribe/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/{channels}/0",
 			params={
 				"tt": tt,
 				"tr": tr,
