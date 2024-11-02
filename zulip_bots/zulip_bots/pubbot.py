@@ -92,7 +92,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 
 			log["message_time"] = message_time
 
-			if msg["c"] == "db_total":
+			if msg["c"].startswith("total"):
 				log["type"] == "total"
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
