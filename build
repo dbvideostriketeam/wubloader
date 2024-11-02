@@ -47,7 +47,11 @@ CACHE_ARGS=()
 if [ -n "${CACHE_FROM:-}" ]; then
 	# Note lack of quotes here - we want to word split
 	for commit in $CACHE_FROM; do
-		tag=$(git rev-parse --short "$commit")
+		if [ "$commit" == "latest" ]; then
+			tag="latest"
+		else
+			tag=$(git rev-parse --short "$commit")
+		fi
 		for component in "${COMPONENTS[@]}"; do
 			CACHE_IMAGES+=("$BASE/wubloader-$component:$tag")
 			CACHE_ARGS+=("--cache-from" "$BASE/wubloader-$component:$tag")
