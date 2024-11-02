@@ -65,4 +65,4 @@ jobs:
         run: |
           export PUSH=true
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
-          CACHE_FROM=$(git rev-list HEAD -n1 --parents | cut -d" " -f 2-) ./build ${{ matrix.component }}
+          CACHE_FROM="latest" ./build ${{ matrix.component }}
