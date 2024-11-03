@@ -20,6 +20,11 @@ from . import atomic_write, ensure_directory, jitter, listdir
 from .stats import timed
 
 
+# Lots of things will tell you to go away if you don't look like a browser
+# (eg. imgur)
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36"
+
+
 media_bytes_downloaded = prom.Counter(
 	"media_bytes_downloaded",
 	"Number of bytes of media files downloaded. Includes data downloaded then later rejected.",
@@ -243,7 +248,10 @@ def _request(url, max_size, content_types):
 	else:
 		raise BadScheme(f"Bad scheme {parsed.scheme!r} for url {url}")
 
-	conn.request("GET", url, preload_content=False)
+	headers = {
+		"User-Agent": USER_AGENT,
+	}
+	conn.request("GET", url, headers=headers, preload_content=False)
 	resp = conn.getresponse()
 
 	# Redirects do not require further checks
@@ -251,7 +259,8 @@ def _request(url, max_size, content_types):
 		return resp
 
 	# 4xx errors are non-retryable, anything else is.
-	if 400 <= resp.status < 500:
+	# However 420 and 429 are "rate limit" errors, which should be retried.
+	if 400 <= resp.status < 500 and resp.status not in (420, 429):
 		raise FailedResponse(f"Url returned {resp.status} response: {url}")
 	elif not (200 <= resp.status < 300):
 		raise Exception(f"Url returned {resp.status} response: {url}")
@@ -308,9 +317,9 @@ def download_imgur_url(output_dir, max_size, url):
 			download_imgur_image(output_dir, max_size, url, id, ext)
 		return True
 	elif parsed.path.startswith("/a/"):
-		contents = download_imgur_album(parsed.path.removeprefix("/a/"))
-	elif parsed.path.startwith("/gallery/"):
-		contents = download_imgur_gallery(parsed.path.removeprefix("/gallery/"))
+		contents = download_imgur_album(url, parsed.path.removeprefix("/a/"))
+	elif parsed.path.startswith("/gallery/"):
+		contents = download_imgur_gallery(url, parsed.path.removeprefix("/gallery/"))
 	else:
 		# no match, treat like non-imgur link
 		return False
@@ -327,7 +336,7 @@ def download_imgur_url(output_dir, max_size, url):
 	# Save the album after trying to download things (so it will be retried until we get this far)
 	# but only raise for image download errors after, so we at least know about everything that
 	# succeeded.
-	contents_urls = [f"https://imgur.com/{id}.{ext}" for id, ext in contents]
+	contents_urls = [f"https://imgur.com/{id}" for id, ext in contents]
 	_save_content(output_dir, [url], "json", json.dumps(contents_urls))
 
 	if failed:
@@ -337,7 +346,9 @@ def download_imgur_url(output_dir, max_size, url):
 
 
 def imgur_request(url):
-	resp = requests.get(url, allow_redirects=False, timeout=30)
+	resp = requests.get(url, allow_redirects=False, timeout=30, headers={
+		"User-Agent": USER_AGENT,
+	})
 	if 300 <= resp.status_code < 400:
 		# imgur redirects you if the resource is gone instead of 404ing, treat this as non-retryable
 		raise Rejected(f"imgur returned redirect for {url!r}")
@@ -361,15 +372,14 @@ def download_imgur_gallery(url, id):
 	# The gallery JSON is contained in a <script> tag like this:
 	# <script>window.postDataJSON=...</script>
 	# where ... is a json string.
-	html = imgur_request(f"https://imgur.com/gallery/{id}").content
+	html = imgur_request(f"https://imgur.com/gallery/{id}").text
 	regex = r'<script>window.postDataJSON=("(?:[^"\\]|\\.)*")'
 	match = re.search(regex, html)
 	# If we can't find a match, assume we got served a 404 page instead.
 	if not match:
 		raise Rejected(f"Could not load gallery for {url!r}")
 	data = match.group(1)
-	# TODO python3 equivalent?
-	data = data[1:-1].decode("string-escape") # remove quotes and unescape contents
+	data = data[1:-1].encode().decode("unicode-escape") # remove quotes and unescape contents
 	data = json.loads(data)
 	result = []
 	for item in data.get("media", []):
@@ -381,4 +391,12 @@ def download_imgur_image(output_dir, max_size, url, id, ext):
 	"""Fetch imgur image and save it as per download_media()"""
 	image_url = f"https://i.imgur.com/{id}.{ext}"
 	resp = imgur_request(image_url)
-	_save_response(output_dir, [url, image_url], resp, max_size, 64*1024)
+	_save_content(output_dir, [url, image_url], ext, resp.content)
+
+
+if __name__ == '__main__':
+	import argh
+	def main(url, output_dir):
+		download_media(url, output_dir)
+
+	argh.dispatch_command(main)
