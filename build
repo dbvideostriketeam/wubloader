@@ -34,6 +34,9 @@ PUSH=${PUSH:-}
 # Base is the repository namespace information, not including the wubloader-component part.
 BASE="ghcr.io/dbvideostriketeam"
 
+# cache name is the name of the repository we store shared layer cache in
+CACHE_NAME="$BASE/wubloader-cache"
+
 # The docker image tag, derived from the git commit + whether working tree is clean
 TAG=$(./get-build-tag)
 
@@ -41,34 +44,30 @@ if [ "$#" -gt 0 ]; then
 	COMPONENTS=("$@")
 fi
 
-# If CACHE_FROM is set, explicitly pull and re-use specified image versions
-CACHE_IMAGES=()
-CACHE_ARGS=()
-if [ -n "${CACHE_FROM:-}" ]; then
-	# Note lack of quotes here - we want to word split
-	for commit in $CACHE_FROM; do
-		if [ "$commit" == "latest" ]; then
-			tag="latest"
-		else
-			tag=$(git rev-parse --short "$commit")
-		fi
-		for component in "${COMPONENTS[@]}"; do
-			CACHE_IMAGES+=("$BASE/wubloader-$component:$tag")
-			CACHE_ARGS+=("--cache-from" "$BASE/wubloader-$component:$tag")
-		done
-	done
-	echo "Trying to pull images for commits $CACHE_FROM if they exist, to re-use layers if possible"
-	for image in "${CACHE_IMAGES[@]}"; do
-		echo "Pulling $image"
-		docker pull "$image" || true # don't exit on failure
-	done
-fi
-
+# If CACHE is set, image layers will be pushed to the registry during the build,
+# and re-use any layers from this cache instead of rebuilding them.
+# You can set CACHE=readonly to only use the cache and not write to it (eg. due to permissions)
+# Setting CACHE requires buildah be installed and configured, as this is used for the build instead of docker.
+case "${CACHE:-}" in
+	"")
+		CACHE_ARGS=()
+		BUILD_CMD="docker"
+		;;
+	readonly)
+		CACHE_ARGS+=("--cache-from" "$CACHE_NAME")
+		BUILD_CMD="buildah"
+		;;
+	*)
+		CACHE_ARGS+=("--layers" "--cache-to" "$CACHE_NAME" "--cache-from" "$CACHE_NAME")
+		BUILD_CMD="buildah"
+		;;
+esac
+		
 for component in "${COMPONENTS[@]}"; do
 	echo "Building image for $component"
 	latest="$BASE/wubloader-$component:latest"
 	specific="$BASE/wubloader-$component:$TAG"
-	docker build \
+	"$BUILD_CMD" build \
 		-f "$component/Dockerfile" \
 		-t "$latest" \
 		-t "$specific" \
@@ -77,10 +76,10 @@ for component in "${COMPONENTS[@]}"; do
 	echo "Built image wubloader-$component:$TAG"
 	if [ -n "$PUSH" ]; then
 		echo "Pushing tag $specific"
-		docker push "$specific"
+		"$BUILD_CMD" push "$specific"
 	fi
 	if [ "$PUSH" == "latest" ]; then
 		echo "Pushing tag $latest"
-		docker push "$latest"
+		"$BUILD_CMD" push "$latest"
 	fi
 done
