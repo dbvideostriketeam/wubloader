@@ -763,6 +763,26 @@ def get_thumbnail(ident):
 			return '', 404
 			
 
+@app.route('/thrimshim/playlist-thumbnails/<tag>')
+@request_stats
+def playlist_thumbnail_info(tag):
+	"""Get info on the thumbnails of all videos with a given tag.
+
+	Returns a JSON list of objects conntaining the event id, video_id, upload_location, thumbnail_mode and thumbnail_template name of each public video with that tag.
+	"""
+	with app.db_manager.get_conn() as conn:
+		query = """
+			SELECT id, video_id, upload_location, thumbnail_mode, thumbnail_template
+			FROM events
+			WHERE %s = ANY (tags) AND state = 'DONE' AND public
+		"""
+		results = database.query(conn, query, tag)
+		videos = [row._asdict() for row in results]
+		if not videos:
+			return 'Tag {} not found'.format(tag), 404
+		
+		return to_json(videos)
+
 
 @app.route('/thrimshim/bus/<channel>')
 @request_stats
