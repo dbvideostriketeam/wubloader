@@ -9,29 +9,10 @@ import requests
 import bs4
 from bs4 import BeautifulSoup
 
+from .zulip import Client
+from .config import get_config
+
 logging.basicConfig(level='INFO')
-
-class Client(object):
-	def __init__(self, base_url, email, api_key):
-		self.base_url = base_url
-		self.email = email
-		self.api_key = api_key
-
-	def request(self, method, *path, **params):
-		if method == 'GET':
-			args = {"params": params}
-		else:
-			args = {"data": {
-				k: v if isinstance(v, str) else json.dumps(v)
-				for k, v in params.items()
-			}}
-		url = "/".join([self.base_url, "api/v1"] + list(map(str, path)))
-		resp = requests.request(method, url, auth=(self.email, self.api_key), **args)
-		if not resp.ok:
-			logging.info(repr(params))
-			logging.info(f"Got {resp.status_code} for {url}: {resp.text}")
-		resp.raise_for_status()
-		return resp.json()
 
 def html_to_md(html):
 	"""Lossy attempt to convert html to markdown"""
@@ -137,11 +118,12 @@ def send_post(client, stream, topic, id, html):
 		content=content,
 	)
 
-def main(zulip_url, zulip_email, zulip_key, interval=60, test=False, stream='bot-spam', topic='Blog Posts'):
+def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts'):
 	"""Post to zulip each new blog post, checking every INTERVAL seconds.
 	Will not post any posts that already exist, unless --test is given
 	in which case it will print the most recent on startup."""
-	client = Client(zulip_url, zulip_email, zulip_key)
+	config = get_config(config_file)
+	client = Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
 	seen = set()
 	first = True
 	while True:
