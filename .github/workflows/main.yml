@@ -19,7 +19,7 @@ permissions:
 # build components using a job matrix, so they can run in parallel
 jobs:
   build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
       matrix:
@@ -65,4 +65,4 @@ jobs:
         run: |
           export PUSH=true
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
-          CACHE_FROM="latest" ./build ${{ matrix.component }}
+          CACHE=true ./build ${{ matrix.component }}
