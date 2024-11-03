@@ -63,6 +63,9 @@ jobs:
         # if not a pull request and a push to master, also push "latest" tag
         # try to cache from previous build and then build component using build script
         run: |
-          export PUSH=true
+          export PUSH=true CACHE=true
+          # Only push latest when pushing to master
           if [ "$GITHUB_EVENT_NAME" != "pull_request" ] && [ "$GITHUB_REF" == "refs/heads/master" ]; then export PUSH=latest; fi
-          CACHE=true ./build ${{ matrix.component }}
+          # PRs from forked repositories can't have package write permissions, so use cache in readonly mode in those cases.
+          if [ '${{ github.event.pull_request.head.repo.full_name }}' != "dbvideostriketeam/wubloader" ]; then export CACHE=readonly; fi
+          ./build ${{ matrix.component }}
