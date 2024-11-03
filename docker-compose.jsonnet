@@ -35,6 +35,7 @@
     tootbot: false,
     twitchbot: false,
     pubbot: false,
+    blogbot: false,
     bus_analyzer: false,
     graphs: false,
   },
@@ -315,6 +316,7 @@
     args:: [],
   },
 
+  blogbot:: self.pubbot,
   pubbot:: {
     zulip_email: "blog-bot@chat.videostrike.team",
     zulip_api_key: "",
@@ -751,6 +753,10 @@
         volumes: ["%s:/mnt" % $.segments_path],
       },
 
+    [if $.enabled.blogbot then "blogbot"]:
+      bot_service("blogbot", $.blogbot + {
+        zulip_url: $.zulip_url,
+      }),
   },
 
 }
