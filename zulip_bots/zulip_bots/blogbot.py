@@ -2,6 +2,7 @@
 import json
 import logging
 import time
+import re
 
 import argh
 import requests
@@ -58,6 +59,9 @@ def html_to_md(html):
 	if html.name == "p":
 		return inner + "\n"
 
+	if html.name == "li":
+		return "\n* " + inner
+
 	CHAR_FORMAT = { 
 		"b": "**",
 		"strong": "**",
@@ -79,26 +83,53 @@ def html_to_md(html):
 
 	return inner
 
-def blog_to_md(blog):
-	md_content = html_to_md(BeautifulSoup(blog["content"], "html.parser"))
+def blog_to_md(id, html):
+	title = "UNKNOWN"
+	author = "UNKNOWN"
+	date = "UNKNOWN"
+	try:
+		a = html.a
+		authoring, content = html.find_all("div", recursive=False)
+
+		title = a.string
+		author_candidates = authoring.find_all(string=lambda v: v.startswith("Posted by"))
+		if len(author_candidates) == 1:
+			author = author_candidates[0]
+		date_element = authoring.find("astro-island")
+		if date_element is not None:
+			try:
+				props = json.loads(date_element["props"])
+				timestamp = props["time"][1]
+				date = f"<time:{timestamp}>"
+			except Exception:
+				pass # error determining date, ignore
+		md_content = html_to_md(content)
+	except Exception as e:
+		md_content = f"Parsing blog failed, please see logs: {e}"
+
 	return "\n".join([
-		"Blog Post: [{title}](https://desertbus.org/?id={id})".format(**blog),
-		"Posted by {author} at <time:{date}>".format(**blog),
+		f"Blog Post: [{title}](https://desertbus.org/?id={id})",
+		f"Posted by {author} at {date}",
 		"```quote",
 		md_content,
 		"```",
 	])
 
 def get_posts():
-	"""Get all blog posts on the front page"""
-	resp = requests.get("https://desertbus.org/wapi/blog/1")
+	"""Get all blog posts on the front page as (id, html)"""
+	# Need to clear UA or we get blocked due to "python" in UA
+	resp = requests.get("https://desertbus.org/2024/", headers={"User-Agent": ""})
 	resp.raise_for_status()
-	posts = resp.json()["posts"]
-	logging.info("Fetched posts: {}".format(", ".join(post['id'] for post in posts)))
+	# Requests doesn't correctly guess this is utf-8
+	html = BeautifulSoup(resp.content.decode(), "html.parser")
+	posts = []
+	for a in html.find_all("a", href=re.compile(r"^\?id=")):
+		id = a["href"].removeprefix("?id=")
+		posts.append((id, a.parent))
 	return posts
 
-def send_post(client, stream, topic, post):
-	content = blog_to_md(post)
+def send_post(client, stream, topic, id, html):
+	content = blog_to_md(id, html)
 	client.request("POST", "messages",
 		type="stream",
 		to=stream,
@@ -121,15 +152,16 @@ def main(zulip_url, zulip_email, zulip_key, interval=60, test=False, stream='bot
 			logging.exception("Failed to get posts")
 		else:
 			if first:
-				seen = set(post['id'] for post in posts)
+				seen = set(id for id, html in posts)
 				if test:
-					send_post(client, stream, topic, posts[0])
+					id, html = posts[0]
+					send_post(client, stream, topic, id, html)
 				first = False
 			else:
-				for post in posts[::-1]:
-					if post['id'] not in seen:
-						send_post(client, stream, topic, post)
-						seen.add(post['id'])
+				for id, html in posts[::-1]:
+					if id not in seen:
+						send_post(client, stream, topic, id, html)
+						seen.add(id)
 		remaining = start + interval - time.time()
 		if remaining > 0:
 			time.sleep(remaining)
