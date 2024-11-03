@@ -83,7 +83,7 @@ def authenticate_artist(f):
 	@wraps(f)
 	def artist_auth_wrapper(*args, **kwargs):
 		if app.no_authentication:
-			return f(*args, editor='NOT_AUTH', **kwargs)
+			return f(*args, artist='NOT_AUTH', **kwargs)
 
 		message, code = check_user(flask.request, 'artist')
 		if code != 200:
