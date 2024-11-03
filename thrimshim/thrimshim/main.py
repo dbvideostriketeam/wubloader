@@ -644,9 +644,12 @@ def get_template_metadata(name):
 		logging.info('Thumbnail metadata of {} fetched'.format(name))
 		return json.dumps(row._asdict())
 
-def validate_template(new_template):
+def validate_template(new_template, require_image=True):
 
-	columns = ['name', 'image', 'description', 'attribution', 'crop', 'location']
+	columns = ['name', 'description', 'attribution', 'crop', 'location']
+	if require_image or 'image' in new_template:
+		columns += ['image']
+
 	#check for missing fields
 	missing = set(columns) - set(new_template)
 	if missing:
@@ -656,15 +659,16 @@ def validate_template(new_template):
 	for extra in extras:
 		del new_template[extra]
 
-	#convert and validate template image
-	try:
-		new_template['image'] = base64.b64decode(new_template['image'])
-	except binascii.Error:
-		return None, 'Template image must be valid base64', 400
-	# check for PNG file header
-	if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
-		return None, 'Template image must be a PNG', 400
-
+	if 'image' in columns:
+		#convert and validate template image
+		try:
+			new_template['image'] = base64.b64decode(new_template['image'])
+		except binascii.Error:
+			return None, 'Template image must be valid base64', 400
+		# check for PNG file header
+		if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+			return None, 'Template image must be a PNG', 400
+	
 	return columns, new_template, 200
 
 
@@ -704,7 +708,7 @@ def add_template(artist=None):
 @authenticate_artist
 def update_template(name, artist=None):
 	"""Update a template in the database"""
-	columns, message, code = validate_template(flask.request.json)
+	columns, message, code = validate_template(flask.request.json, False)
 	if code != 200:
 		return message, code
 	new_template = message
