@@ -12,6 +12,7 @@ setup(
 		"psycopg2",
 		"python-dateutil",
 		"requests",
+        "tzinfo",
 		"wubloader-common",
 	],
 )
