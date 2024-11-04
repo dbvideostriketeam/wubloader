@@ -100,7 +100,7 @@
   authentication:: true, // set to false to disable auth in thrimshim
 
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
-
+  buscribe:: true, // set to false to not have nginx serve buscribe pages.
   nginx_serve_segments:: true, // set to false to not have nginx serve segments directly, letting restreamer do it instead.
 
   ssl_certificate_path:: null, // set to path to SSL certs (cert chain + priv key in one file) to enable SSL
@@ -633,6 +633,7 @@
           if service in $.enabled && $.enabled[service]
         ]),
         THRIMBLETRIMMER: if $.thrimbletrimmer then "true" else "",
+        BUSCRIBE: if $.buscribe then "true" else "",
         SEGMENTS: if $.nginx_serve_segments then "/mnt" else "",
         SSL: if $.ssl_certificate_path != null then "/certs.pem" else "",
       },
