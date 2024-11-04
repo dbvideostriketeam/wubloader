@@ -176,6 +176,27 @@
   // The timestamp corresponding to 00:00 in bustime
   bustime_start:: "1970-01-01T00:00:00Z",
 
+  // the local timezone of the event for determining shifts
+  timezone:: "America/Vancouver",
+
+  // definition of the shifts
+  // repeating shifts are defined in terms of local hours
+  // one off times are defined either with datetimes or with URLs that return a datetime 
+  // if a one-off shift has an end but no start, it is considered to have started at the earliest time Python supports; if it has a start but no end, it is considered to end at the latest time Python supports; shifts with neither 
+  shift_defs:: {
+                repeating: [
+                            ["Zeta Shift", 0, 6],
+   					        ["Dawn Guard", 6, 12],
+                            ["Alpha Flight", 12, 18],
+							["Night Watch", 18, 24],
+                           ],
+			    one_off: [
+                          ["Tech Test", null, $.bustime_start],
+				    	  ["Omega Shift", "http://example.com/omega_start.html", null],
+                         ]
+               },
+  shifts:: std.manifestJson($.shift_defs),
+
   // The timestamps to start/end segment coverage maps at.
   // Generally 1 day before and 7 days after bus start.
   coverage_start:: "1969-12-31T00:00:00Z",
@@ -536,6 +557,8 @@
       image: $.get_image("sheetsync"),
       // Args for the sheetsync
       command: [
+		"--timezone", $.timezone,
+        "--shifts", $.shifts,
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,
       ]
