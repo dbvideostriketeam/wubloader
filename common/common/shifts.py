@@ -45,8 +45,8 @@ def parse_shifts(shifts):
          ['Start Only', '2024-01-02T00:00:00', '9999-12-31T23:59:59.999999'],
          ['URL', '2023-12-31T12:00:00', '2024-01-01T00:00:00']]
          """
-    new_shifts = {'repeating':shifts['repeating'], 'one-off':[]}
-    for shift in shifts['one-off']:
+    new_shifts = {'repeating':shifts['repeating'], 'one_off':[]}
+    for shift in shifts['one_off']:
         name, start, end = shift
         start = parse_shift_time(start)
         end = parse_shift_time(end)
@@ -56,7 +56,7 @@ def parse_shifts(shifts):
             start = datetime.datetime.min
         if end is None:
             end = datetime.datetime.max
-        new_shifts['one-off'].append([name, start, end])       
+        new_shifts['one_off'].append([name, start, end])       
     return new_shifts
 
 
@@ -68,7 +68,7 @@ def calculate_shift(time, shifts, timezone):
     if not time:
         return ''
     
-    for shift in shifts['one-off']:
+    for shift in shifts['one_off']:
         print(time, shift[1], shift[2])
         if shift[1] <= time < shift[2]:
             return shift[0]
