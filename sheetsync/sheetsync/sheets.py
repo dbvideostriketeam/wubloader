@@ -292,6 +292,11 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			"tags": lambda v: ", ".join(v),
 		}
 
+	def get_rows(self):
+		# only need to update the shifts once per sync
+		self.latest_shifts = common.shifts.parse_shifts(self.shifts)
+		return super().get_rows()
+
 	def parse_bustime(self, value, preserve_dash=False):
 		"""Convert from HH:MM or HH:MM:SS format to datetime.
 		If preserve_dash=True and value is "--", returns "--"
@@ -301,7 +306,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			return None
 		if value.strip() == "--":
 			return "--" if preserve_dash else None
-		bustime = common.parse_bustime(value)
+		bustime = common.shifts.parse_bustime(value)
 		return common.bustime_to_dt(self.bustime_start, bustime)
 
 	def encode_bustime(self, value):
@@ -328,7 +333,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		if 'tags' in row_dict:
 			row_dict['tags'] = (
 				[
-					calculate_shift(row_dict['event_start'])
+					common.shifts.calculate_shift(row_dict['event_start'], self.current_shifts, self.timezone), 
 					row_dict['category'], # category name
 					worksheet, # sheet name
 				] + (['Poster Moment'] if row_dict['poster_moment'] else [])
