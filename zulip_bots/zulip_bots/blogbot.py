@@ -124,7 +124,7 @@ def send_post(client, stream, topic, id, html):
 	)
 
 def save_post(save_dir, id, html):
-	hash = b64encode(sha256(html).digest(), b"-_").decode().rstrip("=")
+	hash = b64encode(sha256(html.encode()).digest(), b"-_").decode().rstrip("=")
 	filename = f"{id}-{hash}.json"
 	filepath = os.path.join(save_dir, filename)
 	if os.path.exists(filepath):
