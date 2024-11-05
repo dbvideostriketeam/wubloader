@@ -1,7 +1,6 @@
 
 import logging
 import uuid
-import zoneinfo
 
 from monotonic import monotonic
 
@@ -274,8 +273,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		self.bustime_start = bustime_start
 		self.edit_url = edit_url
 
-		# fallback to no shifts if there is a shift parsing error
-		self.latest_shifts = {'repeating':[], 'one_off':[], 'timezone':zoneinfo.ZoneInfo('UTC')}
+		self.latest_shifts = common.shifts.parse_shifts(self.shifts)
 
 		# column parsers are defined here so they can reference self
 		self.column_parsers = {
@@ -300,8 +298,8 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# only need to update the shifts once per sync
 		try:
 			self.latest_shifts = common.shifts.parse_shifts(self.shifts)
-		except Exception as e:
-			logging.error('Error parsing shifts with {}. Using previous shifts definition.'.format(e))
+		except Exception:
+			logging.exception('Error parsing shifts with. Using previous shifts definition.')
 
 		return super().get_rows()
 
@@ -339,7 +337,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# This is only needed for full events (not the archive sheet),
 		# so only do it if we had a tags column in the first place.
 		if 'tags' in row_dict:
-			shift_tag = common.shifts.calculate_shift(row_dict['event_start'], self.current_shifts)
+			shift_tag = common.shifts.calculate_shift(row_dict['event_start'], self.latest_shifts)
 			row_dict['tags'] = (
 				([shift_tag] if shift_tag is not None else [])
 				[
