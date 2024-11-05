@@ -169,7 +169,7 @@ def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Po
 		else:
 			if save_dir is not None:
 				for id, html in posts:
-					save_post(save_dir, id, html)
+					save_post(save_dir, id, str(html))
 			if first:
 				seen = set(id for id, html in posts)
 				if test:
