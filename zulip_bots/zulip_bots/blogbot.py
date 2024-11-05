@@ -1,8 +1,13 @@
 
 import json
 import logging
-import time
+import os
 import re
+import time
+from base64 import b64encode
+from datetime import datetime
+from hashlib import sha256
+from uuid import uuid4
 
 import argh
 import requests
@@ -43,7 +48,7 @@ def html_to_md(html):
 	if html.name == "li":
 		return "\n* " + inner
 
-	CHAR_FORMAT = { 
+	CHAR_FORMAT = {
 		"b": "**",
 		"strong": "**",
 		"h1": "**",
@@ -57,7 +62,7 @@ def html_to_md(html):
 		"del": "~~",
 		"pre": "`",
 		"code": "`",
-	}   
+	}
 	if html.name in CHAR_FORMAT:
 		char = CHAR_FORMAT[html.name]
 		return f"{char}{inner}{char}"
@@ -118,7 +123,36 @@ def send_post(client, stream, topic, id, html):
 		content=content,
 	)
 
-def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts'):
+def save_post(save_dir, id, html):
+	hash = b64encode(sha256(html).digest(), b"-_").decode().rstrip("=")
+	filename = f"{id}-{hash}.json"
+	filepath = os.path.join(save_dir, filename)
+	if os.path.exists(filepath):
+		return
+	content = {
+		"id": id,
+		"hash": hash,
+		"retrieved_at": datetime.utcnow().isoformat() + "Z",
+		"html": html,
+	}
+	atomic_write(filepath, json.dumps(content) + "\n")
+
+# This is copied from common, which isn't currently installed in zulip_bots.
+# Fix that later.
+def atomic_write(filepath, content):
+	if isinstance(content, str):
+		content = content.encode("utf-8")
+	temp_path = "{}.{}.temp".format(filepath, uuid4())
+	dir_path = os.path.dirname(filepath)
+	os.makedirs(dir_path, exist_ok=True)
+	with open(temp_path, 'wb') as f:
+		f.write(content)
+	try:
+		os.rename(temp_path, filepath)
+	except FileExistsError:
+		os.remove(temp_path)
+
+def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts', save_dir=None):
 	"""Post to zulip each new blog post, checking every INTERVAL seconds.
 	Will not post any posts that already exist, unless --test is given
 	in which case it will print the most recent on startup."""
@@ -133,6 +167,9 @@ def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Po
 		except Exception:
 			logging.exception("Failed to get posts")
 		else:
+			if save_dir is not None:
+				for id, html in posts:
+					save_post(id, html)
 			if first:
 				seen = set(id for id, html in posts)
 				if test:

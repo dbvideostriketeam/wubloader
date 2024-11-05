@@ -757,7 +757,9 @@
     [if $.enabled.blogbot then "blogbot"]:
       bot_service("blogbot", $.blogbot + {
         zulip_url: $.zulip_url,
-      }),
+      }, ["--save-dir", "/mnt/blogs"]) + {
+        volumes: ["%s:/mnt" % $.segments_path],
+      },
   },
 
 }
