@@ -245,15 +245,12 @@ def get_row(ident):
 		if response['thumbnail_template'] is None:
 			conn = app.db_manager.get_conn()
 			query = """
-				SELECT tags, default_template
+				SELECT tags[1] as tag, default_template
 				FROM playlists
-				WHERE default_template IS NOT NULL
+				WHERE cardinality(tags) = 1 AND default_template IS NOT NULL
 			"""
 			results = database.query(conn, query)
-			default_templates = {}
-			for row in results:
-				for tag in row.tags:
-					default_templates[tag] = row.default_template
+			default_templates = {row.tag: row.default_template for row in results}
 
 			# since implicit tags are put at the start, with the shift tag first
 			# we prioritize later tags  
