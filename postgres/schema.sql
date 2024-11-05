@@ -157,7 +157,7 @@ CREATE TABLE playlists (
 	first_event_id TEXT,
 	last_event_id TEXT,
 	-- name of the thumbnail template to be applied by default to this tag
-	default_template TEXT NOT NULL DEFAULT ''
+	default_template TEXT
 );
 
 -- This table records time series data gleaned from the bus cam (right now, just the odometer).

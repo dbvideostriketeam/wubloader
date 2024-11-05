@@ -1,6 +1,7 @@
 
 import logging
 import uuid
+import zoneinfo
 
 from monotonic import monotonic
 
@@ -273,6 +274,9 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		self.bustime_start = bustime_start
 		self.edit_url = edit_url
 
+		# fallback to no shifts if there is a shift parsing error
+		self.latest_shifts = {'repeating':[], 'one_off':[], 'timezone':zoneinfo.ZoneInfo('UTC')}
+
 		# column parsers are defined here so they can reference self
 		self.column_parsers = {
 			'event_start': self.parse_bustime,
@@ -294,7 +298,11 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 
 	def get_rows(self):
 		# only need to update the shifts once per sync
-		self.latest_shifts = common.shifts.parse_shifts(self.shifts)
+		try:
+			self.latest_shifts = common.shifts.parse_shifts(self.shifts)
+		except Exception as e:
+			logging.error('Error parsing shifts with {}. Using previous shifts definition.'.format(e))
+
 		return super().get_rows()
 
 	def parse_bustime(self, value, preserve_dash=False):
@@ -331,9 +339,10 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# This is only needed for full events (not the archive sheet),
 		# so only do it if we had a tags column in the first place.
 		if 'tags' in row_dict:
+			shift_tag = common.shifts.calculate_shift(row_dict['event_start'], self.current_shifts)
 			row_dict['tags'] = (
+				([shift_tag] if shift_tag is not None else [])
 				[
-					common.shifts.calculate_shift(row_dict['event_start'], self.current_shifts, self.timezone), 
 					row_dict['category'], # category name
 					worksheet, # sheet name
 				] + (['Poster Moment'] if row_dict['poster_moment'] else [])

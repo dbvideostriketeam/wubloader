@@ -2,7 +2,6 @@
 import json
 import logging
 import signal
-import zoneinfo
 from collections import defaultdict
 from urllib.parse import urlparse
 
@@ -277,11 +276,10 @@ class EventsSync(SheetSync):
 		"category",
 	}
 
-	def __init__(self, name, middleware, stop, dbmanager, reverse_sync=False, media_dir=None, timezone=None, shifts=None):
+	def __init__(self, name, middleware, stop, dbmanager, reverse_sync=False, media_dir=None, shifts=None):
 		super().__init__(name, middleware, stop, dbmanager, reverse_sync)
 		self.media_dir = media_dir
 		self.media_downloads = None if media_dir is None else {}
-		self.timezone = timezone
 		self.shifts = shifts
 		
 
@@ -417,14 +415,22 @@ class PlaylistsSync(SheetSync):
 			event_id: The id of the streamlog event to sync
 	""",
 )
-@argh.arg('--timezone', help="Local timezone for determining shift times")
 @argh.arg('--shifts', type=json.loads, help="""
 	Shift definitions in JSON form.
 	Always present:
-		repeating: a list of repeating shifts. Each of these consist of a sequence of shift name, start hour and end hour. The start and end hours are in local time.
-		one_off: a list of non-repeating shifts. Each of these consist of a sequence of shift name, start and end. A start or end time can be a string repersenting timestamp or a URL or null. If it is a URL, the URL will be queried for a timestamp. If no timezone info is provided the timestamp will be assumed to be UTC. If the start time is None, then the start will be assumed to be the earliest possible datetime; if the end is None, it will be assumed to be the oldest possible datetime. If both the start and end are None, the shift will be ignored. 
+		repeating: a list of repeating shifts.
+			Each of these consist of a sequence of shift name, start hour and end hour.
+			The start and end hours are in local time.
+		one_off: a list of non-repeating shifts.
+			Each of these consist of a sequence of shift name, start and end.
+			A start or end time can be a string repersenting timestamp or a URL or null.
+			If it is a URL, the URL will be queried for a timestamp.
+			If no timezone info is provided the timestamp will be assumed to be UTC.
+			If the start time is None, then the start will be assumed to be the earliest possible datetime;
+			if the end is None, it will be assumed to be the oldest possible datetime. 
+		timezone: a string interpretable by the zoneinfo package as a timezone
 	""")
-def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=".", shifts=None, timezone=None):
+def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=".", shifts=None):
 	"""
 	Sheet sync constantly scans a Google Sheets sheet and a database, copying inputs from the sheet
 	to the DB and outputs from the DB to the sheet.
@@ -443,6 +449,9 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=
 	gevent.signal_handler(signal.SIGTERM, stop.set) # shut down on sigterm
 
 	logging.info("Starting up")
+
+	if shifts is None:
+		shifts = {'repeating':[], 'one_off':[], 'timezone':'UTC'}
 
 	dbmanager = DBManager(dsn=dbconnect)
 	while True:
@@ -520,7 +529,6 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=
 		}[config["type"]]
 		sync_class_kwargs = {}
 		if config["type"] == "events":
-			sync_class_kwargs["timezone"] = zoneinfo.ZoneInfo(timezone)
 			sync_class_kwargs["shifts"] = shifts
 		if config["type"] == "events" and config.get("download_media", False):
 			sync_class_kwargs["media_dir"] = media_dir
