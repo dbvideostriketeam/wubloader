@@ -5,6 +5,7 @@ import uuid
 from monotonic import monotonic
 
 import common
+import common.shifts
 
 from .middleware import Middleware
 
