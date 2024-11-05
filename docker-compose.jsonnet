@@ -186,14 +186,15 @@
   shift_defs:: {
                 repeating: [
                             ["Zeta Shift", 0, 6],
-   					        ["Dawn Guard", 6, 12],
+                            ["Dawn Guard", 6, 12],
                             ["Alpha Flight", 12, 18],
-							["Night Watch", 18, 24],
+                            ["Night Watch", 18, 24],
                            ],
-			    one_off: [
+                one_off: [
                           ["Tech Test", null, $.bustime_start],
-				    	  ["Omega Shift", "http://example.com/omega_start.html", null],
-                         ]
+                          ["Omega Shift", "http://example.com/omega_start.html", null],
+                         ],
+                timezone: $.timezone,
                },
   shifts:: std.manifestJson($.shift_defs),
 
@@ -557,7 +558,6 @@
       image: $.get_image("sheetsync"),
       // Args for the sheetsync
       command: [
-		"--timezone", $.timezone,
         "--shifts", $.shifts,
         "--backdoor-port", std.toString($.backdoor_port),
         $.db_connect,

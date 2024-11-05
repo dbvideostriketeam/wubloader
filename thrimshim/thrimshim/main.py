@@ -242,22 +242,25 @@ def get_row(ident):
 		start = response['event_start']
 
 		# use tags to determine default thumbnail template
-		if response['thumbnail_template'] is None
+		if response['thumbnail_template'] is None:
 			conn = app.db_manager.get_conn()
 			query = """
-				SELECT name, default_template
+				SELECT tags, default_template
 				FROM playlists
-					"""
+				WHERE default_template IS NOT NULL
+			"""
 			results = database.query(conn, query)
 			default_templates = {}
 			for row in results:
-				row = row._asdict:
-				if row['name'] and row['default_template']:
-					default_templates[row['name']] = row['default_template']
+				for tag in row.tag:
+					default_templates[tag] = row.default_template
 
+			# since implicit tags are put at the start, with the shift tag first
+			# we prioritize later tags  
 			for tag in response['tags'][::-1]:
 				if tag in default_templates:
 					response['thumbnail_template'] = default_templates[tag]
+					break
 	
 		# pick default frame time as the middle of the video.
 		if response['thumbnail_time'] is None:
