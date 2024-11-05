@@ -252,7 +252,7 @@ def get_row(ident):
 			results = database.query(conn, query)
 			default_templates = {}
 			for row in results:
-				for tag in row.tag:
+				for tag in row.tags:
 					default_templates[tag] = row.default_template
 
 			# since implicit tags are put at the start, with the shift tag first
