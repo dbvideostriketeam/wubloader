@@ -216,6 +216,7 @@ class SheetsPlaylistsMiddleware(SheetsMiddleware):
 		"first_event_id": EMPTY_IS_NONE,
 		"last_event_id": EMPTY_IS_NONE,
 		"id": EMPTY_IS_NONE,
+		"default_template": EMPTY_IS_NONE,
 	}
 
 	column_encode = {
