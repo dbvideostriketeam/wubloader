@@ -269,10 +269,11 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		'id': 15,
 	}
 
-	def __init__(self, client, sheet_id, worksheets, bustime_start, edit_url, allocate_ids=False):
+	def __init__(self, client, sheet_id, worksheets, bustime_start, edit_url, shifts, allocate_ids=False):
 		super().__init__(client, sheet_id, worksheets, allocate_ids)
 		self.bustime_start = bustime_start
 		self.edit_url = edit_url
+		self.shifts = shifts
 
 		self.latest_shifts = common.shifts.parse_shifts(self.shifts)
 
