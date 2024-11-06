@@ -668,7 +668,7 @@ def validate_template(new_template, require_image=True):
 		except binascii.Error:
 			return None, 'Template image must be valid base64', 400
 		# check for PNG file header
-		if not new_template['thumbnail_image'].startswith(b'\x89PNG\r\n\x1a\n'):
+		if not new_template['image'].startswith(b'\x89PNG\r\n\x1a\n'):
 			return None, 'Template image must be a PNG', 400
 	
 	return columns, new_template, 200
