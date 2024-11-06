@@ -79,7 +79,7 @@ def parse_shifts(shifts):
 	return new_shifts
 
 
-def calculate_shift(time, shifts, timezone):
+def calculate_shift(time, shifts):
 	"""
 	Calculate what shift a time falls in. 
 
@@ -95,7 +95,7 @@ def calculate_shift(time, shifts, timezone):
 			return shift[0]
 		
 	#since shifts are based on local times we have to worry about timezones for once
-	local_time = time.replace(tzinfo=UTC).astimezone(timezone)
+	local_time = time.replace(tzinfo=UTC).astimezone(shifts['timezone'])
 	# do a more involved calculation to allow for non-integer start and end hours
 	hour = local_time.hour + local_time.minute / 60 + local_time.second / 3600
 	for shift in shifts['repeating']:
