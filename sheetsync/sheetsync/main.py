@@ -481,23 +481,18 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=
 				client_secret=creds['client_secret'],
 				refresh_token=creds['refresh_token'],
 			)
-			if config["type"] == "events":
-				middleware = SheetsEventsMiddleware(
+			if config["type"] in ("events", "archive"):
+				middleware_cls = {
+					"events": SheetsEventsMiddleware,
+					"archive": SheetsArchiveMiddleware,
+				}[config["type"]]
+				middleware = middleware_cls(
 					client,
 					config["sheet_id"],
 					config["worksheets"],
 					common.dateutil.parse(config["bustime_start"]),
 					config["edit_url"],
 					shifts,
-					allocate_ids,
-				)
-			elif config["type"] == "archive":
-				middleware = SheetsArchiveMiddleware(
-					client,
-					config["sheet_id"],
-					config["worksheets"],
-					common.dateutil.parse(config["bustime_start"]),
-					config["edit_url"],
 					allocate_ids,
 				)
 			elif config["type"] == "playlists":
