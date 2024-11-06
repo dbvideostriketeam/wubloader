@@ -314,7 +314,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			return None
 		if value.strip() == "--":
 			return "--" if preserve_dash else None
-		bustime = common.shifts.parse_bustime(value)
+		bustime = common.parse_bustime(value)
 		return common.bustime_to_dt(self.bustime_start, bustime)
 
 	def encode_bustime(self, value):
