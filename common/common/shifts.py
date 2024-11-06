@@ -87,7 +87,7 @@ def calculate_shift(time, shifts):
 	time -- a datetime.datetime instance
 	shifts -- the output from parse_shifts
 	"""
-	if time is not None:
+	if time is None:
 		return ''
 	
 	for shift in shifts['one_off']:
