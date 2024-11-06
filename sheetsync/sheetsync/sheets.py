@@ -342,7 +342,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 			shift_tag = common.shifts.calculate_shift(row_dict['event_start'], self.latest_shifts)
 			row_dict['tags'] = (
 				([shift_tag] if shift_tag is not None else [])
-				[
+				+ [
 					row_dict['category'], # category name
 					worksheet, # sheet name
 				] + (['Poster Moment'] if row_dict['poster_moment'] else [])
