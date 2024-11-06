@@ -87,6 +87,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			crop: [cropXStart, cropYStart, cropXEnd, cropYEnd],
 			location: [locXStart, locYStart, locXEnd, locYEnd],
 		};
+		if (googleUser) {
+			submitData.token = googleUser.getAuthResponse().id_token;
+		}
 
 		if (!errorListContainer.hasChildNodes()) {
 			const submitResponse = await fetch("/thrimshim/add-template", {
