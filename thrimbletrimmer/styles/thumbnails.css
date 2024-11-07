@@ -2,6 +2,10 @@
 	display: none;
 }
 
+table > form {
+	display: table-row;
+}
+
 #template-list-data {
 	border-collapse: collapse;
 }
@@ -15,7 +19,7 @@
 	width: 480px;
 }
 
-#template-new-errors {
+#template-new-errors, .template-data-edit-errors {
 	color: #c00;
 }
 
@@ -29,7 +33,7 @@
 	display: contents;
 }
 
-.template-new-coord {
+.template-coord {
 	width: 50px;
 }
 
