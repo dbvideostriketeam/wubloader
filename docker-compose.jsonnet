@@ -342,6 +342,10 @@
   pubbot:: {
     zulip_email: "blog-bot@chat.videostrike.team",
     zulip_api_key: "",
+    # The id for this year's total
+    total_id: "total:RZZQRDQNLNLW",
+    # The ids of any prizes to watch
+    prize_ids: [],
   },
 
   // template for donation data urls

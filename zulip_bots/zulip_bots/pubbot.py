@@ -11,12 +11,11 @@ from .zulip import Client
 import requests
 session = requests.Session()
 
-def stream():
+def stream(channels):
+	channels = ",".join(channels)
 	tt = 0
 	tr = 0
 	while True:
-		channels = ["total:RZZQRDQNLNLW"]
-		channels = ",".join(channels)
 		resp = session.get(f"https://ps8.pndsn.com/v2/subscribe/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/{channels}/0",
 			params={
 				"tt": tt,
@@ -29,12 +28,6 @@ def stream():
 			yield msg
 		tt = data["t"]["t"]
 		tr = data["t"]["r"]
-
-
-def get_prize(prize_id):
-	resp = session.get("https://desertbus.org/wapi/prize/{}".format(prize_id))
-	resp.raise_for_status()
-	return resp.json()["prize"]
 
 
 giveaway_cache = [None, None]
@@ -58,6 +51,8 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 		zulip_url
 		zulip_email
 		zulip_api_key
+		total_id: id for donation total channel
+		prize_ids: list of ids for prizes to watch bids for
 	"""
 	logging.basicConfig(level="INFO")
 
@@ -75,9 +70,12 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 		"time": time.time(),
 	})
 
-	prizes = {}
+	total_channel = f"total:{config['total_id']}"
+	channels = [total_channel] + [
+		f"bid:{prize_id}" for prize_id in config["prize_ids"]
+	]
 	total = None
-	for msg in stream():
+	for msg in stream(channels):
 		log = {
 			"type": "unknown",
 			"host": name,
@@ -94,7 +92,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 
 			log["message_time"] = message_time
 
-			if msg["c"].startswith("total"):
+			if msg["c"] == total_channel:
 				log["type"] == "total"
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
@@ -114,25 +112,20 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 					client.send_to_stream("bot-spam", "Notable Donations", "Large donation of ${:.2f} (total ${:.2f}){}".format(increase, msg['d'], entries_str))
 				total = msg["d"]
 
-			elif msg["c"] == "db_vue" and msg["d"].get("channel").startswith("prize:"):
+			elif msg["c"].startswith("bid:"):
 				log["type"] = "prize"
-				d = msg["d"]
-				prize_id = msg["d"]["channel"].split(":")[1]
-				data = d["data"]
-				logging.info(f"Prize update for {prize_id}: {data}")
-				if prize_id not in prizes:
-					prizes[prize_id] = get_prize(prize_id)
+				prize_id = msg["c"].removeprefix("bid:")
 				log["prize_id"] = prize_id
-				if "bidder" in data and "bid" in data:
-					log["bidder"] = data["bidder"]
-					log["bid"] = data["bid"]
-					client.send_to_stream("bot-spam", "Bids", "At <time:{time}>, {bidder} bid ${bid:.2f} for [{title}](https://desertbus.org/prize/{prize_id})".format(
-						time = message_time,
-						bidder = data["bidder"],
-						bid = data["bid"],
-						title = prizes[prize_id]["title"],
-						prize_id = prize_id,
-					))
+				data = msg["d"]
+				logging.info(f"Prize update for {prize_id}: {data}")
+				if "name" in data and "amount" in data:
+					log["bidder"] = data["name"]
+					log["bid"] = data["amount"]
+					client.send_to_stream(
+						"bot-spam",
+						"Bids",
+						"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${data['amount']:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
+					)
 
 			else:
 				logging.warning("Unknown message: {}".format(msg))
