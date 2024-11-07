@@ -715,7 +715,7 @@ def update_template(name, artist=None):
 		return message, code
 	new_template = message
 
-	with app.db_manage.get_conn() as conn:
+	with app.db_manager.get_conn() as conn:
 		#check if template is in database
 		query = sql.SQL("""
 			SELECT name FROM templates WHERE name = %s 
