@@ -724,12 +724,13 @@ def update_template(name, artist=None):
 		if results.fetchone() is None:
 			return 'Template with name {} does not exist'.format(name), 400
 		# check if new name is in database
-		query = sql.SQL("""
-			SELECT name FROM templates WHERE name = %s 
-		""")
-		results = database.query(conn, query, new_template['name'])
-		if results.fetchone() is not None:
-			return 'Template with name {} already exists'.format(new_template['name']), 400
+		if name != new_template["name"]:
+			query = sql.SQL("""
+				SELECT name FROM templates WHERE name = %s 
+			""")
+			results = database.query(conn, query, new_template['name'])
+			if results.fetchone() is not None:
+				return 'Template with name {} already exists'.format(new_template['name']), 400
 
 		query = sql.SQL("""
 			UPDATE templates
