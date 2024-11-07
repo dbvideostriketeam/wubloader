@@ -182,7 +182,7 @@ function generateTemplateDOM(index, template) {
 	cropReadCell.innerText = `(${crop[0]}, ${crop[1]}) to (${crop[2]}, ${crop[3]})`;
 	const cropEditCell = document.createElement("div");
 	cropEditCell.classList.add("template-data-edit", "hidden");
-	
+
 	const cropXStartField = document.createElement("input");
 	cropXStartField.name = "cropxstart";
 	setCoordNumberFieldProps(cropXStartField, "X");
@@ -213,7 +213,7 @@ function generateTemplateDOM(index, template) {
 	cropEditCell.appendChild(document.createTextNode(", "));
 	cropEditCell.appendChild(cropYEndField);
 	cropEditCell.appendChild(document.createTextNode(")"));
-	
+
 	cropCell.appendChild(cropReadCell);
 	cropCell.appendChild(cropEditCell);
 
@@ -282,7 +282,7 @@ function generateTemplateDOM(index, template) {
 	editReadCell.classList.add("template-data-view");
 	const switchToEditButton = document.createElement("button");
 	switchToEditButton.type = "button";
-	switchToEditButton.innerText = "Edit"
+	switchToEditButton.innerText = "Edit";
 	editReadCell.appendChild(switchToEditButton);
 	const editEditCell = document.createElement("div");
 	editEditCell.classList.add("template-data-edit", "hidden");
@@ -356,9 +356,9 @@ function generateTemplateDOM(index, template) {
 			description: description,
 			attribution: attribution,
 			crop: [cropXStart, cropYStart, cropXEnd, cropYEnd],
-			location: [locXStart, locYStart, locXEnd, locYEnd]
+			location: [locXStart, locYStart, locXEnd, locYEnd],
 		};
-		
+
 		const imageFiles = imageEditField.files;
 		if (imageFiles.length > 0) {
 			const fileReader = new FileReader();
@@ -367,7 +367,7 @@ function generateTemplateDOM(index, template) {
 			});
 			fileReader.readAsDataURL(imageFile);
 			await fileReaderCompletePromise;
-			
+
 			const imageDataURL = fileReader.result;
 			if (imageDataURL.startsWith("data:image/png;base64,")) {
 				submitData.image = imageDataURL.substring(22);
@@ -384,10 +384,14 @@ function generateTemplateDOM(index, template) {
 		if (editErrors.hasChildNodes()) {
 			return;
 		}
-		
+
 		const origName = templateData[index].name;
 		const encodedName = encodeURIComponent(origName);
-		const submitResponse = await fetch(`/thrimshim/update-template/${encodedName}`, { method: "POST", body: JSON.stringify(submitData), headers: { "Content-Type": "application/json" }});
+		const submitResponse = await fetch(`/thrimshim/update-template/${encodedName}`, {
+			method: "POST",
+			body: JSON.stringify(submitData),
+			headers: { "Content-Type": "application/json" },
+		});
 		if (!submitResponse.ok) {
 			const submitError = document.createElement("li");
 			submitError.innerText = await submitResponse.text();
@@ -407,7 +411,7 @@ function generateTemplateDOM(index, template) {
 		const templateDOM = generateTemplateDOM(index, templateData[index]);
 		templateRow.replaceWith(templateDOM);
 	});
-	
+
 	return templateRow;
 }
 
