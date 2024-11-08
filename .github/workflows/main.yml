@@ -68,11 +68,12 @@ jobs:
           sudo dnf install -y qemu-user-static
 
       - name: Log into ghcr.io
-        uses: redhat-actions/podman-login@v1
-        with:
+        env:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          buildah login "$registry" --username "$username" --password "$password"
 
       - name: Build ${{ matrix.component }}
         # always push
