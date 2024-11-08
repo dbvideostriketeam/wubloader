@@ -43,6 +43,13 @@ jobs:
           - thrimshim
           - zulip_bots
     steps:
+      - name: Install git
+        # the buildah/stable image doesn't include git
+        # actions/checkout works without git, but not if you do submodules
+        # thus, we install git
+        run: |
+          sudo dnf install -y git
+
       - name: Check out repo
         uses: actions/checkout@v3
         with:
