@@ -70,16 +70,12 @@ if [ -n "$MULTIPLATFORM" ]; then
 		exit 1
 	fi
 fi
-		
+
 for component in "${COMPONENTS[@]}"; do
 	echo "Building image for $component"
 	latest="$BASE/wubloader-$component:latest"
 	specific="$BASE/wubloader-$component:$TAG"
 	if [ -n "$MULTIPLATFORM" ]; then
-		echo "Creating multi-arch manifests"
-		"$BUILD_CMD" manifest create "$specific"
-		"$BUILD_CMD" manifest create "$latest"
-
 		# buscribe doesn't (yet?) build under arm64 due to pulling in libc-bin, skip arm64 for it
 		if [ "$component" != "buscribe" ]; then
 			"$BUILD_CMD" build \
@@ -108,12 +104,23 @@ for component in "${COMPONENTS[@]}"; do
 			.
 	fi
 	echo "Built image wubloader-$component:$TAG"
-	if [ -n "$PUSH" ]; then
-		echo "Pushing tag $specific"
-		"$BUILD_CMD" push "$specific"
-	fi
-	if [ "$PUSH" == "latest" ]; then
-		echo "Pushing tag $latest"
-		"$BUILD_CMD" push "$latest"
-	fi
+    if [ -n "$MULTIPLATFORM" ]; then
+	    if [ -n "$PUSH" ]; then
+		    echo "Pushing tag $specific"
+		    "$BUILD_CMD" manifest push "$specific"
+	    fi
+	    if [ "$PUSH" == "latest" ]; then
+		    echo "Pushing tag $latest"
+		    "$BUILD_CMD" manifest push "$latest"
+	    fi
+    else
+	    if [ -n "$PUSH" ]; then
+		    echo "Pushing tag $specific"
+		    "$BUILD_CMD" push "$specific"
+	    fi
+	    if [ "$PUSH" == "latest" ]; then
+		    echo "Pushing tag $latest"
+		    "$BUILD_CMD" push "$latest"
+	    fi
+    fi
 done
