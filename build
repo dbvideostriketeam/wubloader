@@ -76,38 +76,28 @@ for component in "${COMPONENTS[@]}"; do
 	latest="$BASE/wubloader-$component:latest"
 	specific="$BASE/wubloader-$component:$TAG"
 	if [ -n "$MULTIPLATFORM" ]; then
-		echo "Creating multi-arch manifest"
-		"$BUILD_CMD" manifest create "wubloader-$component"
-		# no way to build multi-arch in parallel, so just build amd64 first and then arm64.
-		# caching should work with both, so that'll make things less painful at least.
-		"$BUILD_CMD" build \
-			-f "$component/Dockerfile" \
-			-t "$latest" \
-			-t "$specific" \
-			--manifest "wubloader-$component" \
-			--arch amd64 \
-			"${CACHE_ARGS[@]}" \
-			.
+		echo "Creating multi-arch manifests"
+		"$BUILD_CMD" manifest create "$specific"
+		"$BUILD_CMD" manifest create "$latest"
+
 		# buscribe doesn't (yet?) build under arm64 due to pulling in libc-bin, skip arm64 for it
 		if [ "$component" != "buscribe" ]; then
 			"$BUILD_CMD" build \
-				-f "$component/Dockerfile" \
-				-t "$latest" \
-				-t "$specific" \
-				--manifest "wubloader-$component" \
-				--arch arm64 \
+				-f "$component/Dockerfile' \
+				--manifest "$specific" \
+				--manifest "$latest" \
+				--jobs 2 \
+				--platform=linux/amd64,linux/arm64 \
 				"${CACHE_ARGS[@]}" \
 				.
-		fi
-		echo "Built image wubloader-$component:$TAG"
-		# manifest pushes are buildah-specific. docker buildx multiplatform builds have different syntax...
-		if [ -n "$PUSH" ]; then
-			echo "Pushing tag $specific"
-			"$BUILD_CMD" manifest push --all "$specific"
-		fi
-		if [ "$PUSH" == "latest" ]; then
-			echo "Pushing tag $latest"
-			"$BUILD_CMD" manifest push --all "$latest"
+		else
+			"$BUILD_CMD" build \
+				-f "$component/Dockerfile' \
+				--manifest "$specific" \
+				--manifest "$latest" \
+				--platform=linux/amd64 \
+				"${CACHE_ARGS[@]}" \
+				.
 		fi
 	else
 		"$BUILD_CMD" build \
@@ -117,14 +107,14 @@ for component in "${COMPONENTS[@]}"; do
 			--manifest "wubloader-$component" \
 			"${CACHE_ARGS[@]}" \
 			.
-		echo "Built image wubloader-$component:$TAG"
-		if [ -n "$PUSH" ]; then
-			echo "Pushing tag $specific"
-			"$BUILD_CMD" push "$specific"
-		fi
-		if [ "$PUSH" == "latest" ]; then
-			echo "Pushing tag $latest"
-			"$BUILD_CMD" push "$latest"
-		fi
+	fi
+	echo "Built image wubloader-$component:$TAG"
+	if [ -n "$PUSH" ]; then
+		echo "Pushing tag $specific"
+		"$BUILD_CMD" push "$specific"
+	fi
+	if [ "$PUSH" == "latest" ]; then
+		echo "Pushing tag $latest"
+		"$BUILD_CMD" push "$latest"
 	fi
 done
