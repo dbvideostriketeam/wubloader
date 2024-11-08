@@ -62,24 +62,60 @@ case "${CACHE:-}" in
 		BUILD_CMD="buildah"
 		;;
 esac
+
+# check for MULTIPLATFORM flag. error out if we're not using buildah for now. docker buildx should be able to do it too, but needs testing
+if [ -n "$MULTIPLATFORM" ]; then
+	if [ "$BUILD_CMD" == "docker" ]; then
+		echo "Multiplatform builds are not yet supported with docker! Use buildah instead."
+		exit 1
+	fi
+fi
 		
 for component in "${COMPONENTS[@]}"; do
 	echo "Building image for $component"
+	if [ -n "$MULTIPLATFORM" ]; then
+		echo "Creating multi-arch manifest"
+		"$BUILD_CMD" manifest create "wubloader-$component"
+	fi
 	latest="$BASE/wubloader-$component:latest"
 	specific="$BASE/wubloader-$component:$TAG"
+	# no way to build multi-arch in parallel, so just build amd64 first and then arm64.
+	# caching should work with both, so that'll make things less painful at least.
 	"$BUILD_CMD" build \
 		-f "$component/Dockerfile" \
 		-t "$latest" \
 		-t "$specific" \
+		--manifest "wubloader-$component"
+		--arch amd64
+		"${CACHE_ARGS[@]}" \
+		.
+	"$BUILD_CMD" build \
+		-f "$component/Dockerfile" \
+		-t "$latest" \
+		-t "$specific" \
+		--manifest "wubloader-$component"
+		--arch arm64
 		"${CACHE_ARGS[@]}" \
 		.
 	echo "Built image wubloader-$component:$TAG"
-	if [ -n "$PUSH" ]; then
-		echo "Pushing tag $specific"
-		"$BUILD_CMD" push "$specific"
-	fi
-	if [ "$PUSH" == "latest" ]; then
-		echo "Pushing tag $latest"
-		"$BUILD_CMD" push "$latest"
+	if [ -n "$MULTIPLATFORM ]; then
+		# manifest pushes are buildah-specific. docker buildx multiplatform builds have different syntax...
+		if [ -n "$PUSH" ]; then
+			echo "Pushing tag $specific"
+			"BUILD_CMD" manifest push --all "docker://$specific"
+		fi
+		if [ "$PUSH" == "latest" ]; then
+			echo "Pushing tag $latest"
+			"$BUILD_CMD" manifest push --all "docker://$latest"
+		fi
+	else
+		if [ -n "$PUSH" ]; then
+			echo "Pushing tag $specific"
+			"$BUILD_CMD" push "$specific"
+		fi
+		if [ "$PUSH" == "latest" ]; then
+			echo "Pushing tag $latest"
+			"$BUILD_CMD" push "$latest"
+		fi
 	fi
 done
