@@ -102,7 +102,7 @@ for component in "${COMPONENTS[@]}"; do
 		# manifest pushes are buildah-specific. docker buildx multiplatform builds have different syntax...
 		if [ -n "$PUSH" ]; then
 			echo "Pushing tag $specific"
-			"BUILD_CMD" manifest push --all "docker://$specific"
+			"$BUILD_CMD" manifest push --all "docker://$specific"
 		fi
 		if [ "$PUSH" == "latest" ]; then
 			echo "Pushing tag $latest"
