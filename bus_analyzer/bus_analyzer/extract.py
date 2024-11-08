@@ -9,16 +9,16 @@ import common
 from common.segments import extract_frame, parse_segment_path
 
 
-# DB2023 buscam
+# DB2024 1080p buscam
 # bounding box (left x, top y, right x, bottom y) of the area the odometer can be in
 AREA_COORDS = {
-	"odo": (1121, 820, 1270, 897),
-	"clock": (1685, 819, 1804, 877),
+	"odo": (1053, 857, 1170, 925),
+	"clock": (1498, 852, 1590, 905)
 }
 # starting x coord of each digit within the odo box
 DIGIT_X_COORDS = {
-	"odo": [0, 28, 56, 84, 123],
-	"clock": [0, 27, 66, 93],
+	"odo": [0, 22, 44, 66, 96],
+	"clock": [0, 22, 53, 75],
 }
 # value of each digit
 DIGIT_BASES = {
@@ -26,12 +26,12 @@ DIGIT_BASES = {
 	"clock": [600, 60, 10, 1],
 }
 
-DIGIT_WIDTH = 26
+DIGIT_WIDTH = 17
 # Most digits we only care about the actual character height
-DIGIT_HEIGHT = 26
+DIGIT_HEIGHT = 24
 # But last digit we want the full white-background area as we want to try to match
 # based on position also.
-LAST_DIGIT_HEIGHT = 38
+LAST_DIGIT_HEIGHT = 39
 
 # get back py2 zip behaviour
 _zip = zip
