@@ -765,7 +765,7 @@ def get_thumbnail(ident):
 
 		if event['thumbnail_mode'] != 'NONE' and event['thumbnail_image']:
 			logging.info('Thumbnail for event {} fetched'.format(ident))
-			return flask.Response(event['thumbnail_image'], mimetype='image/png')
+			return flask.Response(bytes(event['thumbnail_image']), mimetype='image/png')
 		else:
 			return '', 404
 			
