@@ -20,9 +20,6 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    # run jobs in buildah containers, since ubuntu is bad at keeping packages updated
-    container:
-      image: quay.io/buildah/stable:latest
     strategy:
       fail-fast: false
       matrix:
@@ -43,15 +40,8 @@ jobs:
           - thrimshim
           - zulip_bots
     steps:
-      - name: Install git
-        # the buildah/stable image doesn't include git
-        # actions/checkout works without git, but not if you do submodules
-        # thus, we install git
-        run: |
-          sudo dnf install -y git
-
       - name: Check out repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           submodules: recursive
           # By default, for PR builds, Actions will check out a merge commit between the actual
@@ -63,20 +53,16 @@ jobs:
 
       - name: Install QEMU
         # qemu-user-static is used by buildah to do multiplatform builds
-        # the buildah image is fedora-based, hence we use dnf
         run: |
-          sudo dnf install -y qemu-user-static
+          sudo apt update
+          sudo apt install -y qemu-user-static
 
-      - name: Create containers/auth.json file
-        env:
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p ~/.config/containers
-          echo "$username:$password" | base64 > tmp
-          echo "{"auths":{"ghcr.io":{"auth": $(cat tmp)}}}" > ~/.config/containers/auth.json
-          rm tmp
 
       - name: Build ${{ matrix.component }}
         # always push

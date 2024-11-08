@@ -104,7 +104,6 @@ for component in "${COMPONENTS[@]}"; do
 			-f "$component/Dockerfile" \
 			-t "$latest" \
 			-t "$specific" \
-			--manifest "wubloader-$component" \
 			"${CACHE_ARGS[@]}" \
 			.
 	fi
