@@ -365,7 +365,7 @@ function generateTemplateDOM(index, template) {
 			const fileReaderCompletePromise = new Promise((resolve, reject) => {
 				fileReader.addEventListener("loadend", (event) => resolve());
 			});
-			fileReader.readAsDataURL(imageFile);
+			fileReader.readAsDataURL(imageFiles[0]);
 			await fileReaderCompletePromise;
 
 			const imageDataURL = fileReader.result;
