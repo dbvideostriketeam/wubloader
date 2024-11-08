@@ -295,26 +295,51 @@ def compare_colors(color_a, color_b):
 
 
 def recognize_time_of_day(frame):
-	"""Returns time of day, score, all scores."""
-	COLORS = {
-		"day": (89, 236, 239),
-		"dusk": (199, 162, 205),
-		"night": (1, 1, 1),
-		"dawn": (51, 59, 142),
+	"""Determine time-of-day from a sky pixel and a dashboard pixel
+	
+	Uses the colour of a pixel in the sky and of a pixel on the dashboard to determine time-of-day
+	or whether the game is on the score screen."""
+	sky_colours = {
+		'score': (119, 119, 119),
+		'day': (82, 218, 217),
+		'dusk': (225, 152, 184), # estimated from previous years
+		'night': (0, 0, 0), # estimated from previous years
+		'dawn': (56, 53, 125), # estimated from previous years
 	}
-	sample = frame.getpixel((177, 255))
-	scores = [
-		(tod, compare_colors(sample, color))
-		for tod, color in COLORS.items()
-	]
-	best, score = max(scores, key=lambda t: t[1])
-	return best, score, scores
+	dash_colours = {
+		'score': (181, 181, 150),
+		'day': (147, 0, 2),
+		'dusk': (118, 0, 0), # estimated from previous years
+		'night': (68, 0, 0), # estimated from previous years
+		'dawn': (118, 0, 0), # estimated from previous years
+	}
+	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
+	# these are for 720p; will need to multiple by 3/2 for 1080p
+	sky_pixel = frame.getpixel((1076, 128))
+	dash_pixel = frame.getpixel((630, 576))
+	
+	MAX_DIST = 6**0.5 * 255
+	sky_distances = []
+	dash_distances = []
+	matches = [(None, MAX_DIST)]
+	
+	for time in sky_colours:
+		
+		sky_distance = sum((a - b)**2 for a, b in zip(sky_pixel, sky_colours[time]))**0.5
+		sky_distances.append(sky_distance)
+		dash_distance = sum((a - b)**2 for a, b in zip(dash_pixel, dash_colours[time]))**0.5
+		dash_distances.append(dash_distance)
+		
+		if sky_distance < threshold and dash_distance < threshold:
+			matches.append((time, (sky_distance**2 + dash_distance**2)**0.5))
+		
+	best, distance = min(matches, key=lambda m: m[1])
+	return best, distance
 
 
 def extract_segment(prototypes, segment):
 	ODO_SCORE_THRESHOLD = 0.01
 	CLOCK_SCORE_THRESHOLD = 0.01
-	TOD_SCORE_THRESHOLD = 0.9
 	frame_data = b"".join(extract_frame([segment], segment.start))
 	frame = Image.open(BytesIO(frame_data))
 	odometer, score, _ = recognize_odometer(prototypes, frame)
@@ -323,9 +348,7 @@ def extract_segment(prototypes, segment):
 	clock, score, _ = recognize_clock(prototypes, frame)
 	if score < CLOCK_SCORE_THRESHOLD:
 		clock = None
-	tod, score, _ = recognize_time_of_day(frame)
-	if score < TOD_SCORE_THRESHOLD:
-		tod = None
+	tod, distance = recognize_time_of_day(frame)
 	return odometer, clock, tod
 
 
