@@ -43,13 +43,12 @@ jobs:
           - thrimshim
           - zulip_bots
     steps:
-      - name: Install git & podman
+      - name: Install git
         # the buildah/stable image doesn't include git
         # actions/checkout works without git, but not if you do submodules
         # thus, we install git
-        # we need podman for the podman-login action unfortunately
         run: |
-          sudo dnf install -y git podman
+          sudo dnf install -y git
 
       - name: Check out repo
         uses: actions/checkout@v3
@@ -68,12 +67,16 @@ jobs:
         run: |
           sudo dnf install -y qemu-user-static
 
-      - name: Log into ghcr.io
-        uses: redhat-actions/podman-login@v1
-        with:
+      - name: Create containers/auth.json file
+        env:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p ~/.config/containers
+          echo "$username:$password" | base64 > tmp
+          echo "{"auths":{"ghcr.io":{"auth": $(cat tmp)}}}" > ~/.config/containers/auth.json
+          rm tmp
 
       - name: Build ${{ matrix.component }}
         # always push
