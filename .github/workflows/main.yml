@@ -20,6 +20,9 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-24.04
+    # run jobs in buildah containers, since ubuntu is bad at keeping packages updated
+    container:
+      image: quay.io/buildah/stable:latest
     strategy:
       fail-fast: false
       matrix:
@@ -53,14 +56,9 @@ jobs:
 
       - name: Install QEMU
         # qemu-user-static is used by buildah to do multiplatform builds
+        # the buildah image is fedora-based, hence we use dnf
         run: |
-          sudo apt update
-          sudo apt install -y qemu-user-static
-
-      - name: Update buildah to latest
-        run: |
-          sudo apt update
-          sudo apt install -y buildah
+          sudo dnf install -y qemu-user-static
 
       - name: Log into ghcr.io
         uses: docker/login-action@v3
