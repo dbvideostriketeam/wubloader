@@ -89,7 +89,7 @@ for component in "${COMPONENTS[@]}"; do
 			"${CACHE_ARGS[@]}" \
 			.
 		# buscribe doesn't (yet?) build under arm64 due to pulling in libc-bin, skip arm64 for it
-		if [ "$component" != "buscribe ]; then
+		if [ "$component" != "buscribe" ]; then
 			"$BUILD_CMD" build \
 				-f "$component/Dockerfile" \
 				-t "$latest" \
