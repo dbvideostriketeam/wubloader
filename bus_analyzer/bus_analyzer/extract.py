@@ -315,8 +315,8 @@ def recognize_time_of_day(frame):
 	}
 	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
 	# these are for 720p; will need to multiple by 3/2 for 1080p
-	sky_pixel = frame.getpixel((1076, 128))
-	dash_pixel = frame.getpixel((630, 576))
+	sky_pixel = frame.getpixel((1614, 192))
+	dash_pixel = frame.getpixel((945, 864))
 	
 	MAX_DIST = 6**0.5 * 255
 	sky_distances = []
