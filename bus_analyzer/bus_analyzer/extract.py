@@ -12,8 +12,8 @@ from common.segments import extract_frame, parse_segment_path
 # DB2024 1080p buscam
 # bounding box (left x, top y, right x, bottom y) of the area the odometer can be in
 AREA_COORDS = {
-	"odo": (1053, 857, 1170, 925),
-	"clock": (1498, 852, 1590, 905)
+	"odo": (1053, 857, 1170, 930),
+	"clock": (1498, 852, 1590, 910)
 }
 # starting x coord of each digit within the odo box
 DIGIT_X_COORDS = {
