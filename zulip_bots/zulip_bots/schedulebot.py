@@ -297,7 +297,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 
 	schedule = None
 	while True:
-		hour = int((time.time() - start_time) / 3600)
+		hour = (time.time() - start_time) // 3600
 		# Download a new schedule or use the old one if there's a failure
 		new_schedule = reload_schedule()
 		if new_schedule is not None:
