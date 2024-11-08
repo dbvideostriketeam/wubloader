@@ -83,7 +83,7 @@ for component in "${COMPONENTS[@]}"; do
 		# buscribe doesn't (yet?) build under arm64 due to pulling in libc-bin, skip arm64 for it
 		if [ "$component" != "buscribe" ]; then
 			"$BUILD_CMD" build \
-				-f "$component/Dockerfile' \
+				-f "$component/Dockerfile" \
 				--manifest "$specific" \
 				--manifest "$latest" \
 				--jobs 2 \
@@ -92,7 +92,7 @@ for component in "${COMPONENTS[@]}"; do
 				.
 		else
 			"$BUILD_CMD" build \
-				-f "$component/Dockerfile' \
+				-f "$component/Dockerfile" \
 				--manifest "$specific" \
 				--manifest "$latest" \
 				--platform=linux/amd64 \
