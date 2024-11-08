@@ -98,7 +98,7 @@ for component in "${COMPONENTS[@]}"; do
 		"${CACHE_ARGS[@]}" \
 		.
 	echo "Built image wubloader-$component:$TAG"
-	if [ -n "$MULTIPLATFORM ]; then
+	if [ -n "$MULTIPLATFORM" ]; then
 		# manifest pushes are buildah-specific. docker buildx multiplatform builds have different syntax...
 		if [ -n "$PUSH" ]; then
 			echo "Pushing tag $specific"
