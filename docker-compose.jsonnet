@@ -72,7 +72,9 @@
   // Thrimbletrimmer (and probably not useful otherwise) to enable live updates
   // to Thrimbletrimmer without restarting/rebuilding Wubloader.
   // If you wish to use this, set this to the path containing the Thrimbletrimmer
-  // web (HTML, CSS, JavaScript) files to serve (e.g. "/path/to/wubloader/thrimbletrimmer/").
+  // web (HTML, CSS, JavaScript) files to serve (e.g. "/path/to/wubloader/thrimbletrimmer/dist/").
+  // This directory should be the build target when building Thrimbletrimmer manually; by default,
+  // this is the /dist/ subdirectory.
   thrimbletrimmer_web_dev_path:: null,
 
   // The host's port to expose each service on.
