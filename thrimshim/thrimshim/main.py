@@ -628,7 +628,7 @@ def get_template(name):
 
 		image = row[0]
 		logging.info('Thumbnail image of {} fetched'.format(name))
-		return flask.Response(image, mimetype='image/png')
+		return flask.Response(bytes(image), mimetype='image/png')
 
 
 @app.route('/thrimshim/template-metadata/<name>')
