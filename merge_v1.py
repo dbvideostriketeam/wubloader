@@ -81,8 +81,13 @@ def merge_messages(left, right):
 	return result
 
 
+def load(file):
+	with open(file) as f:
+		return [json.loads(line) for line in f.read().strip().split("\n")]
+
+
 def main(*files):
-	batches = [json.load(open(file)) for file in files]
+	batches = [load(file) for file in files]
 	result = batches[0]
 	start = time.monotonic()
 	for batch in batches[1:]:

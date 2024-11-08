@@ -50,7 +50,7 @@ def merge_messages(left, right):
 			message, candidates = right.pop(0), left
 
 		# Scan candidates for matching message until found or we know there is no match
-		id = message.get("tags", {}).get("id")
+		id = (message.get("tags") or {}).get("id")
 		end = message['time'] + message['time_range']
 		merged = None
 		for index, candidate in enumerate(candidates):
@@ -62,7 +62,7 @@ def merge_messages(left, right):
 				if merged is not None:
 					candidates.pop(index)
 					break
-			elif candidate.get("tags", {}).get("id") == id:
+			elif (candidate.get("tags") or {}).get("id") == id:
 				merged = merge_message(message, candidate)
 				if merged is None:
 					raise ValueError("TODO")
@@ -82,8 +82,13 @@ def merge_messages(left, right):
 	return result
 
 
+def load(file):
+	with open(file) as f:
+		return [json.loads(line) for line in f.read().strip().split("\n")]
+
+
 def main(*files):
-	batches = [json.load(open(file)) for file in files]
+	batches = [load(file) for file in files]
 	result = batches[0]
 	start = time.monotonic()
 	for batch in batches[1:]:
