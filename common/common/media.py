@@ -125,7 +125,7 @@ def download_media(
 					# fall through to next retry loop
 			else:
 				# This block will be reached if range(retries) runs out but not via "break"
-				raise ExceptionGroup(f"All retries failed for url {urls[-1]}", errors)
+				raise Exception(f"All retries failed for url {urls[-1]}: {errors}")
 
 		raise Exception("Too many redirects")
 
@@ -340,7 +340,7 @@ def download_imgur_url(output_dir, max_size, url):
 	_save_content(output_dir, [url], "json", json.dumps(contents_urls))
 
 	if failed:
-		raise ExceptionGroup(failed)
+		raise Exception(str(failed))
 
 	return True
 
