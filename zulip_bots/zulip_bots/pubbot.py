@@ -142,7 +142,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 					client.send_to_stream(
 						"bot-spam",
 						"Bids",
-						"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${data['amount']:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
+						f"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${data['amount']:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
 					)
 
 			else:
