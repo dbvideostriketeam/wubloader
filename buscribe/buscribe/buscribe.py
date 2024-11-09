@@ -55,6 +55,8 @@ def transcribe_segments(segments: list, sample_rate: int, recognizer: BuscribeRe
 
                 if line_start_time > start_of_transcript:
                     write_line(result_json, line_start_time, line_end_time, db_cursor)
+                    logging.info(f"Line successfully written for duration {line_end_time - line_start_time}")
+
 
         if stopping.is_set():
             return segments_end_time
