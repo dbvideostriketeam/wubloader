@@ -1,5 +1,5 @@
 import { Accessor, Component, createSignal } from "solid-js";
-import { DateTime } from "../external/luxon.min";
+import { DateTime } from "luxon";
 import {
 	dateTimeFromWubloaderTime,
 	dateTimeFromBusTime,
