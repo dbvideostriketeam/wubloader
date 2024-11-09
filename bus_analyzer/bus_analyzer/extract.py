@@ -314,7 +314,6 @@ def recognize_time_of_day(frame):
 		'dawn': (118, 0, 0), # estimated from previous years
 	}
 	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
-	# these are for 720p; will need to multiple by 3/2 for 1080p
 	sky_pixel = frame.getpixel((1614, 192))
 	dash_pixel = frame.getpixel((945, 864))
 	
