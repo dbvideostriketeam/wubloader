@@ -9,6 +9,7 @@ setup(
 	packages=find_packages(),
 	install_requires=[
 		'argh==0.28.1',
+		"exceptiongroup", # backport from python 3.11
 		'gevent',
 		'monotonic',
 		'requests', # for emote fetching
