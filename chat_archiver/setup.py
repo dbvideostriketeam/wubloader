@@ -13,6 +13,6 @@ setup(
 		'gevent',
 		'monotonic',
 		'requests', # for emote fetching
-		"urllib3",
+		"urllib3>=2.2.2",
 	],
 )
