@@ -56,7 +56,7 @@ const TimeConverter: Component<TimeConverterProps> = (props) => {
 	};
 
 	return (
-		<form>
+		<div>
 			<h1>Convert Times</h1>
 			<input
 				type="text"
@@ -129,7 +129,7 @@ const TimeConverter: Component<TimeConverterProps> = (props) => {
 				</label>
 			</div>
 			<div>Converted Time: {outputString()}</div>
-		</form>
+		</div>
 	);
 };
 
