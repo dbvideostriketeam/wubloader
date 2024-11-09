@@ -1,5 +1,4 @@
-import { l } from "vite/dist/node/types.d-aGj9QkWt";
-import { DateTime } from "../external/luxon.min";
+import { DateTime } from "luxon";
 
 export function dateTimeFromWubloaderTime(wubloaderTime: string): DateTime | null {
 	const dt = DateTime.fromISO(wubloaderTime, { zone: "UTC" });
@@ -86,7 +85,7 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 		timeAgoSeconds = -timeAgoSeconds;
 	}
 
-	const seconds = (((timeAgoSeconds % 60) * 1000) | 0) / 1000
+	const seconds = (((timeAgoSeconds % 60) * 1000) | 0) / 1000;
 	const secondsString = seconds < 10 ? `0${seconds}` : seconds.toString();
 	const minutes = (timeAgoSeconds / 60) % 60 | 0;
 	const minutesString = minutes < 10 ? `0${minutes}` : minutes.toString();
