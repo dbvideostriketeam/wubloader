@@ -61,7 +61,7 @@ def _get_giveaway():
 	data = json.loads(island["props"])
 	giveaways = data["giveaways"][1]
 	if giveaways:
-		return giveaways[0]["amount"][1] / 100.
+		return giveaways[0][1]["amount"][1] / 100.
 	return None
 
 
