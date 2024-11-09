@@ -1,18 +1,16 @@
-import { Component, createSignal, onCleanup, onMount } from "solid-js";
+import { Accessor, Component, createSignal, onCleanup, onMount } from "solid-js";
 import { DateTime, Interval } from "../external/luxon.min";
 
-const Clock: Component = () => {
+interface ClockProps {
+	busStartTime: Accessor<DateTime | null>;
+}
+
+const Clock: Component<ClockProps> = (props) => {
 	const [delay, setDelay] = createSignal<number>(10);
 	const [time, setTime] = createSignal<DateTime>(DateTime.utc());
-	const [busStartTime, setBusStartTime] = createSignal<DateTime | null>(null);
+	const busStartTime = props.busStartTime;
 
 	const timer = setInterval(() => setTime(DateTime.utc()), 250);
-
-	onMount(async () => {
-		const dataResponse = await fetch("/thrimshim/defaults");
-		const data = await dataResponse.json();
-		setBusStartTime(DateTime.fromISO(data.bustime_start));
-	});
 
 	onCleanup(() => {
 		clearInterval(timer);
