@@ -61,18 +61,18 @@ def main(channel, database="", base_dir=".",
         logging.error("Couldn't figure out start time!")
         db_conn.close()
         exit(1)
-    logging.info("Start time: {}".format(start_time))
+    logging.info(f"Start time: {start_time}")
 
     if end_time is not None:
         end_time = dateutil.parse(end_time)
 
-    logging.info("End time: {}".format(end_time))
+    logging.info(f"End time: {end_time}")
 
     logging.info("Loading models...")
     recognizer = BuscribeRecognizer(SAMPLE_RATE, model, spk_model)
     logging.info("Models loaded.")
 
-    logging.info('Transcribing from {}'.format(start_time))
+    logging.info(f'Transcribing from {start_time}')
 
     # Start priming the recognizer if possible
     start_of_transcription = start_time

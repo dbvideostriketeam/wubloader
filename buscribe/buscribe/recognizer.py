@@ -1,7 +1,7 @@
 from vosk import Model, SpkModel, KaldiRecognizer
 
 
-class BuscribeRecognizer():
+class BuscribeRecognizer:
     segments_start_time = None
 
     def __init__(self, sample_rate=48000, model_path="model_small", spk_model_path="spk_model"):
