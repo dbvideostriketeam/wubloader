@@ -2,7 +2,7 @@ import { l } from "vite/dist/node/types.d-aGj9QkWt";
 import { DateTime } from "../external/luxon.min";
 
 export function dateTimeFromWubloaderTime(wubloaderTime: string): DateTime | null {
-	const dt = DateTime.fromISO(wubloaderTime);
+	const dt = DateTime.fromISO(wubloaderTime, { zone: "UTC" });
 	if (dt.isValid) {
 		return dt;
 	}
