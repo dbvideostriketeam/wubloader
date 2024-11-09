@@ -31,3 +31,17 @@
 .templateUpdateErrors {
 	color: #c00;
 }
+
+.newTemplateFormFields {
+	display: grid;
+	grid-template-columns: max-content max-content;
+	gap: 1px;
+}
+
+.newTemplateFieldLabelContainer {
+	display: contents;
+}
+
+.newTemplateMidText {
+	margin: 2px;
+}
