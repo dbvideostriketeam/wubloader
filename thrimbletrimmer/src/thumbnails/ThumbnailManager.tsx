@@ -41,13 +41,19 @@ const ThumbnailManager: Component = () => {
 				cropStart: cropStart,
 				cropEnd: cropEnd,
 				locationStart: locationStart,
-				locationEnd: locationEnd
+				locationEnd: locationEnd,
 			});
 		}
 		setTemplates(templateList);
 	});
 
-	const submitHandler = async (origName: string, noImageIsError: boolean, errorList: Accessor<string[]>, setErrorList: Setter<string[]>, event: SubmitEvent): Promise<Template | null> => {
+	const submitHandler = async (
+		origName: string,
+		noImageIsError: boolean,
+		errorList: Accessor<string[]>,
+		setErrorList: Setter<string[]>,
+		event: SubmitEvent,
+	): Promise<Template | null> => {
 		setErrorList([]);
 
 		const form = event.currentTarget as HTMLFormElement;
@@ -67,7 +73,16 @@ const ThumbnailManager: Component = () => {
 		const locEndX = parseInt(formData.get("locendx") as string, 10);
 		const locEndY = parseInt(formData.get("locendy") as string, 10);
 
-		if (isNaN(cropStartX) || isNaN(cropStartY) || isNaN(cropEndX) || isNaN(cropEndY) || isNaN(locStartX) || isNaN(locStartY) || isNaN(locEndX) || isNaN(locEndY)) {
+		if (
+			isNaN(cropStartX) ||
+			isNaN(cropStartY) ||
+			isNaN(cropEndX) ||
+			isNaN(cropEndY) ||
+			isNaN(locStartX) ||
+			isNaN(locStartY) ||
+			isNaN(locEndX) ||
+			isNaN(locEndY)
+		) {
 			setErrorList((errors) => {
 				errors.push("All crop and location information must be entered.");
 				return errors;
@@ -108,12 +123,15 @@ const ThumbnailManager: Component = () => {
 			return null;
 		}
 
-		const submitURL = (origName === "") ? "/thrimshim/add-template" : `/thrimshim/update-template/${encodeURIComponent(origName)}`;
+		const submitURL =
+			origName === ""
+				? "/thrimshim/add-template"
+				: `/thrimshim/update-template/${encodeURIComponent(origName)}`;
 		const submitDataJSON = JSON.stringify(Object.fromEntries(submitData));
 		const submitResponse = await fetch(submitURL, {
 			method: "POST",
 			body: submitDataJSON,
-			headers: { "Content-Type": "application/json" }
+			headers: { "Content-Type": "application/json" },
 		});
 		if (!submitResponse.ok) {
 			const errorText = await submitResponse.text();
@@ -132,7 +150,7 @@ const ThumbnailManager: Component = () => {
 			cropStart: { x: cropStartX, y: cropStartY },
 			cropEnd: { x: cropEndX, y: cropEndY },
 			locationStart: { x: locStartX, y: locStartY },
-			locationEnd: { x: locEndX, y: locEndY }
+			locationEnd: { x: locEndX, y: locEndY },
 		};
 	};
 
@@ -158,7 +176,13 @@ const ThumbnailManager: Component = () => {
 							<form
 								class={styles.templatesListRow}
 								onSubmit={async (event) => {
-									const submitData = await submitHandler(template().name, false, formErrors, setFormErrors, event);
+									const submitData = await submitHandler(
+										template().name,
+										false,
+										formErrors,
+										setFormErrors,
+										event,
+									);
 									if (submitData) {
 										setTemplates((templateList) => {
 											templateList[index] = submitData;
@@ -175,39 +199,30 @@ const ThumbnailManager: Component = () => {
 											<div>{template().description}</div>
 											<div>{template().attribution}</div>
 											<div>
-												({template().cropStart.x}, {template().cropStart.y})
-												to
-												({template().cropEnd.x}, {template().cropEnd.y})
+												({template().cropStart.x}, {template().cropStart.y}) to (
+												{template().cropEnd.x}, {template().cropEnd.y})
 											</div>
 											<div>
-												({template().locationStart.x}, {template().locationStart.y})
-												to
-												({template().locationEnd.x}, {template().locationEnd.y})
+												({template().locationStart.x}, {template().locationStart.y}) to (
+												{template().locationEnd.x}, {template().locationEnd.y})
 											</div>
 											<div>
 												<Show
 													when={displayImagePreview()}
 													fallback={
-														<a
-															href="#"
-															onClick={
-																(event) => setDisplayImagePreview(true)
-															}
-														>
+														<a href="#" onClick={(event) => setDisplayImagePreview(true)}>
 															Preview
 														</a>
 													}
 												>
-													<img class={styles.templateImagePreview} src={`/thrimshim/template/${encodeURIComponent(template().name)}.png`} />
+													<img
+														class={styles.templateImagePreview}
+														src={`/thrimshim/template/${encodeURIComponent(template().name)}.png`}
+													/>
 												</Show>
 											</div>
 											<div>
-												<button
-													type="button"
-													onClick={
-														(event) => setEditing(true)
-													}
-												>
+												<button type="button" onClick={(event) => setEditing(true)}>
 													Edit
 												</button>
 											</div>
@@ -226,28 +241,92 @@ const ThumbnailManager: Component = () => {
 										</div>
 										<div>
 											(
-											<input type="number" name="cropstartx" placeholder="X" min={0} step={1} class={styles.templateCoord} value={template().cropStart.x} />
+											<input
+												type="number"
+												name="cropstartx"
+												placeholder="X"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().cropStart.x}
+											/>
 											,
-											<input type="number" name="cropstarty" placeholder="Y" min={0} step={1} class={styles.templateCoord} value={template().cropStart.y} />
+											<input
+												type="number"
+												name="cropstarty"
+												placeholder="Y"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().cropStart.y}
+											/>
 											)
 											<br />
 											(
-											<input type="number" name="cropendx" placeholder="X" min={0} step={1} class={styles.templateCoord} value={template().cropEnd.x} />
+											<input
+												type="number"
+												name="cropendx"
+												placeholder="X"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().cropEnd.x}
+											/>
 											,
-											<input type="number" name="cropendy" placeholder="Y" min={0} step={1} class={styles.templateCoord} value={template().cropEnd.y} />
+											<input
+												type="number"
+												name="cropendy"
+												placeholder="Y"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().cropEnd.y}
+											/>
 											)
 										</div>
 										<div>
 											(
-											<input type="number" name="locstartx" placeholder="X" min={0} step={1} class={styles.templateCoord} value={template().locationStart.x} />
+											<input
+												type="number"
+												name="locstartx"
+												placeholder="X"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().locationStart.x}
+											/>
 											,
-											<input type="number" name="locstarty" placeholder="Y" min={0} step={1} class={styles.templateCoord} value={template().locationStart.y} />
+											<input
+												type="number"
+												name="locstarty"
+												placeholder="Y"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().locationStart.y}
+											/>
 											)
 											<br />
 											(
-											<input type="number" name="locendx" placeholder="X" min={0} step={1} class={styles.templateCoord} value={template().locationEnd.x} />
+											<input
+												type="number"
+												name="locendx"
+												placeholder="X"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().locationEnd.x}
+											/>
 											,
-											<input type="number" name="locendy" placeholder="Y" min={0} step={1} class={styles.templateCoord} value={template().locationEnd.y} />
+											<input
+												type="number"
+												name="locendy"
+												placeholder="Y"
+												min={0}
+												step={1}
+												class={styles.templateCoord}
+												value={template().locationEnd.y}
+											/>
 											)
 										</div>
 										<div>
@@ -270,7 +349,13 @@ const ThumbnailManager: Component = () => {
 			</div>
 			<form
 				onSubmit={async (event) => {
-					const submitData = await submitHandler("", true, newTemplateErrors, setNewTemplateErrors, event);
+					const submitData = await submitHandler(
+						"",
+						true,
+						newTemplateErrors,
+						setNewTemplateErrors,
+						event,
+					);
 					if (submitData) {
 						setTemplates((templateList) => [...templateList, submitData]);
 					}

@@ -20,7 +20,7 @@ async function googleSignOut() {
 	if (googleUser) {
 		googleUser = null;
 		await gapi.auth2.getAuthInstance().signOut();
-		
+
 		const signInElem = document.getElementById("google-auth-sign-in");
 		if (signInElem) {
 			signInElem.classList.add("hidden");
@@ -40,7 +40,9 @@ export const GoogleSignIn: Component = () => {
 	return (
 		<div>
 			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
-			<a href="javascript:googleSignOut" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
+			<a href="javascript:googleSignOut" id="google-auth-sign-out" class="hidden">
+				Sign Out of Google Account
+			</a>
 		</div>
 	);
 };
