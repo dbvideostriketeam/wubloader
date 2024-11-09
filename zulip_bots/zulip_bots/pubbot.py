@@ -5,6 +5,8 @@ import os
 import socket
 import time
 
+from bs4 import BeautifulSoup
+
 from .config import get_config
 from .zulip import Client
 
@@ -38,12 +40,29 @@ def get_giveaway():
 	now = time.time()
 	timeout = REFRESH_RISING if g is None else REFRESH_FALLING
 	if t is None or now - t > timeout:
-		resp = session.get("https://desertbus.org/wapi/currentGiveaway")
-		resp.raise_for_status()
-		g = resp.json()["giveaway"]
-		giveaway_cache[0] = t
-		giveaway_cache[1] = g
-	return g
+		try:
+			g = _get_giveaway()
+		except Exception:
+			logging.warning("Failed to fetch giveaway", exc_info=True)
+		else:
+			giveaway_cache[0] = t
+			giveaway_cache[1] = g
+	return giveaway_cache[1]
+
+
+def _get_giveaway():
+	resp = session.get("https://desertbus.org/2024/donate", headers={"User-Agent": ""})
+	resp.raise_for_status()
+	html = BeautifulSoup(resp.content.decode(), "html.parser")
+	island = html.find("astro-island", **{"component-export": "DonateForm"})
+	if island is None:
+		logging.warning("Could not find DonateForm astro-island in donate page")
+		return None
+	data = json.loads(island["props"])
+	giveaways = data["giveaways"][1]
+	if giveaways:
+		return giveaways[1]["amount"][1] / 100.
+	return None
 
 
 def main(conf_file, message_log_file, name=socket.gethostname()):
@@ -97,15 +116,14 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
 				increase_str = "" if increase is None else " (+${:.2f})".format(msg["d"] - total)
-				giveaway = None
+				giveaway_amount = get_giveaway()
 				entries_str = ""
-				if increase is not None and giveaway is not None:
-					amount = giveaway["amount"]
-					if (increase + 0.005) % amount < 0.01:
-						entries = int((increase + 0.005) / amount)
-						log["giveaway_amount"] = amount
+				if increase is not None and giveaway_amount is not None:
+					if (increase + 0.005) % giveaway_amount < 0.01:
+						entries = int((increase + 0.005) / giveaway_amount)
+						log["giveaway_amount"] = giveaway_amount
 						log["giveaway_entries"] = entries
-						entries_str = " ({} entries of ${:.2f})".format(entries, amount)
+						entries_str = " ({} entries of ${:.2f})".format(entries, giveaway_amount)
 				logging.info("New donation total: {}{}{}".format(msg["d"], increase_str, entries_str))
 				client.send_to_stream("bot-spam", "Donation Firehose", "Donation total is now ${:.2f}{}{}".format(msg["d"], increase_str, entries_str))
 				if increase is not None and increase >= 500:
