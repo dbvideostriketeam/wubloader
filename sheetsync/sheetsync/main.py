@@ -330,16 +330,16 @@ class EventsSync(SheetSync):
 	def download_media(self, url):
 		hostname = urlparse(url).hostname
 		if hostname in ("youtu.be", "youtube.com"):
-			self.logger.info(f"Ignoring url {url:!r}: Blocklisted hostname")
+			self.logger.info(f"Ignoring url {url!r}: Blocklisted hostname")
 		if check_for_media(self.media_dir, url):
-			self.logger.info(f"Already have content for url {url:!r}")
+			self.logger.info(f"Already have content for url {url!r}")
 			return
 		try:
 			download_media(url, self.media_dir)
 		except Exception:
-			self.logger.warning(f"Failed to download url {url:!r}", exc_info=True)
+			self.logger.warning(f"Failed to download url {url!r}", exc_info=True)
 			raise
-		self.logger.info(f"Downloaded media for url {url:!r}")
+		self.logger.info(f"Downloaded media for url {url!r}")
 
 
 class ArchiveSync(EventsSync):
