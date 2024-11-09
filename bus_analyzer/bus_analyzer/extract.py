@@ -302,15 +302,15 @@ def recognize_time_of_day(frame):
 	sky_colours = {
 		'score': (119, 119, 119),
 		'day': (82, 218, 217),
-		'dusk': (225, 152, 184), # estimated from previous years
-		'night': (0, 0, 0), # estimated from previous years
+		'dusk': (217, 150, 181),
+		'night': (0, 0, 0),
 		'dawn': (56, 53, 125), # estimated from previous years
 	}
 	dash_colours = {
 		'score': (181, 181, 150),
-		'day': (147, 0, 2),
-		'dusk': (118, 0, 0), # estimated from previous years
-		'night': (68, 0, 0), # estimated from previous years
+		'day': (146, 0, 1),
+		'dusk': (115, 0, 0),
+		'night': (41, 0, 0),
 		'dawn': (118, 0, 0), # estimated from previous years
 	}
 	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
@@ -323,12 +323,10 @@ def recognize_time_of_day(frame):
 	matches = [(None, MAX_DIST)]
 	
 	for time in sky_colours:
-		
 		sky_distance = sum((a - b)**2 for a, b in zip(sky_pixel, sky_colours[time]))**0.5
 		sky_distances.append(sky_distance)
 		dash_distance = sum((a - b)**2 for a, b in zip(dash_pixel, dash_colours[time]))**0.5
 		dash_distances.append(dash_distance)
-		
 		if sky_distance < threshold and dash_distance < threshold:
 			matches.append((time, (sky_distance**2 + dash_distance**2)**0.5))
 		
