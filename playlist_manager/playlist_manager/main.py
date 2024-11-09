@@ -220,7 +220,7 @@ class PlaylistManager(object):
 			logging.debug(f"First page of {playlist_id} was entire playlist")
 		elif len(self.get_playlist(playlist_id)) == query.total_size:
 			logging.debug(f"Skipping fetching of remainder of playlist {playlist_id}, size matches")
-			return
+			return self.playlist_state[playlist_id]
 		else:
 			logging.warning("Playlist {} has size mismatch ({} saved vs {} actual), refetching".format(
 				playlist_id, len(self.get_playlist(playlist_id)), query.total_size,
