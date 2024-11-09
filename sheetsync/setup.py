@@ -14,6 +14,7 @@ setup(
 		"python-dateutil",
 		"requests",
 		"tzdata",
+		"urllib3",
 		"wubloader-common",
 	],
 )
