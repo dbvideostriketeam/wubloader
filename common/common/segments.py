@@ -984,7 +984,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 			}
 			if video_type in CUSTOM_XFADE_TRANSITIONS:
 				kwargs["transition"] = "custom"
-				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type]}'" # wrap in '' for quoting
+				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type][1]}'" # wrap in '' for quoting
 			elif video_type in KNOWN_XFADE_TRANSITIONS:
 				kwargs["transition"] = video_type
 			else:
