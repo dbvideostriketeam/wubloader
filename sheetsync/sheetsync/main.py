@@ -311,7 +311,7 @@ class EventsSync(SheetSync):
 				e = self.media_downloads[url].exception
 				if e is not None:
 					sheet_row.setdefault("_parse_errors", []).append(
-						f"Failed to download media link {url:!r}: {e}"
+						f"Failed to download media link {url!r}: {e}"
 					)
 
 		if db_row is not None:
