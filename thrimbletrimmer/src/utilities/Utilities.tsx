@@ -1,5 +1,5 @@
 import { Component, createSignal, onMount } from "solid-js";
-import { DateTime } from "../external/luxon.min";
+import { DateTime } from "luxon";
 import Clock from "./Clock";
 import TimeConverter from "./TimeConverter";
 

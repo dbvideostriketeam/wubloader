@@ -1,5 +1,5 @@
 import { Accessor, Component, createSignal, onCleanup, onMount } from "solid-js";
-import { DateTime, Interval } from "../external/luxon.min";
+import { DateTime, Interval } from "luxon";
 
 interface ClockProps {
 	busStartTime: Accessor<DateTime | null>;
