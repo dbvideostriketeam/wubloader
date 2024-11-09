@@ -32,6 +32,13 @@ def stream(channels):
 		tr = data["t"]["r"]
 
 
+def get_current(channel):
+	resp = session.get(f"https://pubsub.pubnub.com/history/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/{channel}/0/1")
+	resp.raise_for_status()
+	data = resp.json()
+	return data[0]
+
+
 giveaway_cache = [None, None]
 def get_giveaway():
 	REFRESH_RISING = 30
@@ -81,6 +88,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 	message_log = open(message_log_file, "a")
 	def write_log(log):
 		message_log.write(json.dumps(log) + '\n')
+		message_log.flush()
 
 	write_log({
 		"type": "startup",
@@ -93,7 +101,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 	channels = [total_channel] + [
 		f"bid:{prize_id}" for prize_id in config["prize_ids"]
 	]
-	total = None
+	total = get_current(total_channel)
 	for msg in stream(channels):
 		log = {
 			"type": "unknown",
@@ -112,7 +120,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 			log["message_time"] = message_time
 
 			if msg["c"] == total_channel:
-				log["type"] == "total"
+				log["type"] = "total"
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
 				increase_str = "" if increase is None else " (+${:.2f})".format(msg["d"] - total)
