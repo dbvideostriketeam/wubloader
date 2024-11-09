@@ -7,6 +7,7 @@ setup(
 	install_requires = [
 		"argh==0.28.1",
 		"gevent",
+		"exceptiongroup", # backport from python 3.11
 		"prometheus-client==0.7.1", # locked version as we rely on internals
 		"psycogreen",
 		"psycopg2",
