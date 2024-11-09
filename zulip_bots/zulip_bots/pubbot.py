@@ -138,11 +138,12 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				logging.info(f"Prize update for {prize_id}: {data}")
 				if "name" in data and "amount" in data:
 					log["bidder"] = data["name"]
-					log["bid"] = data["amount"]
+					amount = data["amount"] / 100
+					log["bid"] = amount
 					client.send_to_stream(
 						"bot-spam",
 						"Bids",
-						f"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${data['amount']:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
+						f"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${amount:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
 					)
 
 			else:
