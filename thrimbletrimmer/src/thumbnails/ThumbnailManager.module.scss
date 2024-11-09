@@ -1,0 +1,33 @@
+.templatesList {
+	display: grid;
+	grid-template-columns: max-content max-content max-content max-content max-content max-content max-content;
+	gap: 0px;
+	border-left: 1px solid #000;
+}
+
+.templatesListHeader > div {
+	border-top: 1px solid #000;
+	font-weight: 700;
+}
+
+.templatesListRow {
+	display: contents;
+}
+
+.templatesListRow > div {
+	border-right: 1px solid #000;
+	border-bottom: 1px solid #000;
+	padding: 1px;
+}
+
+.templateCoord {
+	width: 50px;
+}
+
+.templateImagePreview {
+	max-width: 480px;
+}
+
+.templateUpdateErrors {
+	color: #c00;
+}
