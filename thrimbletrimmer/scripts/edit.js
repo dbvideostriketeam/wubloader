@@ -448,13 +448,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
 	updateThumbnailInputState();
-	if (videoInfo.thumbnail_time) {
-		document.getElementById("video").addEventListener("loadedmetadata", (_event) => {
-			document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
-				videoInfo.thumbnail_time,
-			);
-		});
-	}
 	// Ensure that changing values on load doesn't set keep the page dirty.
 	globalPageState = PAGE_STATE.CLEAN;
 
@@ -943,6 +936,12 @@ async function initializeVideoInfo() {
 			firstChapterPlayFromStartTime.addEventListener("click", chapterMarkerPlayStartTimeHandler);
 		} else {
 			firstChapterPlayFromStartTime.classList.add("hidden");
+		}
+
+		if (videoInfo.thumbnail_time) {
+			document.getElementById("video-info-thumbnail-time").value = videoHumanTimeFromWubloaderTime(
+				videoInfo.thumbnail_time,
+			);
 		}
 
 		rangeDataUpdated();
