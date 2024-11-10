@@ -136,7 +136,7 @@ def resolve_relative_url(base_url, url):
 	parsed = urllib.parse.urlparse(url)
 	if parsed.scheme:
 		# absolute url
-		return parsed
+		return url
 	parsed = parsed._replace(scheme=base_parsed.scheme)
 	if parsed.netloc == "":
 		parsed = parsed._replace(netloc=base_parsed.netloc)
