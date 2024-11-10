@@ -1321,12 +1321,11 @@ async function sendVideoData(newState, overrideChanges) {
 		}
 	}
 	try {
-		if (thumbnailMode === "ONEOFF") {
-			thumbnailImage = await renderThumbnail();
-			thumbnailMode = "CUSTOM";
-		}
 		if (thumbnailMode === "CUSTOM") {
 			thumbnailImage = await uploadedImageToBase64();
+		} else if (thumbnailMode === "ONEOFF") {
+			thumbnailImage = await renderThumbnail();
+			thumbnailMode = "CUSTOM";
 		}
 	} catch (e) {
 		submissionError(`${e}`);
