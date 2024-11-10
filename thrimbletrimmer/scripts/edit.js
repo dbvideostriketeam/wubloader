@@ -282,7 +282,6 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
 				return;
 			}
-			const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
 			const videoFrameQuery = new URLSearchParams({
 				timestamp: imageTime,
 			});
@@ -293,7 +292,16 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 				"video-info-thumbnail-template-overlay-image",
 			);
 
-			templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
+			const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+			if (thumbnailMode === "TEMPLATE") {
+				const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
+				templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
+			} else if (thumbnailMode === "ONEOFF") {
+				const templateData = await uploadedImageToBase64();
+				templateImageElement.src = `data:image/png;base64,${templateData}`;
+			} else {
+				console.log(`WARNING: Source images updated but thumbnailMode = ${thumbnailMode}`);
+			}
 			templateImageElement.classList.remove("hidden");
 
 			const aspectRatioControls = document.getElementById(
