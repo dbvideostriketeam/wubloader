@@ -113,7 +113,7 @@ def download_media(
 
 					new_url = resp.get_redirect_location()
 					if new_url:
-						urls.append(new_url)
+						urls.append(resolve_relative_url(urls[-1], new_url))
 						break # break from retry loop, continuing in the redirect loop
 
 					_save_response(output_dir, urls, resp, max_size, chunk_size)
@@ -128,6 +128,28 @@ def download_media(
 				raise Exception(f"All retries failed for url {urls[-1]}: {errors}")
 
 		raise Exception("Too many redirects")
+
+
+def resolve_relative_url(base_url, url):
+	"""As per RFC1808 Section 4"""
+	base_parsed = urllib.parse.urlparse(base_url)
+	parsed = urllib.parse.urlparse(url)
+	if parsed.scheme:
+		# absolute url
+		return parsed
+	parsed = parsed._replace(scheme=base_parsed.scheme)
+	if parsed.netloc == "":
+		parsed = parsed._replace(netloc=base_parsed.netloc)
+		if not parsed.path.startswith("/"):
+			# This logic is a bit weird, but we stop as soon as we reach a non-empty part
+			for key in ("path", "params", "query"):
+				if getattr(parsed, key) != "":
+					break
+				parsed._replace(**{key: getattr(base_parsed, key)})
+			base_path = os.path.basename(base_parsed.path)
+			path = os.path.normpath(os.path.join(base_path, parsed.path))
+			parsed = parsed._replace(path=path)
+	return parsed.geturl()
 
 
 def hash_to_path(hash):
