@@ -20,6 +20,7 @@
 		"@types/luxon": "3.4.2"
 	},
 	"dependencies": {
+		"hls.js": "1.5.17",
 		"luxon": "3.4.4",
 		"solid-js": "1.9.3"
 	}
