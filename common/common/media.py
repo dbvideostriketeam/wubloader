@@ -317,6 +317,8 @@ def download_imgur_url(output_dir, max_size, url):
 			download_imgur_image(output_dir, max_size, url, id, ext)
 		return True
 	elif parsed.path.startswith("/a/"):
+		# paths look like /a/some-name-then-ID
+		id = parsed.path.removeprefix("/a/").split("-")[-1]
 		contents = download_imgur_album(url, parsed.path.removeprefix("/a/"))
 	elif parsed.path.startswith("/gallery/"):
 		contents = download_imgur_gallery(url, parsed.path.removeprefix("/gallery/"))
