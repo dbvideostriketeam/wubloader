@@ -277,7 +277,7 @@ def get_row(ident):
 		and response["video_title"].startswith(title_header)
 	):
 		response["video_title"] = response["video_title"][len(title_header):]
-	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?{}\n{}$".format(
+	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?({}[^\n]+\n)?{}$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
 		re.escape(DESCRIPTION_THUMBNAIL_HEADER),
 		re.escape(app.description_footer),
@@ -387,6 +387,7 @@ def update_row(ident, editor=None):
 				template = database.query(conn, """
 					SELECT description FROM templates WHERE name = %s
 				""", new_row['thumbnail_template'])
+				template = results.fetchone()
 				if template.description:
 					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.description]
 			description_lines.append(app.description_footer)
