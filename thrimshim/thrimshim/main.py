@@ -388,7 +388,7 @@ def update_row(ident, editor=None):
 					SELECT description FROM templates WHERE name = %s
 				""", new_row['thumbnail_template'])
 				template = results.fetchone()
-				if template.description:
+				if template and template.description:
 					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.description]
 			description_lines.append(app.description_footer)
 			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
