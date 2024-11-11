@@ -383,8 +383,8 @@ def update_row(ident, editor=None):
 					for playlist in playlists
 				]
 				description_lines.append('') # blank line before footer
-			if new_row['thumbnail_mode'] == 'TEMPLATE':
-				template = database.query(conn, """
+			if new_row['thumbnail_mode'] == 'TEMPLATE' and new_row['thumbnail_template']:
+				results = database.query(conn, """
 					SELECT description FROM templates WHERE name = %s
 				""", new_row['thumbnail_template'])
 				template = results.fetchone()
