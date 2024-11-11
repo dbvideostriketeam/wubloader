@@ -334,6 +334,7 @@ const ThumbnailManager: Component = () => {
 										</div>
 										<div>
 											<button type="submit">Submit</button>
+											<button type="button" onClick={(event) => setEditing(false)}>Cancel</button>
 											<ul class={styles.templateUpdateErrors}>
 												<For each={formErrors()}>
 													{(error: string, index: Accessor<number>) => <li>{error}</li>}
@@ -466,6 +467,7 @@ const ThumbnailManager: Component = () => {
 					</span>
 				</div>
 				<button type="submit">Add Template</button>
+				<button type="reset">Reset</button>
 			</form>
 			<GoogleSignIn />
 		</>
