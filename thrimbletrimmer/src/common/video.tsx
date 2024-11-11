@@ -1,4 +1,5 @@
-import { Accessor, Component, createSignal, Setter, Show } from "solid-js";
+import { Accessor, Component, createEffect, createSignal, Setter, Show } from "solid-js";
+import Hls from "hls.js";
 import { DateTime } from "luxon";
 import {
 	TimeType,
@@ -7,6 +8,8 @@ import {
 	timeAgoFromDateTime,
 } from "./convertTime";
 import styles from "./video.module.scss";
+
+Hls.DefaultConfig.maxBufferHole = 600;
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
@@ -176,4 +179,29 @@ export const KeyboardShortcuts: Component<KeyboardShortcutProps> = (
 			</ul>
 		</details>
 	);
+};
+
+export interface VideoPlayerProps {
+	videoURL: string;
+	errorList: Accessor<string[]>;
+	setErrorList: Setter<string[]>;
+	videoPlayer: Accessor<Hls>;
+}
+
+export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
+	if (!Hls.isSupported()) {
+		const newError =
+			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work.";
+		props.setErrorList([...props.errorList(), newError]);
+		return <></>;
+	}
+
+	let videoElement;
+	createEffect(() => {
+		if (videoElement) {
+			props.videoPlayer().attachMedia(videoElement);
+		}
+	});
+
+	return <video ref={videoElement} controls={true}></video>;
 };

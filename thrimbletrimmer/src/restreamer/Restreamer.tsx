@@ -1,8 +1,23 @@
-import { Accessor, Component, createResource, createSignal, For, Show, Suspense } from "solid-js";
+import {
+	Accessor,
+	Component,
+	createResource,
+	createSignal,
+	For,
+	Setter,
+	Show,
+	Suspense,
+} from "solid-js";
+import Hls from "hls.js";
 import { DateTime } from "luxon";
 import styles from "./Restreamer.module.scss";
-import { dateTimeFromWubloaderTime } from "../common/convertTime";
-import { KeyboardShortcuts, StreamTimeSettings, StreamVideoInfo } from "../common/video";
+import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
+import {
+	KeyboardShortcuts,
+	StreamTimeSettings,
+	StreamVideoInfo,
+	VideoPlayer,
+} from "../common/video";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -51,7 +66,11 @@ export const Restreamer: Component = () => {
 			</div>
 			<Suspense>
 				<Show when={defaultsData()}>
-					<RestreamerWithDefaults defaults={defaultsData()} />
+					<RestreamerWithDefaults
+						defaults={defaultsData()}
+						errorList={pageErrors}
+						setErrorList={setPageErrors}
+					/>
 				</Show>
 			</Suspense>
 		</>
@@ -60,6 +79,8 @@ export const Restreamer: Component = () => {
 
 interface RestreamerDefaultProps {
 	defaults: DefaultsData;
+	errorList: Accessor<string[]>;
+	setErrorList: Setter<string[]>;
 }
 
 const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
@@ -72,6 +93,26 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamEndTime: null,
 	});
 
+	const [videoPlayer, setVideoPlayer] = createSignal(new Hls());
+
+	const videoURL = () => {
+		const streamInfo = streamVideoInfo();
+		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
+		const query = new URLSearchParams({ start: startTime });
+		if (streamInfo.streamEndTime) {
+			const endTime = wubloaderTimeFromDateTime(streamInfo.streamEndTime);
+			query.append("end", endTime);
+		}
+		const queryString = query.toString();
+		let url = `/playlist/${streamInfo.streamName}.m3u8`;
+		if (queryString !== "") {
+			url += `?${queryString}`;
+		}
+		return url;
+	};
+
+	videoPlayer().loadSource(videoURL());
+
 	return (
 		<>
 			<StreamTimeSettings
@@ -79,6 +120,12 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				streamVideoInfo={streamVideoInfo}
 				setStreamVideoInfo={setStreamVideoInfo}
 				showTimeRangeLink={false}
+			/>
+			<VideoPlayer
+				videoURL={videoURL()}
+				errorList={props.errorList}
+				setErrorList={props.setErrorList}
+				videoPlayer={videoPlayer}
 			/>
 		</>
 	);
