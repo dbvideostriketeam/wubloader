@@ -414,7 +414,7 @@ class Cutter(object):
 					# a) it has plenty of space
 					# b) for a Local upload location, it will be on the same filesystem as the
 					#    final desired path.
-					cut = archive_cut_segments(sr, vr, self.segments_path)
+					cut = archive_cut_segments(job.segment_ranges, job.video_ranges, self.segments_path)
 				else:
 					self.logger.debug("Using encoding settings for {} cut: {}".format(
 						"streamable" if upload_backend.encoding_streamable else "non-streamable",
