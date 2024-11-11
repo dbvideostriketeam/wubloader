@@ -201,7 +201,8 @@ def recognize_odometer(prototypes, frame):
 	"""
 	odo = frame.crop(AREA_COORDS["odo"])
 	digits = extract_digits(odo, "odo")
-	mask = Image.open(prototypes['mask'][0])
+	mask = prototypes['mask']['mask']
+	mask = mask.convert(mode='L')
 	digits = [
 		recognize_digit(prototypes["odo-digits"], digit, mask=mask) for digit in digits[:-1]
 	] + [
@@ -220,7 +221,8 @@ def recognize_odometer(prototypes, frame):
 def recognize_clock(prototypes, frame):
 	clock = frame.crop(AREA_COORDS["clock"])
 	digits = extract_digits(clock, "clock")
-	mask = Image.open(prototypes['mask'][0])
+	mask = prototypes['mask']['mask']
+	mask = mask.convert(mode='L')
 	digits = [
 		recognize_digit(prototypes["odo-digits"], digit, i == 0, mask=mask) for i, digit in enumerate(digits)
 	]

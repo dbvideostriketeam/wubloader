@@ -105,7 +105,7 @@ def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path=
 	dbmanager = database.DBManager(dsn=dbconnect)
 
 	for segment_path in segment_paths:
-		analyze_segment(db_manager, prototypes, segment_path)
+		analyze_segment(dbmanager, prototypes, segment_path)
 
 
 def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=None):
