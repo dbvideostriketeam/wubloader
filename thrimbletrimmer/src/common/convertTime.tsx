@@ -1,5 +1,11 @@
 import { DateTime } from "luxon";
 
+export enum TimeType {
+	UTC,
+	BusTime,
+	TimeAgo,
+}
+
 export function dateTimeFromWubloaderTime(wubloaderTime: string): DateTime | null {
 	const dt = DateTime.fromISO(wubloaderTime, { zone: "UTC" });
 	if (dt.isValid) {
