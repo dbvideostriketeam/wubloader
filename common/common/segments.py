@@ -119,7 +119,12 @@ CUSTOM_XFADE_TRANSITIONS = {
 		# and shifts upward slightly to cover the entire source image at close to the same
 		# time.
 		"if(gt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,0),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),3),if(lt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),sqrt((1-pow((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3/3,2))*49)),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),1),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,6*sqrt(10)/7+1.5-0.5*abs((X-W/2)*14/W/pow(1-P,4)*0.3)-3*sqrt(10)/7*sqrt(4-pow(abs((X-W/2)*14/W/pow(1-P,4)*0.3)-1,2))),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),0.75),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,9-8*abs((X-W/2)*14/W/pow(1-P,4)*0.3)),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),0.50),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,3*abs((X-W/2)*14/W/pow(1-P,4)*0.3)+0.75),B,A),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,2.25),B,A))))),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),4),if(lt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),sqrt((1-pow((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3/3,2))*49)),B,A),if(gt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,abs((X-W/2)*14/W/pow(1-P,4)*0.3/2)-(3*sqrt(33)-7)/112*pow((X-W/2)*14/W/pow(1-P,4)*0.3,2)-3+sqrt(1-pow(abs(abs((X-W/2)*14/W/pow(1-P,4)*0.3)-2)-1,2))),B,A)))"
-	)
+	),
+	"diamondwipe": (
+		"Wipe using an expanding diamond from the center. Engineering has been using it, and now we can too.",
+		# By SenseAmidstMadness
+		"if(lt(abs(X-W/2)/W+abs(Y-H/2)/H,pow(1-P,3)),B,A)",
+	),
 }
 
 
