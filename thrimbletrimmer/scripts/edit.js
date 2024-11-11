@@ -239,7 +239,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 	document
 		.getElementById("video-info-thumbnail-template")
-		.addEventListener("change", thumbnailTemplateChanged);
+		.addEventListener("change", handleFieldChange);
 	document
 		.getElementById("video-info-thumbnail-mode")
 		.addEventListener("change", updateThumbnailInputState);
@@ -431,7 +431,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			}
 			thumbnailTemplateSelection.appendChild(templateOption);
 		}
-		thumbnailTemplateChanged();
+		setDefaultCrop(false);
 	} else {
 		addError("Failed to load thumbnail templates list");
 	}
@@ -450,6 +450,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	updateThumbnailInputState();
 	// Ensure that changing values on load doesn't set keep the page dirty.
 	globalPageState = PAGE_STATE.CLEAN;
+
+	document.getElementById("video-info-thumbnail-template-default-crop").addEventListener("click", (_event) => {
+		setDefaultCrop(true);
+	});
 
 	document.getElementById("submit-button").addEventListener("click", (_event) => {
 		submitVideo();
@@ -1024,9 +1028,7 @@ function updateThumbnailInputState(event) {
 	}
 }
 
-function thumbnailTemplateChanged(event) {
-	handleFieldChange(event);
-
+function setDefaultCrop(updateWidgets) {
 	const newTemplate = document.getElementById("video-info-thumbnail-template").value;
 	for (const field of ["crop", "location"]) {
 		const newValue = thumbnailTemplates[newTemplate][field];
@@ -1034,6 +1036,11 @@ function thumbnailTemplateChanged(event) {
 			document.getElementById(`video-info-thumbnail-${field}-${i}`).value = newValue[i];
 		}
 	}
+
+	if (updateWidgets) {
+		updateTemplateCropWidgets();
+	}
+	handleFieldChange();
 }
 
 // Returns [crop, location], with either being null on error.
