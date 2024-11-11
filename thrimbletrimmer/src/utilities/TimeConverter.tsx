@@ -7,16 +7,11 @@ import {
 	wubloaderTimeFromDateTime,
 	busTimeFromDateTime,
 	timeAgoFromDateTime,
+	TimeType,
 } from "../common/convertTime";
 
 interface TimeConverterProps {
 	busStartTime: Accessor<DateTime | null>;
-}
-
-enum TimeType {
-	UTC,
-	BusTime,
-	TimeAgo,
 }
 
 const TimeConverter: Component<TimeConverterProps> = (props) => {
