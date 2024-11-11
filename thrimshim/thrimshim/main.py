@@ -385,11 +385,11 @@ def update_row(ident, editor=None):
 				description_lines.append('') # blank line before footer
 			if new_row['thumbnail_mode'] == 'TEMPLATE' and new_row['thumbnail_template']:
 				results = database.query(conn, """
-					SELECT description FROM templates WHERE name = %s
+					SELECT attribution FROM templates WHERE name = %s
 				""", new_row['thumbnail_template'])
 				template = results.fetchone()
-				if template and template.description:
-					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.description]
+				if template and template.attribution:
+					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.attribution]
 			description_lines.append(app.description_footer)
 			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
