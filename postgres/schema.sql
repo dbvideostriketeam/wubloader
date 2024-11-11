@@ -99,7 +99,7 @@ CREATE TABLE events (
 	), -- left, top, right, bottom pixel coordinates to position the cropped frame
 	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
-	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE') OR uploader IS NOT NULL),
+	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE', 'MODIFIED') OR uploader IS NOT NULL),
 	error TEXT,
 	video_id TEXT,
 	video_link TEXT CHECK ((NOT (state IN ('DONE', 'MODIFIED'))) OR video_link IS NOT NULL),
