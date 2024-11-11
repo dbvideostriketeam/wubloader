@@ -29,6 +29,7 @@ app.after_request(after_request)
 MAX_TITLE_LENGTH = 100 # Youtube only allows 100-character titles
 MAX_DESCRIPTION_LENGTH = 5000 # Youtube only allows 5000-character descriptions
 DESCRIPTION_PLAYLISTS_HEADER = "This video is part of the following playlists:"
+DESCRIPTION_THUMBNAIL_HEADER = "Thumbnail Credit: "
 
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
@@ -276,8 +277,9 @@ def get_row(ident):
 		and response["video_title"].startswith(title_header)
 	):
 		response["video_title"] = response["video_title"][len(title_header):]
-	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?{}$".format(
+	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?{}\n{}$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
+		re.escape(DESCRIPTION_THUMBNAIL_HEADER),
 		re.escape(app.description_footer),
 	))
 	if (not is_archive) and response["video_description"] is not None:
@@ -381,6 +383,12 @@ def update_row(ident, editor=None):
 					for playlist in playlists
 				]
 				description_lines.append('') # blank line before footer
+			if new_row['thumbnail_mode'] == 'TEMPLATE':
+				template = database.query(conn, """
+					SELECT description FROM templates WHERE name = %s
+				""", new_row['thumbnail_template'])
+				if template.description:
+					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.description]
 			description_lines.append(app.description_footer)
 			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
