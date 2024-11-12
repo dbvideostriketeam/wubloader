@@ -356,7 +356,7 @@
     // Path in host fs for the state file.
     // Must exist and be initialized to "{}"
     state_path:: "./prizebot_state.json",
-  }
+  },
 
   // template for donation data urls
   donation_url_template:: "https://example.com/DB{}/DB{}.json",

@@ -83,10 +83,10 @@ def main(config_file, test=False, all=False, once=False, interval=60):
 		for type in ('live', 'silent', 'giveaway'):
 			prizes = get_prizes(type)
 			for prize in prizes:
+				logging.info(f"Got prize: {prize}")
 				if prize.state == "sold" and (all or state.get(prize.id, "sold") != "sold"):
 					send_message(client, prize, test=test)
 				state[prize.id] = prize.state
-		print(state)
 		if not test:
 			with open(config['state'], 'w') as f:
 				f.write(json.dumps(state) + '\n')
