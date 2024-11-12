@@ -1,15 +1,15 @@
 import { Accessor, Component, createEffect, createSignal, Setter, Show } from "solid-js";
-import Hls from "hls.js";
 import { DateTime } from "luxon";
 import {
 	TimeType,
 	wubloaderTimeFromDateTime,
 	busTimeFromDateTime,
 	timeAgoFromDateTime,
+	dateTimeFromWubloaderTime,
+	dateTimeFromBusTime,
+	dateTimeFromTimeAgo,
 } from "./convertTime";
 import styles from "./video.module.scss";
-
-Hls.DefaultConfig.maxBufferHole = 600;
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
@@ -26,16 +26,58 @@ export interface StreamTimeSettingsProps {
 	streamVideoInfo: Accessor<StreamVideoInfo>;
 	setStreamVideoInfo: Setter<StreamVideoInfo>;
 	showTimeRangeLink: boolean;
+	errorList: Accessor<string[]>;
+	setErrorList: Setter<string[]>;
 }
 
 export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) => {
 	const [timeType, setTimeType] = createSignal<TimeType>(TimeType.UTC);
 
 	const submitHandler = (event: SubmitEvent) => {
+		event.preventDefault();
+
 		const form = event.currentTarget as HTMLFormElement;
 		const formData = new FormData(form);
 
-		// TODO
+		const streamName = formData.get("stream") as string;
+		const startTimeEntered = formData.get("start-time") as string;
+		const endTimeEntered = formData.get("end-time") as string;
+		const timeType = +formData.get("time-type") as TimeType;
+
+		let startTime: DateTime | null = null;
+		let endTime: DateTime | null = null;
+		switch (timeType) {
+			case TimeType.UTC:
+				startTime = dateTimeFromWubloaderTime(startTimeEntered);
+				if (endTimeEntered !== "") {
+					endTime = dateTimeFromWubloaderTime(endTimeEntered);
+				}
+				break;
+			case TimeType.BusTime:
+				startTime = dateTimeFromBusTime(props.busStartTime(), startTimeEntered);
+				if (endTimeEntered !== "") {
+					endTime = dateTimeFromBusTime(props.busStartTime(), endTimeEntered);
+				}
+				break;
+			case TimeType.TimeAgo:
+				startTime = dateTimeFromTimeAgo(startTimeEntered);
+				if (endTimeEntered !== "") {
+					endTime = dateTimeFromTimeAgo(endTimeEntered);
+				}
+				break;
+		}
+
+		if (startTime === null || (endTimeEntered !== "" && endTime === null)) {
+			const error = "A load boundary time could not be parsed. Check the format of your times.";
+			props.setErrorList([...props.errorList(), error]);
+			return;
+		}
+
+		props.setStreamVideoInfo({
+			streamName: streamName,
+			streamStartTime: startTime,
+			streamEndTime: endTime,
+		});
 	};
 
 	const startTimeDisplay = () => {
@@ -179,29 +221,4 @@ export const KeyboardShortcuts: Component<KeyboardShortcutProps> = (
 			</ul>
 		</details>
 	);
-};
-
-export interface VideoPlayerProps {
-	videoURL: string;
-	errorList: Accessor<string[]>;
-	setErrorList: Setter<string[]>;
-	videoPlayer: Accessor<Hls>;
-}
-
-export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
-	if (!Hls.isSupported()) {
-		const newError =
-			"Your browser doesn't support MediaSource extensions. Video playback and editing won't work.";
-		props.setErrorList([...props.errorList(), newError]);
-		return <></>;
-	}
-
-	let videoElement;
-	createEffect(() => {
-		if (videoElement) {
-			props.videoPlayer().attachMedia(videoElement);
-		}
-	});
-
-	return <video ref={videoElement} controls={true}></video>;
 };
