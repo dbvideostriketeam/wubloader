@@ -96,15 +96,44 @@ def post_process_miles(seconds, miles, days):
 			if subgroup[0] < good[0] or corrected_miles[subgroup[0] - 1] > corrected_miles[subgroup[-1] + 1]:
 				continue
 			m = (corrected_miles[subgroup[-1] + 1] - corrected_miles[subgroup[0] - 1]) / (seconds[subgroup[-1] + 1] - seconds[subgroup[0] - 1])
-			b = corrected_miles[subgroup[-1] + 1] - m * seconds[subgroup[-1] + 1]	   
+			b = corrected_miles[subgroup[-1] + 1] - m * seconds[subgroup[-1] + 1] 
 			for i in subgroup:
 				corrected_miles[i] = m * seconds[i] + b
 
-	# custom handling of the start and end
+	# custom handling of the start
 	if 0 <= corrected_miles[1] - miles[0] <= MAX_SPEED * (seconds[1] - seconds[0]):
 		corrected_miles[0] = miles[0]
-	if 0 <= miles[-1] - corrected_miles[-2] <= MAX_SPEED * (seconds[-1] - seconds[-2]):
-		corrected_miles[-1] = miles[-1]
+
+	# custom handling of the end
+	# find the most recent good value
+	for latest in range(len(seconds) - 1, -1, -1):
+		if corrected_miles[latest]:
+			break
+	to_fix = []
+	for i in range(latest + 1, len(seconds)):
+		back = 1
+		while True:
+			if corrected_miles[i - back]:
+				diff = miles[i] - corrected_miles[i - back]
+				max_diff = MAX_SPEED * (seconds[i] - seconds[i - back])
+				if diff >= 0 and diff <= max_diff:
+					corrected_miles[i] = miles[i]
+				break
+			else:
+				back += 1
+		if not corrected_miles[i]:
+			to_fix.append(i)
+
+	# linear interpolation of the end 
+	for k, g in itertools.groupby(enumerate(to_fix), lambda x:x[0]-x[1]):
+		subgroup = map(operator.itemgetter(1), g)
+		subgroup = list(map(int, subgroup))
+		# ignore the last data point or after crashes
+		if subgroup[-1] == (len(corrected_miles) - 1) or corrected_miles[subgroup[0] - 1] > corrected_miles[subgroup[-1] + 1]:
+			continue
+		m = (corrected_miles[subgroup[-1] + 1] - corrected_miles[subgroup[0] - 1]) / (seconds[subgroup[-1] + 1] - seconds[subgroup[0] - 1])
+		for i in subgroup:
+			corrected_miles[i] = m * seconds[i] + b
 	
 	corrected_miles = [mile if mile > 0 else math.nan for mile in corrected_miles]
 	return corrected_miles
@@ -157,7 +186,7 @@ def latest():
 	output = {'raw':tuple_to_dict(raw),
 			  'post_processed':tuple_to_dict(processed),
 			  'predicted':tuple_to_dict(predicted),
-		     }
+			 }
 	return to_json(output)
 
 
