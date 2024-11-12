@@ -1,6 +1,7 @@
 import {
 	Accessor,
 	Component,
+	createEffect,
 	createResource,
 	createSignal,
 	For,
@@ -94,6 +95,11 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamEndTime: null,
 	});
 
+	createEffect(() => {
+		const info = streamVideoInfo();
+		console.log(info);
+	});
+
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
 		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
@@ -117,6 +123,8 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				streamVideoInfo={streamVideoInfo}
 				setStreamVideoInfo={setStreamVideoInfo}
 				showTimeRangeLink={false}
+				errorList={props.errorList}
+				setErrorList={props.setErrorList}
 			/>
 			<media-player src={videoURL()} preload="auto">
 				<media-provider />
