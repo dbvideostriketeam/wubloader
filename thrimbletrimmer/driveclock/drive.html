@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+
+<style>
+  	#road-container {
+	  width: 100%;
+	  height: 100px;
+	  left: 0;
+	  top: 0;
+      position: absolute;
+      // margin: 980px 0 0 -100px; // uncomment to move to bottom of screen
+      z-index: 3;
+    }
+
+	#road-container div {
+	  height: 100px;
+	  width: 100%;
+	  position: absolute;
+	  background-position: 0px 0px;
+	}
+
+	#sky-left {
+	  z-index: 5;
+	}
+
+	#sky-right {
+	  z-index: 4;
+	}
+
+	#stops {
+      z-index: 6;
+      background-image: url(stops.png);
+	}
+
+	#bus {
+	  background-repeat: no-repeat;
+	  margin-left: 27px;
+	  z-index: 8;
+	}
+</style>
+
+<body>
+
+<div id="road-container">
+	<div id="bus"></div>
+	<div id="sky-left"></div>
+	<div id="sky-right"></div>
+	<div id="stops"></div>
+</div>
+
+<script src="drive.js"></script>
+
+</body>
+
