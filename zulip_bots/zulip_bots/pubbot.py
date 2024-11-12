@@ -72,6 +72,26 @@ def _get_giveaway():
 	return None
 
 
+prize_cache = {}
+def get_prize_name(id):
+	if id not in prize_cache:
+		try:
+			prize_cache[id] = _get_prize_name(id)
+		except Exception:
+			logging.warning(f"Failed to get prize title for {id}", exc_info=True)
+			return "Unknown prize"
+	return prize_cache[id]
+
+
+def _get_prize_name(id):
+	resp = requests.get(f"https://desertbus.org/2024/prize/{id}", {"User-Agent": ""})
+	resp.raise_for_status()
+	html = BeautifulSoup(resp.content.decode(), "html.parser")
+	div = html.body.main.find("div", **{"class": lambda cl: "text-brand-gold" in cl})
+	# These divs have format "Silent Auction: NAME", "Giveaway: NAME", etc. Split after first ": ".
+	return div.string.split(": ", 1)[-1].strip()
+
+
 def main(conf_file, message_log_file, name=socket.gethostname()):
 	"""Config:
 		zulip_url
@@ -143,6 +163,8 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				log["type"] = "prize"
 				prize_id = msg["c"].removeprefix("bid:")
 				log["prize_id"] = prize_id
+				prize_name = get_prize_name(prize_id)
+				log["prize_name"] = prize_name
 				data = msg["d"]
 				logging.info(f"Prize update for {prize_id}: {data}")
 				if "name" in data and "amount" in data:
@@ -152,7 +174,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 					client.send_to_stream(
 						"bot-spam",
 						"Bids",
-						f"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${amount:.2f} for prize [{prize_id}](https://desertbus.org/prize/{prize_id})",
+						f"At <time:{message_time}>, {data['name']} ({data['donorID']}) has the high bid of ${amount:.2f} for prize [{prize_name}](https://desertbus.org/prize/{prize_id})",
 					)
 
 			else:
