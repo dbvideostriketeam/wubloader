@@ -21,8 +21,8 @@ const BUS_URLS = {
 };
 
 function setSkyElements(left, right, timeToTransition) {
-	const leftElement = document.getElementById("sky-left");
-	const rightElement = document.getElementById("sky-right");
+	const leftElement = document.getElementById("timeofday-left");
+	const rightElement = document.getElementById("timeofday-right");
 	const busElement = document.getElementById("bus");
 
 	leftElement.style.backgroundImage = `url(${SKY_URLS[left]})`;
