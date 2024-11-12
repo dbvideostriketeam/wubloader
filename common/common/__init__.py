@@ -106,7 +106,8 @@ def ensure_directory(path):
 	"""Create directory that contains path, as well as any parent directories,
 	if they don't already exist."""
 	dir_path = os.path.dirname(path)
-	os.makedirs(dir_path, exist_ok=True)
+	if dir_path != "":
+		os.makedirs(dir_path, exist_ok=True)
 
 
 def jitter(interval):
