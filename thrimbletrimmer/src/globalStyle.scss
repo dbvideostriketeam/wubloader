@@ -1,3 +1,46 @@
+body {
+	// Firefox has a weird default font, which is a different size from the one in Chrome
+	// and makes some renderings bad.
+	font-family: "Arial", sans-serif;
+
+	background: #222;
+	color: #fff;
+	height: 100vh;
+	margin: 0;
+}
+
+a {
+	color: #ccf;
+}
+
+input,
+textarea {
+	background: #222;
+	color: #fff;
+	border-color: #444;
+}
+
+textarea {
+	// Text areas look better with the same borders as input fields.
+	border-style: inset;
+	border-width: 2px;
+}
+
+button,
+select {
+	background: #333;
+	color: #fff;
+}
+
+button:active {
+	background: #000;
+}
+
+a,
+.click {
+	cursor: pointer;
+}
+
 .hidden {
 	display: none;
 }

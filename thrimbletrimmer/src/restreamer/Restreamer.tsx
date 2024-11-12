@@ -12,7 +12,12 @@ import {
 import { DateTime } from "luxon";
 import styles from "./Restreamer.module.scss";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
-import { KeyboardShortcuts, StreamTimeSettings, StreamVideoInfo } from "../common/video";
+import {
+	KeyboardShortcuts,
+	StreamTimeSettings,
+	StreamVideoInfo,
+	VideoControls,
+} from "../common/video";
 
 import "vidstack/player/styles/default/theme.css";
 import "vidstack/player/styles/default/layouts/video.css";
@@ -94,6 +99,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamStartTime: DateTime.utc().minus({ minutes: 10 }),
 		streamEndTime: null,
 	});
+	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 
 	createEffect(() => {
 		const info = streamVideoInfo();
@@ -116,6 +122,12 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return url;
 	};
 
+	createEffect(() => {
+		const player = mediaPlayer();
+		const srcURL = videoURL();
+		player.src = srcURL;
+	});
+
 	return (
 		<>
 			<StreamTimeSettings
@@ -126,10 +138,11 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				errorList={props.errorList}
 				setErrorList={props.setErrorList}
 			/>
-			<media-player src={videoURL()} preload="auto">
+			<media-player src={videoURL()} preload="auto" ref={setMediaPlayer}>
 				<media-provider />
 				<media-video-layout />
 			</media-player>
+			<VideoControls mediaPlayer={mediaPlayer} />
 		</>
 	);
 };
