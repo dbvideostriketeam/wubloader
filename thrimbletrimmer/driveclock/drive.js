@@ -116,5 +116,7 @@ if (test) {
 		}
 	}, interval);
 } else {
+	// Do first update immediately, then every UPDATE_INTERVAL_MS
 	setInterval(update, UPDATE_INTERVAL_MS);
+	update();
 }
