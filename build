@@ -13,6 +13,7 @@ cd "$(dirname "$(realpath "$0")")"
 # The different images we can build
 COMPONENTS=(
 	backfiller
+	bus_analyzer
 	buscribe
 	buscribe_api
 	chat_archiver
