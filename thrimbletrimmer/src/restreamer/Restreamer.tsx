@@ -8,16 +8,17 @@ import {
 	Show,
 	Suspense,
 } from "solid-js";
-import Hls from "hls.js";
 import { DateTime } from "luxon";
 import styles from "./Restreamer.module.scss";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
-import {
-	KeyboardShortcuts,
-	StreamTimeSettings,
-	StreamVideoInfo,
-	VideoPlayer,
-} from "../common/video";
+import { KeyboardShortcuts, StreamTimeSettings, StreamVideoInfo } from "../common/video";
+
+import "vidstack/player/styles/default/theme.css";
+import "vidstack/player/styles/default/layouts/video.css";
+import "vidstack/player";
+import "vidstack/player/layouts/default";
+import "vidstack/player/ui";
+import { MediaPlayerElement } from "vidstack/elements";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -93,8 +94,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamEndTime: null,
 	});
 
-	const [videoPlayer, setVideoPlayer] = createSignal(new Hls());
-
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
 		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
@@ -111,8 +110,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return url;
 	};
 
-	videoPlayer().loadSource(videoURL());
-
 	return (
 		<>
 			<StreamTimeSettings
@@ -121,12 +118,10 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				setStreamVideoInfo={setStreamVideoInfo}
 				showTimeRangeLink={false}
 			/>
-			<VideoPlayer
-				videoURL={videoURL()}
-				errorList={props.errorList}
-				setErrorList={props.setErrorList}
-				videoPlayer={videoPlayer}
-			/>
+			<media-player src={videoURL()} preload="auto">
+				<media-provider />
+				<media-video-layout />
+			</media-player>
 		</>
 	);
 };
