@@ -573,6 +573,9 @@ def get_chat_messages(channel):
 	if end <= start:
 		return "End must be after start", 400
 
+	if end - start > datetime.timedelta(hours=2):
+		return "Cannot request more than 2h of chat", 400
+
 	hours_path = os.path.join(app.static_folder, channel, "chat")
 
 	# This process below may fail if a batch is deleted out from underneath us.
