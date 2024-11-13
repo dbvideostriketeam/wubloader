@@ -16,8 +16,32 @@ permissions:
   contents: read
   packages: write
 
-# build components using a job matrix, so they can run in parallel
+
 jobs:
+  # compile buildah v1.38.0, so we can have a more up-to-date version than ubuntu 24.04 has in its repos
+  buildah:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Install buildah dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y bats btrfs-progs git go-md2man golang libapparmor-dev libglib2.0-dev libgpgme11-dev libseccomp-dev libselinux1-dev make runc skopeo libbtrfs-dev
+      - name: Pull buildah sources
+        run: |
+          git clone https://github.com/containers/buildah
+          cd buildah
+          git checkout v1.38.0
+      - name: Build buildah
+        run: |
+          cd buildah
+          make
+          sudo make install
+      - name: Save buildah build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: buildah-bin
+          path: bin/buildah
+  # build components using a job matrix, so they can run in parallel
   build:
     runs-on: ubuntu-24.04
     strategy:
@@ -40,6 +64,14 @@ jobs:
           - thrimshim
           - zulip_bots
     steps:
+      - name: Ensure local bin exists
+        run: |
+          mkdir -p ~/.local/bin
+      - name: Fetch buildah build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: buildah-bin
+          path: ~/.local/bin/buildah
       - name: Check out repo
         uses: actions/checkout@v4
         with:
