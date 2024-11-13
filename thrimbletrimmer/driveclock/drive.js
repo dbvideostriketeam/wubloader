@@ -37,11 +37,14 @@ const POINT_OFFSET = 17;
 // at route start. This array can be looped every point.
 const BUS_STOP_POSITIONS = [1, 55.2, 125.4, 166.3, 233.9, 295.2];
 
-// The default scaling factor is 20 seconds per pixel at max speed.
-// This gives us
-// - 3px per minute
-// - 4px per mile
-let scaleFactor = 1;
+const BUS_DAY_IMAGE = new Image();
+BUS_DAY_IMAGE.src = "bus_day.png";
+const BUS_NIGHT_IMAGE = new Image();
+BUS_NIGHT_IMAGE.src = "bus_night.png";
+const BUS_STOP_IMAGE = new Image();
+BUS_STOP_IMAGE.src = "db_stop.png";
+const POINT_IMAGE = new Image();
+POINT_IMAGE.src = "point.png";
 
 function nextPhase(timeOfDay) {
 	switch (timeOfDay) {
@@ -107,10 +110,17 @@ async function drawRoad() {
 	drawBackground(context, timeOfDay, 0, BUS_FRONT_OFFSET);
 
 	const maxWidth = 1920 - BUS_FRONT_OFFSET;
+	// The default scaling factor (1) is 20 seconds per pixel at max speed.
+	// This gives us
+	// - 3px per minute
+	// - 4px per mile
+	let scaleFactor = +document.getElementById("scale-input").value;
+	if (scaleFactor === 0 || isNaN(scaleFactor)) {
+		scaleFactor = 1;
+	}
 
-	// TODO Figure out scaling factor
 	const startMinute = busData.clock_minutes;
-	const timeDuration = maxWidth / 3;
+	const timeDuration = maxWidth / (3 * scaleFactor);
 
 	let previousTime = startMinute;
 	let previousTimeOfDay = timeOfDay;
@@ -126,7 +136,7 @@ async function drawRoad() {
 		}
 
 		// TODO Figure out scaling factor
-		const pixelWidth = thisDuration * 3;
+		const pixelWidth = thisDuration * 3 * scaleFactor;
 		drawBackground(context, previousTimeOfDay, x, pixelWidth);
 
 		remainingDuration -= thisDuration;
@@ -144,22 +154,15 @@ async function drawRoad() {
 		distanceToNextPoint = 469.3 - currentPointProgress;
 	}
 
-	// TODO Figure out scaling factor
-	x += distanceToNextPoint * 4;
-	const pointImage = new Image();
-	pointImage.src = "point.png";
-	context.drawImage(pointImage, x - POINT_OFFSET, 0);
+	x += distanceToNextPoint * 4 * scaleFactor;
+	context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
 	while (x < maxWidth) {
-		// TODO Figure out scaling factor
-		x += 360 * 4;
-		context.drawImage(pointImage, x - POINT_OFFSET, 0);
+		x += 360 * 4 * scaleFactor;
+		context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
 	}
 
 	const distanceOnRoute = (distance - 109.3) % 360;
-	const busStopImage = new Image();
-	busStopImage.src = "db_stop.png";
-	// TODO Figure out scaling factor
-	let distanceTracked = distanceOnRoute - BUS_FRONT_OFFSET / 4;
+	let distanceTracked = distanceOnRoute - BUS_FRONT_OFFSET / (4 * scaleFactor);
 	if (distanceTracked < 0) {
 		distanceTracked += 720;
 	}
@@ -178,18 +181,15 @@ async function drawRoad() {
 		}
 		const nextBusStopDistance = nextBusStopPosition - distanceTrackedOnRoute;
 		distanceTracked += nextBusStopDistance;
-		// TODO Figure out scaling factor
-		x += nextBusStopDistance * 4;
-		context.drawImage(busStopImage, x - BUS_STOP_OFFSET, 0);
+		x += nextBusStopDistance * 4 * scaleFactor;
+		context.drawImage(BUS_STOP_IMAGE, x - BUS_STOP_OFFSET, 0);
 	}
 
-	const busImage = new Image();
 	if (timeOfDay === "night") {
-		busImage.src = "bus_night.png";
+		context.drawImage(BUS_NIGHT_IMAGE, 0, 0);
 	} else {
-		busImage.src = "bus_day.png";
+		context.drawImage(BUS_DAY_IMAGE, 0, 0);
 	}
-	context.drawImage(busImage, 0, 0);
 }
 
 window.addEventListener("DOMContentLoaded", (event) => {
