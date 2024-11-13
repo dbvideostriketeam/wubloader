@@ -40,7 +40,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: buildah-bin
-          path: bin/buildah
+          path: /usr/local/bin/buildah
   # build components using a job matrix, so they can run in parallel
   build:
     needs: buildah
