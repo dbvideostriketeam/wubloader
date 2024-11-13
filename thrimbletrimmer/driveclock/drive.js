@@ -152,7 +152,7 @@ async function drawRoad() {
 		x += pixelWidth;
 	}
 
-	x = BUS_FRONT_OFFSET;
+	x = 0;
 	const currentPointProgress = distance % 360;
 	let distanceToNextPoint;
 	if (currentPointProgress <= 109.3) {
@@ -161,9 +161,14 @@ async function drawRoad() {
 		distanceToNextPoint = 469.3 - currentPointProgress;
 	}
 
+	distanceToNextPoint += BUS_FRONT_OFFSET / (4 * scaleFactor);
+	if (distanceToNextPoint >= 360) {
+		distanceToNextPoint -= 360;
+	}
+
 	x += distanceToNextPoint * 4 * scaleFactor;
 	context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
-	while (x < maxWidth) {
+	while (x < CANVAS_PIXEL_WIDTH) {
 		x += 360 * 4 * scaleFactor;
 		context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
 	}
