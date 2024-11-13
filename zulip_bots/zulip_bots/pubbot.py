@@ -153,11 +153,11 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 						log["giveaway_entries"] = entries
 						entries_str = " ({} entries of ${:.2f})".format(entries, giveaway_amount)
 				logging.info("New donation total: {}{}{}".format(msg["d"], increase_str, entries_str))
+				total = msg["d"]
 				if increase is not None and increase > 0:
 					client.send_to_stream("bot-spam", "Donation Firehose", "Donation total is now ${:.2f}{}{}".format(msg["d"], increase_str, entries_str))
 				if increase is not None and increase >= 500:
 					client.send_to_stream("bot-spam", "Notable Donations", "Large donation of ${:.2f} (total ${:.2f}){}".format(increase, msg['d'], entries_str))
-				total = msg["d"]
 
 			elif msg["c"].startswith("bid:"):
 				log["type"] = "prize"
