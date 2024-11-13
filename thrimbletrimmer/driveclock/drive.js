@@ -109,6 +109,10 @@ async function drawRoad() {
 
 	// Clear the previous canvas before starting
 	context.clearRect(0, 0, CANVAS_PIXEL_WIDTH, 100);
+	// Background the whole thing as the key-out color in case we need to bail
+	// out before drawing (e.g. we're in a non-DB game menu)
+	context.fillStyle = KEY_OUT_COLOR;
+	context.fillRect(0, 0, CANVAS_PIXEL_WIDTH, 100);
 
 	const currentTime = busData.clock_minutes;
 	const distance = busData.odometer;
