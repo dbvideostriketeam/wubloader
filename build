@@ -54,7 +54,7 @@ case "${CACHE:-}" in
 		BUILD_CMD="docker"
 		;;
 	readonly)
-		CACHE_ARGS+=("--cache-from" "$CACHE_NAME")
+		CACHE_ARGS+=("--layers" "--cache-from" "$CACHE_NAME")
 		BUILD_CMD="buildah"
 		;;
 	*)
@@ -76,25 +76,14 @@ for component in "${COMPONENTS[@]}"; do
 	latest="$BASE/wubloader-$component:latest"
 	specific="$BASE/wubloader-$component:$TAG"
 	if [ -n "$MULTIPLATFORM" ]; then
-		# buscribe doesn't (yet?) build under arm64 due to pulling in libc-bin, skip arm64 for it
-		if [ "$component" != "buscribe" ]; then
-			"$BUILD_CMD" build \
-				-f "$component/Dockerfile" \
-				--manifest "$specific" \
-				--manifest "$latest" \
-				--jobs 2 \
-				--platform=linux/amd64,linux/arm64 \
-				"${CACHE_ARGS[@]}" \
-				.
-		else
-			"$BUILD_CMD" build \
-				-f "$component/Dockerfile" \
-				--manifest "$specific" \
-				--manifest "$latest" \
-				--platform=linux/amd64 \
-				"${CACHE_ARGS[@]}" \
-				.
-		fi
+		"$BUILD_CMD" build \
+			-f "$component/Dockerfile" \
+			--manifest "$specific" \
+			--manifest "$latest" \
+			--jobs 2 \
+			--platform=linux/amd64,linux/arm64 \
+			"${CACHE_ARGS[@]}" \
+			.
 	else
 		"$BUILD_CMD" build \
 			-f "$component/Dockerfile" \
