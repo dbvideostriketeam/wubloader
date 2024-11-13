@@ -21,6 +21,8 @@ const COLORS = {
 	},
 };
 
+const KEY_OUT_COLOR = "#2b6ec6";
+
 // The width from the left side of the bus image to the front of the bus
 const BUS_FRONT_OFFSET = 73;
 
@@ -76,8 +78,10 @@ function drawBackground(context, timeOfDay, leftX, width) {
 	const groundColor = COLORS[timeOfDay].ground;
 	const surfaceColor = COLORS[timeOfDay].surface;
 
+	context.fillStyle = KEY_OUT_COLOR;
+	context.fillRect(leftX, 80, width, 20);
 	context.fillStyle = COLORS[timeOfDay].sky;
-	context.fillRect(leftX, 0, width, 100);
+	context.fillRect(leftX, 0, width, 80);
 	context.fillStyle = COLORS[timeOfDay].surface;
 	context.fillRect(leftX, 80, width, 1);
 	context.fillStyle = COLORS[timeOfDay].ground;
