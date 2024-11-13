@@ -65,14 +65,14 @@ jobs:
           - thrimshim
           - zulip_bots
     steps:
-      - name: Ensure local bin exists
-        run: |
-          mkdir -p ~/.local/bin
       - name: Fetch buildah build artifact
         uses: actions/download-artifact@v4
         with:
           name: buildah-bin
-          path: ~/.local/bin/buildah
+          path: /usr/local/bin/buildah
+      - name: Check buildah version
+        run: |
+          buildah version
       - name: Check out repo
         uses: actions/checkout@v4
         with:
