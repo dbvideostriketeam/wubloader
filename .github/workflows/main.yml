@@ -43,6 +43,7 @@ jobs:
           path: bin/buildah
   # build components using a job matrix, so they can run in parallel
   build:
+    needs: buildah
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
