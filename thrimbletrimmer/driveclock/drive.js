@@ -32,7 +32,7 @@ const DUSK_START_MINUTES = 1140;
 const NIGHT_START_MINUTES = 1200;
 const DAWN_START_MINUTES = 400;
 
-const BUS_STOP_OFFSET = 6;
+const BUS_STOP_OFFSET = 8;
 const POINT_OFFSET = 17;
 
 // Bus stop positions are recorded in miles with the 0 position
