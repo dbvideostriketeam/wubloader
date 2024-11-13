@@ -15,12 +15,14 @@ import prometheus_client
 from psycopg2 import sql
 
 import common
-from common import database, dateutil
+from common import database
 from common.flask_stats import request_stats, after_request
 from common.segments import KNOWN_XFADE_TRANSITIONS, CUSTOM_XFADE_TRANSITIONS
 
 import google.oauth2.id_token
 import google.auth.transport.requests
+
+from . import bus_stats
 
 app = flask.Flask('thrimshim')
 app.after_request(after_request)
@@ -777,99 +779,24 @@ def get_thumbnail(ident):
 			return flask.Response(bytes(event['thumbnail_image']), mimetype='image/png')
 		else:
 			return '', 404
-			
 
 
 @app.route('/thrimshim/bus/<channel>')
 @request_stats
 def get_odometer(channel):
 	"""Not directly thrimbletrimmer related but easiest to put here as we have DB access.
-	Checks DB for the most recent odometer reading as of `time` param (default now).
-	However, won't consider readings older than `range` param (default 1 minute)
-	You can also pass `extrapolate`=`true` to try to extrapolate the reading at your requested time
-	based on the last known time. Note it will still only look within `range` for the last known time.
-	If it can't find a reading, returns 0.
+	Checks DB for the most recent odometer reading.
+	Optional param type can be one of:
+		raw: The most recent value, unmodified
+		processed: The most recent value, excluding outliers and detected mistakes
+		predicted: processed, but extrapolated to the current time.
 	"""
-	time = flask.request.args.get("time")
-	if time is None:
-		time = datetime.datetime.utcnow()
-	else:
-		time = dateutil.parse(time)
-
-	range = int(flask.request.args.get("range", "60"))
-	range = datetime.timedelta(seconds=range)
-
-	extrapolate = (flask.request.args.get("extrapolate") == "true")
-
+	type = flask.request.args.get("type")
 	conn = app.db_manager.get_conn()
-	start = time - range
-	end = time
-
-	# Get newest non-errored row within time range
-	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
-	results = database.query(conn, """
-		SELECT timestamp, odometer
-		FROM bus_data
-		WHERE odometer IS NOT NULL
-			AND odometer >= 109
-			AND odometer < 7000
-			AND channel = %(channel)s
-			AND timestamp > %(start)s
-			AND timestamp <= %(end)s
-		ORDER BY timestamp DESC
-		LIMIT 1
-	""", channel=channel, start=start, end=end)
-	result = results.fetchone()
-	if result is None:
-		odometer = None
-	elif extrapolate:
-		# Current extrapolate strategy is very simple: presume we're going at full speed (45mph).
-		SPEED = 45. / 3600 # in miles per second
-		delta_t = (time - result.timestamp).total_seconds()
-		delta_odo = delta_t * SPEED
-		odometer = result.odometer + delta_odo
-	else:
-		odometer = result.odometer
-
-	results = database.query(conn, """
-		SELECT timestamp, clock, timeofday
-		FROM bus_data
-		WHERE clock IS NOT NULL
-			AND channel = %(channel)s
-			AND timestamp > %(start)s
-			AND timestamp <= %(end)s
-		ORDER BY timestamp DESC
-		LIMIT 1
-	""", channel=channel, start=start, end=end)
-	result = results.fetchone()
-	if result is None:
-		clock24h = None
-		timeofday = None
-		clock_face = None
-	else:
-		clock12h = result.clock
-		# HACK: assume null means dawn, as we can reliably detect everything else.
-		timeofday = result.timeofday or "dawn"
-
-		clock24h = clock12h
-		if time_is_pm(conn, result.timestamp, clock12h, timeofday):
-			clock24h += 720
-
-		if extrapolate:
-			delta_t = (time - result.timestamp).total_seconds()
-			clock12h += delta_t
-			clock24h += delta_t
-
-		clock12h %= 720
-		clock24h %= 1440
-		clock_face = "{}:{:02d}".format(clock12h // 60, int(clock12h % 60))
-
-	return {
-		"odometer": odometer,
-		"clock_minutes": clock24h,
-		"clock": clock_face,
-		"timeofday": timeofday,
-	}
+	values = bus_stats.get_latest(channel, conn)
+	if type not in values:
+		return f"Unknown type: {type!r}", 400
+	return to_json(values[type])
 
 
 def time_is_pm(conn, timestamp, clock, timeofday):

@@ -1,40 +1,12 @@
 import datetime
 import itertools
-import json
 import math
 import operator
 
-import argh
-import base64
-import flask
-import gevent
-import gevent.backdoor
-from gevent.pywsgi import WSGIServer
+import common.database
 
-import common
-from common import database
-from common.flask_stats import request_stats, after_request
-
-app = flask.Flask('bus_synthesizer')
-app.after_request(after_request)
 
 MAX_SPEED = 45 / 3600
-
-def cors(app):
-	"""WSGI middleware that sets CORS headers"""
-	HEADERS = [
-		("Access-Control-Allow-Credentials", "false"),
-		("Access-Control-Allow-Headers", "*"),
-		("Access-Control-Allow-Methods", "GET,POST,HEAD"),
-		("Access-Control-Allow-Origin", "*"),
-		("Access-Control-Max-Age", "86400"),
-	]
-	def handle(environ, start_response):
-		def _start_response(status, headers, exc_info=None):
-			headers += HEADERS
-			return start_response(status, headers, exc_info)
-		return app(environ, _start_response)
-	return handle
 
 
 def post_process_miles(seconds, miles, days):
@@ -169,17 +141,16 @@ def post_process_clocks(seconds, clocks, days):
 
 	return corrected_clocks
 
-@app.route('/bus_synthesizer/latest')
-@request_stats
-def latest(): 
+
+def get_latest(channel, conn): 
 	ago_30_min = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
-	query = common.database.query(app.db_manager.get_conn(), """
+	query = common.database.query(conn, """
 		SELECT timestamp, odometer, clock, timeofday
 		FROM bus_data
 		WHERE timestamp > %(start)s
-		--AND NOT segment LIKE '%%partial%%'
+		AND channel = %(channel)s
 		ORDER BY timestamp;
-		""", start=ago_30_min)
+		""", channel=channel, start=ago_30_min)
 	rows = query.fetchall()
 	times, miles, clocks, days = zip(*rows)
 	
@@ -223,8 +194,9 @@ def latest():
 			# before 6:40 is pm
 			if latest['clock'] < 6 * 60 + 40:
 				is_pm = True
+			# after 7:00 is am
 			elif latest['clock'] >= 7 * 60:
-				is_pm = True
+				is_pm = False
 			else:
 				# 6:40 to 7:00 is ambiguous; look back 21 min
 				twenty_one = None
@@ -237,11 +209,9 @@ def latest():
 				else:
 					is_pm = True
 
-		hour = latest['clock'] // 60
-		minute = latest['clock'] % 60
+		processed_clock = latest['clock']
 		if is_pm:
-			hour += 12
-		proccessed_clock = '{}:{:02d}'.format(hour, minute)
+			processed_clock += 12 * 60
 	else:
 		proccessed_clock = None
 
@@ -257,10 +227,7 @@ def latest():
 		now_second = (now - times[0]) / datetime.timedelta(seconds=1)
 		if latest['clock']:
 			diff = int(math.floor((now - latest['time']) / datetime.timedelta(minutes = 1)))
-			new_clock = hour * 60 + minute + diff
-			minute = new_clock % 60
-			hour = (new_clock // 60) % 24
-			predicted_clock = '{}:{:02d}'.format(hour, minute)
+			predicted_clock = processed_clock + diff
 		else:
 			predicted_clock = None
 
@@ -268,41 +235,12 @@ def latest():
 	else:
 		predicted = None, None, None, None   
 
-	output = {'raw':tuple_to_dict(raw),
-			  'post_processed':tuple_to_dict(processed),
-			  'predicted':tuple_to_dict(predicted),
-			 }
-  
-	return to_json(output)
+	return {
+		'raw': tuple_to_dict(raw),
+		'post_processed': tuple_to_dict(processed),
+		'predicted': tuple_to_dict(predicted),
+	}
 
 
-def tuple_to_dict(t, names=['time', 'mile', 'ToD', 'clock']):
+def tuple_to_dict(t, names=['time', 'odometer', 'timeofday', 'clock_minutes']):
 	return {names[i]:t[i] for i in range(len(t))}
-
-
-# copied from thrimshim
-def to_json(obj):
-	def convert(value):
-		if isinstance(value, datetime.datetime):
-			return value.isoformat()
-		if isinstance(value, datetime.timedelta):
-			return value.total_seconds()
-		if isinstance(value, memoryview) or isinstance(value, bytes):
-			return base64.b64encode(bytes(value)).decode()
-		raise TypeError(f"Can't convert object of type {value.__class__.__name__} to JSON: {value}")
-	return json.dumps(obj, default=convert)
-
-
-def main(connection_string, host='0.0.0.0', port=8004, backdoor_port=0):
-
-	server = WSGIServer((host, port), cors(app))
-
-	app.db_manager = database.DBManager(dsn=connection_string)
-
-	common.PromLogCountsHandler.install()
-	common.install_stacksampler()
-
-	if backdoor_port:
-		gevent.backdoor.BackdoorServer(('127.0.0.1', backdoor_port), locals=locals()).start()
-
-	common.serve_with_graceful_shutdown(server)
