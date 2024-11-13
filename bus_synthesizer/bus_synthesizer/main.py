@@ -65,6 +65,10 @@ def post_process_miles(seconds, miles, days):
 			continue
 		good.append(i)
 
+	# if there are no 'good' odometer readings, bail on post processing 
+	if len(good) == 0:
+		return [math.nan for i in range(len(miles))]
+
 	corrected_miles = [miles[i] if i in good else 0. for i in range(len(miles))]
 	# identify groups of suspicious data and correct them
 	for k, g in itertools.groupby(enumerate(suspect), lambda x:x[0]-x[1]):
