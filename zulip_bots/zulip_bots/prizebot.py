@@ -1,6 +1,7 @@
 
 from collections import namedtuple
 import json
+import logging
 import time
 import re
 
@@ -53,7 +54,8 @@ def get_prizes(type):
 			])
 		else:
 			state = "unknown"
-		prizes.append(Prize(id, a["href"], type, title, state, result))
+		link = f"https://desertbus.org{a['href']}"
+		prizes.append(Prize(id, link, type, title, state, result))
 	return prizes
 
 
