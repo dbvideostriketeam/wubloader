@@ -48,6 +48,9 @@ BUS_STOP_IMAGE.src = "db_stop.png";
 const POINT_IMAGE = new Image();
 POINT_IMAGE.src = "point.png";
 
+// This should match the HTML canvas width
+const CANVAS_PIXEL_WIDTH = 1920;
+
 function nextPhase(timeOfDay) {
 	switch (timeOfDay) {
 		case "day":
@@ -105,7 +108,7 @@ async function drawRoad() {
 	const context = canvas.getContext("2d");
 
 	// Clear the previous canvas before starting
-	context.clearRect(0, 0, 1920, 100);
+	context.clearRect(0, 0, CANVAS_PIXEL_WIDTH, 100);
 
 	const currentTime = busData.clock_minutes;
 	const distance = busData.odometer;
@@ -113,7 +116,7 @@ async function drawRoad() {
 
 	drawBackground(context, timeOfDay, 0, BUS_FRONT_OFFSET);
 
-	const maxWidth = 1920 - BUS_FRONT_OFFSET;
+	const maxWidth = CANVAS_PIXEL_WIDTH - BUS_FRONT_OFFSET;
 	// The default scaling factor (1) is 20 seconds per pixel at max speed.
 	// This gives us
 	// - 3px per minute
@@ -171,7 +174,7 @@ async function drawRoad() {
 		distanceTracked += 720;
 	}
 	x = 0;
-	while (x < 1920) {
+	while (x < CANVAS_PIXEL_WIDTH) {
 		const distanceTrackedOnRoute = distanceTracked % 360;
 		let nextBusStopPosition = null;
 		for (const busStopPosition of BUS_STOP_POSITIONS) {
