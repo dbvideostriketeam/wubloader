@@ -138,59 +138,145 @@ def post_process_miles(seconds, miles, days):
 	corrected_miles = [mile if mile > 0 else math.nan for mile in corrected_miles]
 	return corrected_miles
 
+
+def post_process_clocks(seconds, clocks, days):
+	good = []
+	for i in range(1, len(seconds) - 2):
+		if math.isnan(clocks[i]) or clocks[i] < 60 or clocks[i] > 780:
+			continue
+		if days[i] is None or days[i] == 'score':
+			continue
+		# handle big jumps to apparently good data
+		if good and (seconds[i] - seconds[good[-1]] < 120):
+			if clocks[i] - clocks[good[-1]] > math.ceil((seconds[i] - seconds[good[-1]]) / 60):
+				continue
+			if clocks[i] - clocks[good[-1]] < math.floor((seconds[i] - seconds[good[-1]]) / 60):
+				continue
+		if (clocks[i] - clocks[i - 1]) in [0, 1] and (clocks[i + 1] - clocks[i]) in [0, 1]:
+			good.append(i)
+	
+	corrected_clocks = [clocks[i] if i in good else 0. for i in range(len(clocks))]
+	for i in range(len(seconds)):
+		if corrected_clocks[i]:
+			continue
+		if days[i] is None or days[i] == 'score':
+			continue
+		for j in range(i):
+			if 59.5 <= (seconds[i] - seconds[j]) <= 60.5:
+				if corrected_clocks[j]:
+					corrected_clocks[i] = corrected_clocks[j] + 1
+				break
+
+	return corrected_clocks
+
 @app.route('/bus_synthesizer/latest')
 @request_stats
 def latest(): 
-	ago_30_min = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)	
+	ago_30_min = datetime.datetime.utcnow() - datetime.timedelta(minutes=30)
 	query = common.database.query(app.db_manager.get_conn(), """
-		SELECT timestamp, odometer, timeofday
+		SELECT timestamp, odometer, clock, timeofday
 		FROM bus_data
 		WHERE timestamp > %(start)s
 		--AND NOT segment LIKE '%%partial%%'
 		ORDER BY timestamp;
 		""", start=ago_30_min)
 	rows = query.fetchall()
-	times, miles, days = zip(*rows)
+	times, miles, clocks, days = zip(*rows)
 	
 	seconds = [(time - times[0]) / datetime.timedelta(seconds=1) for time in times]
 	miles = [math.nan if mile is None else mile for mile in miles]
+	clocks = [math.nan if clock is None else clock for clock in clocks]
 	corrected_miles = post_process_miles(seconds, miles, days)
+	corrected_clocks = post_process_clocks(seconds, clocks, days)
 	
-	raw = times[-1], miles[-1], days[-1]
+	raw = times[-1], miles[-1], days[-1], clocks[-1]
 	
 	latest = None
 	second_latest = None
 	for i in range(len(times) - 1, -1, -1):
 		if not math.isnan(corrected_miles[i]):
 			if latest is None:
-				latest = times[i], seconds[i], corrected_miles[i], days[i]
+				latest = {'time':times[i],
+						  'second':seconds[i],
+						  'mile':corrected_miles[i],
+						  'day':days[i],
+						  'clock':corrected_clocks[i]}
 			elif second_latest is None:
-				second_latest = times[i], seconds[i], corrected_miles[i], days[i]
+				second_latest = {'time':times[i],
+								 'second':seconds[i],
+								 'mile':corrected_miles[i],
+								 'day':days[i],
+								 'clock':corrected_clocks[i]}
 			else:
 				break
-				
-	if latest is not None:
-		processed = latest[0], latest[2], latest[3]
-	else:
-		processed = (None, None, None)
+		
+	if latest is not None and latest['clock']: 
+		if latest['day'] == 'day':
+			# before 7:30 is pm
+			is_pm = latest['clock'] < 7 * 60 + 30
+		elif latest['day'] == 'dusk':
+			is_pm = True
+		elif latest['day'] == 'night':
+			# after 8:00 is pm
+			is_pm = latest['clock'] >= 8 * 60
+		else: # dawn - game does not go back to day
+			# before 6:40 is pm
+			if latest['clock'] < 6 * 60 + 40:
+				is_pm = True
+			elif latest['clock'] >= 7 * 60:
+				is_pm = True
+			else:
+				# 6:40 to 7:00 is ambiguous; look back 21 min
+				twenty_one = None
+				for i in range(len(times)):
+					if (21 * 60 - 0.5) <= (latest['second'] - seconds[i]) <= (21 * 60 + 0.5):
+						twenty_one = i
+						break
+				if twenty_one is not None and days[twenty_one] == 'night':
+					is_pm = False
+				else:
+					is_pm = True
 
+		hour = latest['clock'] // 60
+		minute = latest['clock'] % 60
+		if is_pm:
+			hour += 12
+		proccessed_clock = '{}:{:02d}'.format(hour, minute)
+	else:
+		proccessed_clock = None
+
+	if latest is not None:
+		processed = latest['time'], latest['mile'], latest['day'], proccessed_clock
+	else:
+		processed = (None, None, None, None)
+   
 	if second_latest is not None:
-		m = (latest[2] - second_latest[2]) / (latest[1] - second_latest[1])
-		b = latest[2] - m * latest[1]
+		m = (latest['mile'] - second_latest['mile']) / (latest['second'] - second_latest['second'])
+		b = latest['mile'] - m * latest['second']
 		now = datetime.datetime.utcnow()
 		now_second = (now - times[0]) / datetime.timedelta(seconds=1)
-		predicted = now, m * now_second + b, days[-1]
+		if latest['clock']:
+			diff = int(math.floor((now - latest['time']) / datetime.timedelta(minutes = 1)))
+			new_clock = hour * 60 + minute + diff
+			minute = new_clock % 60
+			hour = (new_clock // 60) % 24
+			predicted_clock = '{}:{:02d}'.format(hour, minute)
+		else:
+			predicted_clock = None
+
+		predicted = now, m * now_second + b, days[-1], predicted_clock
 	else:
-		predicted = None, None, None
-	   
+		predicted = None, None, None, None   
+
 	output = {'raw':tuple_to_dict(raw),
 			  'post_processed':tuple_to_dict(processed),
 			  'predicted':tuple_to_dict(predicted),
 			 }
+  
 	return to_json(output)
 
 
-def tuple_to_dict(t, names=['time', 'mile', 'ToD']):
+def tuple_to_dict(t, names=['time', 'mile', 'ToD', 'clock']):
 	return {names[i]:t[i] for i in range(len(t))}
 
 
