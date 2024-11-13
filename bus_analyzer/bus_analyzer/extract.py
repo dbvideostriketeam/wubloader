@@ -314,14 +314,14 @@ def recognize_time_of_day(frame):
 		'day': (82, 218, 217),
 		'dusk': (217, 150, 181),
 		'night': (0, 0, 0),
-		'dawn': (56, 53, 125), # estimated from previous years
+		'dawn': (36, 38, 117), 
 	}
 	dash_colours = {
 		'score': (181, 181, 150),
 		'day': (146, 0, 1),
 		'dusk': (115, 0, 0),
 		'night': (41, 0, 0),
-		'dawn': (118, 0, 0), # estimated from previous years
+		'dawn': (78, 0, 0),
 	}
 	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
 	sky_pixel = frame.getpixel((1614, 192))
