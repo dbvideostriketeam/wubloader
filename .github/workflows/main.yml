@@ -72,9 +72,11 @@ jobs:
           path: /usr/local/bin/buildah
       - name: Ensure /usr/local/bin is on the PATH
         run: |
-          echo "/usr/local/bin" >> "$GITHUB_PATH"
+          export PATH="/usr/local/bin:$PATH"
       - name: Check buildah version
         run: |
+          echo "$PATH"
+          which buildah
           buildah version
       - name: Check out repo
         uses: actions/checkout@v4
