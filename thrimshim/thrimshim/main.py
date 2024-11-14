@@ -791,45 +791,17 @@ def get_odometer(channel):
 		processed: The most recent value, excluding outliers and detected mistakes
 		predicted: processed, but extrapolated to the current time.
 	"""
-	type = flask.request.args.get("type")
+	type = flask.request.args.get("type", "post_processed")
 	conn = app.db_manager.get_conn()
 	values = bus_stats.get_latest(channel, conn)
 	if type not in values:
 		return f"Unknown type: {type!r}", 400
-	return to_json(values[type])
-
-
-def time_is_pm(conn, timestamp, clock, timeofday):
-	if timeofday == "day":
-		# before 7:30 is pm
-		return clock < 7*60+30
-	if timeofday == "dusk":
-		return True
-	if timeofday == "night":
-		# after 8:00 is pm
-		return clock >= 8*60
-	# dawn
-	# before 6:40 is pm
-	if clock < 6*60+40:
-		return True
-	# after 7:00 is am
-	if clock >= 7*60:
-		return False
-	# 6:40 to 7:00 is ambiguous, let's look backwards from our timestamp to see how long ago night was
-	results = database.query(conn, """
-		SELECT timestamp
-		FROM bus_data
-		WHERE timeofday = 'night'
-			AND timestamp < %s
-		ORDER BY timestamp DESC LIMIT 1
-	""", timestamp)
-	result = results.fetchone()
-	if result is None:
-		# Can't determine night time, assume it as a long time ago
-		return True
-	since_night = timestamp - result.timestamp
-	# Pick PM if night was more than 4h ago.
-	return since_night.total_seconds() > 4*60*60
+	result = values[type]
+	# Fall back to raw for anything we failed to determine
+	for key in result:
+		if result[key] is None or math.isnan(result[key]):
+			result[key] = values["raw"][key]
+	return to_json(result)
 
 
 @argh.arg('--host', help='Address or socket server will listen to. Default is 0.0.0.0 (everything on the local machine).')
