@@ -140,7 +140,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 			/>
 			<media-player src={videoURL()} preload="auto" ref={setMediaPlayer}>
 				<media-provider />
-				<media-video-layout />
 			</media-player>
 			<VideoControls mediaPlayer={mediaPlayer} />
 		</>
