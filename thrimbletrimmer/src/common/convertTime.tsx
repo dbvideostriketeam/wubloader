@@ -37,7 +37,7 @@ function dateTimeMathObjectFromBusTime(busTime: string): DateTimeMathObject | nu
 	const parts = busTime.split(":", 3);
 	const hours = parseInt(parts[0], 10) * direction;
 	const minutes = parts.length > 1 ? parseInt(parts[1], 10) * direction : 0;
-	const seconds = parts.length > 2 ? parseInt(parts[2], 10) * direction : 0;
+	const seconds = parts.length > 2 ? +parts[2] * direction : 0;
 	return { hours: hours, minutes: minutes, seconds: seconds };
 }
 
@@ -69,7 +69,7 @@ export function dateTimeFromTimeAgo(timeAgo: string): DateTime | null {
 			return null;
 		}
 		const nextProp = properties.pop();
-		const partNumber = parseInt(nextPart, 10);
+		const partNumber = +nextPart;
 		if (isNaN(partNumber)) {
 			return null;
 		}
@@ -91,7 +91,7 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 		timeAgoSeconds = -timeAgoSeconds;
 	}
 
-	const seconds = (((timeAgoSeconds % 60) * 1000) | 0) / 1000;
+	const seconds = Math.floor((timeAgoSeconds % 60) * 1000) / 1000;
 	const secondsString = seconds < 10 ? `0${seconds}` : seconds.toString();
 	const minutes = (timeAgoSeconds / 60) % 60 | 0;
 	const minutesString = minutes < 10 ? `0${minutes}` : minutes.toString();
