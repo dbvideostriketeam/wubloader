@@ -16,15 +16,8 @@ import {
 	KeyboardShortcuts,
 	StreamTimeSettings,
 	StreamVideoInfo,
-	VideoControls,
+	VideoPlayer,
 } from "../common/video";
-
-import "vidstack/player/styles/default/theme.css";
-import "vidstack/player/styles/default/layouts/video.css";
-import "vidstack/player";
-import "vidstack/player/layouts/default";
-import "vidstack/player/ui";
-import { MediaPlayerElement } from "vidstack/elements";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -99,12 +92,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamStartTime: DateTime.utc().minus({ minutes: 10 }),
 		streamEndTime: null,
 	});
-	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
-
-	createEffect(() => {
-		const info = streamVideoInfo();
-		console.log(info);
-	});
 
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
@@ -122,12 +109,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return url;
 	};
 
-	createEffect(() => {
-		const player = mediaPlayer();
-		const srcURL = videoURL();
-		player.src = srcURL;
-	});
-
 	return (
 		<>
 			<StreamTimeSettings
@@ -138,10 +119,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				errorList={props.errorList}
 				setErrorList={props.setErrorList}
 			/>
-			<media-player src={videoURL()} preload="auto" ref={setMediaPlayer}>
-				<media-provider />
-			</media-player>
-			<VideoControls mediaPlayer={mediaPlayer} />
+			<VideoPlayer src={videoURL} />
 		</>
 	);
 };
