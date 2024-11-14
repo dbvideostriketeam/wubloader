@@ -77,7 +77,7 @@ export function dateTimeFromTimeAgo(timeAgo: string): DateTime | null {
 	}
 
 	const now = DateTime.utc();
-	return now.plus(mathObj);
+	return now.minus(mathObj);
 }
 
 export function timeAgoFromDateTime(dateTime: DateTime): string {
