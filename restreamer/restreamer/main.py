@@ -397,8 +397,8 @@ def cut(channel, quality):
 
 	type = request.args.get('type', 'fast')
 	if type == 'rough':
-		if has_transitions:
-			return "Cannot do rough cut with transitions", 400
+		# NOTE: We intentionally ignore transitions for rough cuts, as these are mostly used
+		# when downloading source footage for later editing.
 		return Response(rough_cut_segments(segment_ranges, ranges), mimetype='video/MP2T')
 	elif type == 'fast':
 		return Response(fast_cut_segments(segment_ranges, ranges, transitions), mimetype='video/MP2T')
