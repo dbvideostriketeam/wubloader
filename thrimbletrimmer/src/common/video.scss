@@ -1,0 +1,29 @@
+// Used to make the controls appear below the video player
+media-player {
+	flex-direction: column;
+}
+
+media-provider, media-captions, video {
+	max-width: 100%;
+	max-height: 50vh;
+}
+
+// Used to make the controls appear below the video player
+media-player:not([data-fullscreen]) media-controls {
+	position: relative;
+	height: auto;
+}
+
+media-controls-group {
+	display: flex;
+	align-items: center;
+	width: 100%;
+}
+
+media-volume-slider {
+	flex-basis: 100px;
+}
+
+.vds-slider-track-fill {
+	background-color: #f6f6f6;
+}

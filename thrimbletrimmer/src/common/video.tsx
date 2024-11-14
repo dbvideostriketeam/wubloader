@@ -5,6 +5,7 @@ import {
 	createSignal,
 	For,
 	onCleanup,
+	onMount,
 	Setter,
 	Show,
 } from "solid-js";
@@ -19,14 +20,15 @@ import {
 	dateTimeFromTimeAgo,
 } from "./convertTime";
 import styles from "./video.module.scss";
+import "./video.scss";
 import { MediaPlayerElement } from "vidstack/elements";
-import { VideoQuality } from "vidstack";
 
-import playImage from "../images/video-controls/play.png";
-import pauseImage from "../images/video-controls/pause.png";
-import volumeImage from "../images/video-controls/volume.png";
-import volumeMuteImage from "../images/video-controls/volume-mute.png";
-import fullscreenImage from "../images/video-controls/fullscreen.png";
+import "vidstack/icons";
+import "vidstack/player/styles/default/theme.css";
+import "vidstack/player/styles/default/layouts/video.css";
+import "vidstack/player";
+import "vidstack/player/layouts/default";
+import "vidstack/player/ui";
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
@@ -196,158 +198,155 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 	);
 };
 
-export interface VideoControlsProps {
-	mediaPlayer: Accessor<MediaPlayerElement>;
+export interface VideoPlayerProps {
+	src: Accessor<string>;
 }
 
-export const VideoControls: Component<VideoControlsProps> = (props) => {
-	const mediaPlayer = props.mediaPlayer();
-	if (!mediaPlayer) {
-		return <></>;
-	}
-
-	const [isPlaying, setIsPlaying] = createSignal(!props.mediaPlayer().paused);
-	const [playerTime, setPlayerTime] = createSignal(props.mediaPlayer().currentTime);
-	const [duration, setDuration] = createSignal(props.mediaPlayer().duration);
-	const [isMuted, setIsMuted] = createSignal(props.mediaPlayer().muted);
-	const [volume, setVolume] = createSignal(props.mediaPlayer().volume);
-	const [playbackRate, setPlaybackRate] = createSignal(props.mediaPlayer().playbackRate);
-	const [qualityLevel, setQualityLevel] = createSignal<VideoQuality | null>(
-		props.mediaPlayer().state.quality,
-	);
-	const [qualityLevelList, setQualityLevelList] = createSignal(props.mediaPlayer().state.qualities);
-	const [isFullscreen, setIsFullscreen] = createSignal(false);
-
-	const unsubscribe = props.mediaPlayer().subscribe((playerState) => {
-		setIsPlaying(!playerState.paused);
-		setPlayerTime(playerState.currentTime);
-		setDuration(playerState.duration);
-		setIsMuted(playerState.muted);
-		setVolume(playerState.volume);
-		setPlaybackRate(playerState.playbackRate);
-		setQualityLevel(playerState.quality);
-		setQualityLevelList(playerState.qualities);
-		setIsFullscreen(playerState.fullscreen);
-
-		if (playerState.fullscreen) {
-			props.mediaPlayer().controls.show();
-		} else {
-			props.mediaPlayer().controls.hide();
-		}
-	});
-
+export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
+	let [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	createEffect(() => {
-		const player = props.mediaPlayer();
-		if (isFullscreen() && !player.controls.showing) {
-			player.controls.show();
-		} else if (!isFullscreen() && player.controls.showing) {
-			player.controls.hide();
-		}
+		const player = mediaPlayer();
+		const srcURL = props.src();
+		player.src = srcURL;
 	});
 
-	onCleanup(() => unsubscribe());
+	let [playerTime, setPlayerTime] = createSignal(0);
+	let [duration, setDuration] = createSignal(0);
 
-	const timeDisplay = (time: number) => {
+	onMount(() => {
+		const player = mediaPlayer();
+		player.subscribe(({ currentTime, duration }) => {
+			setPlayerTime(currentTime);
+			setDuration(duration);
+		});
+		player.streamType = "on-demand";
+	});
+
+	// The <media-time> elements provided by vidstack don't show milliseconds, so
+	// we need to run our own for millisecond display.
+	const formatTime = (time: number) => {
 		const hours = Math.floor(time / 3600);
 		const minutes = Math.floor((time / 60) % 60);
-		const seconds = Math.floor((time % 60) * 1000) / 1000;
+		const milliseconds = Math.floor((time % 1) * 1000);
+		const seconds = Math.floor(time % 60);
 
-		const minutesDisplay = minutes < 10 ? `0${minutes}` : minutes.toString();
-		const secondsDisplay = seconds < 10 ? `0${seconds}` : seconds.toString();
+		const minutesDisplay = minutes.toString().padStart(2, "0");
+		const secondsDisplay = seconds.toString().padStart(2, "0");
+		const millisecondsDisplay = milliseconds.toString().padStart(3, "0");
 
 		if (hours === 0) {
-			return `${minutesDisplay}:${secondsDisplay}`;
+			return `${minutesDisplay}:${secondsDisplay}.${millisecondsDisplay}`;
 		}
-		return `${hours}:${minutesDisplay}:${secondsDisplay}`;
+		return `${hours}:${minutesDisplay}:${secondsDisplay}.${millisecondsDisplay}`;
 	};
 
-	const playerTimeDisplay = () => timeDisplay(playerTime());
-
-	const durationDisplay = () => timeDisplay(duration());
-
 	return (
-		<div class={styles.videoControls}>
-			<div class={styles.videoControlsBar}>
-				<div>
-					<img
-						src={isPlaying() ? pauseImage : playImage}
-						alt={isPlaying() ? "pause" : "play"}
-						class="click"
-						onClick={(event) => (props.mediaPlayer().paused = !props.mediaPlayer().paused)}
-					/>
-				</div>
-				<div>
-					{playerTimeDisplay()} / {durationDisplay()}
-				</div>
-				<div class={styles.videoControlsSpacer}></div>
-				<div class={styles.videoControlsVolume}>
-					<img
-						src={isMuted() ? volumeMuteImage : volumeImage}
-						alt={isMuted() ? "muted" : "volume"}
-						class="click"
-						onClick={(event) => (props.mediaPlayer().muted = !props.mediaPlayer().muted)}
-					/>
-					<progress
-						value={volume()}
-						class={`click ${styles.videoControlsVolumeLevel}`}
-						onClick={(event) => {
-							const player = props.mediaPlayer();
-							player.volume = event.offsetX / event.currentTarget.offsetWidth;
-						}}
-					/>
-				</div>
-				<div>
-					<select
-						value={playbackRate()}
-						onSelect={(event) => (props.mediaPlayer().playbackRate = +event.currentTarget.value)}
-					>
-						<For each={PLAYBACK_RATES}>
-							{(item, index) => <option value={item}>{item}x</option>}
-						</For>
-					</select>
-				</div>
-				<div>
-					<select
-						value={qualityLevel() ? qualityLevel().id : ""}
-						onSelect={(event) =>
-							(props.mediaPlayer().qualities[event.currentTarget.selectedIndex].selected = true)
-						}
-					>
-						<For each={qualityLevelList()}>
-							{(item, index) => <option value={index()}>{item.id}</option>}
-						</For>
-					</select>
-				</div>
-				<div>
-					<img
-						src={fullscreenImage}
-						alt="fullscreen"
-						class="click"
-						onClick={(event) => {
-							const player = props.mediaPlayer();
-							if (!player.state.canFullscreen) {
-								return;
-							}
-							if (isFullscreen()) {
-								player.exitFullscreen();
-							} else {
-								player.requestFullscreen();
-							}
-						}}
-					/>
-				</div>
-			</div>
-			<progress
-				class={`click ${styles.videoControlsPlaybackPosition}`}
-				value={duration() === 0 ? 0 : (playerTime() / duration())}
+		<media-player
+			src={props.src()}
+			ref={setMediaPlayer}
+			preload="auto"
+			controlsDelay={0}
+		>
+			<media-provider 
 				onClick={(event) => {
-					const player = props.mediaPlayer();
-					const progressProportion = event.offsetX / event.currentTarget.offsetWidth;
-					const time = progressProportion * duration();
-					player.currentTime = time;
+					const player = mediaPlayer();
+					if (player.paused) {
+						player.play(event);
+					} else {
+						player.pause(event);
+					}
 				}}
 			/>
-		</div>
+			<media-captions class="vds-captions" />
+			<media-controls class="vds-controls">
+				<media-controls-group class="vds-controls-group">
+					<media-tooltip>
+						<media-tooltip-trigger>
+							<media-play-button class="vds-button">
+								<media-icon type="play" class="vds-play-icon" />
+								<media-icon type="pause" class="vds-pause-icon" />
+							</media-play-button>
+						</media-tooltip-trigger>
+						<media-tooltip-content class="vds-tooltip-content" placement="top">
+							<span class="vds-play-tooltip-text">Play</span>
+							<span class="vds-pause-tooltip-text">Pause</span>
+						</media-tooltip-content>
+					</media-tooltip>
+
+					<media-tooltip>
+						<media-tooltip-trigger>
+							<media-mute-button class="vds-button">
+								<media-icon type="mute" class="vds-mute-icon" />
+								<media-icon type="volume-low" class="vds-volume-low-icon" />
+								<media-icon type="volume-high" class="vds-volume-high-icon" />
+							</media-mute-button>
+						</media-tooltip-trigger>
+						<media-tooltip-content class="vds-tooltip-content" placement="top">
+							<span class="vds-mute-tooltip-text">Unmute</span>
+							<span class="vds-unmute-tooltip-text">Mute</span>
+						</media-tooltip-content>
+					</media-tooltip>
+
+					<media-volume-slider class="vds-slider">
+						<div class="vds-slider-track"></div>
+						<div class="vds-slider-track vds-slider-track-fill"></div>
+						<media-slider-preview class="vds-slider-preview">
+							<media-slider-value class="vds-slider-value" />
+						</media-slider-preview>
+						<div class="vds-slider-thumb"></div>
+					</media-volume-slider>
+
+					<div>
+						<span>{formatTime(playerTime())}</span>
+						<span class="vds-time-divider">/</span>
+						<span>{formatTime(duration())}</span>
+					</div>
+
+					<div class="vds-controls-spacer"></div>
+
+					<media-tooltip>
+						<media-tooltip-trigger>
+							<media-caption-button class="vds-button">
+								<media-icon class="vds-cc-on-icon" type="closed-captions-on" />
+								<media-icon class="vds-cc-off-icon" type="closed-captions" />
+							</media-caption-button>
+						</media-tooltip-trigger>
+						<media-tooltip-content class="vds-tooltip-content" placement="top">
+							<span class="vds-cc-on-tooltip-text">Turn Closed Captions Off</span>
+							<span class="vds-cc-off-tooltip-text">Turn Closed Captions On</span>
+						</media-tooltip-content>
+					</media-tooltip>
+
+					<media-tooltip>
+						<media-tooltip-trigger>
+							<media-fullscreen-button class="vds-button">
+								<media-icon class="vds-fs-enter-icon" type="fullscreen" />
+								<media-icon class="vds-fs-exit-icon" type="fullscreen-exit" />
+							</media-fullscreen-button>
+						</media-tooltip-trigger>
+						<media-tooltip-content class="vds-tooltip-content" placement="top end">
+							<span class="vds-fs-enter-tooltip-text">Enter Fullscreen</span>
+							<span class="vds-fs-exit-tooltip-text">Exit Fullscreen</span>
+						</media-tooltip-content>
+					</media-tooltip>
+				</media-controls-group>
+				<media-controls-group class="vds-controls-group">
+					<media-time-slider class="vds-time-slider vds-slider">
+						<media-slider-chapters class="vds-slider-chapters">
+							<template>
+								<div class="vds-slider-chapter">
+									<div class="vds-slider-track"></div>
+									<div class="vds-slider-track vds-slider-track-fill"></div>
+								</div>
+							</template>
+						</media-slider-chapters>
+						<media-slider-preview class="vds-slider-preview">
+							<media-slider-value class="vds-slider-value" />
+						</media-slider-preview>
+					</media-time-slider>
+				</media-controls-group>
+			</media-controls>
+		</media-player>
 	);
 };
 
