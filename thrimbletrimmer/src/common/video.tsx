@@ -246,6 +246,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 			ref={setMediaPlayer}
 			preload="auto"
 			controlsDelay={0}
+			storage="thrimbletrimmer"
 		>
 			<media-provider 
 				onClick={(event) => {
