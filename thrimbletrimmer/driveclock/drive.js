@@ -172,13 +172,11 @@ function drawRoadDynamic(context, busData) {
 	}
 
 	const startMinute = busData.clock_minutes;
-	const timeDuration = BUS_TRAVEL_WIDTH / (3 * scaleFactor);
 
 	let previousTime = startMinute;
 	let previousTimeOfDay = timeOfDay;
-	let remainingDuration = timeDuration;
 	let x = BUS_FRONT_OFFSET;
-	while (remainingDuration > 0) {
+	while (x < CANVAS_PIXEL_WIDTH) {
 		const nextTimeOfDay = nextPhase(previousTimeOfDay);
 		const nextStartTime = phaseStartTime(nextTimeOfDay);
 
@@ -190,7 +188,6 @@ function drawRoadDynamic(context, busData) {
 		const pixelWidth = thisDuration * 3 * scaleFactor;
 		drawBackground(context, previousTimeOfDay, x, pixelWidth);
 
-		remainingDuration -= thisDuration;
 		previousTime = nextStartTime;
 		previousTimeOfDay = nextTimeOfDay;
 		x += pixelWidth;
