@@ -26,7 +26,7 @@ def do_extract_segment(*segment_paths, prototypes_path="./prototypes"):
 	prototypes = load_prototypes(prototypes_path)
 	for segment_path in segment_paths:
 		segment_info = parse_segment_path(segment_path)
-		odometer, clock, tod = extract_segment(prototypes, segment_info)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.end)
 		print(f"{segment_path} {odometer} {clock} {tod}")
 
 
@@ -76,7 +76,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 	for old_odometer, (segment, old_clock, old_tod) in selected:
 		path = os.path.join(base_dir, segment)
 		segment_info = parse_segment_path(path)
-		odometer, clock, tod = extract_segment(prototypes, segment_info)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.end)
 		results.append((segment, {
 			"odo": (old_odometer, odometer),
 			"clock": (old_clock, clock),
@@ -118,8 +118,10 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 	if check_segment_name is not None:
 		assert segment_name == check_segment_name
 
+	timestamp = segment_info.end
+
 	try:
-		odometer, clock, tod = extract_segment(prototypes, segment_info)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, timestamp)
 	except Exception:
 		logging.warning(f"Failed to extract segment {segment_path!r}", exc_info=True)
 		odometer = None
@@ -143,7 +145,7 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 					timeofday = %(timeofday)s
 		""",
 		channel=segment_info.channel,
-		timestamp=segment_info.start,
+		timestamp=timestamp,
 		segment=segment_name,
 		error=error,
 		odometer=odometer,

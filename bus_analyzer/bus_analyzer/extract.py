@@ -344,10 +344,10 @@ def recognize_time_of_day(frame):
 	return best, distance
 
 
-def extract_segment(prototypes, segment):
+def extract_segment(prototypes, segment, time):
 	ODO_SCORE_THRESHOLD = 0.01
 	CLOCK_SCORE_THRESHOLD = 0.01
-	frame_data = b"".join(extract_frame([segment], segment.start))
+	frame_data = b"".join(extract_frame([segment], time))
 	frame = Image.open(BytesIO(frame_data))
 	odometer, score, _ = recognize_odometer(prototypes, frame)
 	if score < ODO_SCORE_THRESHOLD:
