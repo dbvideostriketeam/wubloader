@@ -21,10 +21,8 @@ const COLORS = {
 	},
 };
 
-const KEY_OUT_COLOR = "#2b6ec6";
-
 // The width from the left side of the bus image to the front of the bus
-const BUS_FRONT_OFFSET = 73;
+const BUS_FRONT_OFFSET = 72;
 
 // Start time of each day phase
 const DAY_START_MINUTES = 450;
@@ -49,7 +47,12 @@ const POINT_IMAGE = new Image();
 POINT_IMAGE.src = "point.png";
 
 // This should match the HTML canvas width
-const CANVAS_PIXEL_WIDTH = 1920;
+const CANVAS_PIXEL_WIDTH = 1580;
+
+const BUS_TRAVEL_WIDTH = CANVAS_PIXEL_WIDTH - BUS_FRONT_OFFSET;
+const PIXELS_PER_MILE = BUS_TRAVEL_WIDTH / 360;
+const PIXELS_PER_MINUTE = BUS_TRAVEL_WIDTH / 480;
+const FULL_SPEED_MILES_PER_MINUTE = 0.75;
 
 function nextPhase(timeOfDay) {
 	switch (timeOfDay) {
@@ -81,17 +84,12 @@ function drawBackground(context, timeOfDay, leftX, width) {
 	const groundColor = COLORS[timeOfDay].ground;
 	const surfaceColor = COLORS[timeOfDay].surface;
 
-	context.fillStyle = KEY_OUT_COLOR;
-	context.fillRect(leftX, 80, width, 20);
 	context.fillStyle = COLORS[timeOfDay].sky;
-	context.fillRect(leftX, 0, width, 80);
+	context.fillRect(leftX, 0, width, 56);
 	context.fillStyle = COLORS[timeOfDay].surface;
-	context.fillRect(leftX, 80, width, 1);
+	context.fillRect(leftX, 56, width, 1);
 	context.fillStyle = COLORS[timeOfDay].ground;
-	context.fillRect(leftX, 81, width, 7);
-	context.fillRect(leftX, 89, width, 3);
-	context.fillRect(leftX, 94, width, 2);
-	context.fillRect(leftX, 99, width, 1);
+	context.fillRect(leftX, 57, width, 5);
 }
 
 async function drawRoad() {
@@ -108,19 +106,62 @@ async function drawRoad() {
 	const context = canvas.getContext("2d");
 
 	// Clear the previous canvas before starting
-	context.clearRect(0, 0, CANVAS_PIXEL_WIDTH, 100);
-	// Background the whole thing as the key-out color in case we need to bail
-	// out before drawing (e.g. we're in a non-DB game menu)
-	context.fillStyle = KEY_OUT_COLOR;
-	context.fillRect(0, 0, CANVAS_PIXEL_WIDTH, 100);
+	context.clearRect(0, 0, CANVAS_PIXEL_WIDTH, 62);
 
-	const currentTime = busData.clock_minutes;
+	const pointModeCheckbox = document.getElementById("point-progress-checkbox");
+	if (pointModeCheckbox.checked) {
+		drawRoadPoint(context, busData);
+	} else {
+		drawRoadDynamic(context, busData);
+	}
+}
+
+function drawRoadPoint(context, busData) {
+	const busDistance = (busData.odometer + 250.7) % 360;
+	const busRemainingDistance = 360 - busDistance;
+	const busRemainingDistancePixels = busRemainingDistance * PIXELS_PER_MILE;
+
+	const busDistancePixels = busDistance * PIXELS_PER_MILE;
+	let x = busDistancePixels + BUS_FRONT_OFFSET;
+	drawBackground(context, busData.timeofday, 0, x);
+	let currentTimeOfDay = busData.timeofday;
+	let currentTime = busData.clock_minutes;
+	while (x < CANVAS_PIXEL_WIDTH) {
+		const nextTimeOfDay = nextPhase(currentTimeOfDay);
+		const nextStartTime = phaseStartTime(nextTimeOfDay);
+
+		let thisDuration = nextStartTime - currentTime;
+		if (thisDuration < 0) {
+			thisDuration += 1440;
+		}
+		const pixelWidth = thisDuration * PIXELS_PER_MINUTE;
+		drawBackground(context, currentTimeOfDay, x, pixelWidth);
+		x += pixelWidth;
+		currentTimeOfDay = nextTimeOfDay;
+		currentTime += thisDuration;
+	}
+
+	context.drawImage(POINT_IMAGE, CANVAS_PIXEL_WIDTH - POINT_OFFSET, 0);
+
+	for (const busStopDistance of BUS_STOP_POSITIONS) {
+		const busStopPixelPosition =
+			BUS_FRONT_OFFSET + PIXELS_PER_MILE * busStopDistance - BUS_STOP_OFFSET;
+		context.drawImage(BUS_STOP_IMAGE, busStopPixelPosition, 16);
+	}
+
+	if (busData.timeofday === "night") {
+		context.drawImage(BUS_NIGHT_IMAGE, busDistancePixels, 32);
+	} else {
+		context.drawImage(BUS_DAY_IMAGE, busDistancePixels, 32);
+	}
+}
+
+function drawRoadDynamic(context, busData) {
 	const distance = busData.odometer;
 	const timeOfDay = busData.timeofday;
 
 	drawBackground(context, timeOfDay, 0, BUS_FRONT_OFFSET);
 
-	const maxWidth = CANVAS_PIXEL_WIDTH - BUS_FRONT_OFFSET;
 	// The default scaling factor (1) is 20 seconds per pixel at max speed.
 	// This gives us
 	// - 3px per minute
@@ -131,7 +172,7 @@ async function drawRoad() {
 	}
 
 	const startMinute = busData.clock_minutes;
-	const timeDuration = maxWidth / (3 * scaleFactor);
+	const timeDuration = BUS_TRAVEL_WIDTH / (3 * scaleFactor);
 
 	let previousTime = startMinute;
 	let previousTimeOfDay = timeOfDay;
@@ -146,7 +187,6 @@ async function drawRoad() {
 			thisDuration += 1440;
 		}
 
-		// TODO Figure out scaling factor
 		const pixelWidth = thisDuration * 3 * scaleFactor;
 		drawBackground(context, previousTimeOfDay, x, pixelWidth);
 
@@ -198,13 +238,13 @@ async function drawRoad() {
 		const nextBusStopDistance = nextBusStopPosition - distanceTrackedOnRoute;
 		distanceTracked += nextBusStopDistance;
 		x += nextBusStopDistance * 4 * scaleFactor;
-		context.drawImage(BUS_STOP_IMAGE, x - BUS_STOP_OFFSET, 0);
+		context.drawImage(BUS_STOP_IMAGE, x - BUS_STOP_OFFSET, 16);
 	}
 
 	if (timeOfDay === "night") {
-		context.drawImage(BUS_NIGHT_IMAGE, 0, 0);
+		context.drawImage(BUS_NIGHT_IMAGE, 0, 32);
 	} else {
-		context.drawImage(BUS_DAY_IMAGE, 0, 0);
+		context.drawImage(BUS_DAY_IMAGE, 0, 32);
 	}
 }
 
