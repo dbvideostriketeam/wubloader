@@ -21,6 +21,7 @@ import {
 } from "./convertTime";
 import styles from "./video.module.scss";
 import "./video.scss";
+import { HLSProvider } from "vidstack";
 import { MediaPlayerElement } from "vidstack/elements";
 
 import "vidstack/icons";
@@ -200,12 +201,14 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 
 export interface VideoPlayerProps {
 	src: Accessor<string>;
+	setPlayerTime: Setter<number>;
+	mediaPlayer: Accessor<MediaPlayerElement>;
+	setMediaPlayer: Setter<MediaPlayerElement>;
 }
 
 export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
-	let [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	createEffect(() => {
-		const player = mediaPlayer();
+		const player = props.mediaPlayer();
 		const srcURL = props.src();
 		player.src = srcURL;
 	});
@@ -214,9 +217,10 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	let [duration, setDuration] = createSignal(0);
 
 	onMount(() => {
-		const player = mediaPlayer();
+		const player = props.mediaPlayer();
 		player.subscribe(({ currentTime, duration }) => {
 			setPlayerTime(currentTime);
+			props.setPlayerTime(currentTime);
 			setDuration(duration);
 		});
 		player.streamType = "on-demand";
@@ -243,14 +247,14 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	return (
 		<media-player
 			src={props.src()}
-			ref={setMediaPlayer}
+			ref={props.setMediaPlayer}
 			preload="auto"
 			controlsDelay={0}
 			storage="thrimbletrimmer"
 		>
-			<media-provider 
+			<media-provider
 				onClick={(event) => {
-					const player = mediaPlayer();
+					const player = props.mediaPlayer();
 					if (player.paused) {
 						player.play(event);
 					} else {

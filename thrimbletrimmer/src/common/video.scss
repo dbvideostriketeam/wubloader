@@ -3,7 +3,9 @@ media-player {
 	flex-direction: column;
 }
 
-media-provider, media-captions, video {
+media-provider,
+media-captions,
+video {
 	max-width: 100%;
 	max-height: 50vh;
 }
