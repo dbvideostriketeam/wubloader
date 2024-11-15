@@ -10,8 +10,14 @@ import {
 	Suspense,
 } from "solid-js";
 import { DateTime } from "luxon";
+import { HLSProvider } from "vidstack";
+import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Restreamer.module.scss";
-import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
+import {
+	dateTimeFromVideoPlayerTime,
+	dateTimeFromWubloaderTime,
+	wubloaderTimeFromDateTime,
+} from "../common/convertTime";
 import {
 	KeyboardShortcuts,
 	StreamTimeSettings,
@@ -92,6 +98,8 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		streamStartTime: DateTime.utc().minus({ minutes: 10 }),
 		streamEndTime: null,
 	});
+	const [playerTime, setPlayerTime] = createSignal<number>(0);
+	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
@@ -109,6 +117,33 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return url;
 	};
 
+	const downloadVideoURL = () => {
+		const streamInfo = streamVideoInfo();
+		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
+		const params = new URLSearchParams({ type: "smart", start: encodeURIComponent(startTime) });
+		if (streamInfo.streamEndTime) {
+			const endTime = wubloaderTimeFromDateTime(streamInfo.streamEndTime);
+			params.append("end", endTime);
+		}
+		return `/cut/${streamInfo.streamName}/source.ts?${params}`;
+	};
+
+	const downloadFrameURL = () => {
+		const streamInfo = streamVideoInfo();
+		const player = mediaPlayer();
+		const videoTime = playerTime();
+		const provider = player.provider as HLSProvider;
+		if (!provider) {
+			return "";
+		}
+		const currentTime = dateTimeFromVideoPlayerTime(provider, videoTime);
+		if (currentTime === null) {
+			return "";
+		}
+		const wubloaderTime = wubloaderTimeFromDateTime(currentTime);
+		return `/frame/${streamInfo.streamName}/source.png?timestamp=${wubloaderTime}`;
+	};
+
 	return (
 		<>
 			<StreamTimeSettings
@@ -119,7 +154,16 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				errorList={props.errorList}
 				setErrorList={props.setErrorList}
 			/>
-			<VideoPlayer src={videoURL} />
+			<VideoPlayer
+				src={videoURL}
+				setPlayerTime={setPlayerTime}
+				mediaPlayer={mediaPlayer}
+				setMediaPlayer={setMediaPlayer}
+			/>
+			<div class={styles.videoLinks}>
+				<a href={downloadVideoURL()}>Download Video</a>
+				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
+			</div>
 		</>
 	);
 };
