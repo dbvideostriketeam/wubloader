@@ -84,6 +84,9 @@ function drawBackground(context, timeOfDay, leftX, width) {
 	const groundColor = COLORS[timeOfDay].ground;
 	const surfaceColor = COLORS[timeOfDay].surface;
 
+	width = Math.ceil(width);
+	leftX = Math.floor(leftX);
+
 	context.fillStyle = COLORS[timeOfDay].sky;
 	context.fillRect(leftX, 0, width, 56);
 	context.fillStyle = COLORS[timeOfDay].surface;
