@@ -1,4 +1,6 @@
 import { DateTime } from "luxon";
+import { HLSProvider } from "vidstack";
+import { Fragment } from "hls.js";
 
 export enum TimeType {
 	UTC,
@@ -98,4 +100,30 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 	const hours = Math.floor(timeAgoSeconds / 3600);
 
 	return `${negative}${hours}:${minutesString}:${secondsString}`;
+}
+
+export function dateTimeFromVideoPlayerTime(
+	videoProvider: HLSProvider,
+	videoTime: number,
+): DateTime | null {
+	// We do a little bit of cheating our way into private data. The standard way of getting this involves
+	// handling events and capturing and saving a fragments array from it, which seems overly cumbersome.
+	const fragments = (videoProvider.instance as any).latencyController.levelDetails
+		.fragments as Fragment[];
+	let fragmentStartTime: number | undefined = undefined;
+	let fragmentStartISOTime: string | undefined = undefined;
+	for (const fragment of fragments) {
+		const fragmentEndTime = fragment.start + fragment.duration;
+		if (videoTime >= fragment.start && videoTime < fragmentEndTime) {
+			fragmentStartTime = fragment.start;
+			fragmentStartISOTime = fragment.rawProgramDateTime;
+			break;
+		}
+	}
+	if (fragmentStartISOTime === undefined) {
+		return null;
+	}
+	const wubloaderTime = DateTime.fromISO(fragmentStartISOTime);
+	const offset = videoTime - fragmentStartTime;
+	return wubloaderTime.plus({ seconds: offset });
 }
