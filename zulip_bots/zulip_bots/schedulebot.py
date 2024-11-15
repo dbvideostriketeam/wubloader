@@ -147,8 +147,12 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		else:
 			return f"**{result}**"
 
+	time_str = f":{shift}: Hour {shift_hour}"
+	if hour == 168:
+		time_str = "*WEEK TWO*"
+
 	lines = [
-		f"**Shift changes for :{shift}: Hour {shift_hour} | Bustime {hour:02d}:00 - {hour+1:02d}:00 | <time:{current_time.isoformat(timespec='minutes')}>:**",
+		f"**Shift changes for {time_str} | Bustime {hour:02d}:00 - {hour+1:02d}:00 | <time:{current_time.isoformat(timespec='minutes')}>:**",
 		"Make sure to *mute/unmute* #**current-shift** as needed!",
 	]
 	if supervisor is None:
@@ -191,7 +195,8 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	]
 	if hour == last:
 		lines += [
-			"**Well done everyone, and thank you for all your hard work :heart:**"
+			"# This bus keeps running because of you. Yes, you.",
+			"# Thank you just...so, so much for joining us in this silly thing. :heart:",
 		]
 
 	if stream == "DEBUG":
