@@ -187,7 +187,7 @@ async function drawRoad() {
 		const distanceTrackedOnRoute = distanceTracked % 360;
 		let nextBusStopPosition = null;
 		for (const busStopPosition of BUS_STOP_POSITIONS) {
-			if (busStopPosition >= distanceTrackedOnRoute + 1) {
+			if (busStopPosition >= distanceTrackedOnRoute + 0.05) {
 				nextBusStopPosition = busStopPosition;
 				break;
 			}
