@@ -210,5 +210,5 @@ async function drawRoad() {
 
 window.addEventListener("DOMContentLoaded", (event) => {
 	drawRoad();
-	setInterval(drawRoad, 10000);
+	setInterval(drawRoad, 2500);
 });
