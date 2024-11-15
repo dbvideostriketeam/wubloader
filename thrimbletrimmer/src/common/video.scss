@@ -1,13 +1,12 @@
-// Used to make the controls appear below the video player
 media-player {
 	flex-direction: column;
-}
-
-media-provider,
-media-captions,
-video {
 	max-width: 100%;
 	max-height: 50vh;
+}
+
+// This level of specificity is required to override player CSS
+#root > media-player > media-provider {
+	align-items: normal;
 }
 
 // Used to make the controls appear below the video player
