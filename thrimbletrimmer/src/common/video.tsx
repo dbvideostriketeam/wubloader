@@ -249,7 +249,6 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 			src={props.src()}
 			ref={props.setMediaPlayer}
 			preload="auto"
-			controlsDelay={0}
 			storage="thrimbletrimmer"
 		>
 			<media-provider
@@ -263,7 +262,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 				}}
 			/>
 			<media-captions class="vds-captions" />
-			<media-controls class="vds-controls">
+			<media-controls class="vds-controls" hideDelay={0}>
 				<media-controls-group class="vds-controls-group">
 					<media-tooltip>
 						<media-tooltip-trigger>
