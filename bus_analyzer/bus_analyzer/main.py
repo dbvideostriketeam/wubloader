@@ -202,7 +202,7 @@ def main(
 	prototypes_path="./prototypes",
 	concurrency=10,
 ):
-	CHECK_INTERVAL = 2
+	CHECK_INTERVAL = 0.5
 
 	stopping = gevent.event.Event()
 
