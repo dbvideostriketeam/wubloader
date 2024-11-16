@@ -5,11 +5,13 @@ import {
 	createResource,
 	createSignal,
 	For,
+	onMount,
 	Setter,
 	Show,
 	Suspense,
 } from "solid-js";
 import { DateTime } from "luxon";
+import { Fragment } from "hls.js";
 import { HLSProvider } from "vidstack";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Restreamer.module.scss";
@@ -18,12 +20,9 @@ import {
 	dateTimeFromWubloaderTime,
 	wubloaderTimeFromDateTime,
 } from "../common/convertTime";
-import {
-	KeyboardShortcuts,
-	StreamTimeSettings,
-	StreamVideoInfo,
-	VideoPlayer,
-} from "../common/video";
+import { StreamVideoInfo } from "../common/streamInfo";
+import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
+import { chatData } from "../common/chat";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -73,7 +72,7 @@ export const Restreamer: Component = () => {
 			<Suspense>
 				<Show when={defaultsData()}>
 					<RestreamerWithDefaults
-						defaults={defaultsData()}
+						defaults={defaultsData()!}
 						errorList={pageErrors}
 						setErrorList={setPageErrors}
 					/>
@@ -90,9 +89,11 @@ interface RestreamerDefaultProps {
 }
 
 const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
-	const [busStartTime, setBusStartTime] = createSignal<DateTime>(
-		dateTimeFromWubloaderTime(props.defaults.bustime_start),
-	);
+	const busStartTimeDefault = dateTimeFromWubloaderTime(props.defaults.bustime_start);
+	if (!busStartTimeDefault) {
+		return <></>;
+	}
+	const [busStartTime, setBusStartTime] = createSignal<DateTime>(busStartTimeDefault);
 	const [streamVideoInfo, setStreamVideoInfo] = createSignal<StreamVideoInfo>({
 		streamName: props.defaults.video_channel,
 		streamStartTime: DateTime.utc().minus({ minutes: 10 }),
@@ -100,6 +101,16 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	});
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
+	const [videoFragments, setVideoFragments] = createSignal<Fragment[]>([]);
+
+	onMount(() => {
+		const player = mediaPlayer();
+		if (player) {
+			player.addEventListener("hls-level-loaded", (event) => {
+				setVideoFragments(event.detail.details.fragments);
+			});
+		}
+	});
 
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
@@ -130,19 +141,34 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 
 	const downloadFrameURL = () => {
 		const streamInfo = streamVideoInfo();
-		const player = mediaPlayer();
+		const fragments = videoFragments();
 		const videoTime = playerTime();
-		const provider = player.provider as HLSProvider;
-		if (!provider) {
+		if (!fragments || fragments.length === 0) {
 			return "";
 		}
-		const currentTime = dateTimeFromVideoPlayerTime(provider, videoTime);
+		const currentTime = dateTimeFromVideoPlayerTime(fragments, videoTime);
 		if (currentTime === null) {
 			return "";
 		}
 		const wubloaderTime = wubloaderTimeFromDateTime(currentTime);
 		return `/frame/${streamInfo.streamName}/source.png?timestamp=${wubloaderTime}`;
 	};
+
+	const streamDataAndFragments = () => {
+		const streamInfo = streamVideoInfo();
+		const fragments = videoFragments();
+		if (!fragments || fragments.length === 0) {
+			return null;
+		}
+		return {
+			streamInfo: streamInfo,
+			fragments: fragments
+		};
+	};
+	const [chatMessages] = createResource(streamDataAndFragments, async () => {
+		const { streamInfo, fragments } = streamDataAndFragments()!;
+		return await chatData(streamInfo, fragments);
+	});
 
 	return (
 		<>
@@ -157,13 +183,14 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 			<VideoPlayer
 				src={videoURL}
 				setPlayerTime={setPlayerTime}
-				mediaPlayer={mediaPlayer}
-				setMediaPlayer={setMediaPlayer}
+				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
 			/>
 			<div class={styles.videoLinks}>
 				<a href={downloadVideoURL()}>Download Video</a>
 				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
 			</div>
+			<div class={styles.chatContainer}></div>
 		</>
 	);
 };
