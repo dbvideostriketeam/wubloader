@@ -23,6 +23,7 @@ import styles from "./video.module.scss";
 import "./video.scss";
 import { HLSProvider } from "vidstack";
 import { MediaPlayerElement } from "vidstack/elements";
+import { StreamVideoInfo } from "./streamInfo";
 
 import "vidstack/icons";
 import "vidstack/player/styles/default/theme.css";
@@ -34,12 +35,6 @@ import "vidstack/player/ui";
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
 export const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 4, 8];
-
-export class StreamVideoInfo {
-	streamName: string;
-	streamStartTime: DateTime;
-	streamEndTime: DateTime | null;
-}
 
 export interface StreamTimeSettingsProps {
 	busStartTime: Accessor<DateTime>;
@@ -62,7 +57,7 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 		const streamName = formData.get("stream") as string;
 		const startTimeEntered = formData.get("start-time") as string;
 		const endTimeEntered = formData.get("end-time") as string;
-		const timeType = +formData.get("time-type") as TimeType;
+		const timeType = +formData.get("time-type")! as TimeType;
 
 		let startTime: DateTime | null = null;
 		let endTime: DateTime | null = null;
