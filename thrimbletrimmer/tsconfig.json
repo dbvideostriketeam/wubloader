@@ -9,6 +9,7 @@
 		"jsxImportSource": "solid-js",
 		"types": ["vidstack/solid", "vite/client"],
 		"noEmit": true,
-		"isolatedModules": true
+		"isolatedModules": true,
+		"strictNullChecks": true
 	}
 }
