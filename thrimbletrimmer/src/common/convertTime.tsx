@@ -66,11 +66,11 @@ export function dateTimeFromTimeAgo(timeAgo: string): DateTime | null {
 	const mathObj = {};
 
 	while (parts.length > 0) {
-		const nextPart = parts.pop();
+		const nextPart = parts.pop()!;
 		if (properties.length === 0) {
 			return null;
 		}
-		const nextProp = properties.pop();
+		const nextProp = properties.pop()!;
 		const partNumber = +nextPart;
 		if (isNaN(partNumber)) {
 			return null;
@@ -102,25 +102,18 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 	return `${negative}${hours}:${minutesString}:${secondsString}`;
 }
 
-export function dateTimeFromVideoPlayerTime(
-	videoProvider: HLSProvider,
-	videoTime: number,
-): DateTime | null {
-	// We do a little bit of cheating our way into private data. The standard way of getting this involves
-	// handling events and capturing and saving a fragments array from it, which seems overly cumbersome.
-	const fragments = (videoProvider.instance as any).latencyController.levelDetails
-		.fragments as Fragment[];
+export function dateTimeFromVideoPlayerTime(fragments: Fragment[], videoTime: number): DateTime | null {
 	let fragmentStartTime: number | undefined = undefined;
 	let fragmentStartISOTime: string | undefined = undefined;
 	for (const fragment of fragments) {
 		const fragmentEndTime = fragment.start + fragment.duration;
 		if (videoTime >= fragment.start && videoTime < fragmentEndTime) {
 			fragmentStartTime = fragment.start;
-			fragmentStartISOTime = fragment.rawProgramDateTime;
+			fragmentStartISOTime = fragment.rawProgramDateTime!;
 			break;
 		}
 	}
-	if (fragmentStartISOTime === undefined) {
+	if (fragmentStartTime === undefined || fragmentStartISOTime === undefined) {
 		return null;
 	}
 	const wubloaderTime = DateTime.fromISO(fragmentStartISOTime);
