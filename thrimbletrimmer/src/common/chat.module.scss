@@ -1,0 +1,50 @@
+.chatReplayMessage {
+	display: flex;
+	align-items: baseline;
+	gap: 10px;
+}
+
+.chatReplayMessageSystem {
+	color: #aaf;
+}
+
+.chatReplayMessageTime {
+	flex-basis: 110px;
+	color: #ccc;
+	text-align: right;
+}
+
+.chatReplayMessageText {
+	flex-basis: 100px;
+	flex-grow: 1;
+}
+
+.chatReplayMessageReply {
+	font-size: 80%;
+
+	a {
+		text-decoration: none;
+	}
+}
+
+.chatReplayMessageTextAction {
+	font-style: italic;
+
+	.chatReplayMessageReply:not(.chatReplayMessageTextAction) {
+		font-style: normal;
+	}
+}
+
+.chatReplayMessageEmote {
+	// The sizes here are based on Twitch's 1.0 emote size.
+	width: 28px;
+	height: 28px;
+}
+
+.chatReplayMessageCleared {
+	opacity: 0.5;
+
+	.chatReplayMessageText {
+		text-decoration: line-through;
+	}
+}

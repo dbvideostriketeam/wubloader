@@ -102,7 +102,10 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 	return `${negative}${hours}:${minutesString}:${secondsString}`;
 }
 
-export function dateTimeFromVideoPlayerTime(fragments: Fragment[], videoTime: number): DateTime | null {
+export function dateTimeFromVideoPlayerTime(
+	fragments: Fragment[],
+	videoTime: number,
+): DateTime | null {
 	let fragmentStartTime: number | undefined = undefined;
 	let fragmentStartISOTime: string | undefined = undefined;
 	for (const fragment of fragments) {
