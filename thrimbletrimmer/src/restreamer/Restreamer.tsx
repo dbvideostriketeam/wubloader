@@ -1,10 +1,10 @@
 import {
 	Accessor,
 	Component,
-	createEffect,
 	createResource,
 	createSignal,
 	For,
+	Index,
 	onMount,
 	Setter,
 	Show,
@@ -12,7 +12,6 @@ import {
 } from "solid-js";
 import { DateTime } from "luxon";
 import { Fragment } from "hls.js";
-import { HLSProvider } from "vidstack";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Restreamer.module.scss";
 import {
@@ -22,7 +21,7 @@ import {
 } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
-import { chatData } from "../common/chat";
+import { chatData, ChatLog, ChatMessage, ChatMessageData, SystemMessage } from "../common/chat";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -162,13 +161,21 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		}
 		return {
 			streamInfo: streamInfo,
-			fragments: fragments
+			fragments: fragments,
 		};
 	};
-	const [chatMessages] = createResource(streamDataAndFragments, async () => {
+	const [possibleChatLog] = createResource(streamDataAndFragments, async () => {
 		const { streamInfo, fragments } = streamDataAndFragments()!;
 		return await chatData(streamInfo, fragments);
 	});
+
+	const chatLog = () => {
+		const chatLogData = possibleChatLog();
+		if (chatLogData) {
+			return chatLogData;
+		}
+		return ChatLog.default();
+	};
 
 	return (
 		<>
@@ -190,7 +197,24 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				<a href={downloadVideoURL()}>Download Video</a>
 				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
 			</div>
-			<div class={styles.chatContainer}></div>
+			<div class={styles.chatContainer}>
+				<Suspense>
+					<Index each={chatLog().messages}>
+						{(item: Accessor<ChatMessageData>, index: number) => {
+							const chatCommand = item().message.command;
+							if (chatCommand === "PRIVMSG") {
+								return (
+									<ChatMessage chatMessage={item()} chatLog={chatLog()} videoTime={playerTime} />
+								);
+							} else if (chatCommand === "USERNOTICE") {
+								return <SystemMessage chatMessage={item()} videoTime={playerTime} />;
+							} else {
+								return <></>;
+							}
+						}}
+					</Index>
+				</Suspense>
+			</div>
 		</>
 	);
 };
