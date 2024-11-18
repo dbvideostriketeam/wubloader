@@ -1,4 +1,4 @@
-import { Accessor, Component, For, JSX, Show } from "solid-js";
+import { Accessor, Component, createResource, For, Index, JSX, Show, Suspense } from "solid-js";
 import { StreamVideoInfo } from "./streamInfo";
 import { DateTime } from "luxon";
 import { Fragment } from "hls.js";
@@ -147,6 +147,56 @@ function formatDisplayTime(timeSeconds: number): string {
 
 	return `${hours}:${minutes}:${seconds}.${milliseconds}`;
 }
+
+export interface ChatDisplayProps {
+	streamInfo: StreamVideoInfo;
+	fragments: Accessor<Fragment[]>;
+	videoTime: Accessor<number>;
+}
+
+export const ChatDisplay: Component<ChatDisplayProps> = (props) => {
+	const streamDataAndFragments = () => {
+		const fragments = props.fragments();
+		if (!fragments || fragments.length === 0) {
+			return null;
+		}
+		return {
+			streamInfo: props.streamInfo,
+			fragments: fragments,
+		};
+	};
+	const [possibleChatLog] = createResource(streamDataAndFragments, async () => {
+		const { streamInfo, fragments } = streamDataAndFragments()!;
+		return await chatData(streamInfo, fragments);
+	});
+
+	const chatLog = () => {
+		const chatLogData = possibleChatLog();
+		if (chatLogData) {
+			return chatLogData;
+		}
+		return ChatLog.default();
+	};
+
+	return (
+		<Suspense>
+			<Index each={chatLog().messages}>
+				{(item: Accessor<ChatMessageData>, index: number) => {
+					const chatCommand = item().message.command;
+					if (chatCommand === "PRIVMSG") {
+						return (
+							<ChatMessage chatMessage={item()} chatLog={chatLog()} videoTime={props.videoTime} />
+						);
+					} else if (chatCommand === "USERNOTICE") {
+						return <SystemMessage chatMessage={item()} videoTime={props.videoTime} />;
+					} else {
+						return <></>;
+					}
+				}}
+			</Index>
+		</Suspense>
+	);
+};
 
 export interface ChatMessageProps {
 	chatMessage: ChatMessageData;
