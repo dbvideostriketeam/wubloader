@@ -4,7 +4,6 @@ import {
 	createResource,
 	createSignal,
 	For,
-	Index,
 	onMount,
 	Setter,
 	Show,
@@ -21,7 +20,7 @@ import {
 } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
-import { chatData, ChatLog, ChatMessage, ChatMessageData, SystemMessage } from "../common/chat";
+import { ChatDisplay } from "../common/chat";
 
 export interface DefaultsData {
 	video_channel: string;
@@ -153,30 +152,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return `/frame/${streamInfo.streamName}/source.png?timestamp=${wubloaderTime}`;
 	};
 
-	const streamDataAndFragments = () => {
-		const streamInfo = streamVideoInfo();
-		const fragments = videoFragments();
-		if (!fragments || fragments.length === 0) {
-			return null;
-		}
-		return {
-			streamInfo: streamInfo,
-			fragments: fragments,
-		};
-	};
-	const [possibleChatLog] = createResource(streamDataAndFragments, async () => {
-		const { streamInfo, fragments } = streamDataAndFragments()!;
-		return await chatData(streamInfo, fragments);
-	});
-
-	const chatLog = () => {
-		const chatLogData = possibleChatLog();
-		if (chatLogData) {
-			return chatLogData;
-		}
-		return ChatLog.default();
-	};
-
 	return (
 		<>
 			<StreamTimeSettings
@@ -198,22 +173,11 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
 			</div>
 			<div class={styles.chatContainer}>
-				<Suspense>
-					<Index each={chatLog().messages}>
-						{(item: Accessor<ChatMessageData>, index: number) => {
-							const chatCommand = item().message.command;
-							if (chatCommand === "PRIVMSG") {
-								return (
-									<ChatMessage chatMessage={item()} chatLog={chatLog()} videoTime={playerTime} />
-								);
-							} else if (chatCommand === "USERNOTICE") {
-								return <SystemMessage chatMessage={item()} videoTime={playerTime} />;
-							} else {
-								return <></>;
-							}
-						}}
-					</Index>
-				</Suspense>
+				<ChatDisplay
+					streamInfo={streamVideoInfo()}
+					fragments={videoFragments}
+					videoTime={playerTime}
+				/>
 			</div>
 		</>
 	);
