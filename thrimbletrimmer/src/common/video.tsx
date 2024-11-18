@@ -350,7 +350,7 @@ export const KeyboardShortcuts: Component<KeyboardShortcutProps> = (
 	props: KeyboardShortcutProps,
 ) => {
 	return (
-		<details>
+		<details class={styles.keyboardShortcutHelp}>
 			<summary>Keyboard Shortcuts</summary>
 			<ul>
 				<li>Number keys (0-9): Jump to that 10% interval of the video (0% - 90%)</li>
