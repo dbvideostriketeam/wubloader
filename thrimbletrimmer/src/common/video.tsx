@@ -250,7 +250,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 			<media-gesture event="pointerup" action="toggle:paused" />
 			<media-gesture event="dblpointerup" action="toggle:fullscreen" />
 			<media-captions class="vds-captions" />
-			<media-controls class="vds-controls" hideDelay={0}>
+			<media-controls class="vds-controls">
 				<media-controls-group class="vds-controls-group">
 					<media-tooltip>
 						<media-tooltip-trigger>
