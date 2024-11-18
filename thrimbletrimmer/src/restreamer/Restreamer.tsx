@@ -65,9 +65,7 @@ export const Restreamer: Component = () => {
 					)}
 				</For>
 			</ul>
-			<div class={styles.keyboardShortcutHelp}>
-				<KeyboardShortcuts includeEditorShortcuts={false} />
-			</div>
+			<KeyboardShortcuts includeEditorShortcuts={false} />
 			<Suspense>
 				<Show when={defaultsData()}>
 					<RestreamerWithDefaults
