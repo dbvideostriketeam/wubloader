@@ -246,16 +246,9 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 			preload="auto"
 			storage="thrimbletrimmer"
 		>
-			<media-provider
-				onClick={(event) => {
-					const player = props.mediaPlayer();
-					if (player.paused) {
-						player.play(event);
-					} else {
-						player.pause(event);
-					}
-				}}
-			/>
+			<media-provider />
+			<media-gesture event="pointerup" action="toggle:paused" />
+			<media-gesture event="dblpointerup" action="toggle:fullscreen" />
 			<media-captions class="vds-captions" />
 			<media-controls class="vds-controls" hideDelay={0}>
 				<media-controls-group class="vds-controls-group">
