@@ -3,8 +3,6 @@ import {
 	Component,
 	createEffect,
 	createSignal,
-	For,
-	onCleanup,
 	onMount,
 	Setter,
 	Show,
@@ -210,13 +208,15 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 
 	let [playerTime, setPlayerTime] = createSignal(0);
 	let [duration, setDuration] = createSignal(0);
+	let [playbackSpeed, setPlaybackSpeed] = createSignal(1);
 
 	onMount(() => {
 		const player = props.mediaPlayer();
-		player.subscribe(({ currentTime, duration }) => {
+		player.subscribe(({ currentTime, duration, playbackRate }) => {
 			setPlayerTime(currentTime);
 			props.setPlayerTime(currentTime);
 			setDuration(duration);
+			setPlaybackSpeed(playbackRate);
 		});
 		player.streamType = "on-demand";
 	});
@@ -295,6 +295,62 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 					</div>
 
 					<div class="vds-controls-spacer"></div>
+
+					<media-menu class="vds-menu vds-settings-menu">
+						<media-tooltip class="vds-tooltip">
+							<media-tooltip-trigger>
+								<media-menu-button class="vds-button vds-menu-button">
+									<media-icon class="vds-icon vds-menu-settings-icon vds-rotate-icon" type="settings" />
+								</media-menu-button>
+							</media-tooltip-trigger>
+							<media-tooltip-content class="vds-tooltip-content" placement="top">
+								Settings
+							</media-tooltip-content>
+						</media-tooltip>
+						<media-menu-items class="vds-menu-items vds-settings-menu-items" placement="top">
+							<section class="vds-menu-section" role="group">
+								<div class="vds-menu-section-title">
+									<header>Speed</header>
+									<div class="vds-menu-section-value">{playbackSpeed()}x</div>
+								</div>
+								<div class="vds-menu-section-body">
+									<div class="vds-menu-item vds-menu-slider-item">
+										<media-speed-slider class="vds-slider vds-speed-slider" max={8}>
+											<div class="vds-slider-track"></div>
+											<div class="vds-slider-track vds-slider-track-fill"></div>
+											<div class="vds-slider-thumb"></div>
+											<media-slider-steps class="vds-slider-steps">
+												<template>
+													<div class="vds-slider-step"></div>
+												</template>
+											</media-slider-steps>
+										</media-speed-slider>
+									</div>
+								</div>
+							</section>
+							<section class="vds-menu-section" role="group">
+								<div class="vds-menu-section-title">
+									<header>Quality</header>
+									<div class="vds-menu-section-value"></div>
+								</div>
+								<div class="vds-menu-section-body">
+									<div class="vds-menu-item vds-menu-slider-item">
+										<media-quality-slider class="vds-slider vds-quality-slider">
+											<div class="vds-slider-track"></div>
+											<div class="vds-slider-track vds-slider-track-fill"></div>
+											<div class="vds-slider-track vds-slider-track-progress"></div>
+											<div class="vds-slider-thumb"></div>
+											<media-slider-steps class="vds-slider-steps">
+												<template>
+													<div class="vds-slider-step"></div>
+												</template>
+											</media-slider-steps>
+										</media-quality-slider>
+									</div>
+								</div>
+							</section>
+						</media-menu-items>
+					</media-menu>
 
 					<media-tooltip>
 						<media-tooltip-trigger>
