@@ -4,6 +4,7 @@ import {
 	createResource,
 	createSignal,
 	For,
+	onCleanup,
 	onMount,
 	Setter,
 	Show,
@@ -100,6 +101,8 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	const [videoFragments, setVideoFragments] = createSignal<Fragment[]>([]);
+	const [chatContainerElement, setChatContainerElement] = createSignal<HTMLDivElement>();
+	const [chatScrolledToBottom, setChatScrolledToBottom] = createSignal(true);
 
 	onMount(() => {
 		const player = mediaPlayer();
@@ -109,6 +112,18 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 			});
 		}
 	});
+
+	const chatScrollTimer = setInterval(() => {
+		const chatContainer = chatContainerElement();
+		if (!chatContainer) {
+			return;
+		}
+		const autoscroll = chatScrolledToBottom();
+		if (autoscroll) {
+			chatContainer.scrollTop = chatContainer.scrollHeight;
+		}
+	}, 100);
+	onCleanup(() => clearInterval(chatScrollTimer));
 
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
@@ -172,7 +187,17 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				<a href={downloadVideoURL()}>Download Video</a>
 				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
 			</div>
-			<div class={styles.chatContainer}>
+			<div
+				class={styles.chatContainer}
+				ref={setChatContainerElement}
+				onScroll={(event) => {
+					const chatContainer = event.currentTarget;
+					// Allow a 20 pixel buffer at the bottom of the element
+					setChatScrolledToBottom(
+						chatContainer.scrollTop + chatContainer.offsetHeight + 20 >= chatContainer.scrollHeight,
+					);
+				}}
+			>
 				<ChatDisplay
 					streamInfo={streamVideoInfo()}
 					fragments={videoFragments}
