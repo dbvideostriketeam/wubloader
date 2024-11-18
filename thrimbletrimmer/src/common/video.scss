@@ -24,6 +24,11 @@ media-player:not([data-fullscreen]) media-controls {
 	height: auto;
 }
 
+media-controls.vds-controls:not([data-fullscreen]) {
+	visibility: visible;
+	opacity: 1;
+}
+
 media-controls-group {
 	display: flex;
 	align-items: center;
