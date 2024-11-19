@@ -171,7 +171,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				busStartTime={busStartTime}
 				streamVideoInfo={streamVideoInfo}
 				setStreamVideoInfo={setStreamVideoInfo}
-				showTimeRangeLink={false}
+				showTimeRangeLink={true}
 				errorList={props.errorList}
 				setErrorList={props.setErrorList}
 			/>
