@@ -91,11 +91,15 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return <></>;
 	}
 	const [busStartTime, setBusStartTime] = createSignal<DateTime>(busStartTimeDefault);
-	const [streamVideoInfo, setStreamVideoInfo] = createSignal<StreamVideoInfo>({
-		streamName: props.defaults.video_channel,
-		streamStartTime: DateTime.utc().minus({ minutes: 10 }),
-		streamEndTime: null,
-	});
+	let defaultStreamInfo = StreamVideoInfo.defaultFromURL();
+	if (defaultStreamInfo === null) {
+		defaultStreamInfo = {
+			streamName: props.defaults.video_channel,
+			streamStartTime: DateTime.utc().minus({ minutes: 10 }),
+			streamEndTime: null,
+		};
+	}
+	const [streamVideoInfo, setStreamVideoInfo] = createSignal<StreamVideoInfo>(defaultStreamInfo);
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	const [videoFragments, setVideoFragments] = createSignal<Fragment[]>([]);
