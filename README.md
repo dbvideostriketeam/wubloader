@@ -37,7 +37,7 @@ but a brief overview of the components:
 * `nginx` provides a webserver through which the other components are exposed to the outside world.
 * `monitoring` provides dashboards to allow the wubloader to be monitored.
 
-### Usage
+### Installation
 
 All components are built as docker images.
 Components which access the disk expect a shared directory mounted at `/mnt`.
@@ -46,8 +46,14 @@ A docker-compose file is provided to run all components. See `docker-compose.jso
 to set configuration options, then generate the compose file with `./generate-docker-compose`.
 Then run `docker-compose up`.
 
+To install wubloader, please refer to [INSTALL.md](./INSTALL.md) for more granular steps. 
+
+#### Alternate Setups
+
+> [!WARNING]
+> Here be dragons.  This config is largely maintained by one user and is not kept at parity with the rest of the tooling.  It's highly suggested to not use at this juncture for new developers to wubloader.
+
 There is also a kubernetes-based option, but it is less configurable and only fully supports replication and editing nodes.
 Basic support for running the database and playlist_manager has been added, but not tested.
 See [k8s.jsonnet](./k8s.jsonnet) for details.
 
-Further details of installing and configuring the backfiller are provided in [INSTALL.md](./INSTALL.md).
