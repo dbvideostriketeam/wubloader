@@ -19,14 +19,9 @@ This installation guide is written assuming you are on a Linux-like operating sy
   
 ## Download the wubloader
 
-You can download the latest version of the wubloader from github:
-
-  https://github.com/dbvideostriketeam/wubloader/archive/master.zip
-  
-Alternatively if you have `git` installed you can clone the git repository:
+Use github to clone the repository into a working directory.  If you intend to make changes, it's highly suggested you clone it into a fork of the repo on your own GitHub account.
 
   `git clone https://github.com/dbvideostriketeam/wubloader`
-  
   
 ## Generate the docker-compose file
 
