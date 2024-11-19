@@ -51,7 +51,7 @@ By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim`, 
 
 If you are running a `cutter` you will have to place the appropriate Google credentials in a JSON file given by the `cutter_creds_file`. Likewise, if you are running the `sheetsync` service, you will have to place the appropriate credentials in the JSON file pointed to by `sheetsync_creds_file` as well as set the appropriate `sheet_id` and `worksheets` for the Google sheet to sync with. You will also need to set the appropriate `edit_url` to access `thrimbletrimmer`.  
 
-## Running the wubloader
+## Running Wubloader
 
 To start the wubloader, simply run
 
@@ -61,7 +61,7 @@ To stop the wubloader and clean up, simply run
 
   `docker-compose down`
 
-## Database setup
+## Database Setup
 
 When setting up a database node, a number of database specific options can be set.
 
