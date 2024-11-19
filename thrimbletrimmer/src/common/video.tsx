@@ -27,13 +27,20 @@ export const VIDEO_FRAMES_PER_SECOND = 30;
 export const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 4, 8];
 
 export interface StreamTimeSettingsProps {
+	/** Getter for the signal to get the time when the run starts. */
 	busStartTime: Accessor<DateTime>;
+	/** Getter for the StreamVideoInfo signal. Used to set field values and, if applicable, apply defaults. */
 	streamVideoInfo: Accessor<StreamVideoInfo>;
+	/** Setter for the StreamVideoInfo signal. */
 	setStreamVideoInfo: Setter<StreamVideoInfo>;
-	/// If true, shows a link to the same page with the specified stream and time range. For the link to work, the host
-	/// page must support defaulting the link data into the StreamVideoInfo.
+	/**
+	 * If true, shows a link to the same page with the specified stream and time range. For the link to work, the host
+	 * page must support defaulting the link data into the StreamVideoInfo.
+	 */
 	showTimeRangeLink: boolean;
+	/** Getter for the signal containing the list of errors to display. */
 	errorList: Accessor<string[]>;
+	/** Setter for the signal containing the list of errors to display. */
 	setErrorList: Setter<string[]>;
 }
 
