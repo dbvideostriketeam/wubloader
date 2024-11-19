@@ -1,12 +1,4 @@
-import {
-	Accessor,
-	Component,
-	createEffect,
-	createSignal,
-	onMount,
-	Setter,
-	Show,
-} from "solid-js";
+import { Accessor, Component, createEffect, createSignal, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
 import {
 	TimeType,
@@ -38,6 +30,8 @@ export interface StreamTimeSettingsProps {
 	busStartTime: Accessor<DateTime>;
 	streamVideoInfo: Accessor<StreamVideoInfo>;
 	setStreamVideoInfo: Setter<StreamVideoInfo>;
+	/// If true, shows a link to the same page with the specified stream and time range. For the link to work, the host
+	/// page must support defaulting the link data into the StreamVideoInfo.
 	showTimeRangeLink: boolean;
 	errorList: Accessor<string[]>;
 	setErrorList: Setter<string[]>;
@@ -300,7 +294,10 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 						<media-tooltip class="vds-tooltip">
 							<media-tooltip-trigger>
 								<media-menu-button class="vds-button vds-menu-button">
-									<media-icon class="vds-icon vds-menu-settings-icon vds-rotate-icon" type="settings" />
+									<media-icon
+										class="vds-icon vds-menu-settings-icon vds-rotate-icon"
+										type="settings"
+									/>
 								</media-menu-button>
 							</media-tooltip-trigger>
 							<media-tooltip-content class="vds-tooltip-content" placement="top">
