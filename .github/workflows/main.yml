@@ -69,13 +69,14 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: buildah-bin
-          path: /usr/bin/buildah
+          path: /usr/local/bin/buildah
       - name: Ensure buildah binary has +x permissions set
         run: |
-          chmod +x /usr/bin/buildah
+          chmod +x /usr/local/bin/buildah
       - name: Check buildah version
         run: |
-          ls -l /usr/bin/buildah
+          ls -l /usr/local/bin/buildah
+          echo $PATH
           which buildah
           buildah version
       - name: Check out repo
