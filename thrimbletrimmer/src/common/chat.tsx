@@ -378,7 +378,7 @@ const MessageText: Component<MessageTextProps> = (props) => {
 				emoteData.start - messageTextStart,
 				emoteData.end + 1 - messageTextStart,
 			);
-			chatMessageText = chatMessageText.substring(emoteData.end + 1);
+			chatMessageText = chatMessageText.substring(emoteData.end + 1 - messageTextStart);
 			messageTextStart = emoteData.end + 1;
 			messageParts.push(
 				<img
