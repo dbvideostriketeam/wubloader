@@ -180,20 +180,20 @@ export const ChatDisplay: Component<ChatDisplayProps> = (props) => {
 
 	return (
 		<Suspense>
-			<Index each={chatLog().messages}>
-				{(item: Accessor<ChatMessageData>, index: number) => {
-					const chatCommand = item().message.command;
+			<For each={chatLog().messages}>
+				{(item: ChatMessageData, index: Accessor<number>) => {
+					const chatCommand = item.message.command;
 					if (chatCommand === "PRIVMSG") {
 						return (
-							<ChatMessage chatMessage={item()} chatLog={chatLog()} videoTime={props.videoTime} />
+							<ChatMessage chatMessage={item} chatLog={chatLog()} videoTime={props.videoTime} />
 						);
 					} else if (chatCommand === "USERNOTICE") {
-						return <SystemMessage chatMessage={item()} videoTime={props.videoTime} />;
+						return <SystemMessage chatMessage={item} videoTime={props.videoTime} />;
 					} else {
 						return <></>;
 					}
 				}}
-			</Index>
+			</For>
 		</Suspense>
 	);
 };
