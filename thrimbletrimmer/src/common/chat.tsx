@@ -385,7 +385,6 @@ const MessageText: Component<MessageTextProps> = (props) => {
 					src={emoteImageURL}
 					alt={emoteText}
 					title={emoteText}
-					class={styles.chatReplayMessageEmote}
 				/>,
 			);
 		}
