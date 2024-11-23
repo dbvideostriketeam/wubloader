@@ -146,7 +146,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const downloadVideoURL = () => {
 		const streamInfo = streamVideoInfo();
 		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
-		const params = new URLSearchParams({ type: "smart", start: encodeURIComponent(startTime) });
+		const params = new URLSearchParams({ type: "smart", start: startTime });
 		if (streamInfo.streamEndTime) {
 			const endTime = wubloaderTimeFromDateTime(streamInfo.streamEndTime);
 			params.append("end", endTime);
