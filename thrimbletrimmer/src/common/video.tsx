@@ -258,6 +258,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 							<media-play-button class="vds-button">
 								<media-icon type="play" class="vds-play-icon" />
 								<media-icon type="pause" class="vds-pause-icon" />
+								<media-icon type="replay" class="vds-replay-icon" />
 							</media-play-button>
 						</media-tooltip-trigger>
 						<media-tooltip-content class="vds-tooltip-content" placement="top">
