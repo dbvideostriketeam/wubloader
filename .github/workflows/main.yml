@@ -72,7 +72,7 @@ jobs:
           path: /usr/local/bin/buildah
       - name: Ensure buildah binary has +x permissions set
         run: |
-          chmod +x /usr/local/bin/buildah
+          sudo chmod +x /usr/local/bin/buildah
       - name: Check buildah version
         run: |
           ls -l /usr/local/bin/buildah
