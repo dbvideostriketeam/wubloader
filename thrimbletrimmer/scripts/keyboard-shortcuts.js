@@ -144,6 +144,10 @@ document.addEventListener("keydown", (event) => {
 		return;
 	}
 
+	if (event.target.classList.contains("jcrop-widget") && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+		return;
+	}
+
 	const videoElement = document.getElementById("video");
 	switch (event.key) {
 		case "ArrowLeft":
