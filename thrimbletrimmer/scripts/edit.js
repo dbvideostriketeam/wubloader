@@ -658,7 +658,11 @@ async function initializeVideoInfo() {
 	if (videoInfo.video_title) {
 		titleElem.value = videoInfo.video_title;
 	} else {
-		titleElem.value = videoInfo.description;
+		// If a video title hasn't been set yet, leave it blank.
+		// Exception: RDPs always use the standard title.
+		if (videoInfo.tags.includes("RDP")) {
+			titleElem.value = videoInfo.description;	
+		}
 	}
 	validateVideoTitle();
 	document.getElementById("video-info-title-abbreviated").innerText =
@@ -668,7 +672,11 @@ async function initializeVideoInfo() {
 	if (videoInfo.video_description) {
 		descriptionElem.value = videoInfo.video_description;
 	} else {
-		descriptionElem.value = videoInfo.description;
+		// If a video description hasn't been set yet, use the descripton from the row.
+		// Exception: RDPs start blank because the row is used for the title.
+		if (!videoInfo.tags.includes("RDP")) {
+			descriptionElem.value = videoInfo.description;
+		}
 	}
 	validateVideoDescription();
 
