@@ -248,10 +248,16 @@ a.click {
 
 .range-transition-duration-section {
 	display: inline-block;
+	padding-left: 0.5em;
 }
 
 .range-transition-duration {
 	width: 50px;
+}
+
+.range-transition-preview-section {
+	display: inline-block;
+	padding-left: 0.5em;
 }
 
 .range-definition-times {
