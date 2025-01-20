@@ -655,7 +655,9 @@ async function initializeVideoInfo() {
 	titlePrefixElem.innerText = videoInfo.title_prefix;
 
 	const titleElem = document.getElementById("video-info-title");
-	if (videoInfo.video_title) {
+	if (videoInfo.video_title !== null) {
+		// If a video titles was saved (even if it is blank), use that. Titles
+		// can't currently be blank, but we may be loosening validation for drafts.
 		titleElem.value = videoInfo.video_title;
 	} else {
 		// If a video title hasn't been set yet, leave it blank.
@@ -669,7 +671,8 @@ async function initializeVideoInfo() {
 		videoInfo.title_prefix + titleElem.value;
 
 	const descriptionElem = document.getElementById("video-info-description");
-	if (videoInfo.video_description) {
+	if (videoInfo.video_description !== null) {
+		// If a video description was saved (even if it is blank), use that.
 		descriptionElem.value = videoInfo.video_description;
 	} else {
 		// If a video description hasn't been set yet, use the descripton from the row.
