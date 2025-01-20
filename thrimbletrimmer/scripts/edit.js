@@ -1703,6 +1703,55 @@ function updateDownloadLink() {
 		videoInfo.video_quality,
 	);
 	document.getElementById("download-link").href = downloadURL;
+
+	// Create preview links for each transition
+	const transitionPreviewPaddingSeconds = 5;
+	const transitionLinks = document.getElementsByClassName("range-transition-preview-button");
+	for (let i=0; i<transitionLinks.length; i++) {
+		const transitionLinkTarget = transitionLinks[i];
+		const previewTimeRanges = timeRanges.slice(i,i+2); // Current and next range
+		const previewTransition = transitions[i]; // Transition after current range
+		// Calculate the duration of the transition. Cut transitions have
+		// previewTransition == "" and are instantaneous.
+		const thisTransitionDuration = previewTransition ? parseFloat(previewTransition.split(",")[1]) : 0;
+		// Each side of the transition needs the configured padding length plus
+		// the duration of the transition.
+		const thisPaddingDurationSeconds = thisTransitionDuration + transitionPreviewPaddingSeconds;
+		if (previewTimeRanges[0].start && previewTimeRanges[0].end && previewTimeRanges[1].start && previewTimeRanges[1].end) {
+			// Set new segment start and end times based on calculated padding.
+			const paddedTimeRanges = [
+				{
+					start: wubloaderTimeFromDateTime(
+						luxon.DateTime.max(
+							dateTimeFromWubloaderTime(previewTimeRanges[0].start),
+							dateTimeFromWubloaderTime(previewTimeRanges[0].end).minus(luxon.Duration.fromMillis(thisPaddingDurationSeconds*1000))
+						)
+					),
+					end: previewTimeRanges[0].end,
+				},
+				{
+					start: previewTimeRanges[1].start,
+					end: wubloaderTimeFromDateTime(
+						luxon.DateTime.min(
+							dateTimeFromWubloaderTime(previewTimeRanges[1].end),
+							dateTimeFromWubloaderTime(previewTimeRanges[1].start).plus(luxon.Duration.fromMillis(thisPaddingDurationSeconds*1000))
+						)
+					),
+				},
+			]
+			// Create a video URL, forcing webm and 480p
+			const previewURL = generateDownloadURL(
+				paddedTimeRanges,
+				[previewTransition],
+				"webm",
+				allowHoles,
+				"480p",
+			);
+			transitionLinkTarget.dataset.videoSource = previewURL;
+		} else {
+			transitionLinkTarget.dataset.videoSource = null;
+		}
+	}
 }
 
 async function setManualVideoLink() {
@@ -1867,7 +1916,39 @@ function rangeDefinitionDOM() {
 		handleFieldChange();
 	});
 	transitionDurationSection.append(" over ", transitionDuration, " seconds");
-	transitionContainer.append("Transition: ", transitionType, transitionDurationSection);
+
+	// Add a link to preview this transition
+	const transitionPreviewSection = makeElement("div", [
+		"range-transition-preview-section",
+	]);
+	const transitionPreviewButton = makeElement("button", ["range-transition-preview-button"]);
+	transitionPreviewButton.append("Preview");
+	transitionPreviewButton.addEventListener("click", (event) => {
+		const videoUrl = event.target.dataset.videoSource;
+
+		// Pop up a new window to contain the video preview.
+		// These dimensions aren't quite right because if I make them exact for 480p,
+		// firefox creates an unnecessary scroll bar.
+		const newWindow = window.open("", "_blank", "width=845,height=480");
+		// Very basic video player wrapper
+		newWindow.document.write(`
+		  <!DOCTYPE html>
+		  <html>
+			<head>
+			  <title>Thrimbletrimmer Transition Preview</title>
+			</head>
+			<body style="margin:0; padding:0;">
+			  <video width="100%" height="100%" controls autoplay>
+				<source src="${videoUrl}" type="video/webm" />
+				Your browser does not support the video tag.
+			  </video>
+			</body>
+		  </html>
+		`);
+		newWindow.document.close();
+	});
+	transitionPreviewSection.append(transitionPreviewButton);
+	transitionContainer.append("Transition: ", transitionType, transitionDurationSection, transitionPreviewSection);
 
 	const rangeTimesContainer = makeElement("div", ["range-definition-times"]);
 	const rangeStart = makeElement("input", ["range-definition-start"], { type: "text" });
