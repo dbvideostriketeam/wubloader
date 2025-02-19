@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -e
+set -eu
 
 sql() {
 	local user
@@ -14,9 +14,10 @@ sed -i "/host all all all/d" "$PGDATA/pg_hba.conf"
 echo "host all $WUBLOADER_USER all md5" >> "$PGDATA/pg_hba.conf"
 
 echo "Creating $WUBLOADER_USER"
-sql "$POSTGRES_USER" <<-EOSQL
+sql "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOSQL
 
 CREATE USER $WUBLOADER_USER LOGIN PASSWORD '$WUBLOADER_PASSWORD';
+GRANT CREATE ON SCHEMA public TO $WUBLOADER_USER;
 
 EOSQL
 
@@ -32,11 +33,7 @@ if [ -n "$REPLICATION_USER" ]; then
 	EOSQL
 
 	cat >> ${PGDATA}/postgresql.conf <<-EOF
-	wal_level = replica
-	archive_mode = on
-	archive_command = 'cd .'
-	max_wal_senders = 8
-	wal_keep_segments = 8
+	wal_keep_size = 128MB
 	EOF
 
 fi
