@@ -94,8 +94,8 @@ CREATE TABLE events (
 		OR thumbnail_crop IS NULL
 	), -- left, upper, right, and lower pixel coordinates to crop the selected frame
 	thumbnail_location INTEGER[] CHECK (
-		cardinality(thumbnail_crop) = 4
-		OR thumbnail_crop IS NULL
+		cardinality(thumbnail_location) = 4
+		OR thumbnail_location IS NULL
 	), -- left, top, right, bottom pixel coordinates to position the cropped frame
 	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
