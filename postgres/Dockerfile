@@ -1,4 +1,4 @@
-FROM postgres:12
+FROM postgres:17
 COPY postgres/setup.sh /docker-entrypoint-initdb.d/setup.sh
 COPY postgres/schema.sql /
 COPY postgres/buscribe.sql /
