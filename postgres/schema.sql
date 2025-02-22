@@ -26,6 +26,10 @@ CREATE TYPE thumbnail_mode as ENUM (
 	'CUSTOM'
 );
 
+-- Represents an area in an image as (left, top, bottom, right)
+-- or equivalently as (x1, y1, x2, y2) where x is the top-left corner and y is the bottom-right.
+CREATE DOMAIN box_coords AS INTEGER[] CHECK (cardinality(VALUE) = 4 OR VALUE IS NULL);
+
 -- The end time for an event can be unset, "--" or a timestamp.
 -- If dashed is true, value should be the same as start time (which may be NULL if start time is unset).
 -- Otherwise value is the value (which may be NULL if end time is unset).
@@ -89,14 +93,8 @@ CREATE TABLE events (
 		OR thumbnail_mode = 'NONE'
 		OR thumbnail_last_written IS NOT NULL
 	),
-	thumbnail_crop INTEGER[] CHECK (
-		cardinality(thumbnail_crop) = 4
-		OR thumbnail_crop IS NULL
-	), -- left, upper, right, and lower pixel coordinates to crop the selected frame
-	thumbnail_location INTEGER[] CHECK (
-		cardinality(thumbnail_location) = 4
-		OR thumbnail_location IS NULL
-	), -- left, top, right, bottom pixel coordinates to position the cropped frame
+	thumbnail_crop box_coords, -- pixel coordinates to crop the selected frame
+	thumbnail_location box_coords, -- pixel coordinates to position the cropped frame
 	
 	state event_state NOT NULL DEFAULT 'UNEDITED',
 	uploader TEXT CHECK (state IN ('UNEDITED', 'EDITED', 'DONE', 'MODIFIED') OR uploader IS NOT NULL),
@@ -194,6 +192,6 @@ CREATE TABLE templates (
 	image BYTEA NOT NULL,
 	description TEXT NOT NULL DEFAULT '',
 	attribution TEXT NOT NULL DEFAULT '',
-	crop INTEGER[] NOT NULL CHECK (cardinality(crop) = 4),
-	location INTEGER[] NOT NULL CHECK (cardinality(location) = 4)
+	crop box_coords NOT NULL,
+	location box_coords NOT NULL
 );
