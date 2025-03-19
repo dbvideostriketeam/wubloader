@@ -57,13 +57,13 @@ def merge_messages(*batches):
 				if id is None:
 					merged = merge_message(message, candidate)
 					if merged is not None:
-						candidates.pop(index)
+						batch.pop(index)
 						break
 				elif (candidate.get("tags") or {}).get("id") == id:
 					merged = merge_message(message, candidate)
 					if merged is None:
 						raise ValueError("TODO")
-					candidates.pop(index)
+					batch.pop(index)
 					break
 			if merged is not None:
 				message = merged
