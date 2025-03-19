@@ -88,14 +88,21 @@ def load(file):
 
 
 def main(*files):
+	out = False
+	if files and files[0] == "--out":
+		files = files[1:]
+		out = True
 	batches = [load(file) for file in files]
 	result = batches[0]
 	start = time.monotonic()
 	for batch in batches[1:]:
 		result = merge_messages(result, batch)
 	interval = time.monotonic() - start
-	hash = hashlib.sha256(json.dumps(result).encode()).hexdigest()
-	print(f"Merged {len(batches)} batches in {interval:.3f}s to hash {hash}")
+	if out:
+		print(json.dumps(result))
+	else:
+		hash = hashlib.sha256(json.dumps(result).encode()).hexdigest()
+		print(f"Merged {len(batches)} batches in {interval:.3f}s to hash {hash}")
 
 if __name__ == '__main__':
 	import sys
