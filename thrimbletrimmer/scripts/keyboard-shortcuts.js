@@ -151,10 +151,18 @@ document.addEventListener("keydown", (event) => {
 	const videoElement = document.getElementById("video");
 	switch (event.key) {
 		case "ArrowLeft":
-			videoElement.currentTime -= 5;
+			if (event.shiftKey) {
+				videoElement.currentTime -= 60;
+			} else {
+				videoElement.currentTime -= 5;
+			}
 			break;
 		case "ArrowRight":
-			videoElement.currentTime += 5;
+			if (event.shiftKey) {
+				videoElement.currentTime += 60;
+			} else {
+				videoElement.currentTime += 5;
+			}
 			break;
 		case "Backspace":
 			event.preventDefault();
