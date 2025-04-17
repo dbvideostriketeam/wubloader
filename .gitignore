@@ -3,3 +3,5 @@
 .*.uptodate
 *.egg-info
 build
+google_creds.json # This is because the default credential location is noted as such.
+creds.json # Listed as credentials in schedulebot reference jsonnet config.
