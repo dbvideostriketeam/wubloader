@@ -20,6 +20,8 @@ const VIDEO_FRAMES_PER_SECOND = 30;
 
 const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 4, 8];
 
+const CHAT_REFRESH_INTERVAL_MS = 10000;
+
 function commonPageSetup() {
 	if (!Hls.isSupported()) {
 		addError(
@@ -517,9 +519,14 @@ function triggerDownload(url, filename) {
 
 function sendChatLogLoadData() {
 	let startTime = getStartTime();
-	let endTime = getEndTime();
-	if (!startTime || !endTime) {
+	if (startTime === null) {
 		return;
+	}
+	let endTime = getEndTime();
+	let refresh = false;
+	if (endTime === null) {
+		endTime = DateTime.now().setZone("utc").plus({minutes: 1});
+		refresh = true;
 	}
 	startTime = wubloaderTimeFromDateTime(startTime);
 	endTime = wubloaderTimeFromDateTime(endTime);
@@ -536,6 +543,10 @@ function sendChatLogLoadData() {
 		segmentMetadata: segmentMetadata,
 	};
 	globalLoadChatWorker.postMessage(message);
+
+	if (refresh) {
+		setTimeout(sendChatLogLoadData, CHAT_REFRESH_INTERVAL_MS);
+	}
 }
 
 function updateChatDataFromWorkerResponse(chatData) {
