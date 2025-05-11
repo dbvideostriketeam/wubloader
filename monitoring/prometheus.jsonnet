@@ -57,6 +57,7 @@ local services = services_by_role.leader;
         job_name: "%s-%s" % [scheme, service],
         metrics_path: "/metrics/%s" % service,
         scheme: scheme,
+        fallback_scrape_protocol: "PrometheusText0.0.4",
         static_configs: [
           {
             local target = hosts[host][0],
