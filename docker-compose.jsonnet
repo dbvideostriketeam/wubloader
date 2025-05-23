@@ -37,6 +37,7 @@
     pubbot: false,
     blogbot: false,
     prizebot: false,
+    youtubebot: false,
     bus_analyzer: false,
     graphs: false,
   },
@@ -356,6 +357,13 @@
     // Path in host fs for the state file.
     // Must exist and be initialized to "{}"
     state_path:: "./prizebot_state.json",
+  },
+
+  youtubebot:: {
+    zulip_email: "youtube-bot@chat.videostrike.team",
+    zulip_api_key: "",
+    google_credentials_file: $.cutter_creds_file,
+    channel_id: "UCz5-PNQxaT4WtB_OMAwD85g", // DesertBusForHope
   },
 
   // template for donation data urls
@@ -803,6 +811,14 @@
         url: $.zulip_url,
       }) + {
         volumes: ["%s:%s" % [$.prizebot.state_path, $.prizebot.state]],
+      },
+
+    [if $.enabled.youtubebot then "youtubebot"]:
+      bot_service("youtubebot", $.youtubebot + {
+        zulip_url: $.zulip_url,
+        google_credentials_file: "/creds.json",
+      }) + {
+        volumes: ["%s:/creds.json" % $.youtubebot.google_credentials_file],
       },
 
   },
