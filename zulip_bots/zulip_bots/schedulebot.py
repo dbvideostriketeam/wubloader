@@ -7,6 +7,7 @@ import logging
 import time
 from calendar import timegm
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import gevent.pool
 import argh
@@ -75,7 +76,9 @@ def hour_to_shift(hour, start_time):
 	"""Converts an hour number into a datetime, shift number (0-3), shift name, and hour-of-shift (1-6)"""
 	start_time = datetime.utcfromtimestamp(start_time)
 	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
-	current_time_pst = current_time - timedelta(hours=8)
+	utc = ZoneInfo("utc")
+	pst = ZoneInfo("America/Vancouver")
+	current_time_pst = current_time.replace(tzinfo=utc).astimezone(pst)
 	hour_pst = current_time_pst.hour
 	shift = hour_pst // 6
 	shift_name = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
@@ -217,7 +220,7 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 
 	for row in raw_schedule:
 		name = row[0].lower()
-		if name in ["", "Chat Member", "Hour of the Run"] or name.startswith("-") or name.startswith("["):
+		if name in ["", "chat member", "hour of the run"] or name.startswith("-") or name.startswith("["):
 			continue
 		if name not in user_ids:
 			logging.warning(f"No user id known for user {name}")
