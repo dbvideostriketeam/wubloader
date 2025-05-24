@@ -24,7 +24,7 @@ def get_prizes(year, type):
 	prizes = []
 	for a in main.find_all("a"):
 		# look for prize links
-		match = re.match("^/\d+/prize/([A-Z]+)$", a["href"])
+		match = re.match("^/[^/]+/prize/([A-Z]+)$", a["href"])
 		if not match:
 			continue
 		# skip image links
@@ -76,6 +76,7 @@ def main(config_file, test=False, all=False, once=False, interval=60):
 		year: the correct URL part for the prizes page: https://desertbus.org/YEAR/prizes/giveaway
 		state: path to state file
 	"""
+	logging.basicConfig(level="INFO")
 	config = get_config(config_file)
 	with open(config['state']) as f:
 		# state is {id: last seen state}
