@@ -76,7 +76,7 @@ def hour_to_shift(hour, start_time):
 	"""Converts an hour number into a datetime, shift number (0-3), shift name, and hour-of-shift (1-6)"""
 	start_time = datetime.utcfromtimestamp(start_time)
 	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
-	utc = ZoneInfo("utc")
+	utc = ZoneInfo("UTC")
 	pst = ZoneInfo("America/Vancouver")
 	current_time_pst = current_time.replace(tzinfo=utc).astimezone(pst)
 	hour_pst = current_time_pst.hour
