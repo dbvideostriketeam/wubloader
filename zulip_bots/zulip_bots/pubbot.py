@@ -40,7 +40,7 @@ def get_current(channel):
 
 
 giveaway_cache = [None, None]
-def get_giveaway():
+def get_giveaway(year):
 	REFRESH_RISING = 30
 	REFRESH_FALLING = 300
 	t, g = giveaway_cache
@@ -48,7 +48,7 @@ def get_giveaway():
 	timeout = REFRESH_RISING if g is None else REFRESH_FALLING
 	if t is None or now - t > timeout:
 		try:
-			g = _get_giveaway()
+			g = _get_giveaway(year)
 		except Exception:
 			logging.warning("Failed to fetch giveaway", exc_info=True)
 		else:
@@ -57,8 +57,8 @@ def get_giveaway():
 	return giveaway_cache[1]
 
 
-def _get_giveaway():
-	resp = session.get("https://desertbus.org/2024/donate", headers={"User-Agent": ""})
+def _get_giveaway(year):
+	resp = session.get(f"https://desertbus.org/{year}/donate", headers={"User-Agent": ""})
 	resp.raise_for_status()
 	html = BeautifulSoup(resp.content.decode(), "html.parser")
 	island = html.find("astro-island", **{"component-export": "DonateForm"})
@@ -73,18 +73,18 @@ def _get_giveaway():
 
 
 prize_cache = {}
-def get_prize_name(id):
+def get_prize_name(year, id):
 	if id not in prize_cache:
 		try:
-			prize_cache[id] = _get_prize_name(id)
+			prize_cache[id] = _get_prize_name(year, id)
 		except Exception:
 			logging.warning(f"Failed to get prize title for {id}", exc_info=True)
 			return "Unknown prize"
 	return prize_cache[id]
 
 
-def _get_prize_name(id):
-	resp = requests.get(f"https://desertbus.org/2024/prize/{id}", {"User-Agent": ""})
+def _get_prize_name(year, id):
+	resp = requests.get(f"https://desertbus.org/{year}/prize/{id}", {"User-Agent": ""})
 	resp.raise_for_status()
 	html = BeautifulSoup(resp.content.decode(), "html.parser")
 	div = html.body.main.find("div", **{"class": lambda cl: "text-brand-gold" in cl})
@@ -97,6 +97,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 		zulip_url
 		zulip_email
 		zulip_api_key
+		year
 		total_id: id for donation total channel
 		prize_ids: list of ids for prizes to watch bids for
 	"""
@@ -104,6 +105,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 
 	config = get_config(conf_file)
 	client = Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
+	year = config["year"]
 
 	message_log = open(message_log_file, "a")
 	def write_log(log):
@@ -144,7 +146,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				increase = None if total is None else msg["d"] - total
 				log["increase"] = increase
 				increase_str = "" if increase is None else " (+${:.2f})".format(msg["d"] - total)
-				giveaway_amount = get_giveaway()
+				giveaway_amount = get_giveaway(year)
 				entries_str = ""
 				if increase is not None and giveaway_amount is not None:
 					if (increase + 0.005) % giveaway_amount < 0.01:
@@ -163,7 +165,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 				log["type"] = "prize"
 				prize_id = msg["c"].removeprefix("bid:")
 				log["prize_id"] = prize_id
-				prize_name = get_prize_name(prize_id)
+				prize_name = get_prize_name(year, prize_id)
 				log["prize_name"] = prize_name
 				data = msg["d"]
 				logging.info(f"Prize update for {prize_id}: {data}")
