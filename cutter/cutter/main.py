@@ -123,7 +123,7 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags):
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags, uploader_explicit_only=False):
 		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
@@ -241,14 +241,18 @@ class Cutter(object):
 		"""Return a list of all available candidates that we might be able to cut."""
 		# We only accept candidates if they haven't excluded us by whitelist,
 		# and we are capable of uploading to their desired upload location.
+		uploader_condition = "(uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))"
+		if self.uploader_explicit_only:
+			uploader_condition = "%(name)s = ANY (uploader_whitelist))"
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
 			WHERE state = 'EDITED'
-			AND (uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))
+			AND {}
 			AND upload_location = ANY (%(upload_locations)s)
 		""").format(
-			sql.SQL(", ").join(sql.Identifier(key) for key in CUT_JOB_PARAMS)
+			sql.SQL(", ").join(sql.Identifier(key) for key in CUT_JOB_PARAMS),
+			sql.SQL(uploader_condition),
 		)
 		result = query(self.conn, built_query, name=self.name, upload_locations=list(self.upload_locations.keys()))
 		return result.fetchall()
@@ -870,6 +874,7 @@ def main(
 	tags='',
 	metrics_port=8003,
 	backdoor_port=0,
+	uploader_explicit_only=False,
 ):
 	"""dbconnect should be a postgres connection string, which is either a space-separated
 	list of key=value pairs, or a URI like:
@@ -960,7 +965,7 @@ def main(
 		if not no_updater:
 			needs_updater[location] = backend
 
-	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags)
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, uploader_explicit_only)
 	transcode_checkers = [
 		TranscodeChecker(location, backend, dbmanager, stop)
 		for location, backend in needs_transcode_check.items()
