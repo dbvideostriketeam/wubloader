@@ -353,6 +353,7 @@
   prizebot:: {
     email: "blog-bot@chat.videostrike.team",
     api_key: "",
+    year: "2024",
     state: "/prizebot_state.json",
     // Path in host fs for the state file.
     // Must exist and be initialized to "{}"

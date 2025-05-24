@@ -15,8 +15,8 @@ from .zulip import Client
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
 
 
-def get_prizes(type):
-	resp = requests.get(f"https://desertbus.org/2024/prizes/{type}", {"User-Agent": ""})
+def get_prizes(year, type):
+	resp = requests.get(f"https://desertbus.org/{year}/prizes/{type}", {"User-Agent": ""})
 	resp.raise_for_status()
 	html = BeautifulSoup(resp.content.decode(), "html.parser")
 
@@ -73,6 +73,7 @@ def main(config_file, test=False, all=False, once=False, interval=60):
 	"""
 	Config:
 		url, email, api_key: zulip creds
+		year: the correct URL part for the prizes page: https://desertbus.org/YEAR/prizes/giveaway
 		state: path to state file
 	"""
 	config = get_config(config_file)
@@ -83,7 +84,7 @@ def main(config_file, test=False, all=False, once=False, interval=60):
 	while True:
 		start = time.time()
 		for type in ('live', 'silent', 'giveaway'):
-			prizes = get_prizes(type)
+			prizes = get_prizes(config['year'], type)
 			for prize in prizes:
 				logging.info(f"Got prize: {prize}")
 				if prize.state == "sold" and (all or state.get(prize.id, "sold") != "sold"):
