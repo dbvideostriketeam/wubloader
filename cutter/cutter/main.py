@@ -243,7 +243,7 @@ class Cutter(object):
 		# and we are capable of uploading to their desired upload location.
 		uploader_condition = "(uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))"
 		if self.uploader_explicit_only:
-			uploader_condition = "%(name)s = ANY (uploader_whitelist))"
+			uploader_condition = "%(name)s = ANY (uploader_whitelist)"
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
