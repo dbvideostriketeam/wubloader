@@ -136,6 +136,7 @@ class Cutter(object):
 		self.stop = stop
 		self.segments_path = segments_path
 		self.tags = tags
+		self.uploader_explicit_only = uploader_explicit_only
 		self.logger = logging.getLogger(type(self).__name__)
 		self.refresh_conn()
 
