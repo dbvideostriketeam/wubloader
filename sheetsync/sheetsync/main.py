@@ -16,7 +16,7 @@ from requests import HTTPError
 import common
 import common.dateutil
 from common.database import DBManager, query, get_column_placeholder
-from common.media import check_for_media, download_media
+from common.media import check_for_media, download_media, WrongContent
 from common.sheets import Sheets as SheetsClient
 
 from .sheets import SheetsEventsMiddleware, SheetsPlaylistsMiddleware, SheetsArchiveMiddleware
@@ -329,13 +329,16 @@ class EventsSync(SheetSync):
 
 	def download_media(self, url):
 		hostname = urlparse(url).hostname
-		if hostname in ("youtu.be", "youtube.com"):
+		if hostname in ("youtu.be", "youtube.com", "www.youtube.com"):
 			self.logger.info(f"Ignoring url {url!r}: Blocklisted hostname")
 		if check_for_media(self.media_dir, url):
 			self.logger.info(f"Already have content for url {url!r}")
 			return
 		try:
 			download_media(url, self.media_dir)
+		except WrongContent as e:
+			self.logger.info(f"Ignoring url {url!r}: {e}")
+			return
 		except Exception:
 			self.logger.warning(f"Failed to download url {url!r}", exc_info=True)
 			raise
