@@ -80,3 +80,15 @@ if [ -n "$BUSCRIBE_USER" ]; then
 	echo "Applying schema for $BUSCRIBE_DB"
 	sql "$BUSCRIBE_USER" -d "$BUSCRIBE_DB" < /buscribe.sql
 fi
+
+if [ -n "$ENCODER_USER" ]; then
+	echo "Creating $ENCODER_USER"
+	echo "host all $ENCODER_USER all md5" >> "$PGDATA/pg_hba.conf"
+	sql "$POSTGRES_USER" <<-EOSQL
+		CREATE USER $ENCODER_USER WITH CONNECTION LIMIT 50 LOGIN PASSWORD '$ENCODER_PASSWORD';
+		GRANT CONNECT ON DATABASE $POSTGRES_DB TO $ENCODER_USER;
+		GRANT USAGE ON SCHEMA public TO $ENCODER_USER;
+		GRANT SELECT ON TABLE encodes TO $ENCODER_USER;
+		GRANT UPDATE ( dest_hash, claimed_by, claimed_at, finished_at ) ON TABLE encodes TO $ENCODER_USER;
+	EOSQL
+fi
