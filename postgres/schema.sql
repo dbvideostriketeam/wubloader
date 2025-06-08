@@ -195,3 +195,24 @@ CREATE TABLE templates (
 	crop box_coords NOT NULL,
 	location box_coords NOT NULL
 );
+
+-- Used to farm out encoding jobs to encoder workers.
+-- URL fields must match form: "scp://USER:PASS@HOST:PORT/PATH"
+-- Hash fields are hex strings containing sha256 hashes.
+-- encode_args should be passed verbatim to ffmpeg with the following substitutions:
+--   {SRC_FILE}: The path to the source file
+--   {DEST_FILE}: The path to the output file
+-- Example encode args: '-i' '{SRC_FILE}' '-c' 'copy' '{DEST_FILE}'
+-- The job is considered complete once the dest hash is written.
+-- Jobs may be claimed by writing a worker name to claimed_by.
+-- Timestamp fields are indicative only.
+CREATE TABLE encodes (
+	src_url TEXT NOT NULL,
+	src_hash TEXT NOT NULL,
+	encode_args TEXT[] NOT NULL,
+	dest_url TEXT PRIMARY KEY,
+	dest_hash TEXT,
+	claimed_by TEXT,
+	claimed_at TIMESTAMP,
+	finished_at TIMESTAMP
+);
