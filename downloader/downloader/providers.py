@@ -139,6 +139,7 @@ class TwitchProvider(Provider):
 				"allow_audio_only": "true",
 				"allow_spectre": "false",
 				"fast_bread": "true",
+				"supported_codecs": "av1,h265,h264",
 				"sig": sig,
 				"token": token,
 			},
