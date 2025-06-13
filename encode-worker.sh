@@ -3,14 +3,16 @@
 set -eu
 
 if [ "$#" -lt 2 ]; then
-	echo "USAGE: $0 NAME CONNINFO"
+	echo "USAGE: $0 NAME CONNINFO [LIMIT]"
 	echo "NAME should be a unique name for your node"
 	echo "CONNINFO should be a postgres connection url like postgresql://USER:PASS@HOSTNAME/DATABASE"
+	echo "Exits after doing LIMIT jobs, default unlimited. Use limit 0 if you just want to clean up after a crash without doing any jobs."
 	exit 1
 fi
 
 NAME="$1"
 CONNINFO="$2"
+LIMIT="${3:--1}"
 WORKDIR=${WORKDIR:-.}
 
 logcmd() {
@@ -70,6 +72,13 @@ encode() {
 	logcmd ffmpeg -hide_banner -nostdin -y "${args[@]}"
 }
 
+quit_after_current() {
+	LIMIT=0
+	echo "Will quit when current job is finished"
+}
+
+trap quit_after_current TERM
+
 existing=$(
 	db -v name="$NAME" <<-SQL
 		SELECT claimed_at, dest_url FROM encodes
@@ -92,7 +101,7 @@ if [ -n "$existing" ]; then
 	fi
 fi
 
-while true; do
+while [ "$((LIMIT--))" -ne 0 ] ; do
 	echo "Checking for jobs"
 	claimed=$(
 		db -F ' ' -v name="$NAME" <<-SQL
