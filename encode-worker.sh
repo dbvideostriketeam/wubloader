@@ -82,7 +82,7 @@ trap quit_after_current TERM
 existing=$(
 	db -v name="$NAME" <<-SQL
 		SELECT claimed_at, dest_url FROM encodes
-		WHERE claimed_by = :'name'
+		WHERE claimed_by = :'name' AND dest_hash IS NULL
 	SQL
 )
 if [ -n "$existing" ]; then
@@ -96,7 +96,7 @@ if [ -n "$existing" ]; then
 			UPDATE encodes SET
 				claimed_by = NULL,
 				claimed_at = NULL
-			WHERE claimed_by = :'name'
+			WHERE claimed_by = :'name' AND dest_hash IS NULL
 		SQL
 	fi
 fi
@@ -110,10 +110,10 @@ while [ "$((LIMIT--))" -ne 0 ] ; do
 				claimed_at = now()
 			WHERE dest_url = (
 				SELECT dest_url FROM encodes
-				WHERE claimed_by IS NULL
+				WHERE claimed_by IS NULL AND dest_hash IS NULL
 				LIMIT 1
 			)
-			RETURNING src_url, src_hash, dest_url, dest_hash
+			RETURNING src_url, src_hash, dest_url
 		SQL
 	)
 	if [ -z "$claimed" ]; then
@@ -122,7 +122,7 @@ while [ "$((LIMIT--))" -ne 0 ] ; do
 		continue
 	fi
 
-	read -r src_url src_hash dest_url dest_hash <<<"$claimed"
+	read -r src_url src_hash dest_url <<<"$claimed"
 	src_file=$(url_to_filename "$src_url")
 	dest_file=$(url_to_filename "$dest_url")
 	echo "Got task to encode $dest_file"
