@@ -11,6 +11,30 @@ from common.googleapis import GoogleAPIClient
 from .config import get_config
 from .zulip import Client
 
+
+_video_title_cache = {}
+def get_video_title(google, video_id):
+	if video_id not in _video_title_cache:
+		_video_title_cache[video_id] = _get_video_title(google, video_id)
+	return _video_title_cache[video_id]
+
+
+def _get_video_title(google, video_id):
+	resp = google.request("GET",
+		"https://www.googleapis.com/youtube/v3/videos",
+		params={
+			"part": "snippet",
+			"id": video_id,
+		}
+	)
+	resp.raise_for_status()
+	items = resp.json()["items"]
+	if not items:
+		# This should be rare, and it's ok to just crash
+		raise Exception(f"Request for video id {video_id} returned no results, was it deleted?")
+	return items[0]["snippet"]["title"]
+
+
 def get_comments(google, channel_id):
 	resp = google.request("GET",
 		"https://www.googleapis.com/youtube/v3/commentThreads",
@@ -39,10 +63,12 @@ def get_comments(google, channel_id):
 	return comments
 
 
-def show_comment(zulip, stream, topic, comment):
+def show_comment(zulip, google, stream, topic, comment):
+	title = get_video_title(google, comment["videoId"])
 	c = comment["snippet"]
 	author = f"[{c['authorDisplayName']}]({c['authorChannelUrl']})"
-	video = f"https://youtu.be/{comment['videoId']}"
+	url = f"https://youtu.be/{comment['videoId']}"
+	video = f"[{title}]({url})"
 	message = f"{author} commented on {video}:\n```quote\n{c['textDisplay']}\n```"
 	logging.info(f"Sending message to {stream}/{topic}: {message!r}")
 	# Empty stream acts as a dry-run mode
@@ -92,7 +118,7 @@ def main(conf_file, interval=60, one_off=0, stream="bot-spam", topic="Youtube Co
 				if comment["id"] in seen:
 					logging.debug(f"Comment {comment['id']} already seen, skipping")
 					continue
-				show_comment(zulip, stream, topic, comment)
+				show_comment(zulip, google, stream, topic, comment)
 				seen.append(comment["id"])
 		seen = seen[-keep:]
 
