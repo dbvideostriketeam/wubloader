@@ -687,7 +687,10 @@ class SegmentGetter(object):
 	def write_history(self, segment_path):
 		segment_path = os.path.relpath(segment_path, self.base_dir)
 		history_path = os.path.join(self.base_dir, "playlist-debug", segment_path)
-		os.makedirs(history_path)
+		try:
+			os.makedirs(history_path)
+		except FileExistsError:
+			pass
 		for n, (timestamp, playlist) in enumerate(self.history):
 			filename = "{}_{}".format(n, timestamp.strftime("%Y-%m-%dT%H:%M:%S.%f"))
 			path = os.path.join(history_path, filename)
