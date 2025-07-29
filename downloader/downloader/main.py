@@ -62,6 +62,18 @@ segment_time_skew = prom.Histogram(
 	buckets=[-10, -1, -0.5, -0.1, -0.01, -0.001, 0, 0.001, 0.01, 0.1, 0.5, 1, 10],
 )
 
+segment_time_skew_non_zero_sum = prom.Gauge(
+	"segment_time_skew_non_zero_sum",
+	"",
+	["channel", "quality", "worker"],
+)
+
+segment_time_skew_non_zero_count = prom.Counter(
+	"segment_time_skew_non_zero_count",
+	"",
+	["channel", "quality", "worker"],
+)
+
 
 class TimedOutError(Exception):
 	pass
@@ -411,6 +423,9 @@ class StreamWorker(object):
 						#      but only used if no other source is available.
 						skew = (date - new_date).total_seconds()
 						segment_time_skew.labels(self.manager.channel, self.quality, f"{id(self):x}").observe(skew)
+						if skew != 0:
+							segment_time_skew_non_zero_sum.labels(self.manager.channel, self.quality, f"{id(self):x}").inc(skew)
+							segment_time_skew_non_zero_count.labels(self.manager.channel, self.quality, f"{id(self):x}").inc()
 						if abs(skew) > self.MAX_SEGMENT_TIME_SKEW and not suspicious_skew:
 							self.trigger_new_worker()
 							suspicious_skew = True
