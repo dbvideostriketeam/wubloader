@@ -91,10 +91,10 @@ def metrics():
 	"""Return current metrics in prometheus metrics format"""
 	return prom.generate_latest()
 
-# To make nginx proxying simpler, we want to allow /metrics/* to work
-@app.route('/metrics/<trailing>')
+# To make nginx proxying simpler, we want to allow /metrics/restreamer to work
+@app.route('/metrics/restreamer')
 @request_stats
-def metrics_with_trailing(trailing):
+def metrics_with_trailing():
 	"""Expose Prometheus metrics."""
 	return prom.generate_latest()
 
