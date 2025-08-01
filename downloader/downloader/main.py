@@ -15,6 +15,7 @@ import gevent.backdoor
 import gevent.event
 import prometheus_client as prom
 import requests
+import requests.adapters
 from monotonic import monotonic
 
 import common
@@ -305,6 +306,8 @@ class StreamWorker(object):
 		# This worker's SegmentGetters will use its session by default for performance,
 		# but will fall back to a new one if something goes wrong.
 		self.session = common.requests.InstrumentedSession()
+		adapter = requests.adapters.HTTPAdapter(pool_maxsize=100)
+		self.session.mount('https://', adapter)
 		# Map cache is a simple cache to avoid re-downloading the same map URI for every segment,
 		# since it's generally the same but may occasionally change.
 		# We expect the map data to be very small so there is no eviction here.
