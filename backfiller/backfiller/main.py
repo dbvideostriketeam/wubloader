@@ -16,6 +16,7 @@ import argh
 import gevent.backdoor
 import gevent.pool
 import prometheus_client as prom
+from requests.adapters import HTTPAdapter
 
 import common
 from common import dateutil
@@ -23,8 +24,10 @@ from common import database
 from common.requests import InstrumentedSession
 from common.segments import list_segment_files, unpadded_b64_decode
 
-# Wraps all requests in some metric collection
+# Wraps all requests in some metric collection and connection pooling
 requests = InstrumentedSession()
+adapter = HTTPAdapter(pool_maxsize=100)
+requests.mount('https://', adapter)
 
 segments_backfilled = prom.Counter(
 	'segments_backfilled',
