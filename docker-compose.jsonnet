@@ -421,7 +421,8 @@
       ] + if $.downloader_creds_file != null then ["--twitch-auth-file", "/token"] else [],
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path]
-        + if $.downloader_creds_file != null then ["%s:/token" % $.downloader_creds_file] else [],
+        + if $.downloader_creds_file != null then ["%s:/token" % $.downloader_creds_file] else []
+        + if $.local_path != null then ["%s:/local" % $.local_path] else [],
       // If the application crashes, restart it.
       restart: "on-failure",
       // Expose on the configured host port by mapping that port to the default
@@ -688,7 +689,8 @@
         if $.nginx_serve_segments then "%s:/mnt" % $.segments_path,
         if $.ssl_certificate_path != null then "%s:/certs.pem" % $.ssl_certificate_path,
         if $.thrimbletrimmer_web_dev_path != null then "%s:/etc/nginx/html/thrimbletrimmer" % $.thrimbletrimmer_web_dev_path,
-      ]),
+      ])
+        + if $.local_path != null then ["%s:/local" % $.local_path] else [],
     },
 
     [if $.enabled.postgres then "postgres"]: {
