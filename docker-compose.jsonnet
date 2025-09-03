@@ -214,11 +214,13 @@
   backfill_dirs:: ["emotes"],
 
   // Enable saving of media (images and videos - this can be large), either globally or split into
-  // three options:
+  // options:
   // - From chat messages (in chat_archiver.download_media)
+  // - From toots
   // - From the image links column in the sheet (using sheetsync)
   // - Backfilled from other nodes
   download_media:: true,
+  download_toot_media:: $.download_media,
   backfill_media:: $.download_media,
   download_sheet_links:: $.download_media,
 
@@ -329,6 +331,8 @@
       // Obtain an access token by running: python -m zulip_bots.tootbot get-access-token
       access_token: "",
     },
+    [if $.download_toot_media then "media_dir"]: "/mnt/media",
+    output_path: "/mnt/tootbot.json"
     args:: [],
   },
 
@@ -788,7 +792,7 @@
     [if $.enabled.tootbot then "tootbot"]:
       bot_service("tootbot", $.tootbot + {
         zulip+: { url: $.zulip_url },
-      }, $.tootbot.args, subcommand="main"),
+      }, $.tootbot.args, subcommand="main", mount_segments=true),
 
     [if $.enabled.twitchbot then "twitchbot"]:
       bot_service("twitchbot", $.twitchbot + {
