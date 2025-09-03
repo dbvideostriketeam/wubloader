@@ -764,7 +764,7 @@
       environment: $.env,
     },
 
-    local bot_service(name, config, args=[], subcommand=null) = {
+    local bot_service(name, config, args=[], subcommand=null, mount_segments=false) = {
       image: $.get_image("zulip_bots"),
       restart: "always",
       entrypoint: ["python3", "-m", "zulip_bots.%s" % name]
@@ -772,6 +772,7 @@
         + [std.manifestJson(config)]
         + args,
       environment: $.env,
+      [if mount_segments then "volumes"]: ["%s:/mnt" % $.segments_path],
     },
 
     [if $.enabled.schedulebot then "schedulebot"]:
@@ -797,16 +798,12 @@
     [if $.enabled.pubbot then "pubbot"]:
       bot_service("pubbot", $.pubbot + {
         zulip_url: $.zulip_url,
-      }, ["/mnt/pubnub-log.json"]) + {
-        volumes: ["%s:/mnt" % $.segments_path],
-      },
+      }, ["/mnt/pubnub-log.json"], mount_segments=true),
 
     [if $.enabled.blogbot then "blogbot"]:
       bot_service("blogbot", $.blogbot + {
         zulip_url: $.zulip_url,
-      }, ["--save-dir", "/mnt/blogs"]) + {
-        volumes: ["%s:/mnt" % $.segments_path],
-      },
+      }, ["--save-dir", "/mnt/blogs"], mount_segments=true),
 
     [if $.enabled.prizebot then "prizebot"]:
       bot_service("prizebot", $.prizebot + {
