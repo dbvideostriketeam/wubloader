@@ -13,6 +13,15 @@ from .config import get_config
 cli = argh.EntryPoint()
 
 
+def try_save_image(media_dir, attachment):
+	if media_dir is None:
+		return {"error": "no media dir given"}
+	try:
+		return {"path": media.download_media(attachment["url"], media_dir)}
+	except media.Rejected as e:
+		return {"error": str(e)}
+
+
 def format_account(account):
 	return f"**[{account['display_name']}]({account['url']})**"
 
@@ -167,11 +176,12 @@ LINE = "\n---"
 
 
 class Listener(mastodon.StreamListener):
-	def __init__(self, zulip_client, stream, post_topic, notification_topic):
+	def __init__(self, zulip_client, stream, post_topic, notification_topic, output_path, media_dir):
 		self.zulip_client = zulip_client
 		self.stream = stream
 		self.post_topic = post_topic
 		self.notification_topic = notification_topic
+		self.output_path = output_path
 
 	def send(self, topic, content):
 		logging.info(f"Sending message to {self.stream}/{topic}: {content!r}")
@@ -179,25 +189,50 @@ class Listener(mastodon.StreamListener):
 
 	def on_update(self, status):
 		logging.info(f"Got update: {status!r}")
+		self.output("update", status)
 		self.send(self.post_topic, format_status(status) + LINE)
 
 	def on_delete(self, status_id):
 		logging.info(f"Got delete: {status_id}")
+		self.output("delete", payload=status_id)
 		self.send(self.post_topic, f"*Status with id {status_id} was deleted*")
 
 	def on_status_update(self, status):
 		logging.info(f"Got status update: {status!r}")
+		self.output("status_update", status)
 		self.send(self.post_topic, f"*The following status has been updated*\n{format_status(status)}" + LINE)
 
 	def on_notification(self, notification):
 		logging.info(f"Got {notification['type']} notification: {notification!r}")
 		if notification["type"] != "mention":
 			return
+		self.output("mention", notification["status"])
 		self.send(self.notification_topic, format_status(notification["status"]) + LINE)
+
+	def output(self, type, status=None, payload=None):
+		if self.output_path is None:
+			return
+		data = {"type": type}
+		if status is not None:
+			data["status"] = status
+			data["attachments"] = [
+				try_save_image(self.media_dir, attachment)
+				for attachment in status["media_attachments"]
+			]
+		if payload is not None:
+			data["payload"] = payload
+		data = json.dumps(data)
+		with open(os.path.join(self.output_path, "messages.json"), "a") as f:
+			f.write(data + "\n")
 
 
 @cli
-def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notification_topic="Mastodon Notifications"):
+def main(
+	conf_file,
+	stream="bot-spam",
+	post_topic="Toots from Desert Bus",
+	notification_topic="Mastodon Notifications",
+):
 	"""
 	Run the actual bot.
 
@@ -211,6 +246,8 @@ def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notif
 			client_id # only required for get-access-token
 			client_secret # only required for get-access-token
 			access_token # only required for main
+		output_path # optional
+		media_dir # optional
 	"""
 	logging.basicConfig(level='INFO')
 
@@ -220,7 +257,7 @@ def main(conf_file, stream="bot-spam", post_topic="Toots from Desert Bus", notif
 
 	zulip_client = zulip.Client(zc["url"], zc["email"], zc["api_key"])
 	mastodon_client = mastodon.Mastodon(api_base_url=mc["url"], access_token=mc["access_token"])
-	listener = Listener(zulip_client, stream, post_topic, notification_topic)
+	listener = Listener(zulip_client, stream, post_topic, notification_topic, conf.get("output_path"), conf.get("media_dir"))
 
 	RETRY_INTERVAL = 1
 
