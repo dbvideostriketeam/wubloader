@@ -39,7 +39,6 @@
     prizebot: false,
     youtubebot: false,
     bus_analyzer: false,
-    graphs: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -371,9 +370,6 @@
     google_credentials_file: $.cutter_creds_file,
     channel_id: "UCz5-PNQxaT4WtB_OMAwD85g", // DesertBusForHope
   },
-
-  // template for donation data urls
-  donation_url_template:: "https://example.com/DB{}/DB{}.json",
 
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
@@ -756,14 +752,6 @@
       image: $.get_image("bus_analyzer"),
       restart: "always",
       command: ["main", $.db_connect, $.bus_channel, "--base-dir", "/mnt"],
-      volumes: ["%s:/mnt" % $.segments_path],
-      environment: $.env,
-    },
-
-    [if $.enabled.graphs then "graphs"]: {
-      image: $.get_image("graphs"),
-      restart: "always",
-      command: [$.donation_url_template, "--base-dir", "/mnt/graphs"],
       volumes: ["%s:/mnt" % $.segments_path],
       environment: $.env,
     },
