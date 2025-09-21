@@ -104,7 +104,7 @@ def blog_to_md(id, html):
 	except Exception as e:
 		md_content = f"Parsing blog failed, please see logs: {e}"
 
-	return "\n".join([
+	return title, author, date, "\n".join([
 		f"Blog Post: [{title}](https://desertbus.org/?id={id})",
 		f"Posted by {author} at {date}",
 		"```quote",
@@ -130,7 +130,7 @@ def get_posts():
 	return posts
 
 def send_post(client, stream, topic, id, html):
-	content = blog_to_md(id, html)
+	title, author, date, content = blog_to_md(id, html)
 	client.request("POST", "messages",
 		type="stream",
 		to=stream,
@@ -145,12 +145,16 @@ def save_post(save_dir, media_dir, id, html):
 	if os.path.exists(filepath):
 		return
 	images = set(find_images(html))
+	title, author, date, _ = blog_to_md(id, html)
 	content = {
 		"id": id,
 		"hash": hash,
 		"retrieved_at": datetime.utcnow().isoformat() + "Z",
 		"html": html,
 		"images": {image: try_save_image(media_dir, image) for image in images},
+		"title": title,
+		"author": author,
+		"date": date,
 	}
 	atomic_write(filepath, json.dumps(content) + "\n")
 
