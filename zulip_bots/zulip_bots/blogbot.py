@@ -7,17 +7,27 @@ import time
 from base64 import b64encode
 from datetime import datetime
 from hashlib import sha256
-from uuid import uuid4
 
 import argh
 import requests
 import bs4
 from bs4 import BeautifulSoup
 
+from common import atomic_write
+from common import media
+
 from .zulip import Client
 from .config import get_config
 
 logging.basicConfig(level='INFO')
+
+def try_save_image(media_dir, url):
+    if media_dir is None:
+        return {"error": "no media dir given"}
+    try:
+        return {"path": media.download_media(url, media_dir)}
+    except media.Rejected as e:
+        return {"error": str(e)}
 
 def html_to_md(html):
 	"""Lossy attempt to convert html to markdown"""
@@ -35,7 +45,8 @@ def html_to_md(html):
 		return "---"
 
 	if html.name == "img":
-		return html.get("src") + "\n"
+		src = html.get("src")
+		return "[{}]({})\n".format(html.get("alt") or src, src)
 
 	inner = "".join(html_to_md(child) for child in html.children)
 
@@ -101,6 +112,10 @@ def blog_to_md(id, html):
 		"```",
 	])
 
+def find_images(html):
+	for img in html.find_all("img"):
+		yield img.get("src")
+
 def get_posts():
 	"""Get all blog posts on the front page as (id, html)"""
 	# Need to clear UA or we get blocked due to "python" in UA
@@ -123,36 +138,23 @@ def send_post(client, stream, topic, id, html):
 		content=content,
 	)
 
-def save_post(save_dir, id, html):
+def save_post(save_dir, media_dir, id, html):
 	hash = b64encode(sha256(html.encode()).digest(), b"-_").decode().rstrip("=")
 	filename = f"{id}-{hash}.json"
 	filepath = os.path.join(save_dir, filename)
 	if os.path.exists(filepath):
 		return
+	images = set(find_images(html))
 	content = {
 		"id": id,
 		"hash": hash,
 		"retrieved_at": datetime.utcnow().isoformat() + "Z",
 		"html": html,
+		"images": {image: try_save_image(media_dir, image) for image in images},
 	}
 	atomic_write(filepath, json.dumps(content) + "\n")
 
-# This is copied from common, which isn't currently installed in zulip_bots.
-# Fix that later.
-def atomic_write(filepath, content):
-	if isinstance(content, str):
-		content = content.encode("utf-8")
-	temp_path = "{}.{}.temp".format(filepath, uuid4())
-	dir_path = os.path.dirname(filepath)
-	os.makedirs(dir_path, exist_ok=True)
-	with open(temp_path, 'wb') as f:
-		f.write(content)
-	try:
-		os.rename(temp_path, filepath)
-	except FileExistsError:
-		os.remove(temp_path)
-
-def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts', save_dir=None):
+def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts', save_dir=None, media_dir=None):
 	"""Post to zulip each new blog post, checking every INTERVAL seconds.
 	Will not post any posts that already exist, unless --test is given
 	in which case it will print the most recent on startup."""
@@ -169,7 +171,7 @@ def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Po
 		else:
 			if save_dir is not None:
 				for id, html in posts:
-					save_post(save_dir, id, str(html))
+					save_post(save_dir, media_dir, id, str(html))
 			if first:
 				seen = set(id for id, html in posts)
 				if test:
