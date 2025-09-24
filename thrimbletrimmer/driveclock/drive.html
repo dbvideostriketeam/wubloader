@@ -1,54 +1,24 @@
 <!doctype html>
 <html>
-
-<style>
-  	#road-container {
-	  width: 100%;
-	  height: 100px;
-	  left: 0;
-	  top: 0;
-      position: absolute;
-      // margin: 980px 0 0 -100px; // uncomment to move to bottom of screen
-      z-index: 3;
-    }
-
-	#road-container div {
-	  height: 100px;
-	  width: 100%;
-	  position: absolute;
-	  background-position: 0px 0px;
-	}
-
-	#timeofday-left {
-	  z-index: 5;
-	}
-
-	#timeofday-right {
-	  z-index: 4;
-	}
-
-	#stops {
-      z-index: 6;
-      background-image: url(stops.png);
-	}
-
-	#bus {
-	  background-repeat: no-repeat;
-	  margin-left: 27px;
-	  z-index: 8;
-	}
-</style>
-
-<body>
-
-<div id="road-container">
-	<div id="bus"></div>
-	<div id="timeofday-left"></div>
-	<div id="timeofday-right"></div>
-	<div id="stops"></div>
-</div>
-
-<script src="drive.js"></script>
-
-</body>
-
+	<head>
+		<meta charset="utf-8" />
+		<title>Bus Progress</title>
+		<link rel="stylesheet" href="drive.css" />
+		<script src="drive.js"></script>
+	</head>
+	<body>
+		<canvas id="road" width="1580" height="62"></canvas>
+		<label id="scale">
+			Scale:
+			<input id="scale-input" type="number" value="1" min="0.1" step="0.1" />
+		</label>
+		<label id="point-progress">
+			<input id="point-progress-checkbox" type="checkbox" />
+			Point Progress Mode
+		</label>
+		<p class="settings-disclaimer">
+			Settings modifications will be applied on the next update, which occur every 2.5 seconds.
+		</p>
+		<p class="settings-disclaimer">The scale setting is ignored in Point Progress Mode.</p>
+	</body>
+</html>

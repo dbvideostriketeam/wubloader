@@ -1,122 +1,254 @@
-
-const PAGE_WIDTH = 1920;
-const MINUTES_PER_PAGE = 60;
-const POINT_WIDTH = PAGE_WIDTH * 8 * 60 / MINUTES_PER_PAGE;
-const MILES_PER_PAGE = 45;
-const BUS_POSITION_X = 93;
-const BASE_ODO = 109.3;
-const UPDATE_INTERVAL_MS = 5000
-const WUBLOADER_URL = "";
-const SKY_URLS = {
-	day: "db_day.png",
-	dawn: "db_dawn.png",
-	dusk: "db_dusk.png",
-	night: "db_night.png",
+const COLORS = {
+	day: {
+		sky: "#41cee2",
+		ground: "#e5931b",
+		surface: "#b77616",
+	},
+	dusk: {
+		sky: "#db92be",
+		ground: "#dd926a",
+		surface: "#b17555",
+	},
+	night: {
+		sky: "#121336",
+		ground: "#30201a",
+		surface: "#261a15",
+	},
+	dawn: {
+		sky: "#2b2f87",
+		ground: "#724d41",
+		surface: "#5b3e34",
+	},
 };
-const BUS_URLS = {
-	day: "bus_day.png",
-	dawn: "bus_day.png",
-	dusk: "bus_day.png",
-	night: "bus_night.png",
-};
 
-function setSkyElements(left, right, timeToTransition) {
-	const leftElement = document.getElementById("timeofday-left");
-	const rightElement = document.getElementById("timeofday-right");
-	const busElement = document.getElementById("bus");
+// The width from the left side of the bus image to the front of the bus
+const BUS_FRONT_OFFSET = 72;
 
-	leftElement.style.backgroundImage = `url(${SKY_URLS[left]})`;
-	rightElement.style.backgroundImage = `url(${SKY_URLS[right]})`;
+// Start time of each day phase
+const DAY_START_MINUTES = 450;
+const DUSK_START_MINUTES = 1140;
+const NIGHT_START_MINUTES = 1200;
+const DAWN_START_MINUTES = 400;
 
-	if (left === right) {
-		leftElement.style.width = "100%";
-	} else {
-		const transitionPercent = timeToTransition / MINUTES_PER_PAGE;
-		leftElement.style.width = `${transitionPercent * 100}%`
-	}
+const BUS_STOP_OFFSET = 8;
+const POINT_OFFSET = 17;
 
-	bus.style.backgroundImage = `url(${BUS_URLS[left]})`;
-}
+// Bus stop positions are recorded in miles with the 0 position
+// at route start. This array can be looped every point.
+const BUS_STOP_POSITIONS = [1, 55.2, 125.4, 166.3, 233.9, 295.2];
 
-function nextSkyTransition(timeofday, clock) {
-	switch (timeofday) {
-		case "dawn":
+const BUS_DAY_IMAGE = new Image();
+BUS_DAY_IMAGE.src = "bus_day.png";
+const BUS_NIGHT_IMAGE = new Image();
+BUS_NIGHT_IMAGE.src = "bus_night.png";
+const BUS_STOP_IMAGE = new Image();
+BUS_STOP_IMAGE.src = "db_stop.png";
+const POINT_IMAGE = new Image();
+POINT_IMAGE.src = "point.png";
+
+// This should match the HTML canvas width
+const CANVAS_PIXEL_WIDTH = 1580;
+
+const BUS_TRAVEL_WIDTH = CANVAS_PIXEL_WIDTH - BUS_FRONT_OFFSET;
+const PIXELS_PER_MILE = BUS_TRAVEL_WIDTH / 360;
+const PIXELS_PER_MINUTE = BUS_TRAVEL_WIDTH / 480;
+const FULL_SPEED_MILES_PER_MINUTE = 0.75;
+
+function nextPhase(timeOfDay) {
+	switch (timeOfDay) {
 		case "day":
-			return [19 * 60, "dusk"]; // 7pm
+		case "dawn":
+			return "dusk";
 		case "dusk":
-			return [20 * 60, "night"]; // 8pm
+			return "night";
 		case "night":
-			return [6 * 60 + 40, "dawn"]; // 6:40am
+			return "dawn";
 	}
 }
 
-function setSky(timeofday, clock) {
-	const [transition, newSky] = nextSkyTransition(timeofday, clock);
-	// 1440 minutes in 24h, this code will return time remaining even if
-	// the transition is in the morning and we're currently in the evening.
-	const timeToTransition = (1440 + transition - clock) % 1440;
-	if (timeToTransition < MINUTES_PER_PAGE) {
-		// Transition on screen
-		setSkyElements(timeofday, newSky, timeToTransition);
+function phaseStartTime(timeOfDay) {
+	switch (timeOfDay) {
+		case "day":
+			return DAY_START_MINUTES;
+		case "dusk":
+			return DUSK_START_MINUTES;
+		case "night":
+			return NIGHT_START_MINUTES;
+		case "dawn":
+			return DAWN_START_MINUTES;
+	}
+}
+
+function drawBackground(context, timeOfDay, leftX, width) {
+	const skyColor = COLORS[timeOfDay].sky;
+	const groundColor = COLORS[timeOfDay].ground;
+	const surfaceColor = COLORS[timeOfDay].surface;
+
+	width = Math.ceil(width);
+	leftX = Math.floor(leftX);
+
+	context.fillStyle = COLORS[timeOfDay].sky;
+	context.fillRect(leftX, 0, width, 56);
+	context.fillStyle = COLORS[timeOfDay].surface;
+	context.fillRect(leftX, 56, width, 1);
+	context.fillStyle = COLORS[timeOfDay].ground;
+	context.fillRect(leftX, 57, width, 5);
+}
+
+async function drawRoad() {
+	const busDataResponse = await fetch("/thrimshim/bus/buscam");
+	if (!busDataResponse.ok) {
+		return;
+	}
+	const busData = await busDataResponse.json();
+
+	const canvas = document.getElementById("road");
+	if (!canvas.getContext) {
+		return;
+	}
+	const context = canvas.getContext("2d");
+
+	// Clear the previous canvas before starting
+	context.clearRect(0, 0, CANVAS_PIXEL_WIDTH, 62);
+
+	const pointModeCheckbox = document.getElementById("point-progress-checkbox");
+	if (pointModeCheckbox.checked) {
+		drawRoadPoint(context, busData);
 	} else {
-		// No transition on screen
-		setSkyElements(timeofday, timeofday, undefined);
+		drawRoadDynamic(context, busData);
 	}
 }
 
-function setOdo(odo) {
-	const distancePixels = PAGE_WIDTH * (odo - BASE_ODO) / MILES_PER_PAGE;
-	const offset = (BUS_POSITION_X - distancePixels) % POINT_WIDTH;
+function drawRoadPoint(context, busData) {
+	const busDistance = (busData.odometer + 250.7) % 360;
+	const busRemainingDistance = 360 - busDistance;
+	const busRemainingDistancePixels = busRemainingDistance * PIXELS_PER_MILE;
 
-	const stopsElement = document.getElementById("stops");
-	stopsElement.style.backgroundPosition = `${offset}px 0px`;
-}
+	const busDistancePixels = busDistance * PIXELS_PER_MILE;
+	let x = busDistancePixels + BUS_FRONT_OFFSET;
+	drawBackground(context, busData.timeofday, 0, x);
+	let currentTimeOfDay = busData.timeofday;
+	let currentTime = busData.clock_minutes;
+	while (x < CANVAS_PIXEL_WIDTH) {
+		const nextTimeOfDay = nextPhase(currentTimeOfDay);
+		const nextStartTime = phaseStartTime(nextTimeOfDay);
 
-async function update() {
-    const busDataResponse = await fetch(`${WUBLOADER_URL}/thrimshim/bus/buscam`);
-    if (!busDataResponse.ok) {
-        return;
-    }
-    const busData = await busDataResponse.json();
-	console.log("Got data:", busData);
-    setOdo(busData.odometer);
-    setSky(busData.timeofday, busData.clock_minutes);
-}
-
-// Initial conditions, before the first refresh finishes
-setSky("day", 7 * 60);
-setOdo(BASE_ODO);
-
-// Testing mode. Set true to enable.
-const test = false;
-if (test) {
-	let h = 0;
-	// Set to how long 1h of in-game time should take in real time
-	const hourTimeMs = 1 * 1000;
-	// Set to how often to update the screen
-	const interval = 30;
-	setInterval(() => {
-		h += interval / hourTimeMs;
-		setOdo(BASE_ODO + 45 * h);
-		if (h < 19) {
-			setSky("day", 60 * h);
-		} else {
-			m = (h % 24) * 60;
-			let tod;
-			if (m < 6 * 60 + 40) {
-				tod = "night";
-			} else if (m < 19 * 60) {
-				tod = "dawn";
-			} else if (m < 20 * 60) {
-				tod = "dusk";
-			} else {
-				tod = "night";
-			}
-			setSky(tod, m);
+		let thisDuration = nextStartTime - currentTime;
+		if (thisDuration < 0) {
+			thisDuration += 1440;
 		}
-	}, interval);
-} else {
-	// Do first update immediately, then every UPDATE_INTERVAL_MS
-	setInterval(update, UPDATE_INTERVAL_MS);
-	update();
+		const pixelWidth = thisDuration * PIXELS_PER_MINUTE;
+		drawBackground(context, currentTimeOfDay, x, pixelWidth);
+		x += pixelWidth;
+		currentTimeOfDay = nextTimeOfDay;
+		currentTime += thisDuration;
+	}
+
+	context.drawImage(POINT_IMAGE, CANVAS_PIXEL_WIDTH - POINT_OFFSET, 0);
+
+	for (const busStopDistance of BUS_STOP_POSITIONS) {
+		const busStopPixelPosition =
+			BUS_FRONT_OFFSET + PIXELS_PER_MILE * busStopDistance - BUS_STOP_OFFSET;
+		context.drawImage(BUS_STOP_IMAGE, busStopPixelPosition, 16);
+	}
+
+	if (busData.timeofday === "night") {
+		context.drawImage(BUS_NIGHT_IMAGE, busDistancePixels, 32);
+	} else {
+		context.drawImage(BUS_DAY_IMAGE, busDistancePixels, 32);
+	}
 }
+
+function drawRoadDynamic(context, busData) {
+	const distance = busData.odometer;
+	const timeOfDay = busData.timeofday;
+
+	drawBackground(context, timeOfDay, 0, BUS_FRONT_OFFSET);
+
+	// The default scaling factor (1) is 20 seconds per pixel at max speed.
+	// This gives us
+	// - 3px per minute
+	// - 4px per mile
+	let scaleFactor = +document.getElementById("scale-input").value;
+	if (scaleFactor === 0 || isNaN(scaleFactor)) {
+		scaleFactor = 1;
+	}
+
+	const startMinute = busData.clock_minutes;
+
+	let previousTime = startMinute;
+	let previousTimeOfDay = timeOfDay;
+	let x = BUS_FRONT_OFFSET;
+	while (x < CANVAS_PIXEL_WIDTH) {
+		const nextTimeOfDay = nextPhase(previousTimeOfDay);
+		const nextStartTime = phaseStartTime(nextTimeOfDay);
+
+		let thisDuration = nextStartTime - previousTime;
+		if (thisDuration < 0) {
+			thisDuration += 1440;
+		}
+
+		const pixelWidth = thisDuration * 3 * scaleFactor;
+		drawBackground(context, previousTimeOfDay, x, pixelWidth);
+
+		previousTime = nextStartTime;
+		previousTimeOfDay = nextTimeOfDay;
+		x += pixelWidth;
+	}
+
+	x = 0;
+	const currentPointProgress = distance % 360;
+	let distanceToNextPoint;
+	if (currentPointProgress <= 109.3) {
+		distanceToNextPoint = 109.3 - currentPointProgress;
+	} else {
+		distanceToNextPoint = 469.3 - currentPointProgress;
+	}
+
+	distanceToNextPoint += BUS_FRONT_OFFSET / (4 * scaleFactor);
+	if (distanceToNextPoint >= 360) {
+		distanceToNextPoint -= 360;
+	}
+
+	x += distanceToNextPoint * 4 * scaleFactor;
+	context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
+	while (x < CANVAS_PIXEL_WIDTH) {
+		x += 360 * 4 * scaleFactor;
+		context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
+	}
+
+	const distanceOnRoute = (distance - 109.3) % 360;
+	let distanceTracked = distanceOnRoute - BUS_FRONT_OFFSET / (4 * scaleFactor);
+	if (distanceTracked < 0) {
+		distanceTracked += 720;
+	}
+	x = 0;
+	while (x < CANVAS_PIXEL_WIDTH) {
+		const distanceTrackedOnRoute = distanceTracked % 360;
+		let nextBusStopPosition = null;
+		for (const busStopPosition of BUS_STOP_POSITIONS) {
+			if (busStopPosition >= distanceTrackedOnRoute + 0.05) {
+				nextBusStopPosition = busStopPosition;
+				break;
+			}
+		}
+		if (nextBusStopPosition === null) {
+			nextBusStopPosition = 360 + BUS_STOP_POSITIONS[0];
+		}
+		const nextBusStopDistance = nextBusStopPosition - distanceTrackedOnRoute;
+		distanceTracked += nextBusStopDistance;
+		x += nextBusStopDistance * 4 * scaleFactor;
+		context.drawImage(BUS_STOP_IMAGE, x - BUS_STOP_OFFSET, 16);
+	}
+
+	if (timeOfDay === "night") {
+		context.drawImage(BUS_NIGHT_IMAGE, 0, 32);
+	} else {
+		context.drawImage(BUS_DAY_IMAGE, 0, 32);
+	}
+}
+
+window.addEventListener("DOMContentLoaded", (event) => {
+	drawRoad();
+	setInterval(drawRoad, 2500);
+});
