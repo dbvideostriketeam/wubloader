@@ -411,6 +411,11 @@ def cut(channel, quality):
 		stream, muxer, mimetype = (True, 'mpegts', 'video/MP2T') if type == 'mpegts' else (False, 'mp4', 'video/mp4')
 		encoding_args = ['-c:v', 'libx264', '-preset', 'ultrafast', '-crf', '0', '-f', muxer]
 		return Response(full_cut_segments(segment_ranges, ranges, transitions, encoding_args, stream=stream), mimetype=mimetype)
+	elif type == 'webm':
+		# Basic webm settings to work in Firefox and Chrome.
+		stream, muxer, mimetype = (True, 'webm', 'video/webm')
+		encoding_args = ['-c:v', 'libvpx-vp9', '-c:a', 'libopus', '-f', muxer]
+		return Response(full_cut_segments(segment_ranges, ranges, transitions, encoding_args, stream=stream), mimetype=mimetype)
 	else:
 		return "Unknown type {!r}".format(type), 400
 
