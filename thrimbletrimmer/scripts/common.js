@@ -517,9 +517,12 @@ function triggerDownload(url, filename) {
 
 function sendChatLogLoadData() {
 	let startTime = getStartTime();
-	let endTime = getEndTime();
-	if (!startTime || !endTime) {
+	if (startTime === null) {
 		return;
+	}
+	let endTime = getEndTime();
+	if (endTime === null) {
+		endTime = DateTime.now().setZone("utc").plus({minutes: 1});
 	}
 	startTime = wubloaderTimeFromDateTime(startTime);
 	endTime = wubloaderTimeFromDateTime(endTime);
