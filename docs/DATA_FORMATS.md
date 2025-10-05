@@ -95,6 +95,23 @@ This is a newline-delimited json file containing messages which can be distingis
 
 The details of what is contained in each type depend on pubnub - you should read the pubbot code.
 
+## Twitch stats
+
+`twitch_stats` bot watches the twitch Hermes event stream via a websocket.
+This is a reverse-engineered API from the twitch website.
+
+It saves an event log `twitch_stats.json`. This is a newline-delimited json file containing messages
+with the fields:
+- `topic`: The name of the topic associated with the message
+- `channel_id`: The twitch user id associated with the message
+- `received_at`: Unix timestamp of when the message was seen
+- `message`: The payload, which depends on topic.
+
+We are subscribed to info on viewer counts, polls and predictions.
+Known formats:
+- When `topic == "video-playback-by-id"`, the `message.viewers` field contains the stream viewer count and the `message.server_time` field contains the server time this observation was made at.
+  The server time should be considered more accurate than our recieve time.
+
 ## Mastodon toots
 
 `tootbot` watches the Desert Bus and VST mastodon accounts for updates.
