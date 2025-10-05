@@ -38,6 +38,7 @@
     blogbot: false,
     prizebot: false,
     youtubebot: false,
+    twitch_stats: false,
     bus_analyzer: false,
   },
 
@@ -45,6 +46,9 @@
   // Channels suffixed with a '!' are considered "important" and will be retried more aggressively
   // and warned about if they're not currently streaming.
   channels:: ["desertbus!", "db_chief", "db_high", "db_audio", "db_bus"],
+  // For some stats collection, we need twitch user ids instead of names.
+  // You can find these by inspecting requests on the website.
+  channel_ids:: ["24856654"], // "desertbus"
 
   backfill_only_channels:: [],
 
@@ -761,7 +765,7 @@
       restart: "always",
       entrypoint: ["python3", "-m", "zulip_bots.%s" % name]
         + (if subcommand == null then [] else [subcommand])
-        + [std.manifestJson(config)]
+        + (if config == null then [] else [std.manifestJson(config)])
         + args,
       environment: $.env,
       [if mount_segments then "volumes"]: ["%s:/mnt" % $.segments_path],
@@ -811,6 +815,9 @@
       }) + {
         volumes: ["%s:/creds.json" % $.youtubebot.google_credentials_file],
       },
+
+    [if $.enabled.twitch_stats then "twitch_stats"]:
+      bot_service("twitch_stats", null, ["/mnt/twitch_stats.json"] + $.channel_ids, mount_segments=true),
 
   },
 
