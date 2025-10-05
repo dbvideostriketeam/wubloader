@@ -5,6 +5,10 @@ let knownTransitions = [];
 let thumbnailTemplates = {};
 let globalPageState = 0;
 
+// Set when a thumbnail already exists when we load a video.
+// Used to re-upload the same image if a new one is not provided.
+let existingThumbnailBase64;
+
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
 const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
 
@@ -447,6 +451,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		}
 	}
 	document.getElementById("video-info-thumbnail-mode").value = videoInfo.thumbnail_mode;
+	existingThumbnailBase64 = videoInfo.thumbnail_image;
 	updateThumbnailInputState();
 	// Ensure that changing values on load doesn't set keep the page dirty.
 	globalPageState = PAGE_STATE.CLEAN;
@@ -1543,10 +1548,14 @@ function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, 
 }
 
 // Reads file data from the custom thumbnail upload input, and returns base64 string.
+// Will use a previously-uploaded image if no image is given and previous upload is available.
 // Throws on error.
 async function uploadedImageToBase64() {
 	const fileInput = document.getElementById("video-info-thumbnail-custom");
 	if (fileInput.files.length === 0) {
+		if (existingThumbnail !== undefined) {
+			return existingThumbnailBase64
+		}
 		throw new Error("A file was not provided for the thumbnail");
 	}
 
