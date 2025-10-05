@@ -89,7 +89,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	coming_online = []
 	online_by_role = {}
 	display_names = {}
-	supervisor = None
+	supervisors = []
 	found_any = False
 	for user_id, (_, hours) in schedule.items():
 		prev = get_role_at_hour(hours, hour - 1)
@@ -99,7 +99,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		if now != "" or prev != "":
 			found_any = True
 		if now == "Supervisor":
-			supervisor = user_id
+			supervisors.append(user_id)
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
 		if now.lower() in ("chatops", "editor", "sheeter"):
@@ -156,11 +156,11 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		f"**Shift changes for {time_str} | Bustime {hour:02d}:00 - {hour+1:02d}:00 | <time:{current_time.isoformat(timespec='minutes')}>:**",
 		"Make sure to *mute/unmute* #**current-shift** as needed!",
 	]
-	if supervisor is None:
+	if not supervisors:
 		logging.warning("No supervisor found")
 	else:
-		name = render_name(supervisor, mention=False)
-		lines.append(f"Your shift supervisor is {name}")
+		names = ", ".join([render_name(name, mention=False) for name in supervisors])
+		lines.append(f"Your shift supervisors are: {names}")
 	if coming_online:
 		lines += [
 			"",
