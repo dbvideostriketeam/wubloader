@@ -14,5 +14,6 @@ setup(
 		'beautifulsoup4', # for parsing mastodon posts
 		'gevent',
 		'requests',
+		'websockets',
 	],
 )
