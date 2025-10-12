@@ -331,7 +331,7 @@
       access_token: "",
     },
     [if $.download_toot_media then "media_dir"]: "/mnt/media",
-    output_path: "/mnt/tootbot.json"
+    output_path: "/mnt/tootbot.json",
     args:: [],
   },
 
