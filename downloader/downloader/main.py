@@ -152,6 +152,7 @@ class StreamsManager(object):
 		self.refresh_needed = gevent.event.Event() # set to tell main loop to refresh now
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
+		self.history_size = history_size
 		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
 			self.FETCH_MIN_INTERVAL = self.IMPORTANT_FETCH_MIN_INTERVAL
