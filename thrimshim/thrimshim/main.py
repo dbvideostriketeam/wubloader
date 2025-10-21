@@ -31,6 +31,20 @@ MAX_DESCRIPTION_LENGTH = 5000 # Youtube only allows 5000-character descriptions
 DESCRIPTION_PLAYLISTS_HEADER = "This video is part of the following playlists:"
 DESCRIPTION_THUMBNAIL_HEADER = "Thumbnail Credit: "
 
+# For specific categories (ie. event types), automatically append this message to notes
+# as a reminder to editors.
+CATEGORY_NOTES = {
+	'Drive/Giveaway':
+		'Title should be "Giveaway for: [Prize Name]". Show the initial setup, then skip '
+		'to the draw. Include any relevant other discussion / showing off the prize '
+		"if you think it's worthwhile."
+	'Auction':
+		'Title should be "Live Auction for: [Prize Name]". Do not include the winning bid '
+		'in the title (in description is fine).',
+	'RDP': "If you're reading this and your name isn't Caitiri...don't turn around.",
+	'Art Challenge Results': 'Title should be "Runners up and Winner of the [Challenge] art challenge."',
+}
+
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
 	HEADERS = [
@@ -286,6 +300,12 @@ def get_row(ident):
 		match = description_playlist_re.search(response["video_description"])
 		if match:
 			response["video_description"] = response["video_description"][:match.start()]
+
+	# Append canned notes for specific event types
+	if response['category'] in CATEGORY_NOTES:
+		if response['notes']:
+			response['notes'] += "\n\n"
+		response['notes'] += CATEOGRY_NOTES[response['category']]
 
 	logging.info('Row {} fetched'.format(ident))
 
