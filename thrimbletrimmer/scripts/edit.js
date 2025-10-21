@@ -243,13 +243,19 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 	});
 	document
 		.getElementById("video-info-thumbnail-template")
-		.addEventListener("change", handleFieldChange);
+		.addEventListener("change", (event) => {
+			handleFieldChange(event);
+			updateThumbnailImages();
+		});
 	document
 		.getElementById("video-info-thumbnail-mode")
 		.addEventListener("change", updateThumbnailInputState);
 	document
 		.getElementById("video-info-thumbnail-time")
-		.addEventListener("change", handleFieldChange);
+		.addEventListener("change", (event) => {
+			handleFieldChange(event);
+			updateThumbnailImages();
+		});
 
 	if (canEditMetadata()) {
 		document.getElementById("video-info-thumbnail-time-set").addEventListener("click", (_event) => {
@@ -339,6 +345,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			// Re-apply the locked/unlocked status
 			updateTemplateCropAspectRatio();
 		});
+
+	document
+		.getElementByID("video-info-thumbnail-custom")
+		.addEventListener("change", (_event) => updateThumbnailImages());
 
 	document
 		.getElementById("video-info-thumbnail-template-preview-generate")
@@ -496,6 +506,11 @@ async function loadTransitions() {
 }
 
 async function updateThumbnailImages() {
+	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+	if thumbnailMode !== "TEMPLATE" && thumbnailMode !== "ONEOFF" {
+		return;
+	}
+
 	const videoFrameImageElement = document.getElementById(
 		"video-info-thumbnail-template-video-source-image",
 	);
@@ -517,15 +532,12 @@ async function updateThumbnailImages() {
 		"video-info-thumbnail-template-overlay-image",
 	);
 
-	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
 	if (thumbnailMode === "TEMPLATE") {
 		const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
 		templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
 	} else if (thumbnailMode === "ONEOFF") {
 		const templateData = await uploadedImageToBase64();
 		templateImageElement.src = `data:image/png;base64,${templateData}`;
-	} else {
-		console.log(`WARNING: Source images updated but thumbnailMode = ${thumbnailMode}`);
 	}
 	templateImageElement.classList.remove("hidden");
 
@@ -1044,6 +1056,8 @@ function updateThumbnailInputState(event) {
 	for (elemID of unhideIDs) {
 		document.getElementById(elemID).classList.remove("hidden");
 	}
+
+	updateThumbnailImages()
 }
 
 function setDefaultCrop(updateWidgets) {
