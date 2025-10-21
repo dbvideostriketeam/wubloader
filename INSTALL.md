@@ -7,6 +7,8 @@ This installation guide is written assuming you are on a Linux-like operating sy
 ## Requirements
 * `bash`
 
+* `git`
+
 * `docker`
 
   https://docs.docker.com/install/
