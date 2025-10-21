@@ -270,47 +270,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 
 	document
 		.getElementById("video-info-thumbnail-template-source-image-update")
-		.addEventListener("click", async (_event) => {
-			const videoFrameImageElement = document.getElementById(
-				"video-info-thumbnail-template-video-source-image",
-			);
-
-			const timeEntryElement = document.getElementById("video-info-thumbnail-time");
-			const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
-			if (imageTime === null) {
-				videoFrameImageElement.classList.add("hidden");
-				addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
-				return;
-			}
-			const videoFrameQuery = new URLSearchParams({
-				timestamp: imageTime,
-			});
-			videoFrameImageElement.src = `/frame/${globalStreamName}/source.png?${videoFrameQuery}`;
-			videoFrameImageElement.classList.remove("hidden");
-
-			const templateImageElement = document.getElementById(
-				"video-info-thumbnail-template-overlay-image",
-			);
-
-			const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
-			if (thumbnailMode === "TEMPLATE") {
-				const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
-				templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
-			} else if (thumbnailMode === "ONEOFF") {
-				const templateData = await uploadedImageToBase64();
-				templateImageElement.src = `data:image/png;base64,${templateData}`;
-			} else {
-				console.log(`WARNING: Source images updated but thumbnailMode = ${thumbnailMode}`);
-			}
-			templateImageElement.classList.remove("hidden");
-
-			const aspectRatioControls = document.getElementById(
-				"video-info-thumbnail-aspect-ratio-controls",
-			);
-			aspectRatioControls.classList.remove("hidden");
-
-			createTemplateCropWidgets();
-		});
+		.addEventListener("click", (_event) => updateThumbnailImages());
 
 	document
 		.getElementById("video-info-thumbnail-crop-0")
@@ -528,6 +488,48 @@ async function loadTransitions() {
 	}
 	knownTransitions = await response.json();
 	updateTransitionTypes();
+}
+
+async function updateThumbnailImages() {
+	const videoFrameImageElement = document.getElementById(
+		"video-info-thumbnail-template-video-source-image",
+	);
+
+	const timeEntryElement = document.getElementById("video-info-thumbnail-time");
+	const imageTime = wubloaderTimeFromVideoHumanTime(timeEntryElement.value);
+	if (imageTime === null) {
+		videoFrameImageElement.classList.add("hidden");
+		addError("Couldn't preview thumbnail; couldn't parse thumbnail frame timestamp");
+		return;
+	}
+	const videoFrameQuery = new URLSearchParams({
+		timestamp: imageTime,
+	});
+	videoFrameImageElement.src = `/frame/${globalStreamName}/source.png?${videoFrameQuery}`;
+	videoFrameImageElement.classList.remove("hidden");
+
+	const templateImageElement = document.getElementById(
+		"video-info-thumbnail-template-overlay-image",
+	);
+
+	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
+	if (thumbnailMode === "TEMPLATE") {
+		const imageTemplate = document.getElementById("video-info-thumbnail-template").value;
+		templateImageElement.src = `/thrimshim/template/${imageTemplate}.png`;
+	} else if (thumbnailMode === "ONEOFF") {
+		const templateData = await uploadedImageToBase64();
+		templateImageElement.src = `data:image/png;base64,${templateData}`;
+	} else {
+		console.log(`WARNING: Source images updated but thumbnailMode = ${thumbnailMode}`);
+	}
+	templateImageElement.classList.remove("hidden");
+
+	const aspectRatioControls = document.getElementById(
+		"video-info-thumbnail-aspect-ratio-controls",
+	);
+	aspectRatioControls.classList.remove("hidden");
+
+	createTemplateCropWidgets();
 }
 
 // Update the given list of transition type <select> tags (or all of them if not given)
