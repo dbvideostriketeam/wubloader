@@ -86,6 +86,7 @@
     playlist_manager: 8007,
     chat_archiver: 8008,
     buscribe_api: 8010,
+    bus_analyzer: 8011,
     nginx: 80,
     nginx_ssl: 443,
     postgres: 5432,
