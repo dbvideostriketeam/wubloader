@@ -347,7 +347,7 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		});
 
 	document
-		.getElementByID("video-info-thumbnail-custom")
+		.getElementById("video-info-thumbnail-custom")
 		.addEventListener("change", (_event) => updateThumbnailImages());
 
 	document
