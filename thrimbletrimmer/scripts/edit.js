@@ -1062,10 +1062,12 @@ function updateThumbnailInputState(event) {
 
 function setDefaultCrop(updateWidgets) {
 	const newTemplate = document.getElementById("video-info-thumbnail-template").value;
-	for (const field of ["crop", "location"]) {
-		const newValue = thumbnailTemplates[newTemplate][field];
-		for (let i = 0; i < 4; i++) {
-			document.getElementById(`video-info-thumbnail-${field}-${i}`).value = newValue[i];
+	if (newTemplate) {
+		for (const field of ["crop", "location"]) {
+			const newValue = thumbnailTemplates[newTemplate][field];
+			for (let i = 0; i < 4; i++) {
+				document.getElementById(`video-info-thumbnail-${field}-${i}`).value = newValue[i];
+			}
 		}
 	}
 
