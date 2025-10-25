@@ -10,4 +10,4 @@ ADD nginx/generate-config /
 COPY --from=less /assets /etc/nginx/html/buscribe
 COPY thrimbletrimmer /etc/nginx/html/thrimbletrimmer
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
-ENTRYPOINT ["/bin/sh", "-c", "/generate-config && nginx -g \"daemon off;\""]
+ENTRYPOINT ["/bin/sh", "-c", "/generate-config && exec nginx -g \"daemon off;\""]
