@@ -506,6 +506,10 @@ async function loadTransitions() {
 }
 
 async function updateThumbnailImages() {
+	if (!hasSegmentList()) {
+		return;
+	}
+
 	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
 	if (thumbnailMode !== "TEMPLATE" && thumbnailMode !== "ONEOFF") {
 		return;
@@ -2181,6 +2185,7 @@ async function rangeDataUpdated() {
 	firstChapterStartField.value = firstRangeStartField.value;
 
 	updateDownloadLink();
+	updateThumbnailImages();
 }
 
 function setCurrentRangeStartToVideoTime() {
