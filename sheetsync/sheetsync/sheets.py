@@ -347,6 +347,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 					row_dict['category'], # category name
 					worksheet, # sheet name
 				] + (['Poster Moment'] if row_dict['poster_moment'] else [])
+				+ (['rdp-troll'] if row_dict['description'].startswith('RDP Troll:') else [])
 				+ row_dict['tags']
 			)
 
@@ -381,6 +382,8 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		if key == "tags":
 			value = value[2:]
 			if row.get("poster_moment"):
+				value = value[1:]
+			if row.get('rdp-troll'):
 				value = value[1:]
 		return super().write_value(row, key, value)
 
