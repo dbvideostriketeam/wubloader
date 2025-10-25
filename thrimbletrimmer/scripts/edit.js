@@ -1003,11 +1003,14 @@ async function initializeVideoInfo() {
 function updateWaveform() {
 	const currentTime = DateTime.now().setZone("utc");
 
-	if (lastWaveformRequest && currentTime.diff(lastWaveformRequest).as("seconds") < 15) {
-		if (!waveformRequestTimeout) {
-			waveformRequestTimeout = setTimeout(updateWaveform, 15000);
+	if (lastWaveformRequest !== null) {
+	    const remaining = 15 - currentTime.diff(lastWaveformRequest).as("seconds");
+	    if (remaining > 0) {
+			if (waveformRequestTimeout === null) {
+				waveformRequestTimeout = setTimeout(updateWaveform, 1000 * remaining);
+			}
+			return;
 		}
-		return;
 	}
 
 	lastWaveformRequest = currentTime;
