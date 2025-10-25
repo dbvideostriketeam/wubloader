@@ -4,6 +4,8 @@ var currentRange = 1;
 let knownTransitions = [];
 let thumbnailTemplates = {};
 let globalPageState = 0;
+let lastWaveformRequest = null;
+let waveformRequestTimeout = null;
 
 // Set when a thumbnail already exists when we load a video.
 // Used to re-upload the same image if a new one is not provided.
@@ -998,6 +1000,8 @@ async function initializeVideoInfo() {
 	videoElement.addEventListener("durationchange", (_event) => {
 		// Every time this is updated, we need to update based on the new video duration
 		rangeDataUpdated();
+		// We should also try to update the waveform image.
+		updateWaveform();
 	});
 
 	videoElement.addEventListener("timeupdate", (_event) => {
@@ -1010,11 +1014,25 @@ async function initializeVideoInfo() {
 }
 
 function updateWaveform() {
+	const currentTime = DateTime.now().setZone("utc");
+
+	if (lastWaveformRequest && currentTime.diff(lastWaveformRequest).as("seconds") < 15) {
+		if (!waveformRequestTimeout) {
+			waveformRequestTimeout = setTimeout(updateWaveform, 15000);
+		}
+		return;
+	}
+
+	lastWaveformRequest = currentTime;
+	waveformRequestTimeout = null;
+
 	let waveformURL =
 		"/waveform/" + globalStreamName + "/" + videoInfo.video_quality + ".png?size=1920x125&";
 
 	const query = startAndEndTimeQuery();
 	waveformURL += query.toString();
+
+	waveformURL += `&t=${currentTime.toUnixInteger()}`;
 
 	const waveformElem = document.getElementById("waveform");
 	waveformElem.src = waveformURL;
