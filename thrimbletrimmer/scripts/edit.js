@@ -507,7 +507,7 @@ async function loadTransitions() {
 
 async function updateThumbnailImages() {
 	const thumbnailMode = document.getElementById("video-info-thumbnail-mode").value;
-	if thumbnailMode !== "TEMPLATE" && thumbnailMode !== "ONEOFF" {
+	if (thumbnailMode !== "TEMPLATE" && thumbnailMode !== "ONEOFF") {
 		return;
 	}
 
@@ -682,7 +682,7 @@ async function initializeVideoInfo() {
 		// If a video title hasn't been set yet, leave it blank.
 		// Exception: RDPs always use the standard title.
 		if (videoInfo.tags.includes("RDP")) {
-			titleElem.value = videoInfo.description;	
+			titleElem.value = videoInfo.description;
 		}
 	}
 	validateVideoTitle();
