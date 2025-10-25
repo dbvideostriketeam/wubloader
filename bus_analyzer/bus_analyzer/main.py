@@ -9,7 +9,9 @@ import traceback
 import argh
 import gevent.event
 from gevent.pool import Pool
+import prometheus_client as prom
 
+import common
 from common import database
 from common.segments import parse_segment_path, list_segment_files
 
@@ -18,6 +20,11 @@ from .extract import extract_segment, load_prototypes
 
 cli = argh.EntryPoint()
 
+segments_analyzed = prom.Counter(
+	'segments_analyzed',
+	'Number of segments succesfully analyzed',
+	['channel', 'quality'],
+)
 
 @cli
 @argh.named("extract-segment")
@@ -133,6 +140,7 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 		error = traceback.format_exc()
 	else:
 		logging.info(f"Got odometer = {odometer}, clock = {clock}, time of day = {tod} for segment {segment_path!r}")
+		segments_analyzed.labels(channel=segment_info.channel, quality=segment_info.quality).inc()
 		error = None
 
 	conn = db_manager.get_conn()
@@ -193,7 +201,7 @@ def parse_hours(s):
 
 @cli
 @argh.arg("--hours", type=parse_hours, help="If integer, watch the most recent N hours. Otherwise, comma-seperated list of hours.")
-@argh.arg("channels", nargs="+")
+@argh.arg("channels", nargs="+", help='List of channels to analyze.')
 def main(
 	dbconnect,
 	*channels,
@@ -204,6 +212,7 @@ def main(
 	overwrite=False,
 	prototypes_path="./prototypes",
 	concurrency=10,
+	metrics_port=8011,
 ):
 	CHECK_INTERVAL = 0.5
 
@@ -215,6 +224,10 @@ def main(
 	conn = db_manager.get_conn()
 
 	prototypes = load_prototypes(prototypes_path)
+
+	common.PromLogCountsHandler.install()
+	common.install_stacksampler()
+	prom.start_http_server(metrics_port)
 
 	logging.info("Started")
 
