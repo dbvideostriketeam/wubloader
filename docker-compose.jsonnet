@@ -671,6 +671,7 @@
         playlist_manager: 8007,
         chat_archiver: 8008,
         buscribe_api: 8010,
+        bus_analyzer: 8011,
       },
       image: $.get_image("nginx"),
       restart: "on-failure",
@@ -758,6 +759,7 @@
       restart: "always",
       command: ["main", $.db_connect, $.bus_channel, "--base-dir", "/mnt"],
       volumes: ["%s:/mnt" % $.segments_path],
+      [if "bus_analyzer" in $.ports then "ports"]: ["%s:8011" % $.ports.bus_analyzer],
       environment: $.env,
     },
 
