@@ -46,6 +46,11 @@ CATEGORY_NOTES = {
 	'Art Challenge Results': 'Title should be "Runners up and Winner of the [Challenge] art challenge."',
 }
 
+
+def json_response(obj):
+	return flask.make_response(to_json(obj), {"Content-Type": "application/json"})
+
+
 def cors(app):
 	"""WSGI middleware that sets CORS headers"""
 	HEADERS = [
@@ -130,7 +135,7 @@ def authenticate_editor(f):
 @request_stats
 @authenticate_editor
 def test(editor=None):
-	return json.dumps(editor)
+	return json_response(editor)
 
 
 # To make nginx proxying simpler, we want to allow /metrics/* to work
@@ -170,14 +175,14 @@ def get_all_rows():
 		}
 		rows.append(row)
 	logging.info('All rows fetched')
-	return to_json(rows)
+	return json_response(rows)
 
 
 @app.route('/thrimshim/defaults')
 @request_stats
 def get_defaults():
 	"""Get default info needed by thrimbletrimmer when not loading a specific row."""
-	return to_json({
+	return json_response({
 		"video_channel": app.default_channel,
 		"bustime_start": app.bustime_start,
 		"title_prefix": app.title_header,
@@ -310,7 +315,7 @@ def get_row(ident):
 
 	logging.info('Row {} fetched'.format(ident))
 
-	return to_json(response)
+	return json_response(response)
 
 
 @app.route('/thrimshim/<ident>', methods=['POST'])
@@ -640,7 +645,7 @@ def list_templates():
 		"""
 		results = database.query(conn, query)
 		logging.info('List of thumbnail templates fetched')
-		return json.dumps([row._asdict() for row in results.fetchall()])
+		return json_response([row._asdict() for row in results.fetchall()])
 
 
 @app.route('/thrimshim/template/<name>.png')
@@ -674,7 +679,7 @@ def get_template_metadata(name):
 		if row is None:
 			return 'Template {} not found'.format(name), 404
 		logging.info('Thumbnail metadata of {} fetched'.format(name))
-		return json.dumps(row._asdict())
+		return json_response(row._asdict())
 
 def validate_template(new_template, require_image=True):
 
