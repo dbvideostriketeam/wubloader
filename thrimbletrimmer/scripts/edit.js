@@ -672,7 +672,9 @@ async function initializeVideoInfo() {
 	document.getElementById("stream-time-setting-end").value =
 		busTimeFromWubloaderTime(globalEndTimeString);
 
-	updateWaveform();
+	if (shouldLoadVideo()) {
+		updateWaveform();
+	}
 
 	const titlePrefixElem = document.getElementById("video-info-title-prefix");
 	titlePrefixElem.innerText = videoInfo.title_prefix;
@@ -812,7 +814,11 @@ async function initializeVideoInfo() {
 		advancedSubmissionContainer.classList.remove("hidden");
 	}
 
-	await loadVideoPlayerFromDefaultPlaylist();
+	if (shouldLoadVideo()) {
+		await loadVideoPlayerFromDefaultPlaylist();
+	} else {
+		addError("Not loading video as load_video=false was given. Most of the page will not work correctly.");
+	}
 
 	const videoElement = document.getElementById("video");
 	const handleInitialSetupForDuration = (_event) => {
@@ -2533,4 +2539,9 @@ function updateTemplateCropAspectRatio() {
 		videoFrameStage.setOptions({ aspectRatio: null });
 		templateStage.setOptions({ aspectRatio: null });
 	}
+}
+
+function shouldLoadVideo() {
+	const queryParams = new URLSearchParams(window.location.search);
+	return queryParams.get("load_video") !== "false";
 }
