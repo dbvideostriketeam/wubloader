@@ -37,7 +37,7 @@ CATEGORY_NOTES = {
 	'Drive/Giveaway':
 		'Title should be "Giveaway for: [Prize Name]". Show the initial setup, then skip '
 		'to the draw. Include any relevant other discussion / showing off the prize '
-		"if you think it's worthwhile."
+		"if you think it's worthwhile.",
 	'Auction':
 		'Title should be "Live Auction for: [Prize Name]". Do not include the winning bid '
 		'in the title (in description is fine). If they show off the prize pre-auction, include it. '
@@ -306,7 +306,7 @@ def get_row(ident):
 	if response['category'] in CATEGORY_NOTES:
 		if response['notes']:
 			response['notes'] += "\n\n"
-		response['notes'] += CATEOGRY_NOTES[response['category']]
+		response['notes'] += CATEGORY_NOTES[response['category']]
 
 	logging.info('Row {} fetched'.format(ident))
 
