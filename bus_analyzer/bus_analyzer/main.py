@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import signal
+import time
 import traceback
 
 import argh
@@ -20,10 +21,10 @@ from .extract import extract_segment, load_prototypes
 
 cli = argh.EntryPoint()
 
-segments_analyzed = prom.Counter(
+segment_analyzed_duration = prom.Histogram(
 	'segments_analyzed',
 	'Number of segments succesfully analyzed',
-	['channel', 'quality'],
+	['channel', 'quality', 'error'],
 )
 
 @cli
@@ -130,6 +131,7 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 	# We attempt to do a fixed time before the end, or use the start if too short.
 	timestamp = max(segment_info.start, segment_info.end - datetime.timedelta(seconds=0.1))
 
+	start = time.monotonic()
 	try:
 		odometer, clock, tod = extract_segment(prototypes, segment_info, timestamp)
 	except Exception:
@@ -140,8 +142,8 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 		error = traceback.format_exc()
 	else:
 		logging.info(f"Got odometer = {odometer}, clock = {clock}, time of day = {tod} for segment {segment_path!r}")
-		segments_analyzed.labels(channel=segment_info.channel, quality=segment_info.quality).inc()
 		error = None
+	segment_analyzed_duration.labels(channel=segment_info.channel, quality=segment_info.quality, error=(error is not None)).observe(time.monotonic() - start)
 
 	conn = db_manager.get_conn()
 	database.query(
