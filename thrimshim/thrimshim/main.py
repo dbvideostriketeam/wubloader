@@ -40,7 +40,8 @@ CATEGORY_NOTES = {
 		"if you think it's worthwhile."
 	'Auction':
 		'Title should be "Live Auction for: [Prize Name]". Do not include the winning bid '
-		'in the title (in description is fine).',
+		'in the title (in description is fine). If they show off the prize pre-auction, include it. '
+		'End the video when the clapping is finished after SOLD.',
 	'RDP': "If you're reading this and your name isn't Caitiri...don't turn around.",
 	'Art Challenge Results': 'Title should be "Runners up and Winner of the [Challenge] art challenge."',
 }
