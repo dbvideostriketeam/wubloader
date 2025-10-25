@@ -815,6 +815,7 @@ async function initializeVideoInfo() {
 		const rangeDefinitionsContainer = document.getElementById("range-definitions");
 		if (videoInfo.video_ranges && videoInfo.video_ranges.length > 0) {
 			const chapterData = [];
+			let totalOffsetForTransitions = 0;
 			const descriptionField = document.getElementById("video-info-description");
 			let description = descriptionField.value;
 			if (description.indexOf(CHAPTER_MARKER_DELIMITER) !== -1) {
@@ -876,6 +877,8 @@ async function initializeVideoInfo() {
 						transitionType.value = type;
 						transitionDuration.value = duration.toString();
 						transitionDurationSection.classList.remove("hidden");
+
+						totalOffsetForTransitions += duration;
 					}
 				}
 
@@ -934,7 +937,7 @@ async function initializeVideoInfo() {
 							"range-definition-chapter-marker-start",
 						)[0];
 						chapterStartField.value = videoHumanTimeFromVideoPlayerTime(
-							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime,
+							chapterData[currentChapterIndex].start - rangeStartOffset + startPlayerTime + totalOffsetForTransitions,
 						);
 						const chapterDescField = chapterMarker.getElementsByClassName(
 							"range-definition-chapter-marker-description",
@@ -1489,6 +1492,9 @@ function formatChapterTime(playerTime, hasHours) {
 	let hours = Math.trunc(playerTime / 3600);
 	let minutes = Math.trunc((playerTime / 60) % 60);
 	let seconds = Math.trunc(playerTime % 60);
+	if (seconds > 59) {
+		seconds = 59;
+	}
 
 	while (minutes.toString().length < 2) {
 		minutes = `0${minutes}`;
