@@ -115,18 +115,6 @@ CREATE INDEX event_state ON events (state);
 -- and change it back if needed. More about accidents than security.
 SELECT audit.audit_table('events');
 
--- Table for recording each "edit" made to a video, written by thrimshim.
--- This is mainly a just-in-case thing so we can work out when something was changed,
--- and change it back if needed. More about accidents than security.
-CREATE TABLE events_edits_audit_log (
-	time TIMESTAMP NOT NULL DEFAULT NOW(),
-	id TEXT NOT NULL,
-	api_action TEXT NOT NULL,
-	editor TEXT NOT NULL,
-	old_data JSONB,
-	new_data JSONB
-);
-
 CREATE TABLE nodes (
 	name TEXT PRIMARY KEY,
 	url TEXT NOT NULL,
