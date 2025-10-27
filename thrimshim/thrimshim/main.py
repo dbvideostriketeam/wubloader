@@ -539,8 +539,6 @@ def update_row(ident, editor=None):
 			if result.rowcount != 1:
 				return 'Video likely already published', 403
 
-		_write_audit_log(conn, ident, "update-row", editor, old_row, new_row)
-
 	logging.info('Row {} updated to state {}'.format(ident, new_row['state']))
 	return '', 201
 
@@ -588,14 +586,6 @@ def manual_link(ident, editor=None):
 		""", upload_location, link, video_id, editor, now, now, ident)
 		if result.rowcount != 1:
 			return 'Video changed state while we were updating - maybe it was reset?', 409
-		_write_audit_log(conn, ident, "manual-link", editor, new_row={
-			"state": "DONE",
-			"upload_location": upload_location,
-			"video_link": link,
-			"video_id": video_id,
-			"editor": editor,
-			"thumbnail_mode": None,
-		})
 	logging.info("Row {} video_link set to {}".format(ident, link))
 	return ''
 
@@ -623,16 +613,8 @@ def reset_row(ident, editor=None):
 		results = database.query(conn, query, ident)
 		if results.rowcount != 1:
 			return 'Row id = {} not found or not in cancellable state'.format(ident), 404
-		_write_audit_log(conn, ident, "reset-row", editor)
 	logging.info("Row {} reset to 'UNEDITED'".format(ident))
 	return ''
-
-
-def _write_audit_log(conn, ident, api_action, editor, old_row=None, new_row=None):
-	database.query(conn, """
-		INSERT INTO events_edits_audit_log (id, api_action, editor, old_data, new_data)
-		VALUES (%(id)s, %(api_action)s, %(editor)s, %(old_row)s, %(new_row)s)
-	""", id=ident, api_action=api_action, editor=editor, old_row=to_json(old_row), new_row=to_json(new_row))
 
 
 @app.route('/thrimshim/templates')
