@@ -38,6 +38,9 @@ if [ -n "$REPLICATION_USER" ]; then
 
 fi
 
+echo "Installing audit log"
+sql "$POSTGRES_USER" -d "$POSTGRES_DB" < /audit.sql
+
 echo "Applying schema for $POSTGRES_DB"
 sql "$WUBLOADER_USER" -d "$POSTGRES_DB" < /schema.sql
 

@@ -110,6 +110,11 @@ CREATE TABLE events (
 -- Index on state, since that's almost always what we're querying on besides id
 CREATE INDEX event_state ON events (state);
 
+-- Enable audit logging for this table.
+-- This is mainly a just-in-case thing so we can work out when something was changed,
+-- and change it back if needed. More about accidents than security.
+SELECT audit.audit_table('events');
+
 -- Table for recording each "edit" made to a video, written by thrimshim.
 -- This is mainly a just-in-case thing so we can work out when something was changed,
 -- and change it back if needed. More about accidents than security.
