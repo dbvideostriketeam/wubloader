@@ -200,3 +200,18 @@ columns                    | type                                 | role        
 `upload_time`              | `TIMESTAMP`                          | state       | Time when video state is set to `DONE`. Only set when state is `DONE`.
 `last_modified`            | `TIMESTAMP`                          | state       | Time when video state was last set to `MODIFIED`, or NULL if it has never been. Only used for diagnostics.
 `thumbnail_last_written`   | `BYTEA`                              | state       | The SHA256 hash, in binary form, of the most recently uploaded thumbnail image.
+
+### Audit Logging
+
+We are using [a third party audit trigger](https://wiki.postgresql.org/wiki/Audit_trigger_91plus)
+to log all changes to the `events` table. The main intent here is to investigate issues and revert mistakes,
+not to be a security system.
+
+Data is logged to the `audit.logged_actions` table.
+
+To get all updates for a particular event id, use a query like:
+```sql
+SELECT action_tstamp_clk, row_data, changed_fields
+FROM audit.logged_actions
+WHERE row_data->id = 'YOUR EVENT ID'
+```
