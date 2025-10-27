@@ -46,20 +46,20 @@ if [ -n "$REPLICATION_USER" ]; then
 
 	EOSQL
 
-	cat >> ${PGDATA}/postgresql.conf <<-EOF
+	cat >> "$PGDATA/postgresql.conf" <<-EOF
 	wal_keep_size = 128MB
 	EOF
 
 fi
 
-if [ -a /mnt/wubloader/nodes.csv ]; then
+if [ -e /mnt/wubloader/nodes.csv ]; then
 	echo "Loading nodes from nodes.csv"
 	sql "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOF
 	COPY nodes FROM '/mnt/wubloader/nodes.csv' DELIMITER ',' CSV HEADER;
 	EOF
 fi
 
-if [ -a /mnt/wubloader/roles.csv ]; then
+if [ -e /mnt/wubloader/roles.csv ]; then
 	echo "Loading roles from roles.csv"
 	sql "$POSTGRES_USER" -d "$POSTGRES_DB" <<-EOF
 	COPY roles FROM '/mnt/wubloader/roles.csv' DELIMITER ',' CSV HEADER;
