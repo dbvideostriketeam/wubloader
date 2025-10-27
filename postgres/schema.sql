@@ -189,6 +189,8 @@ CREATE TABLE templates (
 	location box_coords NOT NULL
 );
 
+SELECT audit.audit_table('templates');
+
 -- Used to farm out encoding jobs to encoder workers.
 -- URL fields must match form: "scp://USER:PASS@HOST:PORT/PATH"
 -- Hash fields are hex strings containing sha256 hashes.
