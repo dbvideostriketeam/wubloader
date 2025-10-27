@@ -1,6 +1,6 @@
 #! /bin/bash
 
-set -eu
+set -e
 
 sql() {
 	local user
