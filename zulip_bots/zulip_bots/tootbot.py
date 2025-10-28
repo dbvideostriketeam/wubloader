@@ -11,7 +11,7 @@ from bs4 import BeautifulSoup
 from common import media
 
 from . import zulip
-from .config import get_config
+from .config import common_setup, get_config
 
 cli = argh.EntryPoint()
 
@@ -235,6 +235,7 @@ def main(
 	stream="bot-spam",
 	post_topic="Toots from Desert Bus",
 	notification_topic="Mastodon Notifications",
+	metrics_port=8013,
 ):
 	"""
 	Run the actual bot.
@@ -252,7 +253,7 @@ def main(
 		output_path # optional
 		media_dir # optional
 	"""
-	logging.basicConfig(level='INFO')
+	common_setup(metrics_port)
 
 	conf = get_config(conf_file)
 	zc = conf["zulip"]

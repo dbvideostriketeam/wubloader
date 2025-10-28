@@ -9,7 +9,7 @@ import argh
 import requests
 from bs4 import BeautifulSoup
 
-from .config import get_config
+from .config import common_setup, get_config
 from .zulip import Client
 
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
@@ -69,14 +69,14 @@ def send_message(client, prize, test=False):
 		client.send_to_stream("bot-spam", "Prize Winners", message)
 
 
-def main(config_file, test=False, all=False, once=False, interval=60):
+def main(config_file, test=False, all=False, once=False, interval=60, metrics_port=8017):
 	"""
 	Config:
 		url, email, api_key: zulip creds
 		year: the correct URL part for the prizes page: https://desertbus.org/YEAR/prizes/giveaway
 		state: path to state file
 	"""
-	logging.basicConfig(level="INFO")
+	common_setup(metrics_port)
 	config = get_config(config_file)
 	with open(config['state']) as f:
 		# state is {id: last seen state}

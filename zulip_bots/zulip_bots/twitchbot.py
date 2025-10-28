@@ -8,7 +8,7 @@ import argh
 import girc
 
 from . import zulip
-from .config import get_config
+from .config import common_setup, get_config
 
 
 def run(zulip_client, nick, oauth_token, stream, topic):
@@ -38,7 +38,7 @@ def run(zulip_client, nick, oauth_token, stream, topic):
 	logging.warning("Chat client disconnected")
 
 
-def main(conf_file, stream="bot-spam", topic="Twitch DMs", retry_interval=10):
+def main(conf_file, stream="bot-spam", topic="Twitch DMs", retry_interval=10, metrics_port=8014):
 	"""
 	config, in json or yaml format:
 		twitch_username
@@ -47,7 +47,7 @@ def main(conf_file, stream="bot-spam", topic="Twitch DMs", retry_interval=10):
 		zulip_email
 		zulip_api_key
 	"""
-	logging.basicConfig(level='INFO')
+	common_setup(metrics_port)
 
 	config = get_config(conf_file)
 

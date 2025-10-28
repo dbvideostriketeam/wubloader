@@ -9,6 +9,8 @@ from datetime import datetime
 import argh
 from websockets.sync.client import connect
 
+from config import common_setup
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,8 +67,8 @@ def stream(channel_ids):
 			}
 
 
-def main(output_file, *channel_ids):
-	logging.basicConfig(level="INFO")
+def main(output_file, *channel_ids, metrics_port=8019):
+	common_setup(metrics_port)
 	for msg in stream(channel_ids):
 		with open(output_file, 'a') as f:
 			f.write(json.dumps(msg) + '\n')

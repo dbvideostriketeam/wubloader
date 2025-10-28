@@ -7,7 +7,7 @@ import time
 
 from bs4 import BeautifulSoup
 
-from .config import get_config
+from .config import common_setup, get_config
 from .zulip import Client
 
 import requests
@@ -92,7 +92,7 @@ def _get_prize_name(year, id):
 	return div.string.split(": ", 1)[-1].strip()
 
 
-def main(conf_file, message_log_file, name=socket.gethostname()):
+def main(conf_file, message_log_file, name=socket.gethostname(), metrics_port=8015):
 	"""Config:
 		zulip_url
 		zulip_email
@@ -101,7 +101,7 @@ def main(conf_file, message_log_file, name=socket.gethostname()):
 		total_id: id for donation total channel
 		prize_ids: list of ids for prizes to watch bids for
 	"""
-	logging.basicConfig(level="INFO")
+	common_setup(metrics_port)
 
 	config = get_config(conf_file)
 	client = Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
