@@ -29,6 +29,9 @@ class Client(object):
 		return resp.json()
 
 	def send_to_stream(self, stream, topic, content):
+		if self.base_url == "":
+			logging.info(f"Zulip sending is disabled, skipping sending message to #{stream}->{topic}: {content!r}")
+			return
 		return self.request("POST", "messages",
 			type="stream",
 			to=stream,
