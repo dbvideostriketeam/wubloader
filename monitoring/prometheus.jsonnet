@@ -13,10 +13,25 @@ local services_by_role = {
     "downloader",
     "backfiller",
     "segment_coverage",
+    "chat_archiver",
   ],
   local_edit: self.replica + ["thrimshim"],
   edit: self.local_edit + ["cutter"],
-  leader: self.edit + ["sheetsync", "playlist_manager"],
+  backup: self.edit + [
+    "tootbot",
+    "pubbot",
+    "blogbot",
+    "prizebot",
+    "twitch_stats",
+  ],
+  leader: self.backup + [
+    "sheetsync",
+    "playlist_manager",
+    "bus_analyzer",
+    "schedulebot",
+    "twitchbot",
+    "youtubebot",
+  ],
 };
 local services = services_by_role.leader;
 
