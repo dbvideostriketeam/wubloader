@@ -17,9 +17,7 @@ from common import atomic_write
 from common import media
 
 from .zulip import Client
-from .config import get_config
-
-logging.basicConfig(level='INFO')
+from .config import common_setup, get_config
 
 def try_save_image(media_dir, url):
     if media_dir is None:
@@ -158,10 +156,11 @@ def save_post(save_dir, media_dir, id, html):
 	}
 	atomic_write(filepath, json.dumps(content) + "\n")
 
-def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts', save_dir=None, media_dir=None):
+def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Posts', save_dir=None, media_dir=None, metrics_port=8016):
 	"""Post to zulip each new blog post, checking every INTERVAL seconds.
 	Will not post any posts that already exist, unless --test is given
 	in which case it will print the most recent on startup."""
+	common_setup(metrics_port)
 	config = get_config(config_file)
 	client = Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
 	seen = set()

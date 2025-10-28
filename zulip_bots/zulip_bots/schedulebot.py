@@ -13,11 +13,8 @@ import gevent.pool
 import argh
 
 from .zulip import Client
-from .config import get_config
+from .config import common_setup, get_config
 from common.sheets import Sheets
-
-logging.basicConfig(level='INFO')
-
 
 def get_membership(client):
 	"""Returns {group id: member set}"""
@@ -237,7 +234,7 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, omega=-1, last=-1):
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, omega=-1, last=-1, metrics_port=8012):
 	"""
 	config:
 		url: the base url of the instance
@@ -263,6 +260,8 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			This is NOT reported in start/end of shifts.
 	authentication is an object {email, api_key}
 	"""
+	common_setup(metrics_port)
+
 	config = get_config(conf_file)
 	client = Client(config["url"], config["api_user"]["email"], config["api_user"]["api_key"])
 	send_auth = config.get("send_user", config["api_user"])

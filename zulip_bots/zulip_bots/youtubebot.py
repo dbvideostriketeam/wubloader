@@ -8,7 +8,7 @@ import time
 
 from common.googleapis import GoogleAPIClient
 
-from .config import get_config
+from .config import common_setup, get_config
 from .zulip import Client
 
 
@@ -76,7 +76,7 @@ def show_comment(zulip, google, stream, topic, comment):
 		zulip.send_to_stream(stream, topic, message)
 
 
-def main(conf_file, interval=60, one_off=0, stream="bot-spam", topic="Youtube Comments", keep=1000, log="INFO"):
+def main(conf_file, interval=60, one_off=0, stream="bot-spam", topic="Youtube Comments", keep=1000, log="INFO", metrics_port=8018):
 	"""Config:
 		zulip_url
 		zulip_email
@@ -91,7 +91,7 @@ def main(conf_file, interval=60, one_off=0, stream="bot-spam", topic="Youtube Co
 
 	In one-off=N mode, get the last N comments and show them, then exit.
 	"""
-	logging.basicConfig(level=log)
+	common_setup(metrics_port)
 
 	config = get_config(conf_file)
 	zulip = Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
