@@ -129,12 +129,7 @@ def get_posts():
 
 def send_post(client, stream, topic, id, html):
 	title, author, date, content = blog_to_md(id, html)
-	client.request("POST", "messages",
-		type="stream",
-		to=stream,
-		topic=topic,
-		content=content,
-	)
+	client.send_to_stream(stream, topic, content)
 
 def save_post(save_dir, media_dir, id, html):
 	hash = b64encode(sha256(html.encode()).digest(), b"-_").decode().rstrip("=")

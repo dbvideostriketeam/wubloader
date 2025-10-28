@@ -289,6 +289,8 @@
   // Typically we set this to 1 month before bustime_start.
   buscribe_start:: "1970-01-01T00:00:00Z",
 
+  // Set this to empty string to disable sending to zulip in enabled bots
+  // (this is useful when you want the bots to still record data)
   zulip_url:: "https://chat.videostrike.team",
 
   schedulebot:: {
