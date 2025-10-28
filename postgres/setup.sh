@@ -82,6 +82,15 @@ if [ -n "$READONLY_USER" ]; then
 	EOSQL
 fi
 
+if [ -n "$MONITORING_USER" ]; then
+	echo "Creating $MONITORING_USER"
+	echo "host all $MONITORING_USER all md5" >> "$PGDATA/pg_hba.conf"
+	sql "$POSTGRES_USER" <<-EOSQL
+		CREATE USER $MONITORING_USER LOGIN PASSWORD '$MONITORING_PASSWORD';
+		GRANT pg_monitor TO $MONITORING_USER;
+	EOSQL
+fi
+
 if [ -n "$BUSCRIBE_USER" ]; then
 	echo "Creating $BUSCRIBE_USER"
 	echo "host all $BUSCRIBE_USER all md5" >> "$PGDATA/pg_hba.conf"

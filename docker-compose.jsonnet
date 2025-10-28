@@ -30,6 +30,7 @@
     buscribe_api: false,
     nginx: true,
     postgres: false,
+    postgres_exporter: false,
     chat_archiver: false,
     schedulebot: false,
     tootbot: false,
@@ -127,7 +128,9 @@
   db_replication_user:: "replicate", // if empty, don't allow replication
   db_replication_password:: "standby", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_readonly_user:: "readonly", // if empty, don't have a readonly account
-  db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.  
+  db_readonly_password:: "volunteer", // don't use default in production. Must not contain ' or \ as these are not escaped.
+  db_monitoring_user:: "monitoring",
+  db_monitoring_password:: "watcher", // don't use default in production. MUST NOT CONTAIN SPACES. Must not contain ' or \ as these are not escaped.
   db_buscribe_dbname:: "buscribe",
   db_buscribe_user:: "buscribe", // if empty, buscribe database is not created and buscribe cannot be used.
   db_buscribe_password:: "transcription", // don't use default in production. Must not contain ' or \ as these are not escaped.
@@ -682,6 +685,7 @@
         prizebot: 8017,
         youtubebot: 8018,
         twitch_stats: 8019,
+        postgres_exporter: 9187,
       },
       image: $.get_image("nginx"),
       restart: "on-failure",
@@ -722,6 +726,8 @@
         REPLICATION_PASSWORD: $.db_replication_password,
         READONLY_USER: $.db_readonly_user,
         READONLY_PASSWORD: $.db_readonly_password,
+        MONITORING_USER: $.db_monitoring_user,
+        MONITORING_PASSWORD: $.db_monitoring_password,
         BUSCRIBE_DB: $.db_buscribe_dbname,
         BUSCRIBE_USER: $.db_buscribe_user,
         BUSCRIBE_PASSWORD: $.db_buscribe_password,
@@ -729,6 +735,17 @@
       },
       volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
       [if $.db_standby then "command"]: ["/standby_setup.sh"],
+    },
+
+    [if $.enabled.postgres then "postgres_exporter"]: {
+      image: "quay.io/prometheuscommunity/postgres-exporter:v0.18.1",
+      restart: "on-failure",
+      environment: $.env + {
+        // Note this always monitors the local postgres, even if it isn't master
+        DATA_SOURCE_URI: "postgres:5432/postgres?sslmode=disable",
+        DATA_SOURCE_USER: $.db_monitoring_user,
+        DATA_SOURCE_PASS: $.db_monitoring_password,
+      },
     },
 
     [if $.enabled.chat_archiver then "chat_archiver"]: {
