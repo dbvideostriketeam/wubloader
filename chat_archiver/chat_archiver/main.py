@@ -116,6 +116,12 @@ merge_pass_merges = prom.Histogram(
 	buckets=[0, 1, 10, 100, 1000, 10000],
 )
 
+emote_download_duration = prom.Histogram(
+	"emote_download_duration",
+	"How long it took to download a variant of an emote that we had not previously downloaded",
+	["error"],
+)
+
 class Archiver(object):
 	def __init__(self, name, base_dir, channels, nick, oauth_token, download_media):
 		self.logger = logging.getLogger(type(self).__name__).getChild(name)
@@ -326,15 +332,19 @@ def ensure_emotes(base_dir, emote_ids):
 			logging.debug("Emote {} already exists".format(path))
 			return
 		logging.info("Fetching emote from {}".format(url))
+		start = time.monotonic()
 		try:
 			response = requests.get(url)
-		except Exception:
+		except Exception as e:
 			logging.warning("Exception while fetching emote from {}".format(url), exc_info=True)
+			emote_download_duration.labels(error=str(type(e))).observe(time.monotonic() - start)
 			return
 		if not response.ok:
 			logging.warning("Error {} while fetching emote from {}: {}".format(response.status_code, url, response.text))
+			emote_download_duration.labels(error=f"{response.status_code} response").observe(time.monotonic() - start)
 			return
 		atomic_write(path, response.content)
+		emote_download_duration.labels(error="").observe(time.monotonic() - start)
 		logging.info("Saved emote {}".format(path))
 
 	for emote_id in emote_ids:
