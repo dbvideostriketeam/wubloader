@@ -6,6 +6,7 @@ from time import sleep
 import argh
 import common
 import gevent
+import prometheus_client as prom
 from common import dateutil
 from common.database import DBManager
 from gevent import signal
@@ -35,7 +36,12 @@ from buscribe.recognizer import BuscribeRecognizer
           help='Directory from which segments will be grabbed. Default is current working directory.')
 def main(channel, database="", base_dir=".",
          model="/usr/share/buscribe/vosk-model-en-us-0.22/", spk_model="/usr/share/buscribe/vosk-model-spk-0.4/",
-         start_time=None, end_time=None, start_time_override=None):
+         start_time=None, end_time=None, start_time_override=None, metrics_port=8009):
+    logging.basicConfig(level=os.environ.get('WUBLOADER_LOG_LEVEL', 'INFO').upper())
+    common.PromLogCountsHandler.install()
+    common.install_stacksampler()
+    prom.start_http_server(metrics_port)
+
     SAMPLE_RATE = 48000
     segments_dir = os.path.join(base_dir, channel, "source")
 
