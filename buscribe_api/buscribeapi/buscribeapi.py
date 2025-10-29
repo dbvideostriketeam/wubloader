@@ -1,10 +1,24 @@
 
 import flask as flask
+import prometheus_client
 from common import dateutil, database, format_bustime, dt_to_bustime, bustime_to_dt, parse_bustime
 from dateutil.parser import ParserError
 from flask import request, jsonify
 
 app = flask.Flask('buscribe')
+
+
+# To make nginx proxying simpler, we want to allow /metrics/* to work
+@app.route('/metrics/<trailing>')
+def metrics_with_trailing(trailing):
+    """Expose Prometheus metrics."""
+    return prometheus_client.generate_latest()
+
+
+@app.route('/metrics')
+def metrics():
+    """Expose Prometheus metrics."""
+    return prometheus_client.generate_latest()
 
 
 # WARNING: Channel is currently ignored. Multi-channel support will come later.

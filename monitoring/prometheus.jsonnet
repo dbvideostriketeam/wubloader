@@ -18,6 +18,7 @@ local services_by_role = {
   local_edit: self.replica + ["thrimshim"],
   edit: self.local_edit + ["cutter"],
   backup: self.edit + [
+    "buscribe_api",
     "tootbot",
     "pubbot",
     "blogbot",
