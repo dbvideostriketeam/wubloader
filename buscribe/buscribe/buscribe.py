@@ -3,6 +3,7 @@ import logging
 import subprocess
 from datetime import timedelta, datetime
 
+from common.stats import timed
 from gevent.event import Event
 from psycopg2._psycopg import cursor
 
@@ -13,6 +14,7 @@ class HitMissingSegment(Exception):
     pass
 
 
+@timed(normalize=lambda result, segments, *_: len(segments))
 def transcribe_segments(segments: list, sample_rate: int, recognizer: BuscribeRecognizer, start_of_transcript: datetime,
                         db_cursor: cursor, stopping: Event):
     """Starts transcribing from a list of segments.

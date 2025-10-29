@@ -15,6 +15,12 @@ from buscribe.buscribe import get_end_of_transcript, transcribe_segments, finish
 from buscribe.recognizer import BuscribeRecognizer
 
 
+buscribe_latest_segment = prom.Gauge(
+    "buscribe_latest_segment",
+    "Unix timestamp of the end of the last-transcribed segment",
+)
+
+
 @argh.arg('channel',
           help="Twitch channel to transcribe.")
 @argh.arg('--database',
@@ -94,6 +100,8 @@ def main(channel, database="", base_dir=".",
     gevent.signal_handler(signal.SIGTERM, stop)
 
     while end_time is None or start_time < end_time:
+        buscribe_latest_segment.set((start_time - datetime.datetime(1970, 1, 1)).total_seconds())
+
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
                                             start_time,
