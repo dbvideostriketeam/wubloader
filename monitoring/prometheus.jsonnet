@@ -28,6 +28,7 @@ local services_by_role = {
   leader: self.backup + [
     "sheetsync",
     "playlist_manager",
+    "buscribe",
     "bus_analyzer",
     "schedulebot",
     "twitchbot",

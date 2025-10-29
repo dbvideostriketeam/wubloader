@@ -675,6 +675,7 @@
         segment_coverage: 8006,
         playlist_manager: 8007,
         chat_archiver: 8008,
+        buscribe: 8009,
         buscribe_api: 8010,
         bus_analyzer: 8011,
         schedulebot: 8012,
