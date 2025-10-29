@@ -13,10 +13,22 @@ import prometheus_client as prom
 import common
 from common.database import DBManager, query
 from common.googleapis import GoogleAPIClient
+from common.stats import timed
 
 
 PlaylistConfig = namedtuple("Playlist", ["tags", "first_event_id", "last_event_id"])
 PlaylistEntry = namedtuple("PlaylistEntry", ["entry_id", "video_id"])
+
+
+playlist_manager_video_count = prom.Gauge(
+	"playlist_manager_video_count",
+	"Number of videos eligible for playlists in most recent run",
+)
+
+playlist_manager_playlist_count = prom.Gauge(
+	"playlist_manager_playlist_count",
+	"Number of playlists checked in most recent run",
+)
 
 
 class PlaylistOutdated(Exception):
@@ -56,6 +68,7 @@ class PlaylistManager(object):
 		"""Returns our cached copy of the list of playlist entries."""
 		return self.playlist_state.get(playlist_id, [])
 
+	@timed("playlist_manager_run")
 	def run_once(self):
 		"""Do one check of all videos and playlists.
 		At a high level:
@@ -73,10 +86,12 @@ class PlaylistManager(object):
 		logging.info("Checking for new videos")
 		videos = self.get_videos()
 		logging.debug(f"Found {len(videos)} eligible videos")
+		playlist_manager_video_count.set(len(videos))
 
 		logging.info("Getting dynamic playlists")
 		playlists = self.get_playlist_config()
 		logging.debug(f"Found {len(playlists)} playlists")
+		playlist_manager_playlist_count.set(len(playlists))
 
 		# start all workers
 		workers = {}
