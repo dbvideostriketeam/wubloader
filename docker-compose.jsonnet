@@ -194,18 +194,18 @@
   // one off times are defined either with datetimes or with URLs that return a datetime 
   // if a one-off shift has an end but no start, it is considered to have started at the earliest time Python supports; if it has a start but no end, it is considered to end at the latest time Python supports; shifts with neither 
   shift_defs:: {
-                repeating: [
-                            ["Zeta Shift", 0, 6],
-                            ["Dawn Guard", 6, 12],
-                            ["Alpha Flight", 12, 18],
-                            ["Night Watch", 18, 24],
-                           ],
-                one_off: [
-                          ["Tech Test", null, $.bustime_start],
-                          ["Omega Shift", "http://example.com/omega_start.html", null],
-                         ],
-                timezone: $.timezone,
-               },
+    repeating: [
+      ["Zeta Shift", 0, 6],
+      ["Dawn Guard", 6, 12],
+      ["Alpha Flight", 12, 18],
+      ["Night Watch", 18, 24],
+    ],
+    one_off: [
+      ["Tech Test", null, $.bustime_start],
+      ["Omega Shift", "http://example.com/omega_start.html", null],
+    ],
+    timezone: $.timezone,
+  },
   shifts:: std.manifestJson($.shift_defs),
 
   // The timestamps to start/end segment coverage maps at.
