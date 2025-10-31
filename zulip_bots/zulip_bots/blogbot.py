@@ -132,7 +132,7 @@ def send_post(client, stream, topic, id, html):
 	client.send_to_stream(stream, topic, content)
 
 def save_post(save_dir, media_dir, id, html):
-	hash = b64encode(sha256(html.encode()).digest(), b"-_").decode().rstrip("=")
+	hash = b64encode(sha256(str(html).encode()).digest(), b"-_").decode().rstrip("=")
 	filename = f"{id}-{hash}.json"
 	filepath = os.path.join(save_dir, filename)
 	if os.path.exists(filepath):
@@ -143,7 +143,7 @@ def save_post(save_dir, media_dir, id, html):
 		"id": id,
 		"hash": hash,
 		"retrieved_at": datetime.utcnow().isoformat() + "Z",
-		"html": html,
+		"html": str(html),
 		"images": {image: try_save_image(media_dir, image) for image in images},
 		"title": title,
 		"author": author,
@@ -169,7 +169,7 @@ def main(config_file, interval=60, test=False, stream='bot-spam', topic='Blog Po
 		else:
 			if save_dir is not None:
 				for id, html in posts:
-					save_post(save_dir, media_dir, id, str(html))
+					save_post(save_dir, media_dir, id, html)
 			if first:
 				seen = set(id for id, html in posts)
 				if test:
