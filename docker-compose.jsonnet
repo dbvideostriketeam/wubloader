@@ -224,10 +224,12 @@
   // options:
   // - From chat messages (in chat_archiver.download_media)
   // - From toots
+  // - From blogs
   // - From the image links column in the sheet (using sheetsync)
   // - Backfilled from other nodes
   download_media:: true,
   download_toot_media:: $.download_media,
+  download_blog_media:: $.download_media,
   backfill_media:: $.download_media,
   download_sheet_links:: $.download_media,
 
@@ -832,9 +834,11 @@
       }, ["/mnt/pubnub-log.json"], mount_segments=true),
 
     [if $.enabled.blogbot then "blogbot"]:
+      local args = ["--save-dir", "/mnt/blogs"]
+        + (if $.download_blog_media then ["--media-dir", "/mnt/media"] else []);
       bot_service("blogbot", $.blogbot + {
         zulip_url: $.zulip_url,
-      }, ["--save-dir", "/mnt/blogs"], mount_segments=true),
+      }, args, mount_segments=true),
 
     [if $.enabled.prizebot then "prizebot"]:
       bot_service("prizebot", $.prizebot + {
