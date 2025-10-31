@@ -24,7 +24,7 @@ local services_by_role = {
     "blogbot",
     "prizebot",
     "twitch_stats",
-    "prometheus_exporter",
+    "postgres_exporter",
   ],
   leader: self.backup + [
     "sheetsync",
