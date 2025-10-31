@@ -353,7 +353,6 @@
     args:: [],
   },
 
-  blogbot:: self.pubbot,
   pubbot:: {
     zulip_email: "blog-bot@chat.videostrike.team",
     zulip_api_key: "",
@@ -362,6 +361,11 @@
     total_id: "RZZQRDQNLNLW",
     # The ids of any prizes to watch
     prize_ids: [],
+  },
+
+  blogbot:: {
+    zulip_email: "blog-bot@chat.videostrike.team",
+    zulip_api_key: "",
   },
 
   prizebot:: {
