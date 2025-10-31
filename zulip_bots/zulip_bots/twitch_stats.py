@@ -9,7 +9,7 @@ from datetime import datetime
 import argh
 from websockets.sync.client import connect
 
-from config import common_setup
+from .config import common_setup
 
 logger = logging.getLogger(__name__)
 
