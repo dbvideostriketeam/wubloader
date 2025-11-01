@@ -98,6 +98,11 @@ def download_media(
 
 	Raises on any rule violation or non-200 response.
 	"""
+	parsed = urllib.parse.urlparse(url)
+	if parsed.scheme is None:
+		# urllib will parse schemeless urls as just a path, use http by default
+		url = parsed._replace(scheme="http").geturl()
+
 	# Stores a list of urls redirected to, latest is current.
 	urls = [url]
 
