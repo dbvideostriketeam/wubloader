@@ -14,8 +14,6 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
 	# write replication settings to config file
 	cat >> "$PGDATA/postgresql.conf" <<-EOF
 	primary_conninfo = 'host=$MASTER_NODE password=\\'$REPLICATION_PASSWORD\\' port=5432 user=$REPLICATION_USER'
-	# touch this file to promote this node to master
-	promote_trigger_file = '/tmp/touch_to_promote_to_master'
 	EOF
 
 	chown postgres. "$PGDATA" -R
