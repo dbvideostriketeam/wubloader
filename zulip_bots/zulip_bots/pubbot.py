@@ -36,7 +36,7 @@ def get_current(channel):
 	resp = session.get(f"https://pubsub.pubnub.com/history/sub-cbd7f5f5-1d3f-11e2-ac11-877a976e347c/{channel}/0/1")
 	resp.raise_for_status()
 	data = resp.json()
-	return data[0]
+	return data[0] if data else None
 
 
 giveaway_cache = [None, None]
