@@ -27,6 +27,25 @@ segment_analyzed_duration = prom.Histogram(
 	['channel', 'quality', 'error'],
 )
 
+latest_analyzed_timestamp = None
+latest_analyzed_segment_time = prom.Gauge(
+	'latest_analyzed_segment_time',
+	'The timestamp of the segment with the latest timestamp seen so far. Can be used to estimate lag behind live data.',
+	['channel', 'quality'],
+)
+
+latest_analyzed_segment_odometer = prom.Gauge(
+	'latest_analyzed_segment_odometer',
+	'The odometer value of the segment with the latest timestamp seen so far. Mostly just for fun so we kind of have this value over time in prometheus.',
+	['channel', 'quality'],
+)
+
+latest_analyzed_segment_clock = prom.Gauge(
+	'latest_analyzed_segment_clock',
+	'The clock value of the segment with the latest timestamp seen so far. Mostly just for fun so we kind of have this value over time in prometheus.',
+	['channel', 'quality'],
+)
+
 @cli
 @argh.named("extract-segment")
 def do_extract_segment(*segment_paths, prototypes_path="./prototypes"):
@@ -143,6 +162,12 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 	else:
 		logging.info(f"Got odometer = {odometer}, clock = {clock}, time of day = {tod} for segment {segment_path!r}")
 		error = None
+		global latest_analyzed_timestamp
+		if latest_analyzed_timestamp is None or latest_analyzed_timestamp < timestamp:
+			latest_analyzed_segment_time.set((timestamp - datetime.datetime(1970, 1, 1)).total_seconds())
+			latest_analyzed_segment_odometer.set(odometer)
+			latest_analyzed_segment_clock.set(clock)
+			latest_analyzed_timestamp = timestamp
 	segment_analyzed_duration.labels(channel=segment_info.channel, quality=segment_info.quality, error=(error is not None)).observe(time.monotonic() - start)
 
 	conn = db_manager.get_conn()
