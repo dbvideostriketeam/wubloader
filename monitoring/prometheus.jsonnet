@@ -9,22 +9,22 @@ local hosts_by_scheme = {
 };
 local services_by_role = {
   replica: [
-    "restreamer",
     "downloader",
+    "restreamer",
     "backfiller",
-    "segment_coverage",
     "chat_archiver",
+    "segment_coverage",
   ],
   local_edit: self.replica + ["thrimshim"],
   edit: self.local_edit + ["cutter"],
   backup: self.edit + [
-    "buscribe_api",
-    "tootbot",
-    "pubbot",
-    "blogbot",
-    "prizebot",
-    "twitch_stats",
     "postgres_exporter",
+    "buscribe_api",
+    "pubbot",
+    "prizebot",
+    "tootbot",
+    "blogbot",
+    "twitch_stats",
   ],
   leader: self.backup + [
     "sheetsync",
@@ -52,6 +52,7 @@ local services = services_by_role.leader;
     },
   ] + std.flattenArrays([
     [
+      local service = services[service_index];
       {
         local hosts = hosts_by_scheme[scheme],
         job_name: "%s-%s" % [scheme, service],
@@ -69,12 +70,14 @@ local services = services_by_role.leader;
               url: "%s://%s" % [scheme, target],
               role: role,
               service: service,
+              // The index gives us a natural ordering when showing services in a table
+              service_index: service_index,
             },
           } for host in std.objectFields(hosts)
           if std.count(services_by_role[hosts[host][1]], service) > 0
         ],
       }
-      for service in services
+      for service_index in std.range(0, std.length(services)-1)
     ]
     for scheme in std.objectFields(hosts_by_scheme)
   ]),
