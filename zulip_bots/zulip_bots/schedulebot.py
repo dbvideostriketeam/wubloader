@@ -47,7 +47,7 @@ def get_display_name(client, user_id):
 
 def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last):
 	if hour < 0:
-		logging.warning(f"Skipping setting groups due to negative hour of {hour}")
+		logging.info(f"Skipping setting groups due to negative hour of {hour}")
 		return
 
 	logging.info("Setting groups for hour {}".format(hour))
@@ -215,14 +215,14 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 
 	for row in raw_schedule:
 		name = row[0].lower()
-		if name in ["", "chat member", "hour of the run"] or name.startswith("-") or name.startswith("["):
+		if name in ["", "vst member", "hour of the run"] or name.startswith("-") or name.startswith("["):
 			continue
 		if name not in user_ids:
 			logging.warning(f"No user id known for user {name}")
 			continue
 		user_id = user_ids[name]
 		if user_id in schedule:
-			logging.warning(f"Multiple rows for user {name}, merging")
+			logging.info(f"Multiple rows for user {name}, merging")
 			_, old_hours = schedule[user_id]
 			merged = [
 				old or new
