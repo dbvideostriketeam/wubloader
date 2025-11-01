@@ -69,7 +69,7 @@ def send_message(client, prize, test=False):
 		client.send_to_stream("bot-spam", "Prize Winners", message)
 
 
-def main(config_file, test=False, all=False, once=False, interval=60, metrics_port=8017):
+def main(config_file, test=False, all=False, once=False, interval=60, metrics_port=8017, log_file=None):
 	"""
 	Config:
 		url, email, api_key: zulip creds
@@ -84,8 +84,10 @@ def main(config_file, test=False, all=False, once=False, interval=60, metrics_po
 	client = Client(config['url'], config['email'], config['api_key'])
 	while True:
 		start = time.time()
+		log = {"time": start}
 		for type in ('live', 'silent', 'giveaway'):
 			prizes = get_prizes(config['year'], type)
+			log[type] = prizes
 			for prize in prizes:
 				logging.info(f"Got prize: {prize}")
 				if prize.state == "sold" and (all or state.get(prize.id, "sold") != "sold"):
@@ -94,6 +96,9 @@ def main(config_file, test=False, all=False, once=False, interval=60, metrics_po
 		if not test:
 			with open(config['state'], 'w') as f:
 				f.write(json.dumps(state) + '\n')
+		if log_file:
+			with open(log_file, 'a') as f:
+				f.write(json.dumps(log) + "\n")
 		if once:
 			break
 		remaining = start + interval - time.time()

@@ -843,8 +843,8 @@
     [if $.enabled.prizebot then "prizebot"]:
       bot_service("prizebot", $.prizebot + {
         url: $.zulip_url,
-      }) + {
-        volumes: ["%s:%s" % [$.prizebot.state_path, $.prizebot.state]],
+      }, ["--log-file", "/mnt/prizes.json"], mount_segments=true) + {
+        volumes+: ["%s:%s" % [$.prizebot.state_path, $.prizebot.state]],
       },
 
     [if $.enabled.youtubebot then "youtubebot"]:
