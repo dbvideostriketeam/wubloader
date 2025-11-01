@@ -100,7 +100,7 @@ def main(channel, database="", base_dir=".",
     gevent.signal_handler(signal.SIGTERM, stop)
 
     while end_time is None or start_time < end_time:
-        buscribe_latest_segment.set((start_time - datetime.datetime(1970, 1, 1)).total_seconds())
+        buscribe_latest_segment.set((start_time - datetime(1970, 1, 1)).total_seconds())
 
         # If end time isn't given, use current time (plus fudge) to get a "live" segment list
         segments = common.get_best_segments(segments_dir,
