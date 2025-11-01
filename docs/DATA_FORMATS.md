@@ -117,3 +117,24 @@ Known formats:
 `tootbot` watches the Desert Bus and VST mastodon accounts for updates.
 It writes these update events to `tootbot.json`. The content of these depends on the mastodon API,
 see `tootbot` for details.
+
+## Prize info
+
+`prizebot` watches the desertbus.org website and periodically scrapes prize data.
+It writes scraped data once per minute to `prizes.json`.
+This is a newline-delimited json file containing entries with keys:
+- `time`: the unix timestamp of the scrape
+- `live`: list of live auction prizes
+- `silent`: list of silent auction prizes
+- `giveaway`: list of giveaway prizes
+
+Where each prize list item has the keys:
+- `id`: website id of prize, NOT the same as the internal prize id that crafters work with
+- `link`: URL of the prize's page on the website
+- `type`: `live`, `silent` or `giveaway`
+- `title`: The name of the prize
+- `state`: One of:
+	- `pending`: Not started yet
+	- `active`: Currently open or waiting to draw
+	- `sold`: A winner has been announced
+- `result`: Free-form text taken from the website describing the outcome if state == `sold`, eg. `Won by NoDonorAccount`
