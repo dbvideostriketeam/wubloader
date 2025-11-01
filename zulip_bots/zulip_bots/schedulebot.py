@@ -30,7 +30,7 @@ def update_members(client, group_id, old_members, new_members):
 	if added or removed:
 		client.request("POST", "user_groups", group_id, "members", add=list(added), delete=list(removed))
 
-def get_role_at_hour(hours, hour):
+def get_roles_at_hour(hours, hour):
 	if 0 <= hour < len(hours):
 		return hours[hour]
 	return ""
@@ -38,7 +38,7 @@ def get_role_at_hour(hours, hour):
 def determine_members(schedule, role, hour):
 	return set(
 		user_id for user_id, (_, hours) in schedule.items()
-		if get_role_at_hour(hours, hour) == role
+		if role in get_roles_at_hour(hours, hour)
 	)
 
 def get_display_name(client, user_id):
@@ -89,25 +89,26 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	supervisors = []
 	found_any = False
 	for user_id, (_, hours) in schedule.items():
-		prev = get_role_at_hour(hours, hour - 1)
-		now = get_role_at_hour(hours, hour)
+		prev = get_roles_at_hour(hours, hour - 1)
+		now = get_roles_at_hour(hours, hour)
 		if hour == last:
-			now = ""
-		if now != "" or prev != "":
+			now = set()
+		if now or prev:
 			found_any = True
-		if now == "Supervisor":
+		if "Supervisor" in now:
 			supervisors.append(user_id)
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
-		if now.lower() in ("chatops", "editor", "sheeter"):
-			online_by_role.setdefault(now, []).append(user_id)
-			if user_id not in display_names:
-				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
+		for role in now:
+			if role.lower() in ("chatops", "editor", "sheeter"):
+				online_by_role.setdefault(role, []).append(user_id)
+				if user_id not in display_names:
+					display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
 		if prev != now:
-			if prev != "":
-				going_offline.append((prev, user_id))
-			if now != "":
-				coming_online.append((now, user_id))
+			for role in prev - now:
+				going_offline.append((role, user_id))
+			for role in now - prev:
+				coming_online.append((role, user_id))
 			if user_id not in display_names:
 				display_names[user_id] = gevent.spawn(get_display_name, client, user_id)
 
@@ -225,12 +226,12 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 			logging.info(f"Multiple rows for user {name}, merging")
 			_, old_hours = schedule[user_id]
 			merged = [
-				old or new
+				old | {new}
 				for old, new in zip(old_hours, row[1:])
 			]
 			schedule[user_id] = name, merged
 		else:
-			schedule[user_id] = name, row[1:]
+			schedule[user_id] = name, [{hour} if hour != "" else set() for hour in row[1:]]
 	return schedule
 
 
