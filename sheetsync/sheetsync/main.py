@@ -37,7 +37,7 @@ sheet_sync_duration = prom.Histogram(
 sync_errors = prom.Counter(
 	'sync_errors',
 	'Number of errors syncing sheets',
-	['name'],
+	['name', 'error'],
 )
 
 rows_found = prom.Counter(
@@ -132,17 +132,22 @@ class SheetSync(object):
 					self.sync_row(None, db_row)
 
 			except Exception as e:
-				# for HTTPErrors, http response body includes the more detailed error
-				detail = ''
-				if isinstance(e, HTTPError):
-					detail = ": {}".format(e.response.content)
-				self.logger.exception("Failed to sync{}".format(detail))
-				sync_errors.labels(self.name).inc()
-				# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
-				# This is heavy-handed but simple and effective.
-				# If we can't re-connect, the program will crash from here,
-				# then restart and wait until it can connect again.
-				self.conn = self.dbmanager.get_conn()
+				# check for rate limits, which aren't treated as an unknown error
+				if isinstance(e, HTTPError) and e.response.status_code == 429:
+					self.logger.warning("Got rate limited while syncing: {}".format(e.response.content))
+					sync_errors.labels(self.name, "rate limited").inc()
+				else:
+					# for HTTPErrors, http response body includes the more detailed error
+					detail = ''
+					if isinstance(e, HTTPError):
+						detail = ": {}".format(e.response.content)
+					self.logger.exception("Failed to sync{}".format(detail))
+					sync_errors.labels(self.name, type(error).__name__).inc()
+					# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
+					# This is heavy-handed but simple and effective.
+					# If we can't re-connect, the program will crash from here,
+					# then restart and wait until it can connect again.
+					self.conn = self.dbmanager.get_conn()
 				wait(self.stop, sync_start, self.error_retry_interval)
 			else:
 				self.logger.info("Successful sync")
