@@ -43,8 +43,16 @@ const BUS_NIGHT_IMAGE = new Image();
 BUS_NIGHT_IMAGE.src = "bus_night.png";
 const BUS_STOP_IMAGE = new Image();
 BUS_STOP_IMAGE.src = "db_stop.png";
-const POINT_IMAGE = new Image();
-POINT_IMAGE.src = "point.png";
+const VEGAS = {
+	image: new Image(),
+	offset: 12,
+};
+VEGAS.image.src = "vegas.png";
+const TUCSON = {
+	image: new Image(),
+	offset: 32,
+};
+TUCSON.image.src = "tucson.png";
 
 // This should match the HTML canvas width
 const CANVAS_PIXEL_WIDTH = 1580;
@@ -121,6 +129,7 @@ async function drawRoad() {
 
 function drawRoadPoint(context, busData) {
 	const busDistance = (busData.odometer + 250.7) % 360;
+	const busNextPoint = Math.floor((busData.odometer + 250.7) / 360);
 	const busRemainingDistance = 360 - busDistance;
 	const busRemainingDistancePixels = busRemainingDistance * PIXELS_PER_MILE;
 
@@ -144,7 +153,8 @@ function drawRoadPoint(context, busData) {
 		currentTime += thisDuration;
 	}
 
-	context.drawImage(POINT_IMAGE, CANVAS_PIXEL_WIDTH - POINT_OFFSET, 0);
+	const pointImage = (busNextPoint % 2 == 1) ? VEGAS : TUCSON;
+	context.drawImage(pointImage.image, CANVAS_PIXEL_WIDTH - pointImage.offset, 0);
 
 	for (const busStopDistance of BUS_STOP_POSITIONS) {
 		const busStopPixelPosition =
@@ -198,6 +208,7 @@ function drawRoadDynamic(context, busData) {
 
 	x = 0;
 	let currentPointProgress = distance % 360;
+	let currentPoint = Math.floor(distance / 360);
 	if (currentPointProgress < 0) {
 		currentPointProgress += 360;
 	}
@@ -206,13 +217,17 @@ function drawRoadDynamic(context, busData) {
 	distanceToNextPoint += BUS_FRONT_OFFSET / (4 * scaleFactor);
 	if (distanceToNextPoint >= 360) {
 		distanceToNextPoint -= 360;
+		currentPoint -= 1;
 	}
 
 	x += distanceToNextPoint * 4 * scaleFactor;
-	context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
+	const pointImage = (currentPoint % 2 == 0) ? VEGAS : TUCSON;
+	context.drawImage(pointImage.image, x - pointImage.offset, 0);
 	while (x < CANVAS_PIXEL_WIDTH) {
 		x += 360 * 4 * scaleFactor;
-		context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
+		currentPoint += 1;
+		const pointImage = (currentPoint % 2 == 0) ? VEGAS : TUCSON;
+		context.drawImage(pointImage.image, x - pointImage.offset, 0);
 	}
 
 	let distanceTracked = currentPointProgress - BUS_FRONT_OFFSET / (4 * scaleFactor);
