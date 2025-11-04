@@ -96,11 +96,14 @@ function drawBackground(context, timeOfDay, leftX, width) {
 }
 
 async function drawRoad() {
-	const busDataResponse = await fetch("/thrimshim/bus/buscam");
-	if (!busDataResponse.ok) {
-		return;
+	let busData = busDataFromParams();
+	if (busData === undefined) {
+		const busDataResponse = await fetch("/thrimshim/bus/buscam");
+		if (!busDataResponse.ok) {
+			return;
+		}
+		busData = await busDataResponse.json();
 	}
-	const busData = await busDataResponse.json();
 
 	const canvas = document.getElementById("road");
 	if (!canvas.getContext) {
@@ -245,6 +248,18 @@ function drawRoadDynamic(context, busData) {
 		context.drawImage(BUS_NIGHT_IMAGE, 0, 32);
 	} else {
 		context.drawImage(BUS_DAY_IMAGE, 0, 32);
+	}
+}
+
+function busDataFromParams() {
+	const queryParams = new URLSearchParams(window.location.search);
+	if (!(queryParams.has("odometer") || queryParams.has("clock_minutes") || queryParams.has("timeofday"))) {
+		return null;
+	}
+	return {
+		odometer: parseFloat(queryParams.get("odometer") ?? "109.3"), // default odo start position
+		clock_minutes: parseFloat(queryParams.get("clock_minutes") ?? "450"), // default 7:30am
+		timeofday: queryParams.get("timeofday") ?? "day",
 	}
 }
 
