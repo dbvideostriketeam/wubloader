@@ -156,9 +156,6 @@ function drawRoadPoint(context, busData) {
 		currentTime += thisDuration;
 	}
 
-	const pointImage = (busNextPoint % 2 == 1) ? VEGAS : TUCSON;
-	context.drawImage(pointImage.image, CANVAS_PIXEL_WIDTH - pointImage.offset, 0);
-
 	for (const busStopDistance of BUS_STOP_POSITIONS) {
 		const busStopPixelPosition =
 			BUS_FRONT_OFFSET + PIXELS_PER_MILE * busStopDistance - BUS_STOP_OFFSET;
