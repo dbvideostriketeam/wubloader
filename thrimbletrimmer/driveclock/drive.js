@@ -163,7 +163,7 @@ function drawRoadPoint(context, busData) {
 }
 
 function drawRoadDynamic(context, busData) {
-	const distance = busData.odometer;
+	const distance = busData.odometer - 109.3;
 	const timeOfDay = busData.timeofday;
 
 	drawBackground(context, timeOfDay, 0, BUS_FRONT_OFFSET);
@@ -200,13 +200,11 @@ function drawRoadDynamic(context, busData) {
 	}
 
 	x = 0;
-	const currentPointProgress = distance % 360;
-	let distanceToNextPoint;
-	if (currentPointProgress <= 109.3) {
-		distanceToNextPoint = 109.3 - currentPointProgress;
-	} else {
-		distanceToNextPoint = 469.3 - currentPointProgress;
+	let currentPointProgress = distance % 360;
+	if (currentPointProgress < 0) {
+		currentPointProgress += 360;
 	}
+	let distanceToNextPoint = 360 - currentPointProgress;
 
 	distanceToNextPoint += BUS_FRONT_OFFSET / (4 * scaleFactor);
 	if (distanceToNextPoint >= 360) {
@@ -220,8 +218,7 @@ function drawRoadDynamic(context, busData) {
 		context.drawImage(POINT_IMAGE, x - POINT_OFFSET, 0);
 	}
 
-	const distanceOnRoute = (distance - 109.3) % 360;
-	let distanceTracked = distanceOnRoute - BUS_FRONT_OFFSET / (4 * scaleFactor);
+	let distanceTracked = currentPointProgress - BUS_FRONT_OFFSET / (4 * scaleFactor);
 	if (distanceTracked < 0) {
 		distanceTracked += 720;
 	}
