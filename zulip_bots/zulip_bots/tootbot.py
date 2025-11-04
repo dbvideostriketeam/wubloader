@@ -185,6 +185,7 @@ class Listener(mastodon.StreamListener):
 		self.post_topic = post_topic
 		self.notification_topic = notification_topic
 		self.output_path = output_path
+		self.media_dir = media_dir
 
 	def send(self, topic, content):
 		logging.info(f"Sending message to {self.stream}/{topic}: {content!r}")
