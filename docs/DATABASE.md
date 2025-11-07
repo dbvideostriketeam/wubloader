@@ -215,3 +215,82 @@ SELECT action_tstamp_clk, row_data, changed_fields
 FROM audit.logged_actions
 WHERE row_data->id = 'YOUR EVENT ID'
 ```
+
+### Replication and failover
+
+#### Failover procedure
+
+In these notes, we refer to the original leader node as `old` and the new leader (former follower) as `new`.
+We refer to a generic node (either `old`, `new`, or a third node) as `node`.
+Commands will show which node they should run on via a prompt prefix, ie.
+
+```bash
+new$ echo "This should be run on the new leader"
+```
+
+1. On all nodes, switch the database configuration from the old hostname to the new hostname
+
+```diff
+   db_args:: {
+     user: "vst",
+     password: "dbfh2019",
+-    host: "old.videostrike.team",
++    host: "new.videostrike.team",
+     port: 5432,
+     dbname: "wubloader",
+   },
+```
+
+**Note**: On the `new` node, the new host must be the string `postgres`, not the external hostname.
+
+```bash
+node$ ./generate-docker-compose
+node$ docker-compose up -d
+```
+
+**Warning**: From this point on, any write operations will fail. This is expected and will not cause lasting damage.
+It may result in some uploads failing with an error that must be manually cleared later.
+
+2. If possible, gracefully shut down the old database:
+
+```bash
+old$ docker-compose stop postgres
+```
+
+This is for safety to double-check that nothing is still talking to the old leader.
+
+3. Promote the new leader
+
+```bash
+$ docker-compose exec postgres psql -U postgres -c 'select pg_promote()'
+```
+
+Write operations should now work again. You can now retry any uploads that failed due to the database not being writable.
+
+4. Fix up the new leader config to prevent accidents
+
+```diff
+   db_buscribe_user:: "buscribe",
+   db_buscribe_password:: "transcription",
+-  db_standby:: true,
++  db_standby:: false,
+ 
+```
+
+4. Once possible, re-setup old leader as a replica
+
+```diff
+   db_buscribe_user:: "buscribe",
+   db_buscribe_password:: "transcription",
+-  db_standby:: false,
++  db_standby:: true,
+ 
+```
+
+Note the `$.database_path` value and use it below:
+
+```bash
+old$ sudo rm -rf DATABASE_PATH
+old$ ./generate-docker-compose
+old$ docker-compose up -d
+```
