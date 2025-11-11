@@ -161,7 +161,6 @@ class TwitchProvider(Provider):
 		#   but no URI. The URI in the main variant entry is the one to use. This is true even of the
 		#   "audio_only" stream.
 		#   Streams without transcoding options only show source and audio_only.
-		# We return the source stream in addition to any in target_qualities that is found.
 
 		logger = logging.getLogger("twitch")
 		if session is None:
@@ -186,15 +185,14 @@ class TwitchProvider(Provider):
 				logger.warning("Variant has a rendition with its own URI: {}".format(variant))
 
 		by_name = {variant_name(variant): variant for variant in master_playlist.playlists}
-
-		source_candidates = [name for name in by_name.keys() if "(source)" in name]
-		if len(source_candidates) != 1:
-			raise ValueError("Can't find source stream, not exactly one candidate. Candidates: {}, playlist: {}".format(
-				source_candidates, master_playlist,
-			))
-		source = by_name[source_candidates[0]]
-
 		variants = {name: variant for name, variant in by_name.items() if name in target_qualities}
-		variants["source"] = source
+
+		if "source" in target_qualities:
+			source_candidates = [name for name in by_name.keys() if "(source)" in name]
+			if len(source_candidates) != 1:
+				raise ValueError("Can't find source stream, not exactly one candidate. Candidates: {}, playlist: {}".format(
+					source_candidates, master_playlist,
+				))
+			variants["source"] = by_name[source_candidates[0]]
 
 		return {name: variant.uri for name, variant in variants.items()}
