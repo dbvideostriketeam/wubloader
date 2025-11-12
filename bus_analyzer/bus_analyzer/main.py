@@ -224,7 +224,7 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 
 	return [segment[1] for segment in segments_to_do]
 
-@timed(normalize=lambda result, db_manager, segments: len(segments))
+@timed(normalize=lambda result, db_manager, segments, channel: len(segments))
 def post_process(db_manager, segments, channel):
 
 	if segments:
