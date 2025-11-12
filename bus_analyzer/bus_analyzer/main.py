@@ -15,6 +15,7 @@ import prometheus_client as prom
 import common
 from common import database
 from common.segments import parse_segment_path, list_segment_files
+from common.stats import timed
 
 from .extract import extract_segment, load_prototypes
 from .post_processing import post_process_miles, post_process_clocks
@@ -220,7 +221,8 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 
 	return [segment[1] for segment in segments_to_do]
 
-def post_process(db_manager, segments):
+@timed(normalize=lambda result, db_manager, segments: len(segments))
+def post_process(db_manager, segments, channel):
 
 	if segments:
 		segments = sorted(segments)
@@ -232,25 +234,26 @@ def post_process(db_manager, segments):
 	query = database.query(conn, """
 		SELECT segment, timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
 		FROM bus_data
-		WHERE timestamp > %(start)s
+		WHERE channel = %(channel)s
+			AND timestamp > %(start)s
 		--AND NOT segment LIKE '%%partial%%'
 		ORDER BY timestamp;
-		""", start=start)
+		""", start=start, channel=channel)
 	rows = query.fetchall()
 	segments, times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
 
-	seconds = [(time - times[0]) / datetime.timedelta(seconds=1) for time in times]
+	seconds = [(time - times[0]).total_seconds() for time in times]
 	corrected_miles = post_process_miles(seconds, miles, days)
 	corrected_clocks = post_process_clocks(seconds, clocks, days)
 
 	for i in range(len(segments)):
-		if corrected_miles[i] == old_miles[i] and corrected_clocks[i] = old_clocks[i]:
-		continue
+		if corrected_miles[i] == old_miles[i] and corrected_clocks[i] == old_clocks[i]:
+			continue
 		query = database.query(conn, """
 			UPDATE bus_data
-			SET odometer = %s, clock = %s
-			WHERE segment = %s
-        """, segments[i], corrected_miles[i], corrected_clocks[i])
+			SET odometer = %(odometer)s, clock = %(clock)s
+			WHERE channel = %(channel)s, segment = %(segment)s, timestamp = %(timestamp)s
+        """, channel=channel, segment=segments[i], timestamp=times[i], odometer=corrected_miles[i], clock=corrected_clocks[i])
 	
 	logging.info("{} segments post processed".format(len(segments)))
 	
@@ -329,14 +332,14 @@ def main(
 			""", channels=channels, start=start, end=end)
 			existing_segments = {segment for (segment,) in result.fetchall()}
 			logging.info("Found {} existing segments".format(len(existing_segments)))
-		
+
 		for channel in channels:
 			segments = []
 			for hour in do_hours:
 				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=concurrency)
 			if reprocess:
 				segments = None
-			post_process(db_manager, segments)
+			post_process(db_manager, segments, channel)
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")
