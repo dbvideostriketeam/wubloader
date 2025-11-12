@@ -1,7 +1,8 @@
-FROM alpine:3.19
+FROM alpine:3.22
 # dependencies needed for compiling c extensions
 # also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busybox-extras && rm /usr/lib/python3.11/EXTERNALLY-MANAGED
+# deno for yt-dlp js extraction (needed for youtube)
+RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busybox-extras deno && rm /usr/lib/python3.*/EXTERNALLY-MANAGED
 
 # Try to get wheels working
 RUN pip install --upgrade pip wheel
