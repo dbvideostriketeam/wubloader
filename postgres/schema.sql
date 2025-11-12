@@ -156,8 +156,8 @@ CREATE TABLE playlists (
 -- Note the values are nullable and NULL indicates the value was indeterminate at that time.
 -- The "error" column records a free-form human readable message about why a value could not
 -- be determined.
--- The odometer column is in miles. The game shows the odometer to the 1/10th mile precision.
--- The clock is in minutes since 00:00, in 12h time.
+-- The odometer column is in miles. The game shows the odometer to the 1/80th mile precision.
+-- The clock is in minutes since 00:00, in 12h time. Note this means the valid range is 60 (`01:00`) to 779 (`12:59`).
 -- The time of day is one of "day", "dusk", "night", "dawn" or "score"
 -- The segment may be NULL, which indicates a manually-inserted value.
 -- The primary key serves two purposes:

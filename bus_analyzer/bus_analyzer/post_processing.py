@@ -17,19 +17,15 @@ def post_process_miles(seconds, miles, days):
 			suspect.append(i)
 			continue
 		previous_diff = miles[i] - miles[i - 1]
-		if previous_diff < 0 or previous_diff > MAX_SPEED * (seconds[i] - seconds[i - 1]):
+		if math.isnan(previous_diff) or previous_diff < 0 or previous_diff > MAX_SPEED * (seconds[i] - seconds[i - 1]):
 			suspect.append(i)
 			continue
 		next_diff = miles[i + 1] - miles[i]
-		if next_diff < 0 or next_diff > MAX_SPEED * (seconds[i + 1] - seconds[i]):
+		if math.isnan(next_diff) or next_diff < 0 or next_diff > MAX_SPEED * (seconds[i + 1] - seconds[i]):
 			suspect.append(i)
 			continue
 		# handle big jumps to apparently good data
 		if good and miles[i] - miles[good[-1]] > MAX_SPEED * (seconds[i] - seconds[good[-1]]):
-			suspect.append(i)
-			continue
-		# try to filter out bad data at the start
-		if not good and miles[i] > 1000:
 			suspect.append(i)
 			continue
 		good.append(i)
