@@ -21,13 +21,14 @@ from .extract import extract_segment, load_prototypes
 
 cli = argh.EntryPoint()
 
+latest_analyzed_timestamp = None
+
 segment_analyzed_duration = prom.Histogram(
 	'segments_analyzed',
 	'Number of segments succesfully analyzed',
 	['channel', 'quality', 'error'],
 )
 
-latest_analyzed_timestamp = None
 latest_analyzed_segment_time = prom.Gauge(
 	'latest_analyzed_segment_time',
 	'The timestamp of the segment with the latest timestamp seen so far. Can be used to estimate lag behind live data.',
@@ -164,9 +165,9 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 		error = None
 		global latest_analyzed_timestamp
 		if latest_analyzed_timestamp is None or latest_analyzed_timestamp < timestamp:
-			latest_analyzed_segment_time.set((timestamp - datetime.datetime(1970, 1, 1)).total_seconds())
-			latest_analyzed_segment_odometer.set(odometer)
-			latest_analyzed_segment_clock.set(clock)
+			latest_analyzed_segment_time.labels(channel=segment_info.channel, quality=segment_info.quality).set((timestamp - datetime.datetime(1970, 1, 1)).total_seconds())
+			latest_analyzed_segment_odometer.labels(channel=segment_info.channel, quality=segment_info.quality).set(odometer)
+			latest_analyzed_segment_clock.labels(channel=segment_info.channel, quality=segment_info.quality).set(clock)
 			latest_analyzed_timestamp = timestamp
 	segment_analyzed_duration.labels(channel=segment_info.channel, quality=segment_info.quality, error=(error is not None)).observe(time.monotonic() - start)
 
