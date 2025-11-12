@@ -17,7 +17,7 @@ from common import database
 from common.segments import parse_segment_path, list_segment_files
 
 from .extract import extract_segment, load_prototypes
-
+from .post_processing import post_process_miles, post_process_clocks
 
 cli = argh.EntryPoint()
 
@@ -76,7 +76,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 		where = ["true"]
 	where = " AND ".join(where)
 	result = database.query(conn, f"""
-		SELECT odometer, clock, timeofday, segment
+		SELECT raw_odometer, raw_clock, timeofday, segment
 		FROM bus_data
 		WHERE segment IS NOT NULL
 			AND {where}
@@ -177,12 +177,12 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 	database.query(
 		conn,
 		"""
-			INSERT INTO bus_data (channel, timestamp, segment, error, odometer, clock, timeofday)
+			INSERT INTO bus_data (channel, timestamp, segment, error, raw_odometer, raw_clock, timeofday)
 			VALUES (%(channel)s, %(timestamp)s, %(segment)s, %(error)s, %(odometer)s, %(clock)s, %(timeofday)s)
 			ON CONFLICT (channel, timestamp, segment) DO UPDATE
 				SET error = %(error)s,
-					odometer = %(odometer)s,
-					clock = %(clock)s,
+					raw_odometer = %(odometer)s,
+					raw_clock = %(clock)s,
 					timeofday = %(timeofday)s
 		""",
 		channel=segment_info.channel,
@@ -221,6 +221,42 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 	for worker in workers:
 		worker.get() # re-raise errors
 
+	return [segment[1] for segment in segments_to_do]
+
+def post_process(db_manager, segments):
+
+	if segments:
+		segments = sorted(segments)
+		start = parse_segment_path(segments[0]).start - datetime.timedelta(minutes=30)
+	# if no list of segments, post process all segments
+	else:
+		start = datetime.datetime(1, 1, 1)
+	conn = db_manager.get_conn()
+	query = database.query(conn, """
+		SELECT segment, timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
+		FROM bus_data
+		WHERE timestamp > %(start)s
+		--AND NOT segment LIKE '%%partial%%'
+		ORDER BY timestamp;
+		""", start=start)
+	rows = query.fetchall()
+	segments, times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
+
+	seconds = [(time - times[0]) / datetime.timedelta(seconds=1) for time in times]
+	corrected_miles = post_process_miles(seconds, miles, days)
+	corrected_clocks = post_process_clocks(seconds, clocks, days)
+
+	for i in range(len(segments)):
+		if corrected_miles[i] == old_miles[i] and corrected_clocks[i] = old_clocks[i]:
+		continue
+		query = database.query(conn, """
+			UPDATE bus_data
+			SET odometer = %s, clock = %s
+			WHERE segment = %s
+        """, segments[i], corrected_miles[i], corrected_clocks[i])
+	
+	logging.info("{} segments post processed".format(len(segments)))
+	
 
 def parse_hours(s):
 	try:
@@ -240,6 +276,7 @@ def main(
 	hours=2,
 	run_once=False,
 	overwrite=False,
+	reprocess=False,
 	prototypes_path="./prototypes",
 	concurrency=10,
 	metrics_port=8011,
@@ -295,10 +332,14 @@ def main(
 			""", channels=channels, start=start, end=end)
 			existing_segments = {segment for (segment,) in result.fetchall()}
 			logging.info("Found {} existing segments".format(len(existing_segments)))
-
+		
 		for channel in channels:
+			segments = []
 			for hour in do_hours:
-				analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=concurrency)
+				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=concurrency)
+			if reprocess:
+				segments = None
+			post_process(db_manager, segments)
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")

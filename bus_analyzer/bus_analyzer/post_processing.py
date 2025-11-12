@@ -4,24 +4,9 @@ import operator
 
 MAX_SPEED = 45 / 3600
 
-def cors(app):
-	"""WSGI middleware that sets CORS headers"""
-	HEADERS = [
-		("Access-Control-Allow-Credentials", "false"),
-		("Access-Control-Allow-Headers", "*"),
-		("Access-Control-Allow-Methods", "GET,POST,HEAD"),
-		("Access-Control-Allow-Origin", "*"),
-		("Access-Control-Max-Age", "86400"),
-	]
-	def handle(environ, start_response):
-		def _start_response(status, headers, exc_info=None):
-			headers += HEADERS
-			return start_response(status, headers, exc_info)
-		return app(environ, _start_response)
-	return handle
-
 
 def post_process_miles(seconds, miles, days):
+	miles = [math.nan if mile is None else mile for mile in miles]
 	good = []
 	suspect = []
 	for i in range(1, len(seconds) - 1):
@@ -123,11 +108,12 @@ def post_process_miles(seconds, miles, days):
 		for i in subgroup:
 			corrected_miles[i] = m * seconds[i] + b
 
-	corrected_miles = [mile if mile > 0 else math.nan for mile in corrected_miles]
+	corrected_miles = [mile if mile > 0 else None for mile in corrected_miles]
 	return corrected_miles
 
 
 def post_process_clocks(seconds, clocks, days):
+	clocks = [math.nan if clock is None else clock for clock in clocks]
 	good = []
 	for i in range(1, len(seconds) - 2):
 		if math.isnan(clocks[i]) or clocks[i] < 60 or clocks[i] > 780:
