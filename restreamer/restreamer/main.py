@@ -14,6 +14,7 @@ import gevent.event
 import prometheus_client as prom
 from flask import Flask, url_for, request, abort, Response
 from gevent.pywsgi import WSGIServer
+from werkzeug.exceptions import NotFound
 
 from common import database, dateutil, get_best_segments, rough_cut_segments, fast_cut_segments, full_cut_segments, PromLogCountsHandler, install_stacksampler, serve_with_graceful_shutdown
 from common.flask_stats import request_stats, after_request
@@ -208,7 +209,10 @@ def generate_master_playlist(channel):
 		# If start or end are given, try to restrict offered qualities to ones which exist for that
 		# time range.
 		if start is not None or end is not None:
-			first, last = time_range_for_quality(channel, quality)
+			try:
+				first, last = time_range_for_quality(channel, quality)
+			except NotFound:
+				continue # no video available for quality, don't offer quality
 			if start is not None and last < start:
 				continue # last time for quality is before our start time, don't offer quality
 			if end is not None and end < first:
