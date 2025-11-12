@@ -151,7 +151,7 @@ CREATE TABLE playlists (
 	default_template TEXT
 );
 
--- This table records time series data gleaned from the bus cam (right now, just the odometer).
+-- This table records time series data gleaned from the bus cam (right now, just the odometer and clock).
 -- Each record indicates a timestamp and value, as well as the channel/segment file it was sourced from.
 -- Note the values are nullable and NULL indicates the value was indeterminate at that time.
 -- The "error" column records a free-form human readable message about why a value could not
@@ -165,11 +165,14 @@ CREATE TABLE playlists (
 --   It provides a unique constraint on the same segment and timestamp
 -- Note that multiple manual records may exist for the same channel and timestamp
 -- as all NULL values are considered distinct, so the unique constraint does not hold.
+-- Two versions of the odometer and clock are stored. raw_odometer and raw_clock are the OCR results; odometer and clock are the results of post processing to identify and correct poorly recognised characters. 
 CREATE TABLE bus_data (
 	channel TEXT NOT NULL,
 	timestamp TIMESTAMP NOT NULL,
 	segment TEXT,
 	error TEXT,
+	raw_odometer DOUBLE PRECISION,
+	raw_clock INTEGER,
 	odometer DOUBLE PRECISION,
 	clock INTEGER,
 	timeofday TEXT,
