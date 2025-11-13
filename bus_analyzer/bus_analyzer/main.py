@@ -255,7 +255,7 @@ def post_process(db_manager, segments, channel):
 		query = database.query(conn, """
 			UPDATE bus_data
 			SET odometer = %(odometer)s, clock = %(clock)s
-			WHERE channel = %(channel)s, segment = %(segment)s, timestamp = %(timestamp)s
+			WHERE channel = %(channel)s AND segment = %(segment)s AND timestamp = %(timestamp)s
         """, channel=channel, segment=segments[i], timestamp=times[i], odometer=corrected_miles[i], clock=corrected_clocks[i])
 	
 	logging.info("{} segments post processed".format(len(segments)))
