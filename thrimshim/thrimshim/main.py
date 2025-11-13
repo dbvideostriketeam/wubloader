@@ -807,6 +807,7 @@ def get_odometer(channel):
 	range = int(flask.request.args.get("range", "60"))
 	range = datetime.timedelta(seconds=range)
 
+	raw = (flask.request.args.get("raw") == "true")
 	extrapolate = (flask.request.args.get("extrapolate") == "true")
 
 	conn = app.db_manager.get_conn()
@@ -815,18 +816,19 @@ def get_odometer(channel):
 
 	# Get newest non-errored row within time range
 	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
+	odometer_col = "raw_odometer" if raw else "odometer"
 	results = database.query(conn, """
-		SELECT timestamp, odometer
+		SELECT timestamp, {c}
 		FROM bus_data
-		WHERE odometer IS NOT NULL
-			AND odometer >= 109
-			AND odometer < 7000
+		WHERE {c} IS NOT NULL
+			AND {c} >= 109
+			AND {c} < 7000
 			AND channel = %(channel)s
 			AND timestamp > %(start)s
 			AND timestamp <= %(end)s
 		ORDER BY timestamp DESC
 		LIMIT 1
-	""", channel=channel, start=start, end=end)
+	""".format(c=odometer_col), channel=channel, start=start, end=end)
 	result = results.fetchone()
 	if result is None:
 		odometer = None
@@ -839,16 +841,17 @@ def get_odometer(channel):
 	else:
 		odometer = result.odometer
 
+	clock_col = "raw_clock" if raw else "clock"
 	results = database.query(conn, """
-		SELECT timestamp, clock, timeofday
+		SELECT timestamp, {c}, timeofday
 		FROM bus_data
-		WHERE clock IS NOT NULL
+		WHERE {c} IS NOT NULL
 			AND channel = %(channel)s
 			AND timestamp > %(start)s
 			AND timestamp <= %(end)s
 		ORDER BY timestamp DESC
 		LIMIT 1
-	""", channel=channel, start=start, end=end)
+	""".format(c=clock_col), channel=channel, start=start, end=end)
 	result = results.fetchone()
 	if result is None:
 		clock24h = None
