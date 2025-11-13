@@ -146,11 +146,16 @@
 
   // Config for cutter upload locations. See cutter docs for full detail.
   cutter_config:: {
+    local zulip_creds = {
+      base_url: $.zulip_url,
+      email: "youtube-bot@chat.videostrike.team",
+      api_key: "",
+    },
     // Default
-    desertbus: {type: "youtube", cut_type: "smart"},
+    desertbus: {type: "youtube", cut_type: "smart", zulip_creds: zulip_creds},
     // Backup options for advanced use, if the smart cut breaks things.
-    desertbus_slow: {type: "youtube", cut_type: "full"},
-    desertbus_emergency: {type: "youtube", cut_type: "fast"},
+    desertbus_slow: {type: "youtube", cut_type: "full", zulip_creds: zulip_creds},
+    desertbus_emergency: {type: "youtube", cut_type: "fast", zulip_creds: zulip_creds},
     // Non-uploading backend that lets us modify manually-updated youtube videos
     "youtube-manual": {type: "youtube", no_uploader: true},
   },
