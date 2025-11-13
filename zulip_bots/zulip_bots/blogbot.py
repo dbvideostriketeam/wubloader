@@ -15,8 +15,8 @@ from bs4 import BeautifulSoup
 
 from common import atomic_write
 from common import media
+from common.zulip import Client
 
-from .zulip import Client
 from .config import common_setup, get_config
 
 def try_save_image(media_dir, url):

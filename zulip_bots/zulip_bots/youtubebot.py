@@ -7,9 +7,9 @@ import logging
 import time
 
 from common.googleapis import GoogleAPIClient
+from common.zulip import Client
 
 from .config import common_setup, get_config
-from .zulip import Client
 
 
 _video_title_cache = {}

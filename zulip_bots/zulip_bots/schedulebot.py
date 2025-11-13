@@ -12,7 +12,8 @@ from zoneinfo import ZoneInfo
 import gevent.pool
 import argh
 
-from .zulip import Client
+from common.zulip import Client
+
 from .config import common_setup, get_config
 from common.sheets import Sheets
 

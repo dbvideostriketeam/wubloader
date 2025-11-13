@@ -9,8 +9,9 @@ import argh
 import requests
 from bs4 import BeautifulSoup
 
+from common.zulip import Client
+
 from .config import common_setup, get_config
-from .zulip import Client
 
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
 
