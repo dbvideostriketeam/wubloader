@@ -9,8 +9,8 @@ import mastodon
 from bs4 import BeautifulSoup
 
 from common import media
+from common import zulip
 
-from . import zulip
 from .config import common_setup, get_config
 
 cli = argh.EntryPoint()

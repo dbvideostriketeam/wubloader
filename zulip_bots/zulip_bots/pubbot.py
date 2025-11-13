@@ -7,8 +7,9 @@ import time
 
 from bs4 import BeautifulSoup
 
+from common.zulip import Client
+
 from .config import common_setup, get_config
-from .zulip import Client
 
 import requests
 session = requests.Session()

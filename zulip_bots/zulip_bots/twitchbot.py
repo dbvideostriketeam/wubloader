@@ -7,7 +7,8 @@ import logging
 import argh
 import girc
 
-from . import zulip
+from common import zulip
+
 from .config import common_setup, get_config
 
 
