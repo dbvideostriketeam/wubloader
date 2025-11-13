@@ -166,8 +166,10 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 		if latest_analyzed_timestamp is None or latest_analyzed_timestamp < timestamp:
 			labels = segment_info.channel, segment_info.quality
 			latest_analyzed_segment_time.labels(*labels).set((timestamp - datetime.datetime(1970, 1, 1)).total_seconds())
-			latest_analyzed_segment_odometer.labels(*labels).set(odometer)
-			latest_analyzed_segment_clock.labels(*labels).set(clock)
+			if odometer is not None:
+				latest_analyzed_segment_odometer.labels(*labels).set(odometer)
+			if clock is not None:
+				latest_analyzed_segment_clock.labels(*labels).set(clock)
 			latest_analyzed_timestamp = timestamp
 	segment_analyzed_duration.labels(channel=segment_info.channel, quality=segment_info.quality, error=(error is not None)).observe(time.monotonic() - start)
 
