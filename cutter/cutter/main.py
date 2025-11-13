@@ -20,6 +20,7 @@ from common.database import DBManager, query, get_column_placeholder
 from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles, get_best_segments_for_frame
 from common.images import compose_thumbnail_template, get_template
 from common.stats import timed
+from common import zulip
 
 from .upload_backends import Youtube, Local, LocalArchive, UploadError
 
@@ -636,7 +637,7 @@ class TranscodeChecker(object):
 	FOUND_VIDEOS_RETRY_INTERVAL = 20
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, location, backend, dbmanager, stop):
+	def __init__(self, location, backend, dbmanager, stop, zulip_client):
 		"""
 		backend is an upload backend that supports transcoding
 		and defines check_status().
@@ -647,6 +648,7 @@ class TranscodeChecker(object):
 		self.backend = backend
 		self.dbmanager = dbmanager
 		self.stop = stop
+		self.zulip_client = zulip_client
 		self.logger = logging.getLogger(type(self).__name__)
 
 	def wait(self, interval):
@@ -667,6 +669,8 @@ class TranscodeChecker(object):
 				if ids:
 					self.logger.info("{} videos are done".format(len(ids)))
 					done = self.mark_done(ids)
+					for id, video_id, title in ids:
+						self.post_to_zulip(video_id, title)
 					videos_marked_done.labels(self.location).inc(done)
 					self.logger.info("Marked {} videos as done".format(done))
 				self.wait(self.FOUND_VIDEOS_RETRY_INTERVAL)
@@ -679,18 +683,18 @@ class TranscodeChecker(object):
 
 	def get_ids_to_check(self):
 		result = query(self.conn, """
-			SELECT id, video_id
+			SELECT id, video_id, video_title
 			FROM events
 			WHERE state = 'TRANSCODING' AND upload_location = %(location)s
 		""", location=self.location)
-		return {id: video_id for id, video_id in result.fetchall()}
+		return {id: (video_id, title) for id, video_id, title in result.fetchall()}
 
 	def check_ids(self, ids):
 		# Future work: Set error in DB if video id is not present,
 		# and/or try to get more info from yt about what's wrong.
 		done = self.backend.check_status(list(ids.values()))
 		return {
-			id: video_id for id, video_id in ids.items()
+			id: video_id for id, (video_id, title) in ids.items()
 			if video_id in done
 		}
 
@@ -701,6 +705,12 @@ class TranscodeChecker(object):
 			WHERE id = ANY (%s) AND state = 'TRANSCODING'
 		""", datetime.datetime.utcnow(), list(ids.keys()))
 		return result.rowcount
+
+	def post_to_zulip(self, video_id, title):
+		if self.zulip_client is None:
+			return
+		text = f"[{title}](https://youtu.be/{video_id})"
+		self.zulip_client.send_to_stream("bot-spam", "Uploaded Videos", text)
 
 
 UPDATE_JOB_PARAMS = [
@@ -945,6 +955,7 @@ def main(
 		no_updater = backend_config.pop('no_updater', False)
 		no_uploader = backend_config.pop('no_uploader', False)
 		cut_type = backend_config.pop('cut_type', 'full')
+		zulip_creds = backend_config.pop('zulip_creds', None)
 		if backend_type == 'youtube':
 			backend_type = Youtube
 		elif backend_type == 'local':
@@ -962,14 +973,15 @@ def main(
 		if not no_uploader:
 			upload_locations[location] = backend
 		if backend.needs_transcode:
-			needs_transcode_check[location] = backend
+			zulip_client = zulip.Client(**zulip_creds) if zulip_creds else None
+			needs_transcode_check[location] = backend, zulip_client
 		if not no_updater:
 			needs_updater[location] = backend
 
 	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, uploader_explicit_only)
 	transcode_checkers = [
-		TranscodeChecker(location, backend, dbmanager, stop)
-		for location, backend in needs_transcode_check.items()
+		TranscodeChecker(location, backend, dbmanager, stop, zulip_client)
+		for location, (backend, zulip_client) in needs_transcode_check.items()
 	]
 	updaters = [
 		VideoUpdater(location, base_dir, backend, dbmanager, tags, stop)
