@@ -694,7 +694,7 @@ class TranscodeChecker(object):
 		# and/or try to get more info from yt about what's wrong.
 		done = self.backend.check_status([video_id for video_id, title in ids.values()])
 		return {
-			id: video_id for id, (video_id, title) in ids.items()
+			id: (video_id, title) for id, (video_id, title) in ids.items()
 			if video_id in done
 		}
 
