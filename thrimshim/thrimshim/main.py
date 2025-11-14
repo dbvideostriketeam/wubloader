@@ -807,7 +807,7 @@ def get_odometer(channel):
 	range = int(flask.request.args.get("range", "60"))
 	range = datetime.timedelta(seconds=range)
 
-	raw = (flask.request.args.get("raw") == "true")
+	raw = (flask.request.args.get("raw") != "false")
 	extrapolate = (flask.request.args.get("extrapolate") == "true")
 
 	conn = app.db_manager.get_conn()
@@ -818,7 +818,7 @@ def get_odometer(channel):
 	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
 	odometer_col = "raw_odometer" if raw else "odometer"
 	results = database.query(conn, """
-		SELECT timestamp, {c}
+		SELECT timestamp, {c} as odometer
 		FROM bus_data
 		WHERE {c} IS NOT NULL
 			AND {c} >= 109
@@ -843,7 +843,7 @@ def get_odometer(channel):
 
 	clock_col = "raw_clock" if raw else "clock"
 	results = database.query(conn, """
-		SELECT timestamp, {c}, timeofday
+		SELECT timestamp, {c} as clock, timeofday
 		FROM bus_data
 		WHERE {c} IS NOT NULL
 			AND channel = %(channel)s
