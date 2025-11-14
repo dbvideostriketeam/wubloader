@@ -49,17 +49,17 @@ latest_analyzed_segment_clock = prom.Gauge(
 
 @cli
 @argh.named("extract-segment")
-def do_extract_segment(*segment_paths, prototypes_path="./prototypes"):
+def do_extract_segment(*segment_paths, prototypes_path="./prototypes", profile='DBfH_2025'):
 	"""Extract info from individual segments and print them"""
 	prototypes = load_prototypes(prototypes_path)
 	for segment_path in segment_paths:
 		segment_info = parse_segment_path(segment_path)
-		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.start)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.start, profile)
 		print(f"{segment_path} {odometer} {clock} {tod}")
 
 
 @cli
-def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", since=None, until=None, num=100, null_chance=0.25, verbose=False):
+def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", since=None, until=None, num=100, null_chance=0.25, profile='DBfH_2025', verbose=False):
 	"""
 	Collect some representitive samples from the database and re-runs them to compare to previous results.
 	num is how many samples to try.
@@ -104,7 +104,7 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 	for old_odometer, (segment, old_clock, old_tod) in selected:
 		path = os.path.join(base_dir, segment)
 		segment_info = parse_segment_path(path)
-		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.start)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, segment_info.start, profile)
 		results.append((segment, {
 			"odo": (old_odometer, odometer),
 			"clock": (old_clock, clock),
@@ -127,16 +127,16 @@ def compare_segments(dbconnect, base_dir='.', prototypes_path="./prototypes", si
 
 @cli
 @argh.named("analyze-segment")
-def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path="./prototypes"):
+def do_analyze_segment(dbconnect, *segment_paths, base_dir='.', prototypes_path="./prototypes", profile='DBfH_2025'):
 	"""Analyze individual segments and write them to the database"""
 	prototypes = load_prototypes(prototypes_path)
 	dbmanager = database.DBManager(dsn=dbconnect)
 
 	for segment_path in segment_paths:
-		analyze_segment(dbmanager, prototypes, segment_path)
+		analyze_segment(dbmanager, prototypes, segment_path, profile)
 
 
-def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=None):
+def analyze_segment(db_manager, prototypes, segment_path, profile, check_segment_name=None):
 	segment_info = parse_segment_path(segment_path)
 	if segment_info.type == "temp":
 		logging.info("Ignoring temp segment {}".format(segment_path))
@@ -153,7 +153,7 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 
 	start = time.monotonic()
 	try:
-		odometer, clock, tod = extract_segment(prototypes, segment_info, timestamp)
+		odometer, clock, tod = extract_segment(prototypes, segment_info, timestamp, profile)
 	except Exception:
 		logging.warning(f"Failed to extract segment {segment_path!r}", exc_info=True)
 		odometer = None
@@ -197,7 +197,7 @@ def analyze_segment(db_manager, prototypes, segment_path, check_segment_name=Non
 	db_manager.put_conn(conn)
 
 
-def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=10):
+def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, profile, concurrency=10):
 	hour_path = os.path.join(base_dir, channel, quality, hour)
 	segments = sorted(list_segment_files(hour_path))
 
@@ -218,7 +218,7 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 	pool = Pool(concurrency)
 	workers = []
 	for segment_path, segment_name in segments_to_do:
-		workers.append(pool.spawn(analyze_segment, db_manager, prototypes, segment_path, segment_name))
+		workers.append(pool.spawn(analyze_segment, db_manager, prototypes, segment_path, segment_name, profile))
 	for worker in workers:
 		worker.get() # re-raise errors
 
@@ -249,6 +249,7 @@ def post_process(db_manager, segments, channel):
 	corrected_miles = post_process_miles(seconds, miles, days)
 	corrected_clocks = post_process_clocks(seconds, clocks, days)
 
+	count = 0
 	for i in range(len(segments)):
 		if corrected_miles[i] == old_miles[i] and corrected_clocks[i] == old_clocks[i]:
 			continue
@@ -257,8 +258,9 @@ def post_process(db_manager, segments, channel):
 			SET odometer = %(odometer)s, clock = %(clock)s
 			WHERE channel = %(channel)s AND segment = %(segment)s AND timestamp = %(timestamp)s
         """, channel=channel, segment=segments[i], timestamp=times[i], odometer=corrected_miles[i], clock=corrected_clocks[i])
+		count += 1
 	
-	logging.info("{} segments post processed".format(len(segments)))
+	logging.info("{} segments post processed with {} segments updated".format(len(segments), count))
 	
 
 def parse_hours(s):
@@ -281,6 +283,7 @@ def main(
 	overwrite=False,
 	reprocess=False,
 	prototypes_path="./prototypes",
+	profile='DBfH_2025', #extraction parameters
 	concurrency=10,
 	metrics_port=8011,
 ):
@@ -299,7 +302,7 @@ def main(
 	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
 
-	logging.info("Started")
+	logging.info("Started analyzing {} with {} as quality over {} hours".format(channels, quality, hours)
 
 	while not stopping.is_set():
 		start_time = datetime.datetime.utcnow()
@@ -339,7 +342,7 @@ def main(
 		for channel in channels:
 			segments = []
 			for hour in do_hours:
-				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=concurrency)
+				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, profile, concurrency=concurrency)
 			if reprocess:
 				segments = None
 			try:

@@ -9,29 +9,101 @@ import common
 from common.segments import extract_frame, parse_segment_path
 
 
-# DB2024 1080p buscam
-# bounding box (left x, top y, right x, bottom y) of the area the odometer can be in
-AREA_COORDS = {
-	"odo": (1053, 857, 1170, 930),
-	"clock": (1498, 852, 1590, 910)
-}
-# starting x coord of each digit within the odo box
-DIGIT_X_COORDS = {
-	"odo": [0, 22, 44, 66, 96],
-	"clock": [0, 22, 53, 75],
-}
-# value of each digit
-DIGIT_BASES = {
-	"odo": [1000, 100, 10, 1, 0.1],
-	"clock": [600, 60, 10, 1],
+colour_profiles = {
+	'DBfH_2025':{
+		'sky_colours': {
+			'score': (113, 118, 114),
+			'day': (85, 203, 200),
+			'dusk': (217, 150, 181),
+			'night': (0, 0, 0),
+			'dawn': (36, 38, 117),
+		},
+		'dash_colours': {
+			'score': (171, 173, 143),
+			'day': (144, 0, 0),
+			'dusk': (115, 0, 0),
+			'night': (41, 0, 0),
+			'dawn': (78, 0, 0),
+		},
+	},
+	'DBfH_2024':{
+		'sky_colours': {
+			'score': (119, 119, 119),
+			'day': (82, 218, 217),
+			'dusk': (217, 150, 181),
+			'night': (0, 0, 0),
+			'dawn': (36, 38, 117),
+		},
+		'dash_colours': {
+			'score': (181, 181, 150),
+			'day': (146, 0, 1),
+			'dusk': (115, 0, 0),
+			'night': (41, 0, 0),
+			'dawn': (78, 0, 0),
+		},
+	},
+	# for reference, before we started deteching the score screen
+	# or using the colour of the dash
+	'DBfH_2023': {
+		'sky_colour': {
+			'day': (89, 236, 239),
+			'dusk': (199, 162, 205),
+			'night': (1, 1, 1),
+			'dawn': (51, 59, 142),			
+		}
+	},
 }
 
-DIGIT_WIDTH = 17
+# 'area_coords'
+# bounding box (left x, top y, right x, bottom y) of the area the odometer can be in
+# 'digit_x_coords'
+# starting x coord of each digit within the odo box
+# 'digit_bases'
+# value of each digit
+# 'digit_height'
 # Most digits we only care about the actual character height
-DIGIT_HEIGHT = 24
+# 'last_digit_height'
 # But last digit we want the full white-background area as we want to try to match
 # based on position also.
-LAST_DIGIT_HEIGHT = 39
+location_profiles = {
+	'DBfH_2024': {
+		'area_coords': {
+			'odo': (1053, 857, 1170, 930),
+			'clock': (1498, 852, 1590, 910)
+		},
+		'digit_x_coords': {
+			'odo': (0, 22, 44, 66, 96),
+			'clock': (0, 22, 53, 75)
+		},
+		'digit_bases': {
+			'odo': (1000, 100, 10, 1, 0.1),
+			'clock': (600, 60, 10, 1)
+		}, 
+		'digit_width': 17,
+		'digit_height': 24,
+        'last_digit_height': 39,
+		'sky_pixel': (1614, 192),
+		'dash_pixel': (945, 864),
+	},
+	'DBfH_2023': {
+		'area_coords': {
+			'odo': (1121, 820, 1270, 897),
+			'clock': (1685, 819, 1804, 877)
+		},
+		'digit_x_coords': {
+			'odo': (0, 28, 56, 84, 123),
+			'clock': (0, 27, 66, 93),
+		},
+		'digit_width': 26,
+		'digit_height': 26,
+        'last_digit_height': 38,
+		'sky_pixel': (177, 255),
+	},
+}
+
+profiles = {}
+profiles['DBfH_2025'] = colour_profiles['DBfH_2025'] + location_profiles['DBfH_2024']
+profiles['DBfH_2024'] = colour_profiles['DBfH_2024'] + location_profiles['DBfH_2024']
 
 # get back py2 zip behaviour
 _zip = zip
@@ -43,7 +115,7 @@ cli = argh.EntryPoint()
 
 @cli
 @argh.arg("paths", nargs="+")
-def to_digits(output_dir, paths, box_only=False, type="odo"):
+def to_digits(output_dir, paths, box_only=False, type="odo", profile='DBfH_2025'):
 	"""Extracts each digit and saves to a file. Useful for testing or building prototypes."""
 	if not os.path.exists(output_dir):
 		os.mkdir(output_dir)
@@ -51,7 +123,7 @@ def to_digits(output_dir, paths, box_only=False, type="odo"):
 		name = os.path.splitext(os.path.basename(path))[0]
 		image = Image.open(path)
 		if not box_only:
-			image = image.crop(AREA_COORDS[type])
+			image = image.crop(profile['area_coords'][type])
 		for i, digit in enumerate(extract_digits(image, type)):
 			output_path = os.path.join(output_dir, "{}-digit{}.png".format(name, i))
 			digit.save(output_path)
@@ -80,9 +152,9 @@ def get_green(image):
 	return newimage
 
 
-def extract_digits(image, type):
+def extract_digits(image, type, profile):
 	"""Takes an odo box, and returns a list of digit images"""
-	main_digit_coords = DIGIT_X_COORDS[type]
+	main_digit_coords = profile['digit_x_coords'][type]
 	if type == "odo":
 		main_digit_coords = main_digit_coords[:-1]
 
@@ -95,21 +167,21 @@ def extract_digits(image, type):
 	# Find main digits y position
 	digit_xs = [
 		x + dx
-		for x in DIGIT_X_COORDS[type]
-		for dx in range(DIGIT_WIDTH)
+		for x in profile['digit_x_coords'][type]
+		for dx in range(profile['digit_width'])
 	]
-	main_digits = get_brightest_region(image, digit_xs, DIGIT_HEIGHT)
+	main_digits = get_brightest_region(image, digit_xs, profile['digit_height'])
 	main_digits = normalize(main_digits)
 
 	digits = []
 	for i, x in enumerate(main_digit_coords):
-		digit = main_digits.crop((x, 0, x + DIGIT_WIDTH, main_digits.height))
+		digit = main_digits.crop((x, 0, x + profile['digit_width'], main_digits.height))
 		digits.append(digit)
 
 	if type == "odo":
-		x = DIGIT_X_COORDS["odo"][-1]
-		last_digit = get_brightest_region(image, range(x, x + DIGIT_WIDTH), LAST_DIGIT_HEIGHT)
-		last_digit = last_digit.crop((x, 0, x + DIGIT_WIDTH, last_digit.height))
+		x = profile['digit_x_coords']["odo"][-1]
+		last_digit = get_brightest_region(image, range(x, x + profile['digit_width']), profile['last_digit_height'])
+		last_digit = last_digit.crop((x, 0, x + profile['digit_width'], last_digit.height))
 		last_digit = normalize(last_digit)
 		digits.append(last_digit)
 
@@ -194,13 +266,13 @@ def read_digit(digit, prototypes_path="./prototypes", verbose=False):
 			print("{}: {}".format(n, s))
 
 
-def recognize_odometer(prototypes, frame):
+def recognize_odometer(prototypes, frame, profile):
 	"""Takes a full image frame and returns (detected mile value, score, digits)
 	where score is between 0 and 1. Higher numbers are more certain the value is correct.
 	digits is for debugging.
 	"""
-	odo = frame.crop(AREA_COORDS["odo"])
-	digits = extract_digits(odo, "odo")
+	odo = frame.crop(profile['area_coords']['odo'])
+	digits = extract_digits(odo, 'odo', profile)
 	mask = prototypes['mask']['mask']
 	mask = mask.convert(mode='L')
 	digits = [
@@ -212,15 +284,15 @@ def recognize_odometer(prototypes, frame):
 	if any(digit is None for digit, _, _ in digits):
 		value = None
 	else:
-		value = sum(digit * base for base, (digit, _, _) in zip(DIGIT_BASES["odo"], digits))
+		value = sum(digit * base for base, (digit, _, _) in zip(profile['digit_bases']['odo'], digits))
 	# Use average score of digits as frame score
 	score = sum(score for _, score, _ in digits) / len(digits)
 	return value, score, digits
 
 
-def recognize_clock(prototypes, frame):
-	clock = frame.crop(AREA_COORDS["clock"])
-	digits = extract_digits(clock, "clock")
+def recognize_clock(prototypes, frame, profile):
+	clock = frame.crop(profile['area_coords']['clock'])
+	digits = extract_digits(clock, 'clock', profile)
 	mask = prototypes['mask']['mask']
 	mask = mask.convert(mode='L')
 	digits = [
@@ -236,7 +308,7 @@ def recognize_clock(prototypes, frame):
 		# 3rd digit is 0-5, or else fail
 		value = None
 	else:
-		value = sum(digit * base for base, (digit, _, _) in zip(DIGIT_BASES["clock"], digits))
+		value = sum(digit * base for base, (digit, _, _) in zip(profile['digit_bases']['clock'], digits))
 	# Use average score of digits as frame score
 	score = sum(score for _, score, _ in digits) / len(digits)
 	return value, score, digits
@@ -304,38 +376,24 @@ def compare_colors(color_a, color_b):
 	return 1 - float(sum((a - b)**2 for a, b in zip(color_a, color_b))) / MAX_ERROR_SQUARED
 
 
-def recognize_time_of_day(frame):
+def recognize_time_of_day(frame, profile):
 	"""Determine time-of-day from a sky pixel and a dashboard pixel
 	
 	Uses the colour of a pixel in the sky and of a pixel on the dashboard to determine time-of-day
 	or whether the game is on the score screen."""
-	sky_colours = {
-		'score': (119, 119, 119),
-		'day': (82, 218, 217),
-		'dusk': (217, 150, 181),
-		'night': (0, 0, 0),
-		'dawn': (36, 38, 117), 
-	}
-	dash_colours = {
-		'score': (181, 181, 150),
-		'day': (146, 0, 1),
-		'dusk': (115, 0, 0),
-		'night': (41, 0, 0),
-		'dawn': (78, 0, 0),
-	}
 	threshold = 20 # use stronger constraint once we have dusk, night and dawn footage
-	sky_pixel = frame.getpixel((1614, 192))
-	dash_pixel = frame.getpixel((945, 864))
+	sky_pixel = frame.getpixel(profile['sky_pixel'])
+	dash_pixel = frame.getpixel(profile['dash_pixel'])
 	
 	MAX_DIST = 6**0.5 * 255
 	sky_distances = []
 	dash_distances = []
 	matches = [(None, MAX_DIST)]
 	
-	for time in sky_colours:
-		sky_distance = sum((a - b)**2 for a, b in zip(sky_pixel, sky_colours[time]))**0.5
+	for time in profile['sky_colours']:
+		sky_distance = sum((a - b)**2 for a, b in zip(sky_pixel, profile['sky_colours'][time]))**0.5
 		sky_distances.append(sky_distance)
-		dash_distance = sum((a - b)**2 for a, b in zip(dash_pixel, dash_colours[time]))**0.5
+		dash_distance = sum((a - b)**2 for a, b in zip(dash_pixel, profile['dash_colours'][time]))**0.5
 		dash_distances.append(dash_distance)
 		if sky_distance < threshold and dash_distance < threshold:
 			matches.append((time, (sky_distance**2 + dash_distance**2)**0.5))
@@ -344,18 +402,19 @@ def recognize_time_of_day(frame):
 	return best, distance
 
 
-def extract_segment(prototypes, segment, time):
+def extract_segment(prototypes, segment, time, profile):
+	profile = profiles[profile]
 	ODO_SCORE_THRESHOLD = 0.01
 	CLOCK_SCORE_THRESHOLD = 0.01
 	frame_data = b"".join(extract_frame([segment], time))
 	frame = Image.open(BytesIO(frame_data))
-	odometer, score, _ = recognize_odometer(prototypes, frame)
+	odometer, score, _ = recognize_odometer(prototypes, frame, profile)
 	if score < ODO_SCORE_THRESHOLD:
 		odometer = None
-	clock, score, _ = recognize_clock(prototypes, frame)
+	clock, score, _ = recognize_clock(prototypes, frame, profile)
 	if score < CLOCK_SCORE_THRESHOLD:
 		clock = None
-	tod, distance = recognize_time_of_day(frame)
+	tod, distance = recognize_time_of_day(frame, profile)
 	return odometer, clock, tod
 
 
