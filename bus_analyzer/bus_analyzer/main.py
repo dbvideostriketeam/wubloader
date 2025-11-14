@@ -271,7 +271,7 @@ def parse_hours(s):
 
 
 @cli
-@argh.arg('dbconect', help='Database connection string.')
+@argh.arg('dbconnect', help='Database connection string.')
 @argh.arg("channels", nargs="+", help='List of channels to analyze.')
 @argh.arg('--base-dir', help='Directory of segments to be analyzed. Default is current working directory')
 @argh.arg('--quality', help='Quality to analyze. Default source.')
