@@ -271,8 +271,18 @@ def parse_hours(s):
 
 
 @cli
-@argh.arg("--hours", type=parse_hours, help="If integer, watch the most recent N hours. Otherwise, comma-seperated list of hours.")
+@argh.arg('dbconect', help='Database connection string.')
 @argh.arg("channels", nargs="+", help='List of channels to analyze.')
+@argh.arg('--base-dir', help='Directory of segments to be analyzed. Default is current working directory')
+@argh.arg('--quality', help='Quality to analyze. Default source.')
+@argh.arg("--hours", type=parse_hours, help="If integer, watch the most recent N hours. Otherwise, comma-seperated list of hours.")
+@argh.arg('--run-once', help='If True, run analyzing once then exit. Default is False.')
+@argh.arg('--overwrite', help='If True, redo analysis for segments already in database. Default is False.')
+@argh.arg('--reprocess', help='Repeat post processing. Default is False.')
+@argh.arg('--prototypes-path', help="Path to prototype digit images. Default is './prototypes'.")
+@argh.arg('--profile', help="Extraction parameters profile to use. Default is 'DBfH_2025'.")
+@argh.arg('--concurrency', help='Number of segments to try to analyze simultaneously. Default is 10.')
+@argh.arg('--metrics-port', help='Port for Prometheus stats. Default is 8011.')
 def main(
 	dbconnect,
 	*channels,
@@ -283,7 +293,7 @@ def main(
 	overwrite=False,
 	reprocess=False,
 	prototypes_path="./prototypes",
-	profile='DBfH_2025', #extraction parameters
+	profile='DBfH_2025',
 	concurrency=10,
 	metrics_port=8011,
 ):
