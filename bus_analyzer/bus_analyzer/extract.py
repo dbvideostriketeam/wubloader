@@ -102,8 +102,8 @@ location_profiles = {
 }
 
 profiles = {}
-profiles['DBfH_2025'] = colour_profiles['DBfH_2025'] + location_profiles['DBfH_2024']
-profiles['DBfH_2024'] = colour_profiles['DBfH_2024'] + location_profiles['DBfH_2024']
+profiles['DBfH_2025'] = {**colour_profiles['DBfH_2025'], **location_profiles['DBfH_2024']}
+profiles['DBfH_2024'] = {**colour_profiles['DBfH_2024'], **location_profiles['DBfH_2024']}
 
 # get back py2 zip behaviour
 _zip = zip
