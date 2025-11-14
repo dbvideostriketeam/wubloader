@@ -227,7 +227,7 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 @timed(normalize=lambda result, db_manager, segments, channel: len(segments))
 def post_process(db_manager, segments, channel):
 
-	if segments:
+	if segments is not None:
 		segments = sorted(segments)
 		start = parse_segment_path(segments[0]).start - datetime.timedelta(minutes=30)
 	# if no list of segments, post process all segments
