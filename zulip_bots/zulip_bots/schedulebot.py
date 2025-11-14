@@ -34,7 +34,7 @@ def update_members(client, group_id, old_members, new_members):
 def get_roles_at_hour(hours, hour):
 	if 0 <= hour < len(hours):
 		return hours[hour]
-	return ""
+	return set()
 
 def determine_members(schedule, role, hour):
 	return set(
