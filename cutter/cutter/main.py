@@ -669,7 +669,7 @@ class TranscodeChecker(object):
 				if ids:
 					self.logger.info("{} videos are done".format(len(ids)))
 					done = self.mark_done(ids)
-					for id, video_id, title in ids:
+					for video_id, title in ids.values():
 						self.post_to_zulip(video_id, title)
 					videos_marked_done.labels(self.location).inc(done)
 					self.logger.info("Marked {} videos as done".format(done))
