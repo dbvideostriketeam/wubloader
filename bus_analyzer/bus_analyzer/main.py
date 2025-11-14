@@ -218,7 +218,7 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 	pool = Pool(concurrency)
 	workers = []
 	for segment_path, segment_name in segments_to_do:
-		workers.append(pool.spawn(analyze_segment, db_manager, prototypes, segment_path, segment_name, profile))
+		workers.append(pool.spawn(analyze_segment, db_manager, prototypes, segment_path, profile, segment_name))
 	for worker in workers:
 		worker.get() # re-raise errors
 
