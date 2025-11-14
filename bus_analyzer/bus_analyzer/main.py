@@ -302,7 +302,7 @@ def main(
 	common.install_stacksampler()
 	prom.start_http_server(metrics_port)
 
-	logging.info("Started analyzing {} with {} as quality over {} hours".format(channels, quality, hours)
+	logging.info("Started analyzing {} with {} as quality over {} hours".format(channels, quality, hours))
 
 	while not stopping.is_set():
 		start_time = datetime.datetime.utcnow()
