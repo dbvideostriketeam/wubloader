@@ -105,7 +105,7 @@ function drawBackground(context, timeOfDay, leftX, width) {
 
 async function drawRoad() {
 	let busData = busDataFromParams();
-	if (busData === undefined) {
+	if (busData === null) {
 		const busDataResponse = await fetch("/thrimshim/bus/buscam");
 		if (!busDataResponse.ok) {
 			return;
