@@ -342,7 +342,10 @@ def main(
 				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, concurrency=concurrency)
 			if reprocess:
 				segments = None
-			post_process(db_manager, segments, channel)
+			try:
+				post_process(db_manager, segments, channel)
+			except Exception:
+				logging.exception("Failed to post process segments")
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")
