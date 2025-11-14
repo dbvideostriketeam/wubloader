@@ -225,7 +225,7 @@ class Listener(mastodon.StreamListener):
 			]
 		if payload is not None:
 			data["payload"] = payload
-		data = json.dumps(data)
+		data = json.dumps(data, default=str)
 		with open(os.path.join(self.output_path, "messages.json"), "a") as f:
 			f.write(data + "\n")
 
@@ -271,7 +271,7 @@ def main(
 		try:
 			mastodon_client.stream_user(listener)
 		except mastodon.MastodonNetworkError:
-			logging.warning(f"Lost connection, reconnecting in {RETRY_INTERVAL}s")
+			logging.warning(f"Lost connection, reconnecting in {RETRY_INTERVAL}s", exc_info=True)
 			time.sleep(RETRY_INTERVAL)
 
 
