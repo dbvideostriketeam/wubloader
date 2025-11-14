@@ -101,6 +101,7 @@ def post_process_miles(seconds, miles, days):
 		if subgroup[-1] == (len(corrected_miles) - 1) or corrected_miles[subgroup[0] - 1] > corrected_miles[subgroup[-1] + 1]:
 			continue
 		m = (corrected_miles[subgroup[-1] + 1] - corrected_miles[subgroup[0] - 1]) / (seconds[subgroup[-1] + 1] - seconds[subgroup[0] - 1])
+		b = corrected_miles[subgroup[-1] + 1] - m * seconds[subgroup[-1] + 1] 
 		for i in subgroup:
 			corrected_miles[i] = m * seconds[i] + b
 
