@@ -226,7 +226,7 @@ class Listener(mastodon.StreamListener):
 		if payload is not None:
 			data["payload"] = payload
 		data = json.dumps(data, default=str)
-		with open(os.path.join(self.output_path, "messages.json"), "a") as f:
+		with open(self.output_path, "a") as f:
 			f.write(data + "\n")
 
 
