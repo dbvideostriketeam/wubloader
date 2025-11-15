@@ -8,7 +8,7 @@ from requests.adapters import HTTPAdapter
 
 session = requests.Session()
 adapter = HTTPAdapter(pool_maxsize=100)
-requests.mount('https://', adapter)
+session.mount('https://', adapter)
 
 
 class Client(object):
