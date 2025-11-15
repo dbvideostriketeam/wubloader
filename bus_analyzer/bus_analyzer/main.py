@@ -278,6 +278,7 @@ def parse_hours(s):
 @argh.arg("--hours", type=parse_hours, help="If integer, watch the most recent N hours. Otherwise, comma-seperated list of hours.")
 @argh.arg('--run-once', help='If True, run analyzing once then exit. Default is False.')
 @argh.arg('--overwrite', help='If True, redo analysis for segments already in database. Default is False.')
+@argh.arg('--process', help='Post-process analyzed segments. Default is False.')
 @argh.arg('--reprocess', help='Repeat post processing. Default is False.')
 @argh.arg('--prototypes-path', help="Path to prototype digit images. Default is './prototypes'.")
 @argh.arg('--profile', help="Extraction parameters profile to use. Default is 'DBfH_2025'.")
@@ -291,6 +292,7 @@ def main(
 	hours=2,
 	run_once=False,
 	overwrite=False,
+	process=False,
 	reprocess=False,
 	prototypes_path="./prototypes",
 	profile='DBfH_2025',
@@ -355,10 +357,11 @@ def main(
 				segments += analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, quality, hour, profile, concurrency=concurrency)
 			if reprocess:
 				segments = None
-			try:
-				post_process(db_manager, segments, channel)
-			except Exception:
-				logging.exception("Failed to post process segments")
+			if process:
+				try:
+					post_process(db_manager, segments, channel)
+				except Exception:
+					logging.exception("Failed to post-process segments")
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")
