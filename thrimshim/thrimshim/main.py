@@ -846,6 +846,7 @@ def get_odometer(channel):
 		SELECT timestamp, {c} as clock, timeofday
 		FROM bus_data
 		WHERE {c} IS NOT NULL
+			AND timeofday IS NOT NULL
 			AND channel = %(channel)s
 			AND timestamp > %(start)s
 			AND timestamp <= %(end)s
@@ -859,8 +860,7 @@ def get_odometer(channel):
 		clock_face = None
 	else:
 		clock12h = result.clock
-		# HACK: assume null means dawn, as we can reliably detect everything else.
-		timeofday = result.timeofday or "dawn"
+		timeofday = result.timeofday
 
 		clock24h = clock12h
 		if time_is_pm(conn, result.timestamp, clock12h, timeofday):
