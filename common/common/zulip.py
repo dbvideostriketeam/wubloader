@@ -3,8 +3,13 @@ import json
 import logging
 
 import requests
+from requests.adapters import HTTPAdapter
+
 
 session = requests.Session()
+adapter = HTTPAdapter(pool_maxsize=100)
+requests.mount('https://', adapter)
+
 
 class Client(object):
 	def __init__(self, base_url, email, api_key):
