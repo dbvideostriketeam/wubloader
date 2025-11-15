@@ -2,6 +2,7 @@
 import json
 import logging
 import os
+import re
 import socket
 import time
 
@@ -10,6 +11,7 @@ from bs4 import BeautifulSoup
 from common.zulip import Client
 
 from .config import common_setup, get_config
+from .prizebot import get_prizes
 
 import requests
 session = requests.Session()
@@ -93,6 +95,23 @@ def _get_prize_name(year, id):
 	return div.string.split(": ", 1)[-1].strip()
 
 
+def find_winning_bids(year, amount):
+	matches = []
+	for prize in get_prizes(year, 'silent') + get_prizes(year, 'live'):
+		if prize.state != "sold":
+			continue
+		match = re.search(r" for (\$[0-9,.]+)", prize.result)
+		if not match:
+			continue
+		try:
+			bid = float(match.group(1).replace(",", ""))
+		except ValueError:
+			continue
+		if bid == amount:
+			matches.append(prize)
+	return matches
+
+
 def main(conf_file, message_log_file, name=socket.gethostname(), metrics_port=8015):
 	"""Config:
 		zulip_url
@@ -160,7 +179,18 @@ def main(conf_file, message_log_file, name=socket.gethostname(), metrics_port=80
 				if increase is not None and increase > 0:
 					client.send_to_stream("firehose", "Donations", "Donation total is now ${:.2f}{}{}".format(msg["d"], increase_str, entries_str))
 				if increase is not None and increase >= 500:
-					client.send_to_stream("bot-spam", "Notable Donations", "Large donation of ${:.2f} (total ${:.2f}){}".format(increase, msg['d'], entries_str))
+					try:
+						matches = find_winning_bids(year)
+					except Exception:
+						logging.warning("Failed to check bids for notable donation", exc_info=True)
+						matches = []
+					prize_str = ""
+					if matches:
+						prize_str = " (may be for {})".format(" or ".join(
+							"[{}]({})".format(prize.title, prize.link)
+							for prize in matches
+						))
+					client.send_to_stream("bot-spam", "Notable Donations", "Large donation of ${:.2f} (total ${:.2f}){}{}".format(increase, msg['d'], prize_str, entries_str))
 
 			elif msg["c"].startswith("bid:"):
 				log["type"] = "prize"
