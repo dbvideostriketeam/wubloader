@@ -11,19 +11,19 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"sass": "1.81.0",
-		"solid-devtools": "0.30.1",
-		"typescript": "5.7.2",
+		"sass": "1.94.0",
+		"solid-devtools": "0.34.4",
+		"typescript": "5.9.3",
 		"url": "0.11.4",
-		"vite": "5.4.11",
-		"vite-plugin-solid": "2.10.2",
-		"@types/luxon": "3.4.2"
+		"vite": "7.2.2",
+		"vite-plugin-solid": "2.11.10",
+		"@types/luxon": "3.7.1"
 	},
 	"dependencies": {
-		"hls.js": "1.5.17",
-		"luxon": "3.5.0",
+		"hls.js": "1.6.14",
+		"luxon": "3.7.2",
 		"media-icons": "1.1.5",
-		"solid-js": "1.9.3",
-		"vidstack": "1.12.12"
+		"solid-js": "1.9.10",
+		"vidstack": "1.12.13"
 	}
 }
