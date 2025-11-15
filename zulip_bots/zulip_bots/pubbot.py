@@ -180,7 +180,7 @@ def main(conf_file, message_log_file, name=socket.gethostname(), metrics_port=80
 					client.send_to_stream("firehose", "Donations", "Donation total is now ${:.2f}{}{}".format(msg["d"], increase_str, entries_str))
 				if increase is not None and increase >= 500:
 					try:
-						matches = find_winning_bids(year)
+						matches = find_winning_bids(year, increase)
 					except Exception:
 						logging.warning("Failed to check bids for notable donation", exc_info=True)
 						matches = []
