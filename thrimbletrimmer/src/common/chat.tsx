@@ -380,13 +380,7 @@ const MessageText: Component<MessageTextProps> = (props) => {
 			);
 			chatMessageText = chatMessageText.substring(emoteData.end + 1 - messageTextStart);
 			messageTextStart = emoteData.end + 1;
-			messageParts.push(
-				<img
-					src={emoteImageURL}
-					alt={emoteText}
-					title={emoteText}
-				/>,
-			);
+			messageParts.push(<img src={emoteImageURL} alt={emoteText} title={emoteText} />);
 		}
 		if (chatMessageText !== "") {
 			messageParts.push(<>{chatMessageText}</>);
