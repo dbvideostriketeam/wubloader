@@ -8,7 +8,11 @@ export enum TimeType {
 	TimeAgo,
 }
 
-export function dateTimeFromWubloaderTime(wubloaderTime: string): DateTime | null {
+export function dateTimeFromWubloaderTime(wubloaderTime: string | null): DateTime | null {
+	if (wubloaderTime === null) {
+		return null;
+	}
+
 	const dt = DateTime.fromISO(wubloaderTime, { zone: "UTC" });
 	if (dt.isValid) {
 		return dt;
