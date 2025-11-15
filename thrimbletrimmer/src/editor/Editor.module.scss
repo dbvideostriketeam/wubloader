@@ -1,0 +1,33 @@
+.fullPageError {
+	color: #f33;
+}
+
+.errorList {
+	color: #f33;
+	display: flex;
+	flex-direction: column;
+
+	> div {
+		border-bottom: 1px solid #f33;
+		background: #300;
+		padding: 4px;
+	}
+}
+
+.errorRemoveLink {
+	float: right;
+}
+
+.clipBar {
+	width: calc(100% - 14px);
+	min-height: 7px;
+	background-color: #bbb;
+	position: relative;
+	margin: 0 7px;
+
+	> div {
+		position: absolute;
+		background-color: #d80;
+		height: 100%;
+	}
+}

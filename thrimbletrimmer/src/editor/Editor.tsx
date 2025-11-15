@@ -1,7 +1,374 @@
-import { Component } from "solid-js";
+import {
+	Accessor,
+	Component,
+	createResource,
+	createSignal,
+	Index,
+	onMount,
+	Setter,
+	Show,
+	Suspense,
+} from "solid-js";
+import { DateTime } from "luxon";
+import { Fragment } from "hls.js";
+import { MediaPlayerElement } from "vidstack/elements";
+import styles from "./Editor.module.scss";
+import { StreamVideoInfo } from "../common/streamInfo";
+import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
+import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
 
-const Editor: Component = () => {
-	return <></>;
+const CHAPTER_MARKER_DELIMITER = "\n==========\n";
+const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
+
+export interface VideoData {
+	id: string;
+	sheet_name: string;
+	event_start: string | null;
+	event_end: string | null;
+	category: string;
+	description: string;
+	submitter_winner: string;
+	poster_moment: boolean;
+	image_links: string[];
+	notes: string;
+	tags: string[];
+	allow_holes: boolean;
+	uploader_whitelist: string[] | null;
+	upload_location: string | null;
+	public: boolean;
+	video_ranges: [string, string][] | null;
+	video_transitions: ([string, number] | null)[] | null;
+	video_title: string | null;
+	video_description: string | null;
+	video_tags: string[] | null;
+	video_channel: string;
+	video_quality: string;
+	thumbnail_mode: string;
+	thumbnail_time: string;
+	thumbnail_template: string | null; // Can be null if no templates are set up
+	thumbnail_image: string | null; // Base64 of the thumbnail data
+	thumbnail_last_written: string | null;
+	thumbnail_crop: [number, number, number, number] | null;
+	thumbnail_location: [number, number, number, number] | null;
+	state: string;
+	uploader: string | null;
+	error: string | null;
+	video_id: string | null;
+	video_link: string | null;
+	editor: string | null;
+	edit_time: string | null;
+	upload_time: string | null;
+	last_modified: string | null;
+	title_prefix: string;
+	title_max_length: number;
+	bustime_start: string;
+	upload_locations: string[];
+}
+
+enum RangeEntryType {
+	Range,
+	Transition,
+}
+
+class RangeData {
+	startTime: DateTime | null;
+	endTime: DateTime | null;
+	transitionType: string;
+	transitionSeconds: number;
+	chapters: ChapterData[];
+}
+
+class ChapterData {
+	time: DateTime | null;
+	description: string;
+}
+
+class FragmentTimes {
+	rawStart: DateTime;
+	rawEnd: DateTime;
+	playerStart: number;
+}
+
+export const Editor: Component = () => {
+	const currentURL = new URL(location.href);
+	const videoID = currentURL.searchParams.get("id");
+
+	if (!videoID) {
+		return (
+			<div class={styles.fullPageError}>
+				No video ID was provided. As fun as it might be, you can't edit none video.
+			</div>
+		);
+	}
+
+	if (videoID === "defaults") {
+		return (
+			<div class={styles.fullPageError}>
+				Silly, you thought you could break this by passing an "ID" that can return data in a
+				different format? Hah! You can't!
+			</div>
+		);
+	}
+
+	const [pageErrors, setPageErrors] = createSignal<string[]>([]);
+	const [videoData] = createResource<VideoData | null>(async (source, { value, refetching }) => {
+		const response = await fetch(`/thrimshim/${videoID}`);
+		if (!response.ok) {
+			return null;
+		}
+		return await response.json();
+	});
+	return (
+		<Suspense>
+			<Show when={videoData() !== undefined}>
+				<EditorContent data={videoData()} />
+			</Show>
+		</Suspense>
+	);
 };
 
-export default Editor;
+interface ContentProps {
+	data: VideoData | null | undefined;
+}
+
+const EditorContent: Component<ContentProps> = (props) => {
+	if (props.data === undefined) {
+		throw new Error("Video data should have a value through Suspense");
+	}
+	if (props.data === null) {
+		return (
+			<div class={styles.fullPageError}>
+				The video you tried to load is not a real video (it could not be found in the database). Are
+				you sure this was a valid link?
+			</div>
+		);
+	}
+
+	const [pageErrors, setPageErrors] = createSignal<string[]>([]);
+
+	const initialVideoRanges: [DateTime, DateTime][] = [];
+	if (props.data.video_ranges) {
+		for (const range of props.data.video_ranges) {
+			const rangeStart = dateTimeFromWubloaderTime(range[0])!;
+			const rangeEnd = dateTimeFromWubloaderTime(range[1])!;
+			initialVideoRanges.push([rangeStart, rangeEnd]);
+		}
+	}
+
+	const streamInfo = new StreamVideoInfo();
+	if (props.data.upload_location) {
+		streamInfo.streamName = props.data.upload_location;
+	} else {
+		streamInfo.streamName = props.data.video_channel;
+	}
+	let streamStart = dateTimeFromWubloaderTime(props.data.event_start);
+	if (!streamStart) {
+		return (
+			<div class={styles.fullPageError}>
+				The video you tried to load has an invalid start time. Please ensure a start time has been
+				set for this entry.
+			</div>
+		);
+	}
+	let streamEnd = dateTimeFromWubloaderTime(props.data.event_end);
+
+	for (const range of initialVideoRanges) {
+		if (range[0] < streamStart) {
+			streamStart = range[0];
+		}
+		if (!streamEnd || range[1] > streamEnd) {
+			streamEnd = range[1];
+		}
+	}
+
+	// To allow for things starting slightly before the logged time, pad the start by a minute
+	streamStart = streamStart.minus({ minutes: 1 });
+	// To allow for late ends and for the end of the minute that was written, pad the end by two minutes
+	if (streamEnd) {
+		streamEnd = streamEnd.plus({ minutes: 2 });
+	}
+
+	streamInfo.streamStartTime = streamStart;
+	streamInfo.streamEndTime = streamEnd;
+
+	const [streamVideoInfo, setStreamVideoInfo] = createSignal(streamInfo);
+	const [busStartTime, setBusStartTime] = createSignal(
+		dateTimeFromWubloaderTime(props.data.bustime_start)!,
+	);
+	const [chaptersEnabled, setChaptersEnabled] = createSignal(
+		(props.data.video_description ?? "").indexOf(CHAPTER_MARKER_DELIMITER) !== -1,
+	);
+
+	const initialVideoData: RangeData[] = [];
+	const transitions = props.data.video_transitions;
+	if (transitions !== null) {
+		transitions.unshift(null);
+	}
+	for (let index = 0; index < initialVideoRanges.length; index++) {
+		const rangeStart = initialVideoRanges[index][0];
+		const rangeEnd = initialVideoRanges[index][1];
+
+		let transitionType = "cut";
+		let transitionSeconds = 0;
+		if (transitions && index < transitions.length) {
+			const thisTransition = transitions[index];
+			if (thisTransition) {
+				transitionType = thisTransition[0];
+				transitionSeconds = thisTransition[1];
+			}
+		}
+
+		const rangeData = new RangeData();
+		rangeData.startTime = rangeStart;
+		rangeData.endTime = rangeEnd;
+		rangeData.transitionType = transitionType;
+		rangeData.transitionSeconds = transitionSeconds;
+		rangeData.chapters = [];
+		initialVideoData.push(rangeData);
+	}
+
+	const [videoData, setVideoData] = createSignal(initialVideoData);
+	const [playerTime, setPlayerTime] = createSignal(0);
+	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
+	const [videoFragmentTimes, setVideoFragmentTimes] = createSignal<FragmentTimes[]>([]);
+	const [downloadType, setDownloadType] = createSignal("smart");
+	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
+	const [videoDuration, setVideoDuration] = createSignal(0);
+
+	onMount(() => {
+		const player = mediaPlayer();
+		if (player) {
+			player.addEventListener("hls-level-loaded", (event) => {
+				const times: FragmentTimes[] = [];
+				for (const fragment of event.detail.details.fragments) {
+					if (fragment.rawProgramDateTime === null) {
+						continue;
+					}
+					const timeDefinition = new FragmentTimes();
+					timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime);
+					timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
+					timeDefinition.playerStart = fragment.start;
+					times.push(timeDefinition);
+				}
+				setVideoFragmentTimes(times);
+			});
+			player.subscribe(({ currentTime, duration }) => {
+				setVideoPlayerTime(currentTime);
+				setVideoDuration(duration);
+			});
+		}
+	});
+
+	const videoURL = () => {
+		const streamInfo = streamVideoInfo();
+		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
+		const query = new URLSearchParams({ start: startTime });
+		if (streamInfo.streamEndTime) {
+			const endTime = wubloaderTimeFromDateTime(streamInfo.streamEndTime);
+			query.append("end", endTime);
+		}
+		const queryString = query.toString();
+		let url = `/playlist/${streamInfo.streamName}.m3u8`;
+		if (queryString !== "") {
+			url += `?${queryString}`;
+		}
+		return url;
+	};
+
+	const downloadVideoURL = () => {
+		const streamInfo = streamVideoInfo();
+		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
+		const params = new URLSearchParams({ type: downloadType(), allow_holes: "false" });
+		const videoRangeData = videoData();
+		for (const range of videoRangeData) {
+			const rangeStart = range.startTime ? wubloaderTimeFromDateTime(range.startTime) : "";
+			const rangeEnd = range.endTime ? wubloaderTimeFromDateTime(range.endTime) : "";
+			const rangeString = `${rangeStart},${rangeEnd}`;
+			params.append("range", rangeString);
+		}
+		return `/cut/${streamInfo.streamName}/${props.data!.video_quality}.ts?${params.toString()}`;
+	};
+
+	return (
+		<>
+			<ul class={styles.errorList}>
+				<Index each={pageErrors()}>
+					{(error: Accessor<string>, index: number) => (
+						<li>
+							{error()}
+							<a class={styles.errorRemoveLink}>[X]</a>
+						</li>
+					)}
+				</Index>
+			</ul>
+			<KeyboardShortcuts includeEditorShortcuts={true} />
+			<StreamTimeSettings
+				busStartTime={busStartTime}
+				streamVideoInfo={streamVideoInfo}
+				setStreamVideoInfo={setStreamVideoInfo}
+				showTimeRangeLink={false}
+				errorList={pageErrors}
+				setErrorList={setPageErrors}
+			/>
+			<VideoPlayer
+				src={videoURL}
+				setPlayerTime={setPlayerTime}
+				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
+			/>
+			<ClipBar
+				rangeData={videoData}
+				videoFragments={videoFragmentTimes}
+				videoDuration={videoDuration}
+			/>
+		</>
+	);
+};
+
+interface ClipBarProperties {
+	rangeData: Accessor<RangeData[]>;
+	videoFragments: Accessor<FragmentTimes[]>;
+	videoDuration: Accessor<number>;
+}
+
+const ClipBar: Component<ClipBarProperties> = (props) => {
+	return (
+		<div class={styles.clipBar}>
+			<Show when={props.videoFragments().length > 0 && props.videoDuration() > 0} keyed>
+				<Index each={props.rangeData()}>
+					{(range) => {
+						const rangeStartTime = range().startTime;
+						const rangeEndTime = range().endTime;
+						if (rangeStartTime === null || rangeEndTime === null) {
+							return <></>;
+						}
+						const fragments = props.videoFragments();
+						const rangeStart = videoPlayerTimeFromDateTime(rangeStartTime, fragments);
+						const rangeEnd = videoPlayerTimeFromDateTime(rangeEndTime, fragments);
+						if (rangeStart === null || rangeEnd === null) {
+							return <></>;
+						}
+						const duration = props.videoDuration();
+						const startPercentage = (rangeStart / duration) * 100;
+						const endPercentage = (rangeEnd / duration) * 100;
+						const widthPercentage = endPercentage - startPercentage;
+						const styleString = `left: ${startPercentage}%; width: ${widthPercentage}%;`;
+						return <div style={styleString}></div>;
+					}}
+				</Index>
+			</Show>
+		</div>
+	);
+};
+
+function videoPlayerTimeFromDateTime(
+	datetime: DateTime,
+	fragments: FragmentTimes[],
+): number | null {
+	for (const fragmentTimes of fragments) {
+		if (datetime >= fragmentTimes.rawStart && datetime <= fragmentTimes.rawEnd) {
+			return fragmentTimes.playerStart + datetime.diff(fragmentTimes.rawStart).as("seconds");
+		}
+	}
+	return null;
+}
