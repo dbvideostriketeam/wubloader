@@ -4,7 +4,7 @@ ADD buscribe-web /assets
 WORKDIR /assets
 RUN lessc style.less > style.css
 
-FROM node:23.1-alpine AS thrim
+FROM node:25.2-alpine AS thrim
 ADD thrimbletrimmer /assets
 WORKDIR /assets
 RUN npm install
