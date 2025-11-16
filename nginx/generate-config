@@ -60,6 +60,7 @@ http {
 	include /etc/nginx/mime.types;
 	resolver 127.0.0.11 valid=10s;
 	client_max_body_size 20M;
+	proxy_read_timeout 300s;
 $SSL_CONF
 	server {
 		listen 80;
