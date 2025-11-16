@@ -648,7 +648,12 @@ def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
 		for input_feeder in input_feeders:
 			input_feeder.kill()
 		if ffmpeg is not None and ffmpeg.poll() is None:
-			for action in (ffmpeg.kill, ffmpeg.stdin.close, ffmpeg.stdout.close):
+			actions = [ffmpeg.kill]
+			if ffmpeg.stdin is not None:
+				actions.append(ffmpeg.stdin.close)
+			if ffmpeg.stdout is not None:
+				actions.append(ffmpeg.stdout.close)
+			for action in actions:
 				try:
 					action()
 				except (OSError, IOError):
