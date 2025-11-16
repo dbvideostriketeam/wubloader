@@ -669,10 +669,11 @@ class TranscodeChecker(object):
 				if ids:
 					self.logger.info("{} videos are done".format(len(ids)))
 					done = self.mark_done(ids)
-					for video_id, title in ids.values():
+					for id in done:
+						video_id, title = ids[id]
 						self.post_to_zulip(video_id, title)
-					videos_marked_done.labels(self.location).inc(done)
-					self.logger.info("Marked {} videos as done".format(done))
+					videos_marked_done.labels(self.location).inc(len(done))
+					self.logger.info("Marked {} videos as done".format(len(done)))
 				self.wait(self.FOUND_VIDEOS_RETRY_INTERVAL)
 			except Exception:
 				self.logger.exception("Error in TranscodeChecker")
@@ -703,8 +704,9 @@ class TranscodeChecker(object):
 			UPDATE events
 			SET state = 'DONE', upload_time = %s
 			WHERE id = ANY (%s) AND state = 'TRANSCODING'
+			RETURNING id
 		""", datetime.datetime.utcnow(), list(ids.keys()))
-		return result.rowcount
+		return [id for id, in result.fetchall()]
 
 	def post_to_zulip(self, video_id, title):
 		if self.zulip_client is None:
