@@ -102,7 +102,7 @@ def find_winning_bids(year, amount):
 		if prize.state != "sold":
 			misses.append(f"{prize.id} state {prize.state}")
 			continue
-		match = re.search(r" for (\$[0-9,.]+)", prize.result)
+		match = re.search(r" for \$([0-9,.]+)", prize.result)
 		if not match:
 			misses.append(f"{prize.id} no match {prize.result!r}")
 			continue
