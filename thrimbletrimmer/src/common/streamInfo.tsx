@@ -5,6 +5,14 @@ export class StreamVideoInfo {
 	streamStartTime: DateTime;
 	streamEndTime: DateTime | null;
 
+	public clone(): StreamVideoInfo {
+		const copy = new StreamVideoInfo();
+		copy.streamName = this.streamName;
+		copy.streamStartTime = this.streamStartTime;
+		copy.streamEndTime = this.streamEndTime;
+		return copy;
+	}
+
 	public static defaultFromURL(): StreamVideoInfo | null {
 		const url = new URL(window.location.href);
 		const urlParams = url.searchParams;
@@ -28,10 +36,11 @@ export class StreamVideoInfo {
 				return null;
 			}
 		}
-		return {
-			streamName: stream,
-			streamStartTime: startTime,
-			streamEndTime: endTime,
-		};
+
+		const info = new StreamVideoInfo();
+		info.streamName = stream;
+		info.streamStartTime = startTime;
+		info.streamEndTime = endTime;
+		return info;
 	}
 }
