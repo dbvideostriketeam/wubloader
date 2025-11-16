@@ -111,8 +111,10 @@ def find_winning_bids(year, amount):
 		except ValueError:
 			misses.append(f"{prize.id} misparse {match.group(1)!r}")
 			continue
-		if bid == amount:
+		if abs(bid - amount) < 0.01:
 			matches.append(prize)
+		else:
+			misses.append(f"{prize.id} wrong bid {amount}")
 	logging.info(f"{len(matches)} matched for {amount} in {year}, not matched: {', '.join(misses)}")
 	return matches
 
