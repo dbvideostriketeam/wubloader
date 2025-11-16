@@ -1608,7 +1608,7 @@ function generateDownloadURL(timeRanges, transitions, downloadType, allowHoles, 
 async function uploadedImageToBase64() {
 	const fileInput = document.getElementById("video-info-thumbnail-custom");
 	if (fileInput.files.length === 0) {
-		if (existingThumbnail !== undefined) {
+		if (existingThumbnailBase64 !== undefined) {
 			return existingThumbnailBase64
 		}
 		throw new Error("A file was not provided for the thumbnail");
