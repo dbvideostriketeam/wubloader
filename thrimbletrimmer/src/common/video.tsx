@@ -160,14 +160,18 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 					<span class={styles.streamTimeSettingLabel}>Start Time</span>
 					<input type="text" name="start-time" value={startTimeDisplay()} />
 				</label>
-				<button onClick={padStartHandler}>Pad 1 Minute</button>
+				<button type="button" onClick={padStartHandler}>
+					Pad 1 Minute
+				</button>
 			</div>
 			<div>
 				<label>
 					<span class={styles.streamTimeSettingLabel}>End Time</span>
 					<input type="text" name="end-time" value={endTimeDisplay()} />
 				</label>
-				<button onClick={padEndHandler}>Pad 1 Minute</button>
+				<button type="button" onClick={padEndHandler}>
+					Pad 1 Minute
+				</button>
 			</div>
 			<div>
 				<label>
