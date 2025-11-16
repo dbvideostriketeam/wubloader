@@ -11,7 +11,6 @@ import {
 } from "./convertTime";
 import styles from "./video.module.scss";
 import "./video.scss";
-import { HLSProvider } from "vidstack";
 import { MediaPlayerElement } from "vidstack/elements";
 import { StreamVideoInfo } from "./streamInfo";
 
@@ -87,11 +86,11 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 			return;
 		}
 
-		props.setStreamVideoInfo({
-			streamName: streamName,
-			streamStartTime: startTime,
-			streamEndTime: endTime,
-		});
+		const newInfo = new StreamVideoInfo();
+		newInfo.streamName = streamName;
+		newInfo.streamStartTime = startTime;
+		newInfo.streamEndTime = endTime;
+		props.setStreamVideoInfo(newInfo);
 	};
 
 	const startTimeDisplay = () => {
@@ -135,20 +134,41 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 		return `?${query}`;
 	};
 
+	const padStartHandler = (event) => {
+		const videoInfo = props.streamVideoInfo().clone();
+		videoInfo.streamStartTime = videoInfo.streamStartTime.minus({ minutes: 1 });
+		props.setStreamVideoInfo(videoInfo);
+	};
+
+	const padEndHandler = (event) => {
+		const videoInfo = props.streamVideoInfo().clone();
+		if (videoInfo.streamEndTime === null) {
+			return;
+		}
+		videoInfo.streamEndTime = videoInfo.streamEndTime.plus({ minutes: 1 });
+		props.setStreamVideoInfo(videoInfo);
+	};
+
 	return (
 		<form onSubmit={submitHandler} class={styles.streamTimeSettings}>
 			<label>
 				<span class={styles.streamTimeSettingLabel}>Stream</span>
 				<input type="text" name="stream" value={props.streamVideoInfo().streamName} />
 			</label>
-			<label>
-				<span class={styles.streamTimeSettingLabel}>Start Time</span>
-				<input type="text" name="start-time" value={startTimeDisplay()} />
-			</label>
-			<label>
-				<span class={styles.streamTimeSettingLabel}>End Time</span>
-				<input type="text" name="end-time" value={endTimeDisplay()} />
-			</label>
+			<div>
+				<label>
+					<span class={styles.streamTimeSettingLabel}>Start Time</span>
+					<input type="text" name="start-time" value={startTimeDisplay()} />
+				</label>
+				<button onClick={padStartHandler}>Pad 1 Minute</button>
+			</div>
+			<div>
+				<label>
+					<span class={styles.streamTimeSettingLabel}>End Time</span>
+					<input type="text" name="end-time" value={endTimeDisplay()} />
+				</label>
+				<button onClick={padEndHandler}>Pad 1 Minute</button>
+			</div>
 			<div>
 				<label>
 					<input
