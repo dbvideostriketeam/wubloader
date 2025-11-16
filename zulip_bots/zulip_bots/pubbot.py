@@ -97,18 +97,23 @@ def _get_prize_name(year, id):
 
 def find_winning_bids(year, amount):
 	matches = []
+	misses = []
 	for prize in get_prizes(year, 'silent') + get_prizes(year, 'live'):
 		if prize.state != "sold":
+			misses.append(f"{prize.id} state {prize.state}")
 			continue
 		match = re.search(r" for (\$[0-9,.]+)", prize.result)
 		if not match:
+			misses.append(f"{prize.id} no match {prize.result!r}")
 			continue
 		try:
 			bid = float(match.group(1).replace(",", ""))
 		except ValueError:
+			misses.append(f"{prize.id} misparse {match.group(1)!r}")
 			continue
 		if bid == amount:
 			matches.append(prize)
+	logging.info(f"{len(matches)} matched for {amount} in {year}, not matched: {', '.join(misses)}")
 	return matches
 
 
