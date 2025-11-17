@@ -787,7 +787,56 @@ def get_thumbnail(ident):
 			return flask.Response(bytes(event['thumbnail_image']), mimetype='image/png')
 		else:
 			return '', 404
-			
+
+
+@app.route('/thrimshim/encodes', methods=['POST'])
+@request_stats
+@authenticate_editor
+def get_encodes(editor=None):
+	with app.db_manager.get_conn() as conn:
+		results = database.query(conn, """
+			SELECT src_url, src_hash, encode_args, dest_url, claimed_by, dest_hash
+			FROM encodes
+		""")
+		rows = [row._asdict() for row in results.fetchall()]
+		return json_response(rows)
+
+
+@app.route('/thrimshim/encodes/claim', methods=['POST'])
+@request_stats
+@authenticate_editor
+def claim_encode(editor=None):
+	body = flask.request.json
+	if "dest_url" not in body:
+		return "dest_url is required", 400
+	with app.db_manager.get_conn() as conn:
+		results = database.query(conn, """
+			UPDATE encodes
+			SET claimed_at = NOW(), claimed_by = (SELECT name FROM roles WHERE email = %(editor)s)
+			WHERE dest_url = %(dest_url)s AND claimed_by IS NULL
+		""", dest_url=body["dest_url"], editor=editor)
+		if results.rowcount == 0:
+			return "No such unclaimed row {!r}".format(body["dest_url"]), 404
+	return "", 200
+
+
+@app.route('/thrimshim/encodes/submit', methods=['POST'])
+@request_stats
+@authenticate_editor
+def finish_encode(editor=None):
+	body = flask.request.json
+	for key in ("dest_url", "dest_hash"):
+		if key not in body:
+			return f"{key} is required", 400
+	with app.db_manager.get_conn() as conn:
+		results = database.query(conn, """
+			UPDATE encodes
+			SET finished_at = NOW(), dest_hash = %(dest_hash)s
+			WHERE dest_url = %(dest_url)s AND dest_hash IS NULL
+		""", dest_url=body["dest_url"], dest_hash=body["dest_hash"])
+		if results.rowcount == 0:
+			return "No such unfinished row {!r}".format(body["dest_url"]), 404
+	return "", 200
 
 
 @app.route('/thrimshim/bus/<channel>')

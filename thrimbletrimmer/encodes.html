@@ -1,0 +1,32 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title>VST Mass Encode Jobs</title>
+
+		<meta
+			name="google-signin-client_id"
+			content="345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com"
+		/>
+		<script src="https://apis.google.com/js/platform.js?onload=onGLoad" async defer></script>
+		<link rel="stylesheet" href="styles/encodes.css" />
+		<script src="scripts/encodes.js"></script>
+	</head>
+	<body>
+		<table id="list-data">
+			<tr>
+				<th>Source</th>
+				<th>Source Hash</th>
+				<th>Encode Args</th>
+				<th>Dest</th>
+				<th>Claimed By</th>
+				<th>Dest Hash</th>
+			</tr>
+		</table>
+
+		<div id="google-authentication">
+			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
+			<a href="#" id="google-auth-sign-out" class="hidden">Sign Out of Google Account</a>
+		</div>
+	</body>
+</html>
