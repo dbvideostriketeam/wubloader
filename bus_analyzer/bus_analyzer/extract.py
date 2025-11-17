@@ -1,4 +1,5 @@
 
+import datetime
 import os
 from io import BytesIO
 
@@ -64,11 +65,13 @@ colour_profiles = {
 # Most digits we only care about the actual character height
 # 'last_digit_height'
 # But last digit we want the full white-background area as we want to try to match
+# 'last_digit_y_offset'
+# How many pixels above the top of the main digits the last digit starts
 # based on position also.
 location_profiles = {
 	'DBfH_2024': {
 		'area_coords': {
-			'odo': (1053, 857, 1170, 930),
+			'odo': (1053, 850, 1170, 930),
 			'clock': (1498, 852, 1590, 910)
 		},
 		'digit_x_coords': {
@@ -82,6 +85,7 @@ location_profiles = {
 		'digit_width': 17,
 		'digit_height': 24,
         'last_digit_height': 39,
+		'last_digit_y_offset': 5,
 		'sky_pixel': (1614, 192),
 		'dash_pixel': (945, 864),
 	},
@@ -97,6 +101,7 @@ location_profiles = {
 		'digit_width': 26,
 		'digit_height': 26,
         'last_digit_height': 38,
+		'last_digit_y_offset': 5,
 		'sky_pixel': (177, 255),
 	},
 }
@@ -117,16 +122,20 @@ cli = argh.EntryPoint()
 @argh.arg("paths", nargs="+")
 def to_digits(output_dir, paths, box_only=False, type="odo", profile='DBfH_2025'):
 	"""Extracts each digit and saves to a file. Useful for testing or building prototypes."""
+	profile = profiles[profile]
 	if not os.path.exists(output_dir):
 		os.mkdir(output_dir)
 	for path in paths:
 		name = os.path.splitext(os.path.basename(path))[0]
 		image = Image.open(path)
-		if not box_only:
-			image = image.crop(profile['area_coords'][type])
-		for i, digit in enumerate(extract_digits(image, type)):
-			output_path = os.path.join(output_dir, "{}-digit{}.png".format(name, i))
-			digit.save(output_path)
+		image = image.crop(profile['area_coords'][type])
+		if box_only:
+			output_path = os.path.join(output_dir, "{}-box.png".format(name))
+			image.save(output_path)
+		else:
+			for i, digit in enumerate(extract_digits(image, type, profile)):
+				output_path = os.path.join(output_dir, "{}-digit{}.png".format(name, i))
+				digit.save(output_path)
 
 
 def get_brightest_region(image, xs, height):
@@ -140,7 +149,7 @@ def get_brightest_region(image, xs, height):
 	# Find brightest sub-image of `height` rows
 	start_at = max(range(image.height - (height-1)), key=lambda y: sum(rows[y:y+height]))
 	# Cut image to only be that part
-	return image.crop((0, start_at, image.width, start_at + height))
+	return image.crop((0, start_at, image.width, start_at + height)), start_at
 
 
 def get_green(image):
@@ -170,7 +179,7 @@ def extract_digits(image, type, profile):
 		for x in profile['digit_x_coords'][type]
 		for dx in range(profile['digit_width'])
 	]
-	main_digits = get_brightest_region(image, digit_xs, profile['digit_height'])
+	main_digits, main_digits_y_base = get_brightest_region(image, digit_xs, profile['digit_height'])
 	main_digits = normalize(main_digits)
 
 	digits = []
@@ -180,8 +189,8 @@ def extract_digits(image, type, profile):
 
 	if type == "odo":
 		x = profile['digit_x_coords']["odo"][-1]
-		last_digit = get_brightest_region(image, range(x, x + profile['digit_width']), profile['last_digit_height'])
-		last_digit = last_digit.crop((x, 0, x + profile['digit_width'], last_digit.height))
+		y = main_digits_y_base - profile['last_digit_y_offset']
+		last_digit = image.crop((x, y, x + profile['digit_width'], y + profile['last_digit_height']))
 		last_digit = normalize(last_digit)
 		digits.append(last_digit)
 
@@ -361,12 +370,12 @@ def create_prototype(output, *images):
 
 
 @cli
-def get_frame(*segments):
+def get_frame(*segments, seek=0.):
 	for path in segments:
 		segment = parse_segment_path(path)
 		filename = segment.start.strftime("%Y-%m-%dT-%H-%M-%S") + ".png"
 		with open(filename, "wb") as f:
-			for chunk in extract_frame([segment], segment.start):
+			for chunk in extract_frame([segment], segment.start + datetime.timedelta(seconds=seek)):
 				common.writeall(f.write, chunk)
 		print(filename)
 
