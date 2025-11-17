@@ -5,6 +5,7 @@ import functools
 import json
 import logging
 import os
+import re
 import subprocess
 from uuid import uuid4
 
@@ -434,6 +435,7 @@ def generate_waveform(channel, quality):
 			Must be in ISO 8601 format (ie. yyyy-mm-ddTHH:MM:SS) and UTC.
 			The returned image may extend beyond the requested start and end times by a few seconds.
 		size: The image size to render in form WIDTHxHEIGHT. Default 1024x64.
+		color: The color to render the waveform. Defaults to black (#000000).
 	"""
 	start = dateutil.parse_utc_only(request.args['start'])
 	end = dateutil.parse_utc_only(request.args['end'])
@@ -459,7 +461,11 @@ def generate_waveform(channel, quality):
 	if not any(segment is not None for segment in segments):
 		return "We have no content available within the requested time range.", 406
 
-	return Response(render_segments_waveform(segments, (width, height)), mimetype='image/png')
+	color = request.args.get('color', '#000000')
+	if not re.match("^#?[0-9A-Fa-f]{,6}$", color):
+		return "The color provided is not a valid color code.", 400
+
+	return Response(render_segments_waveform(segments, (width, height), color = color), mimetype='image/png')
 
 
 @app.route('/frame/<channel>/<quality>.png')
@@ -528,7 +534,7 @@ def get_thumbnail_uploaded_template(channel, quality):
 			Should be a comma-seperated list of numbers.
 		location: Required. Left, top, right, bottom pixel coordinates to position the cropped frame.
 			Should be a comma-seperated list of numbers.
-	"""	
+	"""
 	template = request.data
 	logging.info('Generating thumbnail from the video frame at {} using a custom template'.format(request.args['timestamp']))
 	return get_thumbnail(channel, quality, request.args['timestamp'], template, request.args['crop'], request.args['location'])
