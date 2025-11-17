@@ -310,9 +310,7 @@ def get_row(ident):
 
 	# Append canned notes for specific event types
 	if response['category'] in CATEGORY_NOTES:
-		if response['notes']:
-			response['notes'] += "\n\n"
-		response['notes'] += CATEGORY_NOTES[response['category']]
+		response['category_notes'] = CATEGORY_NOTES[response['category']]
 
 	logging.info('Row {} fetched'.format(ident))
 
@@ -473,8 +471,6 @@ def update_row(ident, editor=None):
 			if column == "event_end":
 				# convert (dashed, value) to value
 				old_row[column] = old_row[column][1]
-			if column == "notes" and new_row["category"] in CATEGORY_NOTES:
-				new_row["notes"] = new_row["notes"].rsplit("\n\n", 1)[0]
 			if isinstance(old_row[column], datetime.datetime):
 				old_row[column] = old_row[column].isoformat()
 			def normalize(value):
