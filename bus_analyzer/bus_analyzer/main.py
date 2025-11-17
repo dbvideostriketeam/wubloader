@@ -365,7 +365,7 @@ def main(
 				try:
 					post_process(db_manager, segments, channel)
 				except Exception:
-					logging.exception("Failed to post-process segments")
+					logging.exception("Failed to post-process segments", exc_info=True)
 
 		if run_once:
 			logging.info("Requested to only run once, stopping")
