@@ -328,6 +328,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoTime={videoPlayerTime}
 				videoDuration={videoDuration}
 			/>
+			<NotesToEditor notes={props.data.notes} />
 		</>
 	);
 };
@@ -427,6 +428,22 @@ const Waveform: Component<WaveformProperties> = (props) => {
 		<div class={styles.waveformContainer}>
 			<img class={styles.waveform} alt="Waveform for this video" src={waveformURL()} />
 			<div class={styles.waveformMarker} style={markerStyle()}></div>
+		</div>
+	);
+};
+
+interface NotesToEditorProps {
+	notes: string;
+}
+
+const NotesToEditor: Component<NotesToEditorProps> = (props) => {
+	if (props.notes === "") {
+		return <></>;
+	}
+	return (
+		<div class={styles.notesToEditor}>
+			<div>Notes to Editor:</div>
+			<div>{props.notes}</div>
 		</div>
 	);
 };
