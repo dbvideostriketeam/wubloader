@@ -223,16 +223,17 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 			logging.warning(f"No user id known for user {name}")
 			continue
 		user_id = user_ids[name]
+		hours = [{hour} if hour != "" else set() for hour in row[1:]]
 		if user_id in schedule:
 			logging.info(f"Multiple rows for user {name}, merging")
 			_, old_hours = schedule[user_id]
 			merged = [
-				old | {new}
-				for old, new in zip(old_hours, row[1:])
+				old | new
+				for old, new in zip(old_hours, hours)
 			]
 			schedule[user_id] = name, merged
 		else:
-			schedule[user_id] = name, [{hour} if hour != "" else set() for hour in row[1:]]
+			schedule[user_id] = name, hours
 	return schedule
 
 
