@@ -232,10 +232,15 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoData, setVideoData] = createSignal(initialVideoData);
 	const [playerTime, setPlayerTime] = createSignal(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
-	const [videoFragmentTimes, setVideoFragmentTimes] = createSignal<FragmentTimes[]>([]);
 	const [downloadType, setDownloadType] = createSignal("smart");
 	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
 	const [videoDuration, setVideoDuration] = createSignal(0);
+	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
+	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
+
+	const videoFragmentTimes = () => {
+		return allFragmentTimes()[currentQualityLevel()];
+	};
 
 	onMount(() => {
 		const player = mediaPlayer();
@@ -252,7 +257,15 @@ const EditorContent: Component<ContentProps> = (props) => {
 					timeDefinition.playerStart = fragment.start;
 					times.push(timeDefinition);
 				}
-				setVideoFragmentTimes(times);
+				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
+				while (fragmentTimes.length <= event.detail.level) {
+					fragmentTimes.push([]);
+				}
+				fragmentTimes[event.detail.level] = times;
+				setAllFragmentTimes(fragmentTimes);
+			});
+			player.addEventListener("hls-level-switched", (event) => {
+				setCurrentQualityLevel(event.detail.level);
 			});
 			player.subscribe(({ currentTime, duration }) => {
 				setVideoPlayerTime(currentTime);
