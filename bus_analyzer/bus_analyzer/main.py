@@ -227,12 +227,16 @@ def analyze_hour(db_manager, prototypes, existing_segments, base_dir, channel, q
 @timed(normalize=lambda result, db_manager, segments, channel: len(segments))
 def post_process(db_manager, segments, channel):
 
-	if segments is not None:
+	if segments:
 		segments = sorted(segments)
 		start = parse_segment_path(segments[0]).start - datetime.timedelta(minutes=30)
 	# if no list of segments, post process all segments
-	else:
+	elif segments is None:
 		start = datetime.datetime(1, 1, 1)
+	else:
+		logging.info('No segments to post process')
+		return
+
 	conn = db_manager.get_conn()
 	query = database.query(conn, """
 		SELECT segment, timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
