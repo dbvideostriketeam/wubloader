@@ -277,7 +277,7 @@ def get_row(ident):
 			default_templates = {row.tag: row.default_template for row in results}
 
 			# since implicit tags are put at the start, with the shift tag first
-			# we prioritize later tags  
+			# we prioritize later tags
 			for tag in response['tags'][::-1]:
 				if tag in default_templates:
 					response['thumbnail_template'] = default_templates[tag]
@@ -647,7 +647,7 @@ def get_template(name):
 	"""Get a thumbnail template in PNG form"""
 	with app.db_manager.get_conn() as conn:
 		query = """
-			SELECT image FROM templates WHERE name = %s 
+			SELECT image FROM templates WHERE name = %s
 		"""
 		results = database.query(conn, query, name)
 		row = results.fetchone()
@@ -665,7 +665,7 @@ def get_template_metadata(name):
 	"""Get the metadata for a thumbnail as JSON"""
 	with app.db_manager.get_conn() as conn:
 		query = """
-			SELECT name, description, attribution, crop, location FROM templates WHERE name = %s 
+			SELECT name, description, attribution, crop, location FROM templates WHERE name = %s
 		"""
 		results = database.query(conn, query, name)
 		row = results.fetchone()
@@ -698,7 +698,7 @@ def validate_template(new_template, require_image=True):
 		# check for PNG file header
 		if not new_template['image'].startswith(b'\x89PNG\r\n\x1a\n'):
 			return None, 'Template image must be a PNG', 400
-	
+
 	return columns, new_template, 200
 
 
@@ -715,7 +715,7 @@ def add_template(artist=None):
 	with app.db_manager.get_conn() as conn:
 		#check if name is already in the database
 		query = sql.SQL("""
-			SELECT name FROM templates WHERE name = %s 
+			SELECT name FROM templates WHERE name = %s
 		""")
 		results = database.query(conn, query, new_template['name'])
 		if results.fetchone() is not None:
@@ -729,7 +729,7 @@ def add_template(artist=None):
 				sql.SQL(", ").join(database.get_column_placeholder(column) for column in columns),
 			)
 		database.query(conn, query, **new_template)
-	
+
 	logging.info('Thumbnail template {} added'.format(new_template['name']))
 	return '', 201
 
@@ -746,7 +746,7 @@ def update_template(name, artist=None):
 	with app.db_manager.get_conn() as conn:
 		#check if template is in database
 		query = sql.SQL("""
-			SELECT name FROM templates WHERE name = %s 
+			SELECT name FROM templates WHERE name = %s
 		""")
 		results = database.query(conn, query, name)
 		if results.fetchone() is None:
@@ -754,7 +754,7 @@ def update_template(name, artist=None):
 		# check if new name is in database
 		if name != new_template["name"]:
 			query = sql.SQL("""
-				SELECT name FROM templates WHERE name = %s 
+				SELECT name FROM templates WHERE name = %s
 			""")
 			results = database.query(conn, query, new_template['name'])
 			if results.fetchone() is not None:
@@ -783,7 +783,7 @@ def get_thumbnail(ident):
 	"Get the thumbnail for an event in PNG form"
 	with app.db_manager.get_conn() as conn:
 		query = """
-			SELECT thumbnail_mode, thumbnail_image FROM events WHERE id = %s 
+			SELECT thumbnail_mode, thumbnail_image FROM events WHERE id = %s
 		"""
 		results = database.query(conn, query, ident)
 		row = results.fetchone()
