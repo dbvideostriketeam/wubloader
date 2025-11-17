@@ -201,6 +201,48 @@ const EditorContent: Component<ContentProps> = (props) => {
 		(props.data.video_description ?? "").indexOf(CHAPTER_MARKER_DELIMITER) !== -1,
 	);
 
+	const descriptionParts = (props.data.video_description ?? "").split(CHAPTER_MARKER_DELIMITER, 2);
+	const description = descriptionParts[0];
+	const chaptersRawString = descriptionParts.length > 1 ? descriptionParts[1] : "";
+	const chaptersRawLines = chaptersRawString === "" ? [] : chaptersRawString.split("\n");
+	const chaptersByRange: ChapterData[][] = [];
+	for (const chapterLine of chaptersRawLines) {
+		const parts = chapterLine.split(" - ");
+		const timeData = parts.shift();
+		if (!timeData) {
+			continue;
+		}
+		const description = parts.join(" - ");
+
+		const timeParts = timeData.split(";");
+		const rangeIndex = +timeParts[0];
+		const time = dateTimeFromWubloaderTime(timeParts[1]);
+
+		const chapterDefinition = new ChapterData();
+		chapterDefinition.time = time;
+		chapterDefinition.description = description;
+
+		while (chaptersByRange.length <= rangeIndex) {
+			chaptersByRange.push([]);
+		}
+		chaptersByRange[rangeIndex].push(chapterDefinition);
+	}
+	for (const rangeChapters of chaptersByRange) {
+		rangeChapters.sort((a, b) => {
+			if (a.time === null && b.time === null) {
+				return 0;
+			}
+			// Sort null last so blank values appear at the end in the UI
+			if (a.time === null) {
+				return 1;
+			}
+			if (b.time === null) {
+				return -1;
+			}
+			return a.time.toMillis() - b.time.toMillis();
+		});
+	}
+
 	const initialVideoData: RangeData[] = [];
 	const transitions = props.data.video_transitions;
 	if (transitions !== null) {
@@ -225,7 +267,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		rangeData.endTime = rangeEnd;
 		rangeData.transitionType = transitionType;
 		rangeData.transitionSeconds = transitionSeconds;
-		rangeData.chapters = [];
+		rangeData.chapters = chaptersByRange.length > index ? chaptersByRange[index] : [];
 		initialVideoData.push(rangeData);
 	}
 
@@ -237,6 +279,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoDuration, setVideoDuration] = createSignal(0);
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
+	const [videoDescription, setVideoDescription] = createSignal(description);
 
 	const videoFragmentTimes = () => {
 		return allFragmentTimes()[currentQualityLevel()];
