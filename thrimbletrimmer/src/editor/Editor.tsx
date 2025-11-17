@@ -331,6 +331,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			/>
 			<NotesToEditor notes={props.data.notes} />
 			<CategoryNotes notes={props.data.category_notes} />
+			<ChapterToggle chaptersEnabled={chaptersEnabled} setChaptersEnabled={setChaptersEnabled} />
 		</>
 	);
 };
@@ -460,5 +461,28 @@ const CategoryNotes: Component<CategoryNotesProps> = (props) => {
 				{props.notes}
 			</div>
 		</Show>
+	);
+};
+
+interface ChapterToggleProps {
+	chaptersEnabled: Accessor<boolean>;
+	setChaptersEnabled: Setter<boolean>;
+}
+
+const ChapterToggle: Component<ChapterToggleProps> = (props) => {
+	const updateEnabled = (event: Event) => {
+		const checkbox = event.currentTarget;
+		if (checkbox) {
+			const checkboxElement = checkbox as HTMLInputElement;
+			props.setChaptersEnabled(checkboxElement.checked);
+		}
+	};
+	return (
+		<div class={styles.chaptersEnabledSelection}>
+			<label>
+				<input type="checkbox" checked={props.chaptersEnabled()} onChange={updateEnabled} />
+				Add chapter markers to the video description
+			</label>
+		</div>
 	);
 };
