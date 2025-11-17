@@ -64,6 +64,7 @@ export interface VideoData {
 	title_max_length: number;
 	bustime_start: string;
 	upload_locations: string[];
+	category_notes?: string;
 }
 
 enum RangeEntryType {
@@ -329,6 +330,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoDuration={videoDuration}
 			/>
 			<NotesToEditor notes={props.data.notes} />
+			<CategoryNotes notes={props.data.category_notes} />
 		</>
 	);
 };
@@ -437,13 +439,26 @@ interface NotesToEditorProps {
 }
 
 const NotesToEditor: Component<NotesToEditorProps> = (props) => {
-	if (props.notes === "") {
-		return <></>;
-	}
 	return (
-		<div class={styles.notesToEditor}>
-			<div>Notes to Editor:</div>
-			<div>{props.notes}</div>
-		</div>
+		<Show when={props.notes}>
+			<div class={styles.notesToEditor}>
+				<div>Notes to Editor:</div>
+				<div>{props.notes}</div>
+			</div>
+		</Show>
+	);
+};
+
+interface CategoryNotesProps {
+	notes?: string;
+}
+
+const CategoryNotes: Component<CategoryNotesProps> = (props) => {
+	return (
+		<Show when={props.notes}>
+			<div class={styles.categoryNotes}>
+				{props.notes}
+			</div>
+		</Show>
 	);
 };
