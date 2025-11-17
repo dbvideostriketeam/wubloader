@@ -142,7 +142,7 @@ class SheetSync(object):
 					if isinstance(e, HTTPError):
 						detail = ": {}".format(e.response.content)
 					self.logger.exception("Failed to sync{}".format(detail))
-					sync_errors.labels(self.name, type(error).__name__).inc()
+					sync_errors.labels(self.name, type(e).__name__).inc()
 					# To ensure a fresh slate and clear any DB-related errors, get a new conn on error.
 					# This is heavy-handed but simple and effective.
 					# If we can't re-connect, the program will crash from here,
