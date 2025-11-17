@@ -103,7 +103,7 @@ export const Editor: Component = () => {
 		);
 	}
 
-	if (videoID === "defaults" || videoID === "transitions") {
+	if (videoID === "defaults" || videoID === "transitions" || videoID === "templates" || videoID === "challenges") {
 		return (
 			<div class={styles.fullPageError}>
 				Silly, you thought you could break this by passing an "ID" that can return data in a
