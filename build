@@ -19,7 +19,6 @@ COMPONENTS=(
 	chat_archiver
 	cutter
 	downloader
-	graphs
 	nginx
 	playlist_manager
 	postgres
