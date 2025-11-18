@@ -45,6 +45,10 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		submitButton.innerText = "Submit";
 
 		const urlForm = document.createElement("form");
+		urlForm.appendChild(messageDiv);
+		urlForm.appendChild(urlEntry);
+		urlForm.appendChild(submitButton);
+
 		urlForm.addEventListener("submit", async (event) => {
 			event.preventDefault();
 
@@ -92,6 +96,9 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 		updateCell.appendChild(urlForm);
 
 		const row = document.createElement("tr");
+		row.appendChild(descriptionCell);
+		row.appendChild(updateCell);
+
 		challengesTable.appendChild(row);
 	}
 });
