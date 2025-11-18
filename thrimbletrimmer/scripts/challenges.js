@@ -53,11 +53,14 @@ window.addEventListener("DOMContentLoaded", async (event) => {
 			event.preventDefault();
 
 			const formData = new FormData(event.currentTarget);
-			const url = formData.get("url");
-			if (!url.startsWith("https://www.youtube.com/watch") || !url.startsWith("https://youtube.com/watch") || !url.startsWith("https://youtu.be/")) {
+			let url = formData.get("url");
+			if (url !== "" && !url.startsWith("https://www.youtube.com/watch") && !url.startsWith("https://youtube.com/watch") && !url.startsWith("https://youtu.be/")) {
 				messageDiv.style.color = "#c00";
 				messageDiv.innerText = "That doesn't seem to be a YouTube link.";
 				return;
+			}
+			if (url === "") {
+				url = null;
 			}
 
 			let authToken;
