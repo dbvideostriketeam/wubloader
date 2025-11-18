@@ -1,3 +1,7 @@
+.clickable {
+	cursor: pointer;
+}
+
 .fullPageError {
 	color: #f33;
 }
@@ -67,4 +71,35 @@
 
 .chaptersEnabledSelection {
 	margin-top: 5px;
+}
+
+.transitionLabel {
+	margin-right: 5px;
+}
+
+.rangeRegion {
+	margin-top: 4px;
+}
+
+.timeRangeEntryRow {
+	display: flex;
+	gap: 4px;
+	align-items: center;
+	margin: 4px 0;
+}
+
+.timeRangeSelect {
+	flex-basis: 100px;
+
+	input {
+		width: calc(100% - 8px); // Subtract the browser-added padding and border
+	}
+}
+
+.timeRangeIcon {
+	flex-basis: 16px;
+
+	img {
+		width: 16px;
+	}
 }
