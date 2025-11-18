@@ -4,6 +4,7 @@ import {
 	createEffect,
 	createResource,
 	createSignal,
+	For,
 	Index,
 	onMount,
 	Setter,
@@ -14,9 +15,15 @@ import { leadingAndTrailing, throttle } from "@solid-primitives/scheduled";
 import { DateTime } from "luxon";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
+import { bindingInputOnChange } from "../common/binding";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
+import AddIcon from "../assets/plus.png";
+import ArrowIcon from "../assets/arrow.png";
+import PencilIcon from "../assets/pencil.png";
+import PlayToIcon from "../assets/play_to.png";
+import RemoveIcon from "../assets/minus.png";
 
 const CHAPTER_MARKER_DELIMITER = "\n==========\n";
 const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
@@ -67,17 +74,17 @@ export interface VideoData {
 	category_notes?: string;
 }
 
-enum RangeEntryType {
-	Range,
-	Transition,
-}
-
 class RangeData {
-	startTime: DateTime | null;
-	endTime: DateTime | null;
-	transitionType: string;
-	transitionSeconds: number;
-	chapters: ChapterData[];
+	startTime: Accessor<DateTime | null>;
+	setStartTime: Setter<DateTime | null>;
+	endTime: Accessor<DateTime | null>;
+	setEndTime: Setter<DateTime | null>;
+	transitionType: Accessor<string>;
+	setTransitionType: Setter<string>;
+	transitionSeconds: Accessor<number>;
+	setTransitionSeconds: Setter<number>;
+	chapters: Accessor<ChapterData[]>;
+	setChapters: Setter<ChapterData[]>;
 }
 
 class ChapterData {
@@ -89,6 +96,84 @@ class FragmentTimes {
 	rawStart: DateTime;
 	rawEnd: DateTime;
 	playerStart: number;
+	duration: number;
+}
+
+class TransitionDefinition {
+	name: string;
+	description: string;
+}
+
+function defaultRangeData(): RangeData {
+	const data = new RangeData();
+	[data.startTime, data.setStartTime] = createSignal<DateTime | null>(null);
+	[data.endTime, data.setEndTime] = createSignal<DateTime | null>(null);
+	[data.transitionType, data.setTransitionType] = createSignal("");
+	[data.transitionSeconds, data.setTransitionSeconds] = createSignal(0);
+	[data.chapters, data.setChapters] = createSignal<ChapterData[]>([]);
+	return data;
+}
+
+function videoPlayerTimeFromDateTime(
+	datetime: DateTime,
+	fragments: FragmentTimes[],
+): number | null {
+	for (const fragmentTimes of fragments) {
+		if (datetime >= fragmentTimes.rawStart && datetime <= fragmentTimes.rawEnd) {
+			return fragmentTimes.playerStart + datetime.diff(fragmentTimes.rawStart).as("seconds");
+		}
+	}
+	return null;
+}
+
+function dateTimeFromVideoPlayerTime(time: number, fragments: FragmentTimes[]): DateTime | null {
+	for (const fragmentTimes of fragments) {
+		const fragmentStart = fragmentTimes.playerStart;
+		const fragmentEnd = fragmentStart + fragmentTimes.duration;
+		if (time >= fragmentStart && time <= fragmentEnd) {
+			const offset = time - fragmentStart;
+			return fragmentTimes.rawStart.plus({ seconds: offset });
+		}
+	}
+	return null;
+}
+
+function displayTimeForVideoPlayerTime(time: number): string {
+	const minutes = Math.trunc(time / 60);
+	const secondsRaw = Math.trunc(time % 60);
+	const seconds = secondsRaw < 10 ? `0${secondsRaw}` : secondsRaw;
+	const millisecondsRaw = Math.round((time % 1) * 1000);
+	let milliseconds: string | number;
+	if (millisecondsRaw < 10) {
+		milliseconds = `00${millisecondsRaw}`;
+	} else if (millisecondsRaw < 100) {
+		milliseconds = `0${millisecondsRaw}`;
+	} else {
+		milliseconds = millisecondsRaw;
+	}
+
+	return `${minutes}:${seconds}.${milliseconds}`;
+}
+
+function videoPlayerTimeForDisplayTime(time: string): number {
+	const parts = time.split(":");
+	if (parts.length === 1) {
+		return +time;
+	}
+
+	let hours = 0;
+	let minutes = 0;
+	let seconds = 0;
+	if (parts.length < 3) {
+		minutes = +parts[0];
+		seconds = +parts[1];
+	} else {
+		hours = +parts[0];
+		minutes = +parts[1];
+		seconds = +parts[2];
+	}
+
+	return hours * 3600 + minutes * 60 + seconds;
 }
 
 export const Editor: Component = () => {
@@ -103,7 +188,12 @@ export const Editor: Component = () => {
 		);
 	}
 
-	if (videoID === "defaults" || videoID === "transitions" || videoID === "templates" || videoID === "challenges") {
+	if (
+		videoID === "defaults" ||
+		videoID === "transitions" ||
+		videoID === "templates" ||
+		videoID === "challenges"
+	) {
 		return (
 			<div class={styles.fullPageError}>
 				Silly, you thought you could break this by passing an "ID" that can return data in a
@@ -218,9 +308,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 		const rangeIndex = +timeParts[0];
 		const time = dateTimeFromWubloaderTime(timeParts[1]);
 
-		const chapterDefinition = new ChapterData();
-		chapterDefinition.time = time;
-		chapterDefinition.description = description;
+		const chapterDefinition = {
+			time: time,
+			description: description,
+		};
 
 		while (chaptersByRange.length <= rangeIndex) {
 			chaptersByRange.push([]);
@@ -263,11 +354,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 		}
 
 		const rangeData = new RangeData();
-		rangeData.startTime = rangeStart;
-		rangeData.endTime = rangeEnd;
-		rangeData.transitionType = transitionType;
-		rangeData.transitionSeconds = transitionSeconds;
-		rangeData.chapters = chaptersByRange.length > index ? chaptersByRange[index] : [];
+		[rangeData.startTime, rangeData.setStartTime] = createSignal<DateTime | null>(rangeStart);
+		[rangeData.endTime, rangeData.setEndTime] = createSignal<DateTime | null>(rangeEnd);
+		[rangeData.transitionType, rangeData.setTransitionType] = createSignal(transitionType);
+		[rangeData.transitionSeconds, rangeData.setTransitionSeconds] = createSignal(transitionSeconds);
+		[rangeData.chapters, rangeData.setChapters] = createSignal(chaptersByRange[index] ?? []);
 		initialVideoData.push(rangeData);
 	}
 
@@ -280,10 +371,22 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [videoDescription, setVideoDescription] = createSignal(description);
+	const [allowHoles, setAllowHoles] = createSignal(false);
 
 	const videoFragmentTimes = () => {
 		return allFragmentTimes()[currentQualityLevel()];
 	};
+
+	const [allTransitions] = createResource<TransitionDefinition[]>(
+		async (source, { value, refetching }) => {
+			const transitionResponse = await fetch("/thrimshim/transitions");
+			if (!transitionResponse.ok) {
+				return [];
+			}
+			return await transitionResponse.json();
+		},
+	);
+	const [activeKeyboardIndex, setActiveKeyboardIndex] = createSignal(0);
 
 	onMount(() => {
 		const player = mediaPlayer();
@@ -295,9 +398,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 						continue;
 					}
 					const timeDefinition = new FragmentTimes();
-					timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime);
+					timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
 					timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
 					timeDefinition.playerStart = fragment.start;
+					timeDefinition.duration = fragment.duration;
 					times.push(timeDefinition);
 				}
 				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
@@ -337,10 +441,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 		const streamInfo = streamVideoInfo();
 		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
 		const params = new URLSearchParams({ type: downloadType(), allow_holes: "false" });
-		const videoRangeData = videoData();
-		for (const range of videoRangeData) {
-			const rangeStart = range.startTime ? wubloaderTimeFromDateTime(range.startTime) : "";
-			const rangeEnd = range.endTime ? wubloaderTimeFromDateTime(range.endTime) : "";
+		for (const range of videoData()) {
+			const rangeStartTime = range.startTime();
+			const rangeEndTime = range.endTime();
+			const rangeStart = rangeStartTime ? wubloaderTimeFromDateTime(rangeStartTime) : "";
+			const rangeEnd = rangeEndTime ? wubloaderTimeFromDateTime(rangeEndTime) : "";
 			const rangeString = `${rangeStart},${rangeEnd}`;
 			params.append("range", rangeString);
 		}
@@ -388,6 +493,17 @@ const EditorContent: Component<ContentProps> = (props) => {
 			<NotesToEditor notes={props.data.notes} />
 			<CategoryNotes notes={props.data.category_notes} />
 			<ChapterToggle chaptersEnabled={chaptersEnabled} setChaptersEnabled={setChaptersEnabled} />
+			<RangeSelection
+				rangeData={videoData}
+				setRangeData={setVideoData}
+				allTransitions={allTransitions.latest ?? []}
+				activeKeyboardIndex={activeKeyboardIndex}
+				streamInfo={streamVideoInfo}
+				allowHoles={allowHoles}
+				videoPlayerTime={videoPlayerTime}
+				videoFragments={videoFragmentTimes}
+				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+			/>
 		</>
 	);
 };
@@ -402,43 +518,34 @@ const ClipBar: Component<ClipBarProperties> = (props) => {
 	return (
 		<div class={styles.clipBar}>
 			<Show when={props.videoFragments().length > 0 && props.videoDuration() > 0} keyed>
-				<Index each={props.rangeData()}>
-					{(range) => {
-						const rangeStartTime = range().startTime;
-						const rangeEndTime = range().endTime;
-						if (rangeStartTime === null || rangeEndTime === null) {
-							return <></>;
-						}
-						const fragments = props.videoFragments();
-						const rangeStart = videoPlayerTimeFromDateTime(rangeStartTime, fragments);
-						const rangeEnd = videoPlayerTimeFromDateTime(rangeEndTime, fragments);
-						if (rangeStart === null || rangeEnd === null) {
-							return <></>;
-						}
-						const duration = props.videoDuration();
-						const startPercentage = (rangeStart / duration) * 100;
-						const endPercentage = (rangeEnd / duration) * 100;
-						const widthPercentage = endPercentage - startPercentage;
-						const styleString = `left: ${startPercentage}%; width: ${widthPercentage}%;`;
-						return <div style={styleString}></div>;
+				<For each={props.rangeData()}>
+					{(range: RangeData) => {
+						const styleString = () => {
+							const rangeStartTime = range.startTime();
+							const rangeEndTime = range.endTime();
+							const fragments = props.videoFragments();
+							const duration = props.videoDuration();
+
+							if (rangeStartTime === null || rangeEndTime === null) {
+								return "width: 0px";
+							}
+							const rangeStart = videoPlayerTimeFromDateTime(rangeStartTime, fragments);
+							const rangeEnd = videoPlayerTimeFromDateTime(rangeEndTime, fragments);
+							if (rangeStart === null || rangeEnd === null) {
+								return "width: 0px";
+							}
+							const startPercentage = (rangeStart / duration) * 100;
+							const endPercentage = (rangeEnd / duration) * 100;
+							const widthPercentage = endPercentage - startPercentage;
+							return `left: ${startPercentage}%; width: ${widthPercentage}%;`;
+						};
+						return <div style={styleString()}></div>;
 					}}
-				</Index>
+				</For>
 			</Show>
 		</div>
 	);
 };
-
-function videoPlayerTimeFromDateTime(
-	datetime: DateTime,
-	fragments: FragmentTimes[],
-): number | null {
-	for (const fragmentTimes of fragments) {
-		if (datetime >= fragmentTimes.rawStart && datetime <= fragmentTimes.rawEnd) {
-			return fragmentTimes.playerStart + datetime.diff(fragmentTimes.rawStart).as("seconds");
-		}
-	}
-	return null;
-}
 
 interface WaveformProperties {
 	videoInfo: Accessor<StreamVideoInfo>;
@@ -513,9 +620,7 @@ interface CategoryNotesProps {
 const CategoryNotes: Component<CategoryNotesProps> = (props) => {
 	return (
 		<Show when={props.notes}>
-			<div class={styles.categoryNotes}>
-				{props.notes}
-			</div>
+			<div class={styles.categoryNotes}>{props.notes}</div>
 		</Show>
 	);
 };
@@ -539,6 +644,330 @@ const ChapterToggle: Component<ChapterToggleProps> = (props) => {
 				<input type="checkbox" checked={props.chaptersEnabled()} onChange={updateEnabled} />
 				Add chapter markers to the video description
 			</label>
+		</div>
+	);
+};
+
+interface RangeSelectionProps {
+	rangeData: Accessor<RangeData[]>;
+	setRangeData: Setter<RangeData[]>;
+	allTransitions: TransitionDefinition[];
+	activeKeyboardIndex: Accessor<number>;
+	streamInfo: Accessor<StreamVideoInfo>;
+	allowHoles: Accessor<boolean>;
+	videoPlayerTime: Accessor<number>;
+	videoFragments: Accessor<FragmentTimes[]>;
+	videoPlayer: Accessor<MediaPlayerElement>;
+}
+
+const RangeSelection: Component<RangeSelectionProps> = (props) => {
+	const addNewRange = (event) => {
+		props.setRangeData([...props.rangeData(), defaultRangeData()]);
+	};
+
+	return (
+		<div class={styles.rangeRegion}>
+			<Index each={props.rangeData()}>
+				{(currentRangeData: Accessor<RangeData>, index: number) => {
+					const setTransitionType = (event) => {
+						const sourceSelection: HTMLSelectElement = event.currentTarget;
+						props.rangeData()[index].setTransitionType(sourceSelection.value);
+					};
+					const setTransitionSeconds = (event) => {
+						const sourceSelection: HTMLInputElement = event.currentTarget;
+						props.rangeData()[index].setTransitionSeconds(+sourceSelection.value);
+					};
+
+					const [previewPlayerTime, setPreviewPlayerTime] = createSignal(0);
+					const [previewMediaPlayerElement, setPreviewMediaPlayerElement] =
+						createSignal<MediaPlayerElement>();
+					const [showPreview, setShowPreview] = createSignal(false);
+
+					const togglePreview = () => {
+						setShowPreview(!showPreview());
+					};
+
+					const previewVideoURL = () => {
+						if (index === 0) {
+							return "";
+						}
+
+						const previousRange = props.rangeData()[index - 1];
+						const durationAndPadding = currentRangeData().transitionSeconds() + 5;
+						const currentStart = currentRangeData().startTime();
+						const currentEnd = currentRangeData().endTime();
+						const previousStart = previousRange.startTime();
+						const previousEnd = previousRange.endTime();
+						if (
+							previousStart === null ||
+							previousEnd === null ||
+							currentStart === null ||
+							currentEnd === null
+						) {
+							return "";
+						}
+
+						const previousRangeStart = DateTime.max(
+							previousStart,
+							previousEnd.minus({ seconds: durationAndPadding }),
+						);
+						const currentRangeEnd = DateTime.min(
+							currentEnd,
+							currentStart.plus({ seconds: durationAndPadding }),
+						);
+						const previousRangeString = `${wubloaderTimeFromDateTime(previousRangeStart)},${wubloaderTimeFromDateTime(previousEnd)}`;
+						const currentRangeString = `${wubloaderTimeFromDateTime(currentStart)},${wubloaderTimeFromDateTime(currentRangeEnd)}`;
+						const transitionString =
+							currentRangeData().transitionType() === ""
+								? ""
+								: `${currentRangeData().transitionType()},${currentRangeData().transitionSeconds()}`;
+
+						const urlParams = new URLSearchParams({
+							type: "webm",
+							allow_holes: props.allowHoles().toString(),
+							transition: transitionString,
+						});
+						urlParams.append("range", previousRangeString);
+						urlParams.append("range", currentRangeString);
+
+						return `/cut/${props.streamInfo().streamName}/480p.ts?${urlParams.toString()}`;
+					};
+
+					const [startTimeFieldValue, setStartTimeFieldValue] = createSignal("");
+					const [endTimeFieldValue, setEndTimeFieldValue] = createSignal("");
+
+					// Synchronize the field values with store values
+					createEffect(() => {
+						const rangeStartTime = currentRangeData().startTime();
+						const fragments = props.videoFragments();
+						if (rangeStartTime === null) {
+							return;
+						}
+						const videoPlayerStart = videoPlayerTimeFromDateTime(rangeStartTime, fragments);
+						if (videoPlayerStart === null) {
+							return;
+						}
+						setStartTimeFieldValue(displayTimeForVideoPlayerTime(videoPlayerStart));
+					});
+
+					createEffect(() => {
+						const enteredStartTime = startTimeFieldValue();
+						const fragments = props.videoFragments();
+
+						const playerTime = videoPlayerTimeForDisplayTime(enteredStartTime);
+						const startTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
+						if (startTime !== null) {
+							props.rangeData()[index].setStartTime(startTime);
+						}
+					});
+
+					createEffect(() => {
+						const rangeEndTime = currentRangeData().endTime();
+						const fragments = props.videoFragments();
+						if (rangeEndTime === null) {
+							return;
+						}
+						const videoPlayerEnd = videoPlayerTimeFromDateTime(rangeEndTime, fragments);
+						if (videoPlayerEnd === null) {
+							return;
+						}
+						setEndTimeFieldValue(displayTimeForVideoPlayerTime(videoPlayerEnd));
+					});
+
+					createEffect(() => {
+						const enteredEndTime = endTimeFieldValue();
+						const fragments = props.videoFragments();
+
+						const playerTime = videoPlayerTimeForDisplayTime(enteredEndTime);
+						const endTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
+						if (endTime !== null) {
+							props.rangeData()[index].setEndTime(endTime);
+						}
+					});
+
+					const setStartPoint = () => {
+						const currentTime = props.videoPlayerTime();
+						const fragments = props.videoFragments();
+						const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
+						if (time === null) {
+							return;
+						}
+						props.rangeData()[index].setStartTime(time);
+					};
+
+					const playFromStartTime = () => {
+						const currentTime = currentRangeData().startTime();
+						const fragments = props.videoFragments();
+						if (currentTime === null) {
+							return;
+						}
+						const time = videoPlayerTimeFromDateTime(currentTime, fragments);
+						if (time === null) {
+							return;
+						}
+						props.videoPlayer().currentTime = time;
+					};
+
+					const setEndPoint = () => {
+						const currentTime = props.videoPlayerTime();
+						const fragments = props.videoFragments();
+						const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
+						if (time === null) {
+							return;
+						}
+						props.rangeData()[index].setEndTime(time);
+					};
+
+					const playFromEndTime = () => {
+						const currentTime = currentRangeData().endTime();
+						const fragments = props.videoFragments();
+						if (currentTime === null) {
+							return;
+						}
+						const time = videoPlayerTimeFromDateTime(currentTime, fragments);
+						if (time === null) {
+							return;
+						}
+						props.videoPlayer().currentTime = time;
+					};
+
+					const removeHandler = () => {
+						const ranges = props.rangeData();
+						const newRanges = ranges.slice();
+						newRanges.splice(index, 1);
+						props.setRangeData(newRanges);
+					};
+
+					return (
+						<>
+							<Show when={index > 0}>
+								<div>
+									<span class={styles.transitionLabel}>
+										Transition:
+									</span>
+									<select onSelect={setTransitionType}>
+										<option value="cut" title="Hard cut between the time ranges">
+											cut
+										</option>
+										<For each={props.allTransitions}>
+											{(item: TransitionDefinition, index: Accessor<number>) => {
+												return (
+													<option value={item.name} title={item.description}>
+														{item.name}
+													</option>
+												);
+											}}
+										</For>
+									</select>
+									<Show when={currentRangeData().transitionType() !== ""}>
+										over
+										<input
+											type="number"
+											value={currentRangeData().transitionSeconds()}
+											onChange={setTransitionSeconds}
+										/>
+										seconds
+										<button type="button" onClick={togglePreview}>
+											<Show when={showPreview()} fallback="Hide Preview">
+												Show Preview
+											</Show>
+										</button>
+									</Show>
+									<Show when={showPreview()}>
+										<div class={styles.previewVideoPlayer}>
+											<VideoPlayer
+												src={previewVideoURL}
+												setPlayerTime={setPreviewPlayerTime}
+												mediaPlayer={previewMediaPlayerElement as Accessor<MediaPlayerElement>}
+												setMediaPlayer={setPreviewMediaPlayerElement as Setter<MediaPlayerElement>}
+											/>
+										</div>
+									</Show>
+								</div>
+							</Show>
+							<div class={styles.timeRangeEntryRow}>
+								<div class={styles.timeRangeSelect}>
+									<input
+										type="text"
+										class={styles.timeField}
+										use:bindingInputOnChange={[startTimeFieldValue, setStartTimeFieldValue]}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<img
+										class={styles.clickable}
+										src={PencilIcon}
+										alt="Set range start point to current video time"
+										title="Set range start point to current video time"
+										onClick={setStartPoint}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<img
+										class={styles.clickable}
+										src={PlayToIcon}
+										alt="Play from the start point"
+										title="Play from the start point"
+										onClick={playFromStartTime}
+									/>
+								</div>
+								<div class={styles.timeRangeSelect}>
+									<input
+										type="text"
+										class={styles.timeField}
+										use:bindingInputOnChange={[endTimeFieldValue, setEndTimeFieldValue]}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<img
+										class={styles.clickable}
+										src={PencilIcon}
+										alt="Set range end point to current video time"
+										title="Set range end point to current video time"
+										onClick={setEndPoint}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<img
+										class={styles.clickable}
+										src={PlayToIcon}
+										alt="Play from the end point"
+										title="Play from the end point"
+										onClick={playFromEndTime}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<img
+										class={styles.clickable}
+										src={RemoveIcon}
+										alt="Remove this time range"
+										title="Remove this time range"
+										onClick={removeHandler}
+									/>
+								</div>
+								<div class={styles.timeRangeIcon}>
+									<Show when={props.activeKeyboardIndex() === index}>
+										<img
+											src={ArrowIcon}
+											alt="This is the active range for keyboard shortcuts."
+											title="This is the active range for keyboard shortcuts."
+										/>
+									</Show>
+								</div>
+							</div>
+						</>
+					);
+				}}
+			</Index>
+			<div>
+				<img
+					class={styles.clickable}
+					src={AddIcon}
+					alt="Add another time range"
+					title="Add another time range"
+					onClick={addNewRange}
+				/>
+			</div>
 		</div>
 	);
 };
