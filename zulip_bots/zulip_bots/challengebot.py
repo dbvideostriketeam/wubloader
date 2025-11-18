@@ -41,7 +41,7 @@ def main(config_file, interval=60, metrics_port=8020, test=False, once=False, fi
 			if test:
 				print(message)
 			elif not first_run:
-				client.send_to_stream("bot-spam", "Completed Challenges", message)
+				client.send_to_stream("editors", "Completed Challenges", message)
 			state[challenge["id"]] = challenge
 		if not test:
 			with open(config['state'], 'w') as f:
