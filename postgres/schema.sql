@@ -140,7 +140,7 @@ CREATE TABLE playlists (
 	-- When tags is NULL, it indicates tags have not been set and so the playlist should
 	-- match nothing. Conversely, when tags is empty, it indicates the playlist should match everything.
 	tags TEXT[],
-	playlist_id TEXT,
+	playlist_id TEXT UNIQUE,
 	show_in_description BOOLEAN NOT NULL DEFAULT FALSE,
 	-- These event ids are references into the events table, but they aren't foreign keys
 	-- because we don't want invalid input to cause integrity errors.
