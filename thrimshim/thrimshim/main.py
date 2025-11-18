@@ -253,11 +253,12 @@ def get_row(ident):
 	else:
 		response["upload_locations"] = app.upload_locations
 
-	# archive events always have allow_holes on
 	if is_archive:
+		# archive events always have allow_holes on
 		response["allow_holes"] = True
-
-	if is_archive:
+		# archive event video titles don't matter, and should just match description
+		if not response["video_title"]:
+			response["video_title"] = response["description"]
 		response["thumbnail_mode"] = "NONE"
 	elif response['event_start'] is not None:
 		start = response['event_start']
