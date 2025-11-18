@@ -293,8 +293,8 @@
   bus_channel:: "buscam",
 
   // If you don't know what these are, leave them blank.
-  challenge_api_url: null,
-  challenge_api_key: null,
+  challenge_api_url:: null,
+  challenge_api_key:: null,
 
   // The channel to run buscribe on. Future work: Have it run for more than one channel.
   buscribe_channel:: $.clean_channels[0],
