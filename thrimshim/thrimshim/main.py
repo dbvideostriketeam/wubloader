@@ -15,7 +15,7 @@ import prometheus_client
 from psycopg2 import sql
 
 import common
-from common import database, dateutil
+from common import database, dateutil, requests
 from common.flask_stats import request_stats, after_request
 from common.segments import KNOWN_XFADE_TRANSITIONS, CUSTOM_XFADE_TRANSITIONS
 
@@ -821,6 +821,41 @@ def claim_encode(editor=None):
 	return "", 200
 
 
+@app.route('/thrimshim/challenges')
+@request_stats
+def get_challenges():
+	if app.challenge_api_url is None:
+		return "This server not configured with challenge api", 501
+	resp = app.requests.get(app.challenge_api_url, headers={
+		"Authorization": app.challenge_api_key,
+		"User-Agent": "thrimshim",
+	})
+	resp.raise_for_status()
+	return resp.json()["challenges"]
+
+
+@app.route('/thrimshim/challenges/<id>', methods=['POST'])
+@request_stats
+@authenticate_editor
+def set_challenge_video(id, editor=None):
+	if app.challenge_api_url is None:
+		return "This server not configured with challenge api", 501
+	url = flask.request.json["url"]
+	resp = app.requests.post(
+		app.challenge_api_url,
+		headers={
+			"Authorization": app.challenge_api_key,
+			"User-Agent": "thrimshim",
+		},
+		json={
+			"id": id,
+			"vstURL": url,
+		},
+	)
+	resp.raise_for_status()
+	return "", 200
+
+
 @app.route('/thrimshim/encodes/submit', methods=['POST'])
 @request_stats
 @authenticate_editor
@@ -986,10 +1021,12 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 	'  - Thumbnail mode defaults to NONE.',
 ]))
 @argh.arg('--archive-location', help="Default upload location for archive sheet events, see --archive-sheet")
+@argh.arg('--challenge-api-url', help="URL of the desertbus.org challenge API")
+@argh.arg('--challenge-api-key', help="Auth token for the desertbus.org challenge API")
 def main(
 	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False, title_header=None, description_footer=None, upload_locations='',
-	archive_sheet=None, archive_location=None,
+	archive_sheet=None, archive_location=None, challenge_api_url=None, challenge_api_key=None,
 ):
 	server = WSGIServer((host, port), cors(app))
 
@@ -1000,6 +1037,9 @@ def main(
 	app.description_footer = "" if description_footer is None else description_footer
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
+	app.challenge_api_url = challenge_api_url
+	app.challenge_api_key = challenge_api_key
+	app.requests = requests.InstrumentedSession()
 
 	if archive_sheet is not None and archive_location is None:
 		raise ValueError("Setting --archive-sheet also requires setting --archive-location")
