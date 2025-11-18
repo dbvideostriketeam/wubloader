@@ -40,6 +40,7 @@
     prizebot: false,
     youtubebot: false,
     twitch_stats: false,
+    challengebot: false,
     bus_analyzer: false,
   },
 
@@ -392,6 +393,13 @@
     channel_id: "UCz5-PNQxaT4WtB_OMAwD85g", // DesertBusForHope
   },
 
+  challengebot:: {
+    email: "blog-bot@chat.videostrike.team",
+    api_key: $.blogbot.zulip_api_key,
+    state_path: "./challengebot_state.json",
+    args: [],
+  },
+
   // Extra options to pass via environment variables,
   // eg. log level, disabling stack sampling.
   env:: {
@@ -697,6 +705,7 @@
         prizebot: 8017,
         youtubebot: 8018,
         twitch_stats: 8019,
+        challengebot: 8020,
         postgres_exporter: 9187,
       },
       image: $.get_image("nginx"),
@@ -862,6 +871,22 @@
 
     [if $.enabled.twitch_stats then "twitch_stats"]:
       bot_service("twitch_stats", null, ["/mnt/twitch_stats.json"] + $.channel_ids, mount_segments=true),
+
+    [if $.enabled.challengebot then "challengebot"]:
+      bot_service("challengebot", {
+        zulip: {
+          url: $.zulip_url,
+          email: $.challengebot.email,
+          api_key: $.challengebot.api_key,
+        },
+        challenge_api: {
+          url: $.challenge_api_url,
+          api_key: $.challenge_api_key,
+        },
+        state: "/state.json"
+      }, $.challengebot.args) + {
+        volumes: ["%s:/state.json" % $.challengebot.state_path],
+      },
 
   },
 

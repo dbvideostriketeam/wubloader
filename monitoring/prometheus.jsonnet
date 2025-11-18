@@ -34,6 +34,7 @@ local services_by_role = {
     "schedulebot",
     "twitchbot",
     "youtubebot",
+    "challengebot",
   ],
 };
 local services = services_by_role.leader;
