@@ -292,6 +292,10 @@
   // The channel to use for bus_analyzer
   bus_channel:: "buscam",
 
+  // If you don't know what these are, leave them blank.
+  challenge_api_url: null,
+  challenge_api_key: null,
+
   // The channel to run buscribe on. Future work: Have it run for more than one channel.
   buscribe_channel:: $.clean_channels[0],
   // Don't transcribe anything older than this time.
@@ -550,6 +554,10 @@
       + (if $.archive_worksheet != null then [
         "--archive-sheet", $.archive_worksheet,
         "--archive-location", $.archive_location,
+      ] else [])
+      + (if $.challenge_api_url != null then [
+        "--challenge-api-url", $.challenge_api_url,
+        "--challenge-api-key", $.challenge_api_key,
       ] else []),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
