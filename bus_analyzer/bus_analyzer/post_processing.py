@@ -2,39 +2,68 @@ import itertools
 import math
 import operator
 
-MAX_SPEED = 45 / 3600
+
+def fix_chain(seconds, corrected_chains, days, subgroup, first, second):
+	m = (corrected_chains[second] - corrected_chains[first]) / (seconds[second] - seconds[first])
+	b = corrected_chains[first] - m * seconds[first] 
+	for i in subgroup:
+		if days[i] is None or days[i] == 'score':
+			continue
+		corrected_chains[i] = m * seconds[i] + b
 
 
 def post_process_miles(seconds, miles, days):
-	miles = [math.nan if mile is None else mile for mile in miles]
+	MAX_SPEED = 1 # chains per second
+	START = 109.3 * 80 # in chains
+	# convert to chains to avoid floating point issues
+	chains = [math.nan if mile is None else 80 * mile for mile in miles]
+	whole_miles = [math.nan if mile is None else 80 * int(mile) for mile in miles]
+	
 	good = []
 	suspect = []
 	for i in range(1, len(seconds) - 1):
-		if math.isnan(miles[i]) or miles[i] <= 100:
+		if math.isnan(chains[i]) or chains[i] < START:
 			suspect.append(i)
 			continue
 		if days[i] is None or days[i] == 'score':
 			suspect.append(i)
 			continue
-		previous_diff = miles[i] - miles[i - 1]
+		# the last digit of the odometer is less reliable so throw out negative changes in the whole miles or increases of more than one mile
+		previous_diff = whole_miles[i] - whole_miles[i - 1]
+		if math.isnan(previous_diff) or previous_diff < 0 or previous_diff > 80:
+			suspect.append(i)
+			continue
+		next_diff = whole_miles[i + 1] - whole_miles[i]
+		if math.isnan(next_diff) or next_diff < 0 or next_diff > 80:
+			suspect.append(i)
+			continue			
+		previous_diff = chains[i] - chains[i - 1]
 		if math.isnan(previous_diff) or previous_diff < 0 or previous_diff > MAX_SPEED * (seconds[i] - seconds[i - 1]):
 			suspect.append(i)
 			continue
-		next_diff = miles[i + 1] - miles[i]
+		next_diff = chains[i + 1] - chains[i]
 		if math.isnan(next_diff) or next_diff < 0 or next_diff > MAX_SPEED * (seconds[i + 1] - seconds[i]):
 			suspect.append(i)
 			continue
-		# handle big jumps to apparently good data
-		if good and miles[i] - miles[good[-1]] > MAX_SPEED * (seconds[i] - seconds[good[-1]]):
-			suspect.append(i)
-			continue
+		if good:
+			good_diff = chains[i] - chains[good[-1]]
+			time_diff = seconds[i] - seconds[good[-1]]
+			# handle big jumps to apparently good data
+			if good_diff > MAX_SPEED * time_diff:
+				suspect.append(i)
+				continue
+			# the only valid reason for the milage to go down is if they crash.
+			# If they have crashed, then they should have been able to reach the current milage since the earliest posible crash
+			if good_diff < 0 and chains[i] > START + time_diff * MAX_SPEED:
+				suspect.append(i)
+				continue
 		good.append(i)
 
 	# if there are no 'good' odometer readings, bail on post processing 
 	if len(good) == 0:
-		return [math.nan for i in range(len(miles))]
+		return [math.nan for i in range(len(chains))]
 
-	corrected_miles = [miles[i] if i in good else 0. for i in range(len(miles))]
+	corrected_chains = [chains[i] if i in good else 0. for i in range(len(chains))]
 	# identify groups of suspicious data and correct them
 	for k, g in itertools.groupby(enumerate(suspect), lambda x:x[0]-x[1]):
 		group = map(operator.itemgetter(1), g)
@@ -44,17 +73,17 @@ def post_process_miles(seconds, miles, days):
 			back = 1
 			# check whether any suspicious data is likely valid and mark it as not suspicious
 			while True:
-				if corrected_miles[i - back]:
-					diff = miles[i] - corrected_miles[i - back]
+				if corrected_chains[i - back]:
+					diff = chains[i] - corrected_chains[i - back]
 					max_diff = MAX_SPEED * (seconds[i] - seconds[i - back])
-					forward_diff = miles[group[-1] + 1] - miles[i]
+					forward_diff = chains[group[-1] + 1] - chains[i]
 					forward_max_diff = MAX_SPEED * (seconds[group[-1] + 1] - seconds[i])
 					if diff >= 0 and diff <= max_diff and forward_diff <= forward_max_diff:
-						corrected_miles[i] = miles[i]
+						corrected_chains[i] = chains[i]
 					break
 				else:
 					back += 1
-			if not corrected_miles[i]:
+			if not corrected_chains[i]:
 				to_fix.append(i)
 
 		# actually fix remaining suspicious data via linear interpolation
@@ -62,50 +91,76 @@ def post_process_miles(seconds, miles, days):
 			subgroup = map(operator.itemgetter(1), g)
 			subgroup = list(map(int, subgroup))
 			# ignore data from before the first good measurement or after crashes
-			if subgroup[0] < good[0] or corrected_miles[subgroup[0] - 1] > corrected_miles[subgroup[-1] + 1]:
+			if subgroup[0] < good[0] or corrected_chains[subgroup[0] - 1] > corrected_chains[subgroup[-1] + 1]:
 				continue
-			m = (corrected_miles[subgroup[-1] + 1] - corrected_miles[subgroup[0] - 1]) / (seconds[subgroup[-1] + 1] - seconds[subgroup[0] - 1])
-			b = corrected_miles[subgroup[-1] + 1] - m * seconds[subgroup[-1] + 1] 
-			for i in subgroup:
-				corrected_miles[i] = m * seconds[i] + b
-
+			fix_chain(seconds, corrected_chains, days, subgroup, subgroup[0] - 1, subgroup[-1] + 1)
+	
+	to_fix = []
 	# custom handling of the start
-	if 0 <= corrected_miles[1] - miles[0] <= MAX_SPEED * (seconds[1] - seconds[0]):
-		corrected_miles[0] = miles[0]
+	for earliest in range(len(seconds)):
+		if corrected_chains[earliest]:
+			break
+	for i in range(earliest - 1, -1, -1):
+		foreward = 1
+		while True:
+			if corrected_chains[i + foreward]:
+				diff = corrected_chains[i + foreward] - chains[i]
+				max_diff = MAX_SPEED * (seconds[i + foreward] - seconds[i])
+				if diff >= 0 and diff <= max_diff:
+					corrected_chains[i] = chains[i]
+				break
+			else:
+				foreward += 1
 
+		if not corrected_chains[i]:
+			to_fix.append(i)
+	to_fix = to_fix[::-1]
+			
 	# custom handling of the end
 	# find the most recent good value
 	for latest in range(len(seconds) - 1, -1, -1):
-		if corrected_miles[latest]:
+		if corrected_chains[latest]:
 			break
-	to_fix = []
 	for i in range(latest + 1, len(seconds)):
 		back = 1
 		while True:
-			if corrected_miles[i - back]:
-				diff = miles[i] - corrected_miles[i - back]
+			if corrected_chains[i - back]:
+				diff = chains[i] - corrected_chains[i - back]
 				max_diff = MAX_SPEED * (seconds[i] - seconds[i - back])
 				if diff >= 0 and diff <= max_diff:
-					corrected_miles[i] = miles[i]
+					corrected_chains[i] = chains[i]
 				break
 			else:
 				back += 1
-		if not corrected_miles[i]:
+		if not corrected_chains[i]:
 			to_fix.append(i)
-
-	# linear interpolation of the end 
+	
+	# linear interpolation to fix gaps near but not at start and end
 	for k, g in itertools.groupby(enumerate(to_fix), lambda x:x[0]-x[1]):
 		subgroup = map(operator.itemgetter(1), g)
 		subgroup = list(map(int, subgroup))
-		# ignore the last data point or after crashes
-		if subgroup[-1] == (len(corrected_miles) - 1) or corrected_miles[subgroup[0] - 1] > corrected_miles[subgroup[-1] + 1]:
+		# ignore the last data point or after crashes, or ranges at the very start or end
+		if subgroup[0] == 0 or subgroup[-1] == (len(corrected_chains) - 1) or corrected_chains[subgroup[0] - 1] > corrected_chains[subgroup[-1] + 1]:
 			continue
-		m = (corrected_miles[subgroup[-1] + 1] - corrected_miles[subgroup[0] - 1]) / (seconds[subgroup[-1] + 1] - seconds[subgroup[0] - 1])
-		b = corrected_miles[subgroup[-1] + 1] - m * seconds[subgroup[-1] + 1] 
-		for i in subgroup:
-			corrected_miles[i] = m * seconds[i] + b
+		fix_chain(seconds, corrected_chains, days, subgroup, subgroup[0] - 1, subgroup[-1] + 1)
+	# special handling of the end
+	if not corrected_chains[-1]:
+		for latest in range(len(seconds) - 1, -1, -1):
+			if corrected_chains[latest]:
+				break
+		if corrected_chains[latest - 1]:
+			subgroup = range(latest + 1, len(seconds))
+			fix_chain(seconds, corrected_chains, days, subgroup, latest - 1, latest)
+	# and of the start
+	if not corrected_chains[0]:
+		for earliest in range(len(seconds)):
+			if corrected_chains[earliest]:
+				break
+		if corrected_chains[earliest + 1]:
+			subgroup = range(earliest)
+			fix_chain(seconds, corrected_chains, days, subgroup, earliest, earliest + 1)
 
-	corrected_miles = [mile if mile > 0 else None for mile in corrected_miles]
+	corrected_miles = [chain / 80 if chain > 0 else None for chain in corrected_chains]
 	return corrected_miles
 
 
