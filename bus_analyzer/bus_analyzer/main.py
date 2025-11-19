@@ -232,7 +232,7 @@ def post_process(db_manager, segments, channel):
 		start = parse_segment_path(segments[0]).start
 		a_minute_ago = start - datetime.timedelta(minutes=1)
 		start = start - datetime.timedelta(minutes=30)
-		end = segments.parse_segment_path(segments[-1]).end
+		end = parse_segment_path(segments[-1]).end
 	# if no list of segments, post process all segments
 	elif segments is None:
 		start = datetime.datetime(1, 1, 1)
