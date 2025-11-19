@@ -244,7 +244,7 @@ def post_process(db_manager, segments, channel):
 
 	conn = db_manager.get_conn()
 	query = database.query(conn, """
-		SELECT timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
+		SELECT segment, timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
 		FROM bus_data
 		WHERE channel = %(channel)s
 			AND timestamp > %(start)s
@@ -253,7 +253,7 @@ def post_process(db_manager, segments, channel):
 		ORDER BY timestamp;
 		""", start=start, end=end, channel=channel)
 	rows = query.fetchall()
-	times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
+	segments, times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
 	logging.info('{} segments fetched for post processing between {} and {}'.format(len(times), times[0], times[-1]))
 
 	for index in range(len(times) - 1, 0, -1):
@@ -264,6 +264,7 @@ def post_process(db_manager, segments, channel):
 	corrected_clocks = post_process_clocks(seconds, clocks, days)[index:]
 	old_miles = old_miles[index:]
 	old_clocks = old_clocks[index:]
+	segments = segments[index:]
 
 	count = 0
 	for i in range(len(corrected_miles)):
