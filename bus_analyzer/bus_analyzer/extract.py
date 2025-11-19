@@ -1,5 +1,6 @@
 
 import datetime
+import math
 import os
 from io import BytesIO
 
@@ -68,11 +69,15 @@ colour_profiles = {
 # 'last_digit_y_offset'
 # How many pixels above the top of the main digits the last digit starts
 # based on position also.
+# 'speed_y_offset'
+# Y difference between center of speed gauge and top of main odo digits
 location_profiles = {
 	'DBfH_2024': {
 		'area_coords': {
 			'odo': (1053, 850, 1170, 930),
-			'clock': (1498, 852, 1590, 910)
+			'clock': (1498, 852, 1590, 910),
+			'heat': (458, 845, 528, 1070),
+			'speed': (660, 845, 758, 980),
 		},
 		'digit_x_coords': {
 			'odo': (0, 22, 44, 66, 96),
@@ -86,6 +91,7 @@ location_profiles = {
 		'digit_height': 24,
         'last_digit_height': 39,
 		'last_digit_y_offset': 5,
+		'speed_y_offset': 72,
 		'sky_pixel': (1614, 192),
 		'dash_pixel': (945, 864),
 	},
@@ -133,7 +139,8 @@ def to_digits(output_dir, paths, box_only=False, type="odo", profile='DBfH_2025'
 			output_path = os.path.join(output_dir, "{}-box.png".format(name))
 			image.save(output_path)
 		else:
-			for i, digit in enumerate(extract_digits(image, type, profile)):
+			_, digits = extract_digits(image, type, profile)
+			for i, digit in enumerate(digits):
 				output_path = os.path.join(output_dir, "{}-digit{}.png".format(name, i))
 				digit.save(output_path)
 
@@ -194,7 +201,14 @@ def extract_digits(image, type, profile):
 		last_digit = normalize(last_digit)
 		digits.append(last_digit)
 
-	return digits
+	return main_digits_y_base, digits
+
+
+def extract_gauge(image, profile, type):
+	"""Takes a full image and returns the gauge line"""
+	cropped = image.crop(profile["area_coords"][type])
+	green = normalize(get_green(cropped))
+	return green.point(lambda v: v > 128, mode='1')
 
 
 def normalize(image):
@@ -275,13 +289,24 @@ def read_digit(digit, prototypes_path="./prototypes", verbose=False):
 			print("{}: {}".format(n, s))
 
 
+@cli
+def read_gauges(*files, profile='DBfH_2025'):
+	profile = profiles[profile]
+	for file in files:
+		image = Image.open(file)
+		odo_base, _ = extract_digits(image, 'odo', profile)
+		heat = recognize_gauge(extract_gauge(image, profile, 'heat'), profile, 'heat', odo_base)
+		speed = recognize_gauge(extract_gauge(image, profile, 'speed'), profile, 'speed', odo_base)
+		print(f"{file}: heat {heat}, speed {speed}")
+
+
 def recognize_odometer(prototypes, frame, profile):
 	"""Takes a full image frame and returns (detected mile value, score, digits)
 	where score is between 0 and 1. Higher numbers are more certain the value is correct.
 	digits is for debugging.
 	"""
 	odo = frame.crop(profile['area_coords']['odo'])
-	digits = extract_digits(odo, 'odo', profile)
+	_, digits = extract_digits(odo, 'odo', profile)
 	mask = prototypes['mask']['mask']
 	mask = mask.convert(mode='L')
 	digits = [
@@ -301,7 +326,7 @@ def recognize_odometer(prototypes, frame, profile):
 
 def recognize_clock(prototypes, frame, profile):
 	clock = frame.crop(profile['area_coords']['clock'])
-	digits = extract_digits(clock, 'clock', profile)
+	_, digits = extract_digits(clock, 'clock', profile)
 	mask = prototypes['mask']['mask']
 	mask = mask.convert(mode='L')
 	digits = [
@@ -321,6 +346,66 @@ def recognize_clock(prototypes, frame, profile):
 	# Use average score of digits as frame score
 	score = sum(score for _, score, _ in digits) / len(digits)
 	return value, score, digits
+
+
+def recognize_gauge(box, profile, type, odo_digit_height):
+	# find top and bottom pixels of the arm
+	minmax = lambda l: (min(l), max(l))
+	bounds = box.getbbox()
+	if bounds is None:
+		return None # empty image
+	_, top, _, bottom = bounds
+	toprow, _ = box.crop((0, top, box.width, top + 1)).getprojection()
+	bottomrow, _ = box.crop((0, bottom - 1, box.width, bottom)).getprojection()
+	top_left, top_right = minmax([i for i, v in enumerate(toprow) if v])
+	bottom_left, bottom_right = minmax([i for i, v in enumerate(bottomrow) if v])
+	top_x = (top_left + top_right) / 2
+	bottom_x = (bottom_left + bottom_right) / 2
+
+	# Identify which one is the center of the gauge.
+	if type == "speed":
+		# For speed this is whichever is closer to the correct offset from the odo.
+		target = odo_digit_height + profile["speed_y_offset"]
+		top_diff = abs(top - target)
+		bottom_diff = abs(bottom - target)
+		if top_diff < bottom_diff:
+			center_x = top_x
+			center_y = top
+			edge_x = bottom_x
+			edge_y = bottom
+		else:
+			center_x = bottom_x
+			center_y = bottom
+			edge_x = top_x
+			edge_y = top
+	else:
+		# For heat it is always the bottom pixel
+		center_x = bottom_x
+		center_y = bottom
+		edge_x = top_x
+		edge_y = top
+
+	# With these coords, 0 is left, -90deg is down, +90deg is up.
+	# This lets us avoid the discontinuity at -180.
+	angle = math.atan2(center_y - edge_y, center_x - edge_x)
+
+	if type == "speed":
+		full = 1.7938
+		zero = -math.pi/2
+		scale = 45
+		stops = 12
+	elif type == "heat":
+		full = 2.02
+		zero = 0.9
+		scale = 1
+		stops = 6
+	else:
+		raise ValueError("Bad type")
+	value = (angle - zero) / (full - zero) # should be 0 to 1
+	value = round(value * stops) / stops # quantize to 0..stops positions
+	if not 0 <= value <= stops:
+		return None # out of range
+	return scale * value
 
 
 @cli
