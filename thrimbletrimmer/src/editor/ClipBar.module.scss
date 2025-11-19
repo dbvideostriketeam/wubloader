@@ -1,0 +1,13 @@
+.clipBar {
+	width: calc(100% - 14px);
+	min-height: 7px;
+	background-color: #bbb;
+	position: relative;
+	margin: 0 7px;
+
+	> div {
+		position: absolute;
+		background-color: #d80;
+		height: 100%;
+	}
+}
