@@ -265,6 +265,7 @@ def post_process(db_manager, segments, channel):
 	old_miles = old_miles[index:]
 	old_clocks = old_clocks[index:]
 	segments = segments[index:]
+	times = times[index:]
 
 	count = 0
 	for i in range(len(corrected_miles)):
