@@ -229,42 +229,54 @@ def post_process(db_manager, segments, channel):
 
 	if segments:
 		segments = sorted(segments)
-		start = parse_segment_path(segments[0]).start - datetime.timedelta(minutes=30)
+		start = parse_segment_path(segments[0]).start
+		a_minute_ago = start - datetime.timedelta(minutes=1)
+		start = start - datetime.timedelta(minutes=30)
+		end = segments.parse_segment_path(segments[-1]).end
 	# if no list of segments, post process all segments
 	elif segments is None:
 		start = datetime.datetime(1, 1, 1)
+		a_minute_ago = start
+		end = datetime.datetime.now(datetime.UTC)
 	else:
 		logging.info('No segments to post process')
 		return
 
 	conn = db_manager.get_conn()
 	query = database.query(conn, """
-		SELECT segment, timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
+		SELECT timestamp, raw_odometer, raw_clock, timeofday, odometer, clock
 		FROM bus_data
 		WHERE channel = %(channel)s
 			AND timestamp > %(start)s
+			AND timestamp < %(end)s
 		--AND NOT segment LIKE '%%partial%%'
 		ORDER BY timestamp;
-		""", start=start, channel=channel)
+		""", start=start, end=end, channel=channel)
 	rows = query.fetchall()
-	segments, times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
+	times, miles, clocks, days, old_miles, old_clocks = zip(*rows)
+	logging.info('{} segments fetched for post processing between {} and {}'.format(len(times), times[0], times[-1]))
 
+	for index in range(len(times) - 1, 0, -1):
+		if times[index] <= a_minute_ago:
+			break
 	seconds = [(time - times[0]).total_seconds() for time in times]
-	corrected_miles = post_process_miles(seconds, miles, days)
-	corrected_clocks = post_process_clocks(seconds, clocks, days)
+	corrected_miles = post_process_miles(seconds[index:], miles[index:], days[index:])
+	corrected_clocks = post_process_clocks(seconds, clocks, days)[index:]
+	old_miles = old_miles[index:]
+	old_clocks = old_clocks[index:]
 
 	count = 0
-	for i in range(len(segments)):
+	for i in range(len(corrected_miles)):
 		if corrected_miles[i] == old_miles[i] and corrected_clocks[i] == old_clocks[i]:
 			continue
 		query = database.query(conn, """
 			UPDATE bus_data
 			SET odometer = %(odometer)s, clock = %(clock)s
 			WHERE channel = %(channel)s AND segment = %(segment)s AND timestamp = %(timestamp)s
-        """, channel=channel, segment=segments[i], timestamp=times[i], odometer=corrected_miles[i], clock=corrected_clocks[i])
+		""", channel=channel, segment=segments[i], timestamp=times[i], odometer=corrected_miles[i], clock=corrected_clocks[i])
 		count += 1
 	
-	logging.info("{} segments post processed with {} segments updated".format(len(segments), count))
+	logging.info("{} segments post processed with {} segments updated".format(len(corrected_clocks), count))
 	
 
 def parse_hours(s):
