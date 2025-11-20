@@ -213,6 +213,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 		initialVideoData.push(rangeData);
 	}
 
+	let initialTitle = props.data.video_title;
+	if (props.data.category === "RDP" && !initialTitle) {
+		initialTitle = props.data.description;
+	}
+
 	const [videoData, setVideoData] = createSignal(initialVideoData);
 	const [playerTime, setPlayerTime] = createSignal(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
@@ -221,7 +226,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoDuration, setVideoDuration] = createSignal(0);
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
-	const [videoTitle, setVideoTitle] = createSignal(props.data.video_title ?? "");
+	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
 	const [videoDescription, setVideoDescription] = createSignal(description);
 	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
 	const [allowHoles, setAllowHoles] = createSignal(false);
