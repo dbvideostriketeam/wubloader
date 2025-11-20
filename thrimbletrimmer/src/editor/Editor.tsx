@@ -353,6 +353,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoPlayerTime={videoPlayerTime}
 				videoFragments={videoFragmentTimes}
 				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+				enableChapterEntry={chaptersEnabled}
 			/>
 		</>
 	);
