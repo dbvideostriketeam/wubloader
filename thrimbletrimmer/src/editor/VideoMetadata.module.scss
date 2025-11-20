@@ -1,0 +1,35 @@
+.info {
+	display: grid;
+	grid-template-columns: 200px 1fr;
+	grid-template-rows: 1.25em 3em minmax(4em, max-content) 1.25em;
+	gap: 2px;
+
+	> label {
+		display: contents;
+	}
+}
+
+.titleContainer {
+	display: flex;
+	align-items: center;
+	white-space: pre;
+}
+
+.title {
+	flex-grow: 1;
+}
+
+.abbreviatedTitle {
+	width: 200px;
+	overflow: hidden;
+	font-size: 1em;
+	line-height: 1em;
+	height: 2em;
+	text-overflow: ellipsis;
+
+	// Unfortunately, all the Webkit-specific stuff below is required to show ellipses on wrapped text.
+	// Somehow, it also works on Firefox.
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+}
