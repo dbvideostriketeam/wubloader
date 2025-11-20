@@ -63,6 +63,11 @@ export class RangeData {
 export class ChapterData {
 	time: DateTime | null;
 	description: string;
+
+	constructor() {
+		this.time = null;
+		this.description = "";
+	}
 }
 
 export class FragmentTimes {

@@ -1,3 +1,7 @@
+.clickable {
+	cursor: pointer;
+}
+
 .transitionLabel {
 	margin-right: 5px;
 }
@@ -24,7 +28,19 @@
 .timeRangeIcon {
 	flex-basis: 16px;
 
-	img {
+	img, media-icon {
 		width: 16px;
 	}
+}
+
+.timeRangeDescription {
+	flex-basis: 400px;
+
+	input {
+		width: calc(100% - 8px);
+	}
+}
+
+.addChapter {
+	margin-left: 20px;
 }
