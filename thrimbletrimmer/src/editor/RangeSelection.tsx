@@ -7,7 +7,7 @@ import {
 	Index,
 	Setter,
 	Show,
-	untrack
+	untrack,
 } from "solid-js";
 import styles from "./RangeSelection.module.scss";
 import {
@@ -367,7 +367,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												if (chapterTime === null) {
 													return;
 												}
-												const videoPlayerChapter = videoPlayerTimeFromDateTime(chapterTime, fragments);
+												const videoPlayerChapter = videoPlayerTimeFromDateTime(
+													chapterTime,
+													fragments,
+												);
 												if (videoPlayerChapter === null) {
 													return;
 												}

@@ -11,10 +11,34 @@ export function bindingInputOnChange(
 	createEffect(() => (element.value = s()));
 }
 
+export function bindingInputOnInput(
+	element: HTMLInputElement,
+	accessor: () => [Accessor<string>, Setter<string>],
+) {
+	const [s, set] = accessor();
+	element.addEventListener("input", (event) =>
+		set((event.currentTarget as HTMLInputElement).value),
+	);
+	createEffect(() => (element.value = s()));
+}
+
+export function bindingTextareaOnChange(
+	element: HTMLTextAreaElement,
+	accessor: () => [Accessor<string>, Setter<string>],
+) {
+	const [s, set] = accessor();
+	element.addEventListener("change", (event) =>
+		set((event.currentTarget as HTMLTextAreaElement).value),
+	);
+	createEffect(() => (element.value = s()));
+}
+
 declare module "solid-js" {
 	namespace JSX {
 		interface DirectiveFunctions {
 			bindingInputOnChange: typeof bindingInputOnChange;
+			bindingInputOnInput: typeof bindingInputOnInput;
+			bindingTextareaOnChange: typeof bindingTextareaOnChange;
 		}
 	}
 }
