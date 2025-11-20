@@ -7,7 +7,7 @@ import {
 	Index,
 	Setter,
 	Show,
-	untrack
+	untrack,
 } from "solid-js";
 import styles from "./RangeSelection.module.scss";
 import {
@@ -246,8 +246,8 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							<Show when={index > 0}>
 								<div>
 									<span class={styles.transitionLabel}>Transition:</span>
-									<select onSelect={setTransitionType}>
-										<option value="cut" title="Hard cut between the time ranges">
+									<select onChange={setTransitionType}>
+										<option value="" title="Hard cut between the time ranges">
 											cut
 										</option>
 										<For each={props.allTransitions}>
@@ -261,16 +261,23 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 										</For>
 									</select>
 									<Show when={currentRangeData().transitionType() !== ""}>
-										over
+										<span class={styles.transitionText}>over</span>
 										<input
+											class={styles.transitionDuration}
 											type="number"
+											min={0}
+											step={1}
 											value={currentRangeData().transitionSeconds()}
 											onChange={setTransitionSeconds}
 										/>
-										seconds
-										<button type="button" onClick={togglePreview}>
-											<Show when={showPreview()} fallback="Hide Preview">
-												Show Preview
+										<span class={styles.transitionText}>seconds</span>
+										<button
+											type="button"
+											class={styles.transitionPreviewToggle}
+											onClick={togglePreview}
+										>
+											<Show when={showPreview()} fallback="Show Preview">
+												Hide Preview
 											</Show>
 										</button>
 									</Show>
@@ -367,7 +374,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												if (chapterTime === null) {
 													return;
 												}
-												const videoPlayerChapter = videoPlayerTimeFromDateTime(chapterTime, fragments);
+												const videoPlayerChapter = videoPlayerTimeFromDateTime(
+													chapterTime,
+													fragments,
+												);
 												if (videoPlayerChapter === null) {
 													return;
 												}

@@ -18,6 +18,7 @@ import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
 import { NotesToEditor } from "./NotesToEditor";
 import { RangeSelection } from "./RangeSelection";
+import { VideoMetadata } from "./VideoMetadata";
 import { Waveform } from "./Waveform";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
@@ -220,7 +221,9 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoDuration, setVideoDuration] = createSignal(0);
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
+	const [videoTitle, setVideoTitle] = createSignal(props.data.video_title ?? "");
 	const [videoDescription, setVideoDescription] = createSignal(description);
+	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
 	const [allowHoles, setAllowHoles] = createSignal(false);
 
 	const videoFragmentTimes = () => {
@@ -354,6 +357,16 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoFragments={videoFragmentTimes}
 				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 				enableChapterEntry={chaptersEnabled}
+			/>
+			<VideoMetadata
+				titlePrefix={props.data.title_prefix}
+				titleMaxLength={props.data.title_max_length}
+				title={videoTitle}
+				setTitle={setVideoTitle}
+				description={videoDescription}
+				setDescription={setVideoDescription}
+				tags={videoTags}
+				setTags={setVideoTags}
 			/>
 		</>
 	);
