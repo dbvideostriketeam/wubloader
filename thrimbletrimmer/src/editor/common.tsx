@@ -24,7 +24,7 @@ export interface VideoData {
 	video_tags: string[] | null;
 	video_channel: string;
 	video_quality: string;
-	thumbnail_mode: string;
+	thumbnail_mode: ThumbnailType;
 	thumbnail_time: string;
 	thumbnail_template: string | null; // Can be null if no templates are set up
 	thumbnail_image: string | null; // Base64 of the thumbnail data
@@ -80,6 +80,37 @@ export class FragmentTimes {
 export class TransitionDefinition {
 	name: string;
 	description: string;
+}
+
+export enum ThumbnailType {
+	None = "NONE",
+	Frame = "BARE",
+	Template = "TEMPLATE",
+	CustomTemplate = "ONEOFF",
+	CustomThumbnail = "CUSTOM"
+}
+
+export class ThumbnailData {
+	type: Accessor<ThumbnailType>;
+	setType: Setter<ThumbnailType>;
+	time: Accessor<DateTime | null>;
+	setTime: Setter<DateTime | null>;
+	template: Accessor<string | null>;
+	setTemplate: Setter<string | null>;
+	image: Accessor<string | null>;
+	setImage: Setter<string | null>;
+	crop: Accessor<[number, number, number, number] | null>;
+	setCrop: Setter<[number, number, number, number] | null>;
+	location: Accessor<[number, number, number, number] | null>;
+	setLocation: Setter<[number, number, number, number] | null>;
+}
+
+export interface ThumbnailTemplateDefinition {
+	name: string;
+	description: string;
+	attribution: string;
+	crop: [number, number, number, number];
+	location: [number, number, number, number];
 }
 
 export function defaultRangeData(): RangeData {
