@@ -12,12 +12,13 @@ import {
 import { DateTime } from "luxon";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
-import { ChapterData, FragmentTimes, RangeData, TransitionDefinition, VideoData } from "./common";
+import { ChapterData, FragmentTimes, RangeData, ThumbnailData, ThumbnailTemplateDefinition, TransitionDefinition, VideoData } from "./common";
 import { CategoryNotes } from "./CategoryNotes";
 import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
 import { NotesToEditor } from "./NotesToEditor";
 import { RangeSelection } from "./RangeSelection";
+import { ThumbnailSettings } from "./ThumbnailSettings";
 import { VideoMetadata } from "./VideoMetadata";
 import { Waveform } from "./Waveform";
 import { StreamVideoInfo } from "../common/streamInfo";
@@ -244,6 +245,26 @@ const EditorContent: Component<ContentProps> = (props) => {
 			return await transitionResponse.json();
 		},
 	);
+
+	const initialThumbnailData = new ThumbnailData();
+	[initialThumbnailData.type, initialThumbnailData.setType] = createSignal(props.data.thumbnail_mode);
+	[initialThumbnailData.time, initialThumbnailData.setTime] = createSignal(props.data.thumbnail_time ? dateTimeFromWubloaderTime(props.data.thumbnail_time) : null);
+	[initialThumbnailData.template, initialThumbnailData.setTemplate] = createSignal(props.data.thumbnail_template);
+	[initialThumbnailData.image, initialThumbnailData.setImage] = createSignal(props.data.thumbnail_image);
+	[initialThumbnailData.crop, initialThumbnailData.setCrop] = createSignal(props.data.thumbnail_crop);
+	[initialThumbnailData.location, initialThumbnailData.setLocation] = createSignal(props.data.thumbnail_location);
+	const [thumbnail, setThumbnail] = createSignal(initialThumbnailData);
+
+	const [allThumbnailTemplates] = createResource<ThumbnailTemplateDefinition[]>(
+		async (source, { value, refetching }) => {
+			const thumbnailResponse = await fetch("/thrimshim/templates");
+			if (!thumbnailResponse.ok) {
+				return [];
+			}
+			return await thumbnailResponse.json();
+		}
+	);
+
 	const [activeKeyboardIndex, setActiveKeyboardIndex] = createSignal(0);
 
 	onMount(() => {
@@ -372,6 +393,13 @@ const EditorContent: Component<ContentProps> = (props) => {
 				setDescription={setVideoDescription}
 				tags={videoTags}
 				setTags={setVideoTags}
+			/>
+			<ThumbnailSettings
+				allThumbnailTemplates={allThumbnailTemplates() ?? []}
+				thumbnailData={thumbnail()}
+				videoFragments={videoFragmentTimes}
+				videoPlayerTime={videoPlayerTime}
+				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 			/>
 		</>
 	);
