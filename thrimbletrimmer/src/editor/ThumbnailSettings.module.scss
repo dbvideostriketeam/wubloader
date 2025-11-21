@@ -1,0 +1,29 @@
+.firstThumbnailRow > *:not(:last-child) {
+	margin-right: 5px;
+}
+
+.timeRangeEntry {
+	display: inline-flex;
+	gap: 4px;
+	align-items: center;
+}
+
+.timeRangeSelect {
+	flex-basis: 100px;
+
+	input {
+		width: calc(100% - 8px);
+	}
+}
+
+.timeRangeIcon {
+	flex-basis: 16px;
+
+	img {
+		width: 16px;
+	}
+}
+
+.clickable {
+	cursor: pointer;
+}
