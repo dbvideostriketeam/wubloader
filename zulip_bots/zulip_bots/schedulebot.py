@@ -130,7 +130,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 		shift_hour = hour - omega + 1
 
 	if hour == last:
-		shift = "rdporb"
+		shift = "💥"
 		shift_hour = "∞"
 
 	def render_name(user_id, mention=True):
