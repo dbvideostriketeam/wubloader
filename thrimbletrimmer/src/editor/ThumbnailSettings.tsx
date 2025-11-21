@@ -71,9 +71,19 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		props.videoPlayer().currentTime = playerTime;
 	};
 
+	const [thumbnailUploadError, setThumbnailUploadError] = createSignal<string | null>(null);
+	const customThumbnailChange = async (event) => {
+		const fileElement = event.currentTarget as HTMLInputElement;
+		const imageData = await getUploadedImageAsBase64(fileElement);
+		setThumbnailUploadError(imageData.error);
+		if (!imageData.error) {
+			props.thumbnailData.setImage(imageData.base64Contents);
+		}
+	};
+
 	return (
 		<div>
-			<div>
+			<div class={styles.thumbnailLabel}>
 				Thumbnail:
 			</div>
 			<div class={styles.firstThumbnailRow}>
@@ -86,7 +96,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				</select>
 				<Show when={props.thumbnailData.type() === ThumbnailType.Template}>
 					<select value={props.thumbnailData.template() ?? ""} onChange={setThumbnailTemplate}>
-						<For each={props.allThumbnails}>
+						<For each={props.allThumbnailTemplates}>
 							{(template: ThumbnailTemplateDefinition) => <option value={template.name} title={template.description}>{template.name}</option>}
 						</For>
 					</select>
@@ -120,6 +130,66 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 					</div>
 				</Show>
 			</div>
+			<div>
+				<Show when={props.thumbnailData.type() === ThumbnailType.CustomTemplate || props.thumbnailData.type() === ThumbnailType.CustomThumbnail}>
+					<input type="file" onChange={customThumbnailChange} />
+				</Show>
+			</div>
+			<Show when={thumbnailUploadError() !== null}>
+				<div class={styles.uploadError}>
+					{thumbnailUploadError()}
+				</div>
+			</Show>
 		</div>
 	);
 };
+
+class UploadedImageData {
+	base64Contents: string | null;
+	error: string | null;
+}
+
+function uploadedImageDataFromFileData(base64Contents: string | null): UploadedImageData {
+	return {
+		base64Contents: base64Contents,
+		error: null
+	};
+}
+
+function uploadedImageDataFromErrorMessage(error: string): UploadedImageData {
+	return {
+		base64Contents: null,
+		error: error
+	};
+}
+
+async function getUploadedImageAsBase64(fileElement: HTMLInputElement): Promise<UploadedImageData> {
+	if (!fileElement.files) {
+		return uploadedImageDataFromErrorMessage("Not a file upload field");
+	}
+	if (fileElement.files.length === 0) {
+		return uploadedImageDataFromFileData(null);
+	}
+
+	const fileHandle = fileElement.files[0];
+	if (fileHandle.size > 2097151) {
+		return uploadedImageDataFromErrorMessage("Uploaded file is too large (limit: almost 2MB)");
+	}
+	const fileReader = new FileReader();
+
+	let loadPromiseResolve: (value: void) => void;
+	const loadPromise = new Promise((resolve, reject) => {
+		loadPromiseResolve = resolve;
+	});
+	fileReader.addEventListener("loadend", (event) => {
+		loadPromiseResolve();
+	});
+	fileReader.readAsDataURL(fileHandle);
+	await loadPromise;
+
+	const fileLoadData = fileReader.result as string;
+	if (fileLoadData.substring(0, 22) !== "data:image/png;base64,") {
+		return uploadedImageDataFromErrorMessage("Uploaded file isn't a PNG image");
+	}
+	return uploadedImageDataFromFileData(fileLoadData.substring(22));
+}

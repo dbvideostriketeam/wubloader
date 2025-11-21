@@ -1,5 +1,14 @@
-.firstThumbnailRow > *:not(:last-child) {
-	margin-right: 5px;
+.thumbnailLabel {
+	margin-top: 3px;
+}
+
+.firstThumbnailRow {
+	padding-top: 2px;
+	padding-bottom: 2px;
+
+	> *:not(:last-child) {
+		margin-right: 5px;
+	}
 }
 
 .timeRangeEntry {
@@ -26,4 +35,8 @@
 
 .clickable {
 	cursor: pointer;
+}
+
+.uploadError {
+	color: #f33;
 }
