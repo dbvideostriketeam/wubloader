@@ -195,8 +195,9 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	]
 	if hour == last:
 		lines += [
-			"# This bus keeps running because of you. Yes, you.",
-			"# Thank you just...so, so much for joining us in this silly thing. :heart:",
+			"# Thank you everyone for making this crazy thing possible, year after year"
+			"# 💥",
+			"# In memory of ScheduleBot 1970 - 2038",
 		]
 
 	if stream == "DEBUG":
