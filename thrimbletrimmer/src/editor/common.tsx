@@ -87,7 +87,7 @@ export enum ThumbnailType {
 	Frame = "BARE",
 	Template = "TEMPLATE",
 	CustomTemplate = "ONEOFF",
-	CustomThumbnail = "CUSTOM"
+	CustomThumbnail = "CUSTOM",
 }
 
 export class ThumbnailData {
