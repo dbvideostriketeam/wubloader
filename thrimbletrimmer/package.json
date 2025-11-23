@@ -20,6 +20,7 @@
 		"@types/luxon": "3.7.1"
 	},
 	"dependencies": {
+		"cropperjs": "2.1.0",
 		"hls.js": "1.6.14",
 		"luxon": "3.7.2",
 		"media-icons": "1.1.5",

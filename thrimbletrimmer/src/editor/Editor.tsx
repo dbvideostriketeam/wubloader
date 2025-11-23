@@ -1,6 +1,7 @@
 import {
 	Accessor,
 	Component,
+	createEffect,
 	createResource,
 	createSignal,
 	Index,
@@ -12,7 +13,15 @@ import {
 import { DateTime } from "luxon";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
-import { ChapterData, FragmentTimes, RangeData, ThumbnailData, ThumbnailTemplateDefinition, TransitionDefinition, VideoData } from "./common";
+import {
+	ChapterData,
+	FragmentTimes,
+	RangeData,
+	ThumbnailData,
+	ThumbnailTemplateDefinition,
+	TransitionDefinition,
+	VideoData,
+} from "./common";
 import { CategoryNotes } from "./CategoryNotes";
 import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
@@ -247,12 +256,24 @@ const EditorContent: Component<ContentProps> = (props) => {
 	);
 
 	const initialThumbnailData = new ThumbnailData();
-	[initialThumbnailData.type, initialThumbnailData.setType] = createSignal(props.data.thumbnail_mode);
-	[initialThumbnailData.time, initialThumbnailData.setTime] = createSignal(props.data.thumbnail_time ? dateTimeFromWubloaderTime(props.data.thumbnail_time) : null);
-	[initialThumbnailData.template, initialThumbnailData.setTemplate] = createSignal(props.data.thumbnail_template);
-	[initialThumbnailData.image, initialThumbnailData.setImage] = createSignal(props.data.thumbnail_image);
-	[initialThumbnailData.crop, initialThumbnailData.setCrop] = createSignal(props.data.thumbnail_crop);
-	[initialThumbnailData.location, initialThumbnailData.setLocation] = createSignal(props.data.thumbnail_location);
+	[initialThumbnailData.type, initialThumbnailData.setType] = createSignal(
+		props.data.thumbnail_mode,
+	);
+	[initialThumbnailData.time, initialThumbnailData.setTime] = createSignal(
+		props.data.thumbnail_time ? dateTimeFromWubloaderTime(props.data.thumbnail_time) : null,
+	);
+	[initialThumbnailData.template, initialThumbnailData.setTemplate] = createSignal(
+		props.data.thumbnail_template,
+	);
+	[initialThumbnailData.image, initialThumbnailData.setImage] = createSignal(
+		props.data.thumbnail_image,
+	);
+	[initialThumbnailData.crop, initialThumbnailData.setCrop] = createSignal(
+		props.data.thumbnail_crop,
+	);
+	[initialThumbnailData.location, initialThumbnailData.setLocation] = createSignal(
+		props.data.thumbnail_location,
+	);
 	const [thumbnail, setThumbnail] = createSignal(initialThumbnailData);
 
 	const [allThumbnailTemplates] = createResource<ThumbnailTemplateDefinition[]>(
@@ -262,8 +283,55 @@ const EditorContent: Component<ContentProps> = (props) => {
 				return [];
 			}
 			return await thumbnailResponse.json();
-		}
+		},
 	);
+
+	createEffect(() => {
+		const thumbnailData = thumbnail();
+		const templateName = thumbnailData.template();
+		const allTemplates = allThumbnailTemplates();
+		if (
+			templateName === null &&
+			allThumbnailTemplates.latest !== undefined &&
+			allThumbnailTemplates.latest.length > 0
+		) {
+			thumbnailData.setTemplate(allThumbnailTemplates.latest[0].name);
+		}
+	});
+
+	createEffect(() => {
+		const thumbnailData = thumbnail();
+		const templateName = thumbnailData.template();
+		const crop = thumbnailData.crop();
+		const location = thumbnailData.location();
+
+		if (templateName === null) {
+			return;
+		}
+		if (crop !== null && location !== null) {
+			return;
+		}
+
+		let templateData: ThumbnailTemplateDefinition | null = null;
+		if (allThumbnailTemplates.latest) {
+			for (const template of allThumbnailTemplates.latest) {
+				if (template.name === templateName) {
+					templateData = template;
+					break;
+				}
+			}
+		}
+		if (!templateData) {
+			return;
+		}
+
+		if (crop === null) {
+			thumbnailData.setCrop(templateData.crop);
+		}
+		if (location === null) {
+			thumbnailData.setLocation(templateData.location);
+		}
+	});
 
 	const [activeKeyboardIndex, setActiveKeyboardIndex] = createSignal(0);
 
@@ -397,6 +465,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			<ThumbnailSettings
 				allThumbnailTemplates={allThumbnailTemplates() ?? []}
 				thumbnailData={thumbnail()}
+				streamInfo={streamVideoInfo}
 				videoFragments={videoFragmentTimes}
 				videoPlayerTime={videoPlayerTime}
 				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}

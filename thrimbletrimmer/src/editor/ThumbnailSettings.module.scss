@@ -40,3 +40,27 @@
 .uploadError {
 	color: #f33;
 }
+
+.cropOptions label {
+	margin-right: 5px;
+}
+
+.thumbnailCoordinateInput {
+	width: 50px;
+}
+
+.cropCoordinatesLabel {
+	margin-right: 3px;
+}
+
+.cropCropper {
+	width: 1920px;
+	height: 1080px;
+	margin: 5px 0;
+}
+
+.locationCropper {
+	width: 1280px;
+	height: 720px;
+	margin: 5px 0;
+}

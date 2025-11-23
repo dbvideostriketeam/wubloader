@@ -1,5 +1,6 @@
 import { Accessor, Component, createSignal, For, Index, onMount, Setter, Show } from "solid-js";
 import { GoogleSignIn, googleUser } from "../common/googleAuth";
+import { BASE64_PNG_PREFIX } from "../common/thumbnails";
 import styles from "./ThumbnailManager.module.scss";
 
 class Coordinate {
@@ -106,7 +107,7 @@ const ThumbnailManager: Component = () => {
 		submitData.set("location", [locStartX, locStartY, locEndX, locEndY]);
 
 		const imageDataURL = fileReader.result as string;
-		if (imageDataURL.startsWith("data:image/png;base64,")) {
+		if (imageDataURL.startsWith(BASE64_PNG_PREFIX)) {
 			submitData.set("image", imageDataURL.substring(22));
 		} else if (noImageIsError) {
 			setErrorList((errors) => {
