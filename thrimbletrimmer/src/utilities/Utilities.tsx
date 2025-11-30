@@ -14,7 +14,7 @@ const Utilities: Component = () => {
 
 	return (
 		<>
-			<Clock busStartTime={busStartTime} />
+			<Clock busStartTime={busStartTime} initialPageTitle="Thrimbletrimmer - Utilities" />
 			<TimeConverter busStartTime={busStartTime} />
 		</>
 	);
