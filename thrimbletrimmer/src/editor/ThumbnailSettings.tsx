@@ -1,4 +1,4 @@
-import { Accessor, Component, createEffect, createSignal, For, Show, untrack } from "solid-js";
+import { Accessor, Component, createEffect, createSignal, For, on, Show, untrack } from "solid-js";
 import { MediaPlayerElement } from "vidstack/elements";
 import {
 	dateTimeFromVideoPlayerTime,
@@ -26,6 +26,7 @@ import { wubloaderTimeFromDateTime } from "../common/convertTime";
 
 import "cropperjs"; // This is required for Cropper.js to work, even with the specific import below
 import { CropperImage, CropperSelection } from "cropperjs";
+import { createSingletonPromise } from "solidjs-use";
 
 interface ThumbnailSettingsProps {
 	allThumbnailTemplates: ThumbnailTemplateDefinition[];
@@ -367,62 +368,77 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		setShowThumbnailPreview(!showThumbnailPreview());
 	};
 	let previewCanvas: HTMLCanvasElement | undefined;
-	createEffect(() => {
-		const showingPreview = showThumbnailPreview();
-		const thumbnailType = props.thumbnailData.type();
-		if (!showingPreview || !previewCanvas) {
-			return;
-		}
+	createEffect(
+		on(
+			[
+				showThumbnailPreview,
+				cropBaseImageURL,
+				locBaseImageURL,
+				cropX,
+				cropY,
+				cropWidth,
+				cropHeight,
+				locX,
+				locY,
+				locWidth,
+				locHeight,
+			],
+			(values) => {
+				const showingPreview = values[0];
+				if (!showingPreview || !previewCanvas) {
+					return;
+				}
 
-		const canvasContext = previewCanvas.getContext("2d");
-		if (!canvasContext) {
-			return;
-		}
-		canvasContext.reset();
+				const canvasContext = previewCanvas.getContext("2d");
+				if (!canvasContext) {
+					return;
+				}
 
-		const cropURL = cropBaseImageURL();
-		const locURL = locBaseImageURL();
-		if (!cropURL || !locURL) {
-			return;
-		}
+				const cropURL = values[1];
+				const locURL = values[2];
+				if (!cropURL || !locURL) {
+					canvasContext.reset();
+					return;
+				}
 
-		const cropImage = new Image();
-		const templateImage = new Image(1280, 720);
-		cropImage.src = cropURL;
-		templateImage.src = locURL;
+				const cropImage = new Image();
+				const templateImage = new Image(1280, 720);
+				cropImage.src = cropURL;
+				templateImage.src = locURL;
 
-		const renderPreview = () => {
-			canvasContext.drawImage(
-				cropImage,
-				cropX(),
-				cropY(),
-				cropWidth(),
-				cropHeight(),
-				locX(),
-				locY(),
-				locWidth(),
-				locHeight(),
-			);
-			canvasContext.drawImage(templateImage, 0, 0);
-		};
+				const renderPreview = () => {
+					canvasContext.reset();
+					canvasContext.drawImage(
+						cropImage,
+						cropX(),
+						cropY(),
+						cropWidth(),
+						cropHeight(),
+						locX(),
+						locY(),
+						locWidth(),
+						locHeight(),
+					);
+					canvasContext.drawImage(templateImage, 0, 0);
+				};
 
-		renderPreview();
-
-		let cropLoaded = false;
-		let templateLoaded = false;
-		cropImage.addEventListener("load", (event) => {
-			cropLoaded = true;
-			if (templateLoaded) {
-				renderPreview();
-			}
-		});
-		templateImage.addEventListener("load", (event) => {
-			templateLoaded = true;
-			if (cropLoaded) {
-				renderPreview();
-			}
-		});
-	});
+				let cropLoaded = false;
+				let templateLoaded = false;
+				cropImage.addEventListener("load", (event) => {
+					cropLoaded = true;
+					if (templateLoaded) {
+						renderPreview();
+					}
+				});
+				templateImage.addEventListener("load", (event) => {
+					templateLoaded = true;
+					if (cropLoaded) {
+						renderPreview();
+					}
+				});
+			},
+		),
+	);
 
 	return (
 		<div>
