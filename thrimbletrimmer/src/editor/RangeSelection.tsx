@@ -13,7 +13,6 @@ import styles from "./RangeSelection.module.scss";
 import {
 	ChapterData,
 	dateTimeFromVideoPlayerTime,
-	defaultRangeData,
 	displayTimeForVideoPlayerTime,
 	FragmentTimes,
 	RangeData,
@@ -51,7 +50,7 @@ interface RangeSelectionProps {
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 	const addNewRange = (event) => {
-		props.setRangeData([...props.rangeData(), defaultRangeData()]);
+		props.setRangeData([...props.rangeData(), new RangeData()]);
 	};
 
 	return (
