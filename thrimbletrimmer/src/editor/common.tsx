@@ -58,6 +58,14 @@ export class RangeData {
 	setTransitionSeconds: Setter<number>;
 	chapters: Accessor<ChapterData[]>;
 	setChapters: Setter<ChapterData[]>;
+
+	public constructor() {
+		[this.startTime, this.setStartTime] = createSignal<DateTime | null>(null);
+		[this.endTime, this.setEndTime] = createSignal<DateTime | null>(null);
+		[this.transitionType, this.setTransitionType] = createSignal("");
+		[this.transitionSeconds, this.setTransitionSeconds] = createSignal(0);
+		[this.chapters, this.setChapters] = createSignal<ChapterData[]>([]);
+	}
 }
 
 export class ChapterData {
@@ -111,16 +119,6 @@ export interface ThumbnailTemplateDefinition {
 	attribution: string;
 	crop: [number, number, number, number];
 	location: [number, number, number, number];
-}
-
-export function defaultRangeData(): RangeData {
-	const data = new RangeData();
-	[data.startTime, data.setStartTime] = createSignal<DateTime | null>(null);
-	[data.endTime, data.setEndTime] = createSignal<DateTime | null>(null);
-	[data.transitionType, data.setTransitionType] = createSignal("");
-	[data.transitionSeconds, data.setTransitionSeconds] = createSignal(0);
-	[data.chapters, data.setChapters] = createSignal<ChapterData[]>([]);
-	return data;
 }
 
 export function videoPlayerTimeFromDateTime(
