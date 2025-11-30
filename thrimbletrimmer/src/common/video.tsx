@@ -44,7 +44,7 @@ export interface StreamTimeSettingsProps {
 }
 
 export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) => {
-	const [timeType, setTimeType] = createSignal<TimeType>(TimeType.UTC);
+	const [timeType, setTimeType] = createSignal<TimeType>(TimeType.BusTime);
 
 	const submitHandler = (event: SubmitEvent) => {
 		event.preventDefault();
