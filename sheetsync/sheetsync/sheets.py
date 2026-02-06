@@ -340,7 +340,7 @@ class SheetsEventsMiddleware(SheetsMiddleware):
 		# This is only needed for full events (not the archive sheet),
 		# so only do it if we had a tags column in the first place.
 		if 'tags' in row_dict:
-			shift_tag = common.shifts.calculate_shift(row_dict['event_start'], self.latest_shifts)
+			shift_tag, _ = common.shifts.calculate_shift(row_dict['event_start'], self.latest_shifts)
 			row_dict['tags'] = (
 				([shift_tag] if shift_tag is not None else [])
 				+ [
