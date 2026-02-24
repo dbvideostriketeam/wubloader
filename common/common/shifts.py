@@ -92,7 +92,10 @@ def calculate_shift(time, shifts):
 	
 	for shift in shifts['one_off']:
 		if shift[1] <= time < shift[2]:
-			shift_hour = math.floor((time - shift[1]).total_seconds() / 3600) + 1
+			if shift[1] == datetime.datetime.min:
+				shift_hour = math.ceil((time - shift[2]).total_seconds() / 3600)
+			else:
+				shift_hour = math.floor((time - shift[1]).total_seconds() / 3600) + 1
 			return shift[0], shift_hour
 		
 	#since shifts are based on local times we have to worry about timezones for once
