@@ -458,7 +458,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=
 	logging.info("Starting up")
 
 	if shifts is None:
-		shifts = {'repeating':[], 'one_off':[], 'timezone':'UTC'}
+		shifts = {'repeating':[['default shift', 0, 24]], 'one_off':[], 'timezone':'UTC'}
 
 	dbmanager = DBManager(dsn=dbconnect)
 	while True:
