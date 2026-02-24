@@ -14,6 +14,8 @@ setup(
 		'beautifulsoup4', # for parsing mastodon posts
 		'gevent',
 		'requests',
+		'tzdata',
 		'websockets',
+		'wubloader-common',
 	],
 )
