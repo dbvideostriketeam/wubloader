@@ -16,7 +16,9 @@ def get_config(conf_file):
 			return yaml.safe_load(f)
 
 def common_setup(metrics_port):
-	logging.basicConfig(level=os.environ.get('WUBLOADER_LOG_LEVEL', 'INFO').upper())
+	LOG_FORMAT = "[%(asctime)s] %(levelname)8s %(name)s(%(module)s:%(lineno)d): %(message)s"
+	level = os.environ.get('WUBLOADER_LOG_LEVEL', 'INFO').upper()
+	logging.basicConfig(level=level, format=LOG_FORMAT)
 
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
