@@ -8,7 +8,6 @@ setup(
         "argh==0.29.4",
         "psycopg2",
 	    "gevent",
-	    "greenlet",
         "psycogreen",
         "wubloader-common",
         "python-dateutil",
