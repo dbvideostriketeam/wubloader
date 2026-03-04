@@ -1,7 +1,8 @@
-FROM debian:11
+FROM debian:13
 
 RUN apt update &&\
-    apt install -y python3 libpq-dev python3-pip curl unzip ffmpeg
+    apt install -y python3 libpq-dev python3-pip curl unzip ffmpeg &&\
+	rm /usr/lib/python3.13/EXTERNALLY-MANAGED
 
 RUN cd /tmp \
 	&& curl \
