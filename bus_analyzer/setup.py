@@ -8,7 +8,7 @@ setup(
 	description='',
 	packages=find_packages(),
 	install_requires=[
-		"argh",
+		"argh==0.29.4",
 		"gevent",
 		"Pillow",
         "psycogreen",
