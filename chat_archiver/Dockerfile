@@ -1,10 +1,6 @@
-FROM alpine:3.19
-# dependencies needed for compiling c extensions
-# also busybox-extras for telnet for easier use of backdoor
-RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busybox-extras && rm /usr/lib/python3.11/EXTERNALLY-MANAGED
-
-# Try to get wheels working
-RUN pip install --upgrade pip wheel
+FROM debian:13
+# install python & pip, and tell python we're fine with messing with the system env
+RUN apt update && apt install -y python3 python3-pip && rm /usr/lib/python3.13/EXTERNALLY-MANAGED
 
 # Install gevent so that we don't need to re-install it when common changes
 RUN pip install gevent
