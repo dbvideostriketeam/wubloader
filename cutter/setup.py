@@ -5,7 +5,7 @@ setup(
 	version = "0.0.0",
 	packages = find_packages(),
 	install_requires = [
-		"argh",
+		"argh==0.29.4",
 		"gevent",
 		"Pillow", # for thumbnail templating
 		"prometheus-client",
