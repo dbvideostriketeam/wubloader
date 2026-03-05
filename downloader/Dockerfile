@@ -1,11 +1,12 @@
-FROM alpine:3.22
-# dependencies needed for compiling c extensions
-# also busybox-extras for telnet for easier use of backdoor
-# deno for yt-dlp js extraction (needed for youtube)
-RUN apk --update add py3-pip g++ python3-dev libffi-dev musl-dev file make busybox-extras deno && rm /usr/lib/python3.*/EXTERNALLY-MANAGED
-
-# Try to get wheels working
-RUN pip install --upgrade pip wheel
+FROM debian:13
+# install python & pip, and tell python we're fine with messing with the system env
+RUN apt update && apt install -y python3 python3-pip && rm /usr/lib/python3.13/EXTERNALLY-MANAGED
+# install deno for yt-dlp js extraction (needed for youtube)
+# deno is not packaged in the native debian repos, so we pull and unzip a release binary
+RUN apt update && apt install -y unzip
+ADD https://github.com/denoland/deno/releases/download/v2.7.3/deno-x86_64-unknown-linux-gnu.zip /deno.zip
+RUN unzip /deno.zip -d /usr/local/bin/
+RUN chmod +x /usr/local/bin/deno
 
 # Install gevent so that we don't need to re-install it when common changes
 RUN pip install gevent
