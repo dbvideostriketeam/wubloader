@@ -10,7 +10,7 @@ setup(
 	install_requires=[
 		'Mastodon.py',
 		'PyYAML',
-		'argh==0.28.1',
+		'argh==0.29.4',
 		'beautifulsoup4', # for parsing mastodon posts
 		'gevent',
 		'requests',
