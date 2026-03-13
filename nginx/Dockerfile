@@ -1,4 +1,4 @@
-FROM node:17-alpine AS less
+FROM node:24-alpine AS less
 RUN npm install less -g
 ADD buscribe-web /assets
 WORKDIR /assets
