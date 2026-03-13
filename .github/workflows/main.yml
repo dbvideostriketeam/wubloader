@@ -41,7 +41,7 @@ jobs:
           - zulip_bots
     steps:
       - name: Check out repo
-        uses: actions/checkout@v2
+        uses: actions/checkout@v6
         with:
           submodules: recursive
           # By default, for PR builds, Actions will check out a merge commit between the actual
@@ -52,7 +52,7 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Log into ghcr.io
-        uses: docker/login-action@v1
+        uses: docker/login-action@v4
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
