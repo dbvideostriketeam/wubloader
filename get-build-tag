@@ -3,7 +3,7 @@
 # cd to location of script
 cd "$(dirname "$(realpath "$0")")"
 
-TAG=$(git rev-parse --short HEAD)
+TAG=$(git rev-parse HEAD)
 if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
 	TAG="$TAG-wip"
 fi
