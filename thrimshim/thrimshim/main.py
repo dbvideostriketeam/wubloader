@@ -266,10 +266,12 @@ def get_row(ident):
 		# use tags to determine default thumbnail template
 		if response['thumbnail_template'] is None:
 			conn = app.db_manager.get_conn()
+			# Use of <= 1 here means we pick up the all-everything playlist too,
+			# recording its tag as None.
 			query = """
 				SELECT tags[1] as tag, default_template
 				FROM playlists
-				WHERE cardinality(tags) = 1 AND default_template IS NOT NULL
+				WHERE cardinality(tags) <= 1 AND default_template IS NOT NULL
 			"""
 			results = database.query(conn, query)
 			default_templates = {row.tag: row.default_template for row in results}
@@ -280,6 +282,12 @@ def get_row(ident):
 				if tag in default_templates:
 					response['thumbnail_template'] = default_templates[tag]
 					break
+			else:
+				# If no tags match, fall back to the all-everything playlist's template.
+				# Normally this won't happen because we have a per-shift playlist with a template,
+				# but edge-cases like DBEx (which is shift-less) exist.
+				if None in default_templates:
+					response['thumbnail_template'] = default_templates[None]
 	
 		# pick default frame time as the middle of the video.
 		if response['thumbnail_time'] is None:
