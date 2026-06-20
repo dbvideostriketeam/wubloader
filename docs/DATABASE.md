@@ -213,7 +213,7 @@ To get all updates for a particular event id, use a query like:
 ```sql
 SELECT action_tstamp_clk, row_data, changed_fields
 FROM audit.logged_actions
-WHERE row_data->id = 'YOUR EVENT ID'
+WHERE row_data->'id' = 'YOUR EVENT ID'
 ```
 
 ### Replication and failover
