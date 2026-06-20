@@ -7,7 +7,6 @@ import logging
 import time
 from calendar import timegm
 from datetime import datetime, timedelta
-from zoneinfo import ZoneInfo
 
 import gevent.pool
 import argh
@@ -16,6 +15,7 @@ from common.zulip import Client
 
 from .config import common_setup, get_config
 from common.sheets import Sheets
+from common.shifts import calculate_shift, parse_shifts
 
 def get_membership(client):
 	"""Returns {group id: member set}"""
@@ -46,14 +46,13 @@ def get_display_name(client, user_id):
 	return client.request("GET", "users", user_id)["user"]["full_name"]
 
 
-def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last):
+def update_groups(client, group_ids, schedule, hour, start_time, last):
 	if hour < 0:
 		logging.info(f"Skipping setting groups due to negative hour of {hour}")
 		return
 
 	logging.info("Setting groups for hour {}".format(hour))
 	members = get_membership(client)
-	_, shift, _, _ = hour_to_shift(hour, start_time)
 
 	def run_group(item):
 		group_name, group_id = item
@@ -61,28 +60,29 @@ def update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time
 		assert group_id in members, "group {} doesn't exist".format(group_id)
 		update_members(client, group_id, members[group_id], new_members)
 
-	def run_group_by_shift(item):
-		group_id, shifts = item
-		user_ids = set(shifts[shift])
-		update_members(client, group_id, members[group_id], user_ids)
-
 	gevent.pool.Group().map(run_group, group_ids.items())
-	gevent.pool.Group().map(run_group_by_shift, groups_by_shift.items())
 
 
-def hour_to_shift(hour, start_time):
-	"""Converts an hour number into a datetime, shift number (0-3), shift name, and hour-of-shift (1-6)"""
+def hour_to_shift(hour, start_time, shift_definitions):
+	"""Converts an hour number into a datetime, shift emoji name, and hour-of-shift (1-6)"""
 	start_time = datetime.utcfromtimestamp(start_time)
 	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
-	current_time_pst = current_time - timedelta(hours=8)
-	hour_pst = current_time_pst.hour
-	shift = hour_pst // 6
-	shift_name = ["zeta", "dawn-guard", "alpha-flight", "night-watch"][shift]
-	shift_hour = hour_pst % 6 + 1
-	return current_time, shift, shift_name, shift_hour
+	shifts = parse_shifts(shift_definitions) # need to do this each hour to check for Omega shift start time
+	shift, shift_hour = calculate_shift(current_time, shifts)
+	shift_emoji = {'Zeta Shift':'zeta',
+				   'Dawn Guard':'dawn-guard',
+				   'Alpha Flight':'alpha-flight',
+				   'Night Watch':'night-watch',
+				   'Omega Shift':'omega',
+				  }
+	if shift in shift_emoji:
+		shift = shift_emoji[shift]
+	else:
+		shift = 'exclamation'
+	return current_time, shift, shift_hour
 
 
-def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega):
+def post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shift_definitions):
 	going_offline = []
 	coming_online = []
 	online_by_role = {}
@@ -123,11 +123,7 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	logging.info(f"Going offline: {going_offline}")
 	logging.info(f"Coming online: {coming_online}")
 
-	current_time, _, shift, shift_hour = hour_to_shift(hour, start_time)
-
-	if omega >= 0 and hour >= omega:
-		shift = "omega"
-		shift_hour = hour - omega + 1
+	current_time, shift, shift_hour = hour_to_shift(hour, start_time, shift_definitions)
 
 	if hour == last:
 		shift = "💥"
@@ -238,7 +234,7 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, omega=-1, last=-1, metrics_port=8012):
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, shifts=None, last=-1, metrics_port=8012):
 	"""
 	config:
 		url: the base url of the instance
@@ -258,13 +254,12 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			NAME: USER_ID
 		groups:
 			NAME: GROUP_ID
-		groups_by_shift:
-			GROUP_ID: [[USER_ID], [USER_ID], [USER_ID], [USER_ID]]
-			Populates membership of given group as a hard-coded list of users per DB shift.
-			This is NOT reported in start/end of shifts.
 	authentication is an object {email, api_key}
 	"""
 	common_setup(metrics_port)
+
+	if shifts is None:
+		shifts = {'repeating':[['default shift', 0, 24]], 'one_off':[], 'timezone':'UTC'}
 
 	config = get_config(conf_file)
 	client = Client(config["url"], config["api_user"]["email"], config["api_user"]["api_key"])
@@ -284,7 +279,6 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		config["schedule_sheet_id"],
 		config["schedule_sheet_name"]
 	)
-	groups_by_shift = {int(id): shifts for id, shifts in config["groups_by_shift"].items()}
 
 	# Accept start time timestamp with or without trailing "Z" indicating UTC.
 	start_time = config["start_time"]
@@ -299,9 +293,9 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			raise Exception("Schedule failed to download")
 
 		if not no_groups:
-			update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
+			update_groups(client, group_ids, schedule, hour, start_time, last)
 		if stream:
-			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
+			post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shifts)
 		return
 
 	schedule = None
@@ -316,9 +310,9 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 
 		if not no_initial:
 			if not no_groups:
-				update_groups(client, group_ids, groups_by_shift, schedule, hour, start_time, last)
+				update_groups(client, group_ids, schedule, hour, start_time, last)
 			if stream:
-				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, omega)
+				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shifts)
 		no_initial = False
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()

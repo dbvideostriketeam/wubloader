@@ -329,9 +329,6 @@
       Editor: 17,
       ChatOps: 18,
     },
-    // Map from group id to 4 hard-coded lists of user ids, one per shift.
-    groups_by_shift: {
-    },
     // Map from schedule names to zulip user ids
     members: {
       ekimekim: 8,
@@ -339,7 +336,9 @@
     // Extra args, see schedulebot.py.
     // --no-initial prevents re-posting current hour on restart.
     // --omega and --last enable special behaviour for omega shift and end of run, once known.
-    args:: ["--no-initial"],
+    args:: [
+      "--no-initial",
+      "--shifts", $.shifts,],
   },
 
   tootbot:: {

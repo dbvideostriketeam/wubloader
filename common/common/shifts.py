@@ -81,7 +81,7 @@ def parse_shifts(shifts):
 
 def calculate_shift(time, shifts):
 	"""
-	Calculate what shift a time falls in. 
+	Calculate what shift a time falls in and the hour within that shift. 
 
 	Arguments:
 	time -- a datetime.datetime instance
@@ -92,7 +92,11 @@ def calculate_shift(time, shifts):
 	
 	for shift in shifts['one_off']:
 		if shift[1] <= time < shift[2]:
-			return shift[0]
+			if shift[1] == datetime.datetime.min:
+				shift_hour = math.ceil((time - shift[2]).total_seconds() / 3600)
+			else:
+				shift_hour = math.floor((time - shift[1]).total_seconds() / 3600) + 1
+			return shift[0], shift_hour
 		
 	#since shifts are based on local times we have to worry about timezones for once
 	local_time = time.replace(tzinfo=UTC).astimezone(shifts['timezone'])
@@ -100,4 +104,5 @@ def calculate_shift(time, shifts):
 	hour = local_time.hour + local_time.minute / 60 + local_time.second / 3600
 	for shift in shifts['repeating']:
 		if shift[1] <= hour < shift[2]:
-			return shift[0]
+			shift_hour = math.floor(hour - shift[1]) + 1
+			return shift[0], shift_hour
