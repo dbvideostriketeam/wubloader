@@ -128,6 +128,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					createEffect(() => {
 						const rangeStartTime = currentRangeData().startTime();
 						const fragments = props.videoFragments();
+						if (fragments.length === 0) {
+							return;
+						}
 						if (rangeStartTime === null) {
 							return;
 						}
@@ -141,6 +144,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					createEffect(() => {
 						const enteredStartTime = startTimeFieldValue();
 						const fragments = props.videoFragments();
+
+						if (fragments.length === 0) {
+							// If the fragments haven't loaded yet, we shouldn't start setting the start time.
+							return;
+						}
 
 						if (enteredStartTime === "") {
 							untrack(props.rangeData)[index].setStartTime(null);
@@ -157,6 +165,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					createEffect(() => {
 						const rangeEndTime = currentRangeData().endTime();
 						const fragments = props.videoFragments();
+						if (fragments.length === 0) {
+							return;
+						}
 						if (rangeEndTime === null) {
 							return;
 						}
@@ -170,6 +181,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					createEffect(() => {
 						const enteredEndTime = endTimeFieldValue();
 						const fragments = props.videoFragments();
+
+						if (fragments.length === 0) {
+							// If the fragments haven't loaded yet, we shouldn't start setting the end time.
+							return;
+						}
 
 						if (enteredEndTime === "") {
 							untrack(props.rangeData)[index].setEndTime(null);
