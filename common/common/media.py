@@ -258,8 +258,14 @@ def _request(url, max_size, content_types):
 	(status 200) or a redirect.
 	Raises Rejected if content fails checks, anything else should be considered retryable."""
 	parsed = urllib.parse.urlparse(url)
+	if parsed.scheme is None:
+		# default scheme to http and reparse
+		parsed = urllib.parse.urlparse(f"http://{url}")
+
 	hostname = parsed.hostname
 	port = parsed.port
+	if hostname is None:
+		raise BadScheme(f"URL {url} parsed to no hostname: {parsed}")
 
 	ip = socket.gethostbyname(hostname)
 	if not ip_address(ip).is_global:
