@@ -1,6 +1,5 @@
 import { Accessor, Component, Setter } from "solid-js";
 import styles from "./ChapterToggle.module.scss";
-import { EditorState } from "./common";
 
 interface ChapterToggleProps {
 	chaptersEnabled: Accessor<boolean>;
