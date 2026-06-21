@@ -27,6 +27,8 @@ interface SubmissionProps {
 	uploadLocations: string[];
 	editorState: Accessor<EditorState>;
 	setEditorState: Setter<EditorState>;
+	allowHoles: Accessor<boolean>;
+	setAllowHoles: Setter<boolean>;
 	thumbnailData: ThumbnailData;
 	originalVideoData: VideoData;
 	videoFragmentTimes: Accessor<FragmentTimes[]>;
@@ -34,7 +36,6 @@ interface SubmissionProps {
 
 export const Submission: Component<SubmissionProps> = (props) => {
 	const [showAdvancedSubmissionOptions, setShowAdvancedSubmissionOptions] = createSignal(false);
-	const [allowHoles, setAllowHoles] = createSignal(false);
 	const [makeUnlisted, setMakeUnlisted] = createSignal(false);
 	const [uploadLocation, setUploadLocation] = createSignal(
 		props.uploadLocations.length > 0 ? props.uploadLocations[0] : "",
@@ -273,7 +274,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_title: videoTitle,
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
-			allow_holes: allowHoles(),
+			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
 			video_channel: props.streamVideoInfo().streamName,
@@ -371,7 +372,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_title: props.videoTitle(),
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
-			allow_holes: allowHoles(),
+			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
 			video_channel: props.streamVideoInfo().streamName,
@@ -464,7 +465,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			<Show when={showAdvancedSubmissionOptions()}>
 				<div>
 					<label>
-						<input type="checkbox" use:bindingInputChecked={[allowHoles, setAllowHoles]} />
+						<input
+							type="checkbox"
+							use:bindingInputChecked={[props.allowHoles, props.setAllowHoles]}
+						/>
 						<span class={styles.advancedSubmissionLabel}>Allow Holes</span>
 					</label>
 				</div>

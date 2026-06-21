@@ -1,4 +1,5 @@
 import { Accessor, createEffect, Setter } from "solid-js";
+import { DownloadType } from "./downloads";
 
 export function bindingInputOnChange(
 	element: HTMLInputElement,
@@ -84,6 +85,17 @@ export function bindingInputChecked(
 	createEffect(() => (element.checked = s()));
 }
 
+export function bindingDownloadTypeSelectOnChange(
+	element: HTMLSelectElement,
+	accessor: () => [Accessor<DownloadType>, Setter<DownloadType>],
+) {
+	const [s, set] = accessor();
+	element.addEventListener("change", (event) =>
+		set(+(event.currentTarget as HTMLSelectElement).value),
+	);
+	createEffect(() => (element.value = s().toString()));
+}
+
 declare module "solid-js" {
 	namespace JSX {
 		interface DirectiveFunctions {
@@ -94,6 +106,7 @@ declare module "solid-js" {
 			bindingInputPositiveNumberOnChange: typeof bindingInputPositiveNumberOnChange;
 			bindingInputPositiveNumberOrZeroOnChange: typeof bindingInputPositiveNumberOrZeroOnChange;
 			bindingInputChecked: typeof bindingInputChecked;
+			bindingDownloadTypeSelectOnChange: typeof bindingDownloadTypeSelectOnChange;
 		}
 	}
 }
