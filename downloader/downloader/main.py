@@ -600,6 +600,8 @@ class SegmentGetter(object):
 	def exists(self):
 		"""Look for an existing, full (non-partial, non-suspect) copy of this segment. Return bool."""
 		dirname = os.path.dirname(self.prefix)
+		file_prefix = os.path.basename(self.prefix)
+		full_prefix = "{}-full".format(file_prefix)
 		try:
 			candidates = os.listdir(dirname)
 		except OSError as e:
@@ -607,7 +609,6 @@ class SegmentGetter(object):
 			if e.errno != errno.ENOENT:
 				raise
 			return False
-		full_prefix = "{}-full".format(self.prefix)
 		return any(
 			candidate.startswith(full_prefix)
 				# There's almost no way a matching tombstone could already exist, but just in case
