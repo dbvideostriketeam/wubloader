@@ -478,6 +478,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 			/>
 			<Submission
+				streamVideoInfo={streamVideoInfo}
 				videoData={videoData}
 				videoTitle={videoTitle}
 				videoDescription={videoDescription}
