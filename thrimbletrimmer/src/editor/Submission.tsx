@@ -8,17 +8,17 @@ import {
 	ThumbnailData,
 	ThumbnailType,
 	VideoData,
-	displayTimeForVideoPlayerTime,
 	videoPlayerTimeFromDateTime,
 } from "./common";
-import { bindingInputChecked, bindingInputOnChange } from "../common/binding";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
 import { GoogleSignIn, googleUser } from "../common/googleAuth";
+import { StreamVideoInfo } from "../common/streamInfo";
 import { DateTime } from "luxon";
 
 import styles from "./Submission.module.scss";
 
 interface SubmissionProps {
+	streamVideoInfo: Accessor<StreamVideoInfo>;
 	videoData: Accessor<RangeData[]>;
 	videoTitle: Accessor<string>;
 	videoDescription: Accessor<string>;
@@ -241,7 +241,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			);
 			const templateBody = new Uint8Array(await templateResponse.arrayBuffer());
 			const thumbnailResponse = await fetch(
-				`/thumbnail/${props.originalVideoData.video_channel}/source.png?${query}`,
+				`/thumbnail/${props.streamVideoInfo().streamName}/source.png?${query}`,
 				{ method: "POST", body: templateBody },
 			);
 			if (!thumbnailResponse.ok) {
@@ -277,7 +277,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			allow_holes: allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
-			video_channel: props.originalVideoData.video_channel,
+			video_channel: props.streamVideoInfo().streamName,
 			video_quality: props.originalVideoData.video_quality,
 			uploader_whitelist: uploaderAllowlist()
 				.split(",")
@@ -376,7 +376,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			allow_holes: allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
-			video_channel: props.originalVideoData.video_channel,
+			video_channel: props.streamVideoInfo().streamName,
 			video_quality: props.originalVideoData.video_quality,
 			uploader_whitelist: uploaderAllowlist()
 				.split(",")
