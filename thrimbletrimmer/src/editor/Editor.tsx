@@ -37,6 +37,7 @@ import { StreamVideoInfo } from "../common/streamInfo";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
 import { Download } from "./Download";
+import { DataCorrection } from "./DataCorrection";
 
 export const Editor: Component = () => {
 	const currentURL = new URL(location.href);
@@ -486,6 +487,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoQuality={props.data.video_quality}
 				videoFragments={videoFragmentTimes}
 			/>
+			<DataCorrection videoID={props.data.id} />
 		</>
 	);
 };
