@@ -1,4 +1,9 @@
 
+"""
+This bot polls the youtube API for top-level comments on videos,
+posting them to zulip.
+"""
+
 import gevent.monkey
 gevent.monkey.patch_all()
 

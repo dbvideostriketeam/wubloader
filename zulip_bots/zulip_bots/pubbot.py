@@ -1,4 +1,10 @@
 
+"""
+This bot watches pubnub subscriptions tracking the donation total
+and current high bid on prizes. It logs it to a file as well as posting it to zulip.
+By looking at the difference between updates, we can imply indvidiual donation amounts.
+"""
+
 import json
 import logging
 import os

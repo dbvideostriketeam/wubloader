@@ -1,4 +1,10 @@
 
+"""
+This bot watches the website pages for prizes, tracking their state and posting to zulip
+when a prize becomes Sold. It also saves the info to a file as JSON.
+It tracks the previously-seen state for each prize in a state file.
+"""
+
 from collections import namedtuple
 import json
 import logging

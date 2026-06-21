@@ -1,4 +1,14 @@
 
+"""
+Blogbot watches the desertbus.org website blog and for each post:
+- Saves the content as JSON
+- Downloads any attached images
+- Posts it to zulip
+
+By default it will assume any existing posts are already processed, and only processes
+new posts after it has been started.
+"""
+
 import json
 import logging
 import os

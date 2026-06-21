@@ -1,4 +1,13 @@
 
+"""
+This bot posts an hourly update to Zulip with who is coming online
+or going offline, and in what roles.
+
+It also updates group membership so eg. @sup always points to current sups.
+
+It polls the schedule Google Sheet to ensure its data is up to date.
+"""
+
 import gevent.monkey
 gevent.monkey.patch_all()
 
