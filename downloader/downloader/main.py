@@ -141,7 +141,7 @@ class StreamsManager(object):
 
 	FETCH_TIMEOUTS = 5, 30
 
-	def __init__(self, provider, channel, base_dir, qualities, important=False, history_size=0, max_stream_segment_getters=64):
+	def __init__(self, provider, channel, base_dir, qualities, important=False, history_size=0, max_stream_segment_getters=None):
 		self.provider = provider
 		self.channel = channel
 		self.logger = logging.getLogger("StreamsManager({})".format(channel))
@@ -153,6 +153,8 @@ class StreamsManager(object):
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
 		self.history_size = history_size
+		if max_stream_segment_getters is None:
+			max_stream_segment_getters = provider.MAX_SEGMENT_GETTERS
 		self.max_stream_segment_getters = max_stream_segment_getters
 		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
@@ -718,7 +720,7 @@ def parse_channel(channel):
 	"This affects retry interval, error reporting and monitoring. "
 	"Non-twitch URLs can also be given with the form CHANNEL[!]:TYPE:URL"
 )
-def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, twitch_auth_file=None, playlist_debug=0, max_stream_segment_getters=64):
+def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, twitch_auth_file=None, playlist_debug=0):
 	qualities = qualities.split(",") if qualities else []
 
 	twitch_auth_token = None
@@ -739,7 +741,7 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 			channel_qualities = ["source"]
 		else:
 			raise ValueError(f"Unknown type {type!r}")
-		manager = StreamsManager(provider, channel, base_dir, channel_qualities, important=important, history_size=playlist_debug, max_stream_segment_getters=max_stream_segment_getters)
+		manager = StreamsManager(provider, channel, base_dir, channel_qualities, important=important, history_size=playlist_debug)
 		managers.append(manager)
 
 	def stop():

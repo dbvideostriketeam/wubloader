@@ -17,6 +17,9 @@ class Provider:
 	# However the default is an arbitrarily long period (ie. never).
 	MAX_WORKER_AGE = 30 * 24 * 60 * 60 # 30 days
 
+	# Max allowed concurrent segment fetches
+	MAX_SEGMENT_GETTERS = 64
+
 	def get_media_playlist_uris(self, qualities, session=None):
 		"""Fetches master playlist and returns {quality: media playlist URI} for each
 		requested quality."""
@@ -61,6 +64,9 @@ class YoutubeProvider(Provider):
 	"""
 	# Youtube links expire after 6h, so roll workers at 5h
 	MAX_WORKER_AGE = 5 * 60 * 60
+
+	# Youtube throws rate limit errors above this value
+	MAX_SEGMENT_GETTERS = 4
 
 	def __init__(self, youtube_url):
 		self.youtube_url = youtube_url
