@@ -190,8 +190,7 @@ export function videoPlayerTimeForDisplayTime(time: string): number {
 }
 
 export enum EditorState {
-	Clean,
-	Dirty,
+	Entry,
 	Submitting,
 	Submitted,
 }

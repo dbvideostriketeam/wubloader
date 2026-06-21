@@ -398,7 +398,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		return `/cut/${streamInfo.streamName}/${props.data!.video_quality}.ts?${params.toString()}`;
 	};
 
-	const [editorState, setEditorState] = createSignal(EditorState.Clean);
+	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
 	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
 

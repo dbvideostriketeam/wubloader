@@ -53,7 +53,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	};
 
 	const submitVideo = async (event) => {
-		const oldState = props.editorState();
 		props.setEditorState(EditorState.Submitting);
 		setSubmissionError("");
 
@@ -61,12 +60,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		const videoDescription = props.videoDescription();
 		if (videoTitle === "" || videoDescription === "") {
 			setSubmissionError("The video title and/or description must be filled in");
-			props.setEditorState(oldState);
+			props.setEditorState(EditorState.Entry);
 			return;
 		}
 		if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
 			setSubmissionError("Description contains manually entered chapter marker delimiter");
-			props.setEditorState(oldState);
+			props.setEditorState(EditorState.Entry);
 			return;
 		}
 
@@ -81,12 +80,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const rangeEndDate = rangeData.endTime();
 			if (rangeStartDate === null || rangeEndDate === null) {
 				setSubmissionError("There are missing times for ranges");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 			if (rangeStartDate > rangeEndDate) {
 				setSubmissionError("The end time of a range is before its start time");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 			const rangeStart = wubloaderTimeFromDateTime(rangeStartDate);
@@ -100,7 +99,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const rangePlayerEnd = videoPlayerTimeFromDateTime(rangeEndDate, props.videoFragmentTimes());
 			if (rangePlayerStart === null || rangePlayerEnd === null) {
 				setSubmissionError("The start and/or end time of a range don't resolve to video times.");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -116,13 +115,13 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					);
 					if (chapterTime === null) {
 						setSubmissionError("A chapter time doesn't resolve to video times");
-						props.setEditorState(oldState);
+						props.setEditorState(EditorState.Entry);
 						return;
 					}
 
 					if (!chapterData.description) {
 						setSubmissionError("A chapter is missing a description");
-						props.setEditorState(oldState);
+						props.setEditorState(EditorState.Entry);
 						return;
 					}
 
@@ -131,13 +130,13 @@ export const Submission: Component<SubmissionProps> = (props) => {
 						checkedFirstChapter = true;
 						if (outputVideoTimeSeconds !== 0) {
 							setSubmissionError("The first chapter must start at the beginning of the video");
-							props.setEditorState(oldState);
+							props.setEditorState(EditorState.Entry);
 							return;
 						}
 					}
 					if (lastChapterTime !== null && outputVideoTimeSeconds - lastChapterTime < 10) {
 						setSubmissionError("Chapters must be at least 10 seconds apart");
-						props.setEditorState(oldState);
+						props.setEditorState(EditorState.Entry);
 						return;
 					}
 					lastChapterTime = outputVideoTimeSeconds;
@@ -156,7 +155,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				setSubmissionError(
 					"Time ranges and transition data resulted in a negative video time at some point in the time calculations",
 				);
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 		}
@@ -173,7 +172,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailTime = props.thumbnailData.time();
 			if (thumbnailTime === null) {
 				setSubmissionError("The thumbnail time is invalid");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 		}
@@ -182,7 +181,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailTemplate = props.thumbnailData.template();
 			if (thumbnailTemplate === null) {
 				setSubmissionError("Thumbnail template is missing");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -190,7 +189,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailLocation = props.thumbnailData.location();
 			if (thumbnailCrop === null || thumbnailLocation === null) {
 				setSubmissionError("The thumbnail crop/location options are invalid");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 		}
@@ -199,7 +198,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailImage = props.thumbnailData.image();
 			if (thumbnailImage === null) {
 				setSubmissionError("The thumbnail image was invalid or not uploaded");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 		}
@@ -208,7 +207,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const customTime = props.thumbnailData.time();
 			if (customTime === null) {
 				setSubmissionError("The thumbnail time is invalid");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -216,7 +215,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const customLocation = props.thumbnailData.location();
 			if (customCrop === null || customLocation === null) {
 				setSubmissionError("The thumbnail crop/location options are invalid");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -229,7 +228,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const customTemplate = props.thumbnailData.image();
 			if (customTemplate === null) {
 				setSubmissionError("The template image was not uploaded or invalid");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -248,7 +247,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				setSubmissionError(
 					`Rendering thumbnail failed with ${thumbnailResponse.status} ${thumbnailResponse.statusText}`,
 				);
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -260,7 +259,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			});
 			if (thumbnailData.substring(0, 22) !== "data:image/png;base64,") {
 				setSubmissionError("An error occurred converting the generated thumbnail to base64");
-				props.setEditorState(oldState);
+				props.setEditorState(EditorState.Entry);
 				return;
 			}
 
@@ -322,7 +321,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			props.setEditorState(EditorState.Submitted);
 			setNeedsOverrideMessage("");
 		} else {
-			props.setEditorState(oldState);
+			props.setEditorState(EditorState.Entry);
 			if (submitResponse.status === 409) {
 				setNeedsOverrideMessage(await submitResponse.text());
 			} else if (submitResponse.status === 401) {
@@ -334,14 +333,13 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	};
 
 	const saveVideoDraft = async (event) => {
-		const oldState = props.editorState();
 		props.setEditorState(EditorState.Submitting);
 		setSubmissionError("");
 
 		let videoDescription = props.videoDescription();
 		if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
 			setSubmissionError("Description contains manually entered chapter marker delimiter");
-			props.setEditorState(oldState);
+			props.setEditorState(EditorState.Entry);
 			return;
 		}
 
@@ -417,11 +415,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			body: JSON.stringify(editData),
 		});
 
+		props.setEditorState(EditorState.Entry);
 		if (submitResponse.ok) {
-			props.setEditorState(EditorState.Clean);
 			setNeedsOverrideMessage("");
 		} else {
-			props.setEditorState(oldState);
 			if (submitResponse.status === 409) {
 				setNeedsOverrideMessage(await submitResponse.text());
 			} else if (submitResponse.status === 401) {
@@ -443,13 +440,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			<div>
 				<div>{needsOverrideMessage()}</div>
 				<Switch>
-					<Match when={props.editorState() === EditorState.Clean}>
-						<button onClick={submitVideo}>{submitButtonLabel()}</button>
-						<Show when={showSaveDraftButton()}>
-							<button disabled>{saveDraftButtonLabel()}</button>
-						</Show>
-					</Match>
-					<Match when={props.editorState() === EditorState.Dirty}>
+					<Match when={props.editorState() === EditorState.Entry}>
 						<button onClick={submitVideo}>{submitButtonLabel()}</button>
 						<Show when={showSaveDraftButton()}>
 							<button onClick={saveVideoDraft}>{saveDraftButtonLabel()}</button>
