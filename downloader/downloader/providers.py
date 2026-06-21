@@ -20,6 +20,9 @@ class Provider:
 	# Max allowed concurrent segment fetches
 	MAX_SEGMENT_GETTERS = 64
 
+	# Enable a hack for resolving suspicious time skew issues on twitch streams
+	SUS_SKEW_DETECTION = False
+
 	def get_media_playlist_uris(self, qualities, session=None):
 		"""Fetches master playlist and returns {quality: media playlist URI} for each
 		requested quality."""
@@ -94,6 +97,8 @@ class TwitchProvider(Provider):
 	"""Provider that takes a twitch channel."""
 	# Twitch links expire after 24h, so roll workers at 20h
 	MAX_WORKER_AGE = 20 * 60 * 60
+
+	SUS_SKEW_DETECTION = True
 
 	def __init__(self, channel, auth_token=None):
 		self.channel = channel

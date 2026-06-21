@@ -444,7 +444,7 @@ class StreamWorker(object):
 						if skew != 0:
 							segment_time_skew_non_zero_sum.labels(self.manager.channel, self.quality, f"{id(self):x}").inc(skew)
 							segment_time_skew_non_zero_count.labels(self.manager.channel, self.quality, f"{id(self):x}").inc()
-						if abs(skew) > self.MAX_SEGMENT_TIME_SKEW and not suspicious_skew:
+						if self.manager.provider.SUS_SKEW_DETECTION and abs(skew) > self.MAX_SEGMENT_TIME_SKEW and not suspicious_skew:
 							self.logger.warning(f"Suspicious skew of {skew}, triggering new worker: Expected {date} after {prev_segment}, got {new_date} for {segment}")
 							self.trigger_new_worker()
 							suspicious_skew = True
