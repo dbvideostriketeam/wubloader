@@ -141,7 +141,7 @@ class StreamsManager(object):
 
 	FETCH_TIMEOUTS = 5, 30
 
-	def __init__(self, provider, channel, base_dir, qualities, important=False, history_size=0):
+	def __init__(self, provider, channel, base_dir, qualities, important=False, history_size=0, max_stream_segment_getters=64):
 		self.provider = provider
 		self.channel = channel
 		self.logger = logging.getLogger("StreamsManager({})".format(channel))
@@ -153,6 +153,7 @@ class StreamsManager(object):
 		self.stopping = gevent.event.Event() # set to tell main loop to stop
 		self.important = important
 		self.history_size = history_size
+		self.max_stream_segment_getters = max_stream_segment_getters
 		self.master_playlist_log_level = logging.INFO if important else logging.DEBUG
 		if self.important:
 			self.FETCH_MIN_INTERVAL = self.IMPORTANT_FETCH_MIN_INTERVAL
@@ -223,7 +224,7 @@ class StreamsManager(object):
 			self.logger.info("Ignoring worker start as we are stopping")
 			return
 		url_time, url = self.latest_urls[quality]
-		worker = StreamWorker(self, quality, url, url_time, self.history_size)
+		worker = StreamWorker(self, quality, url, url_time, self.history_size, self.max_stream_segment_getters)
 		self.stream_workers[quality].append(worker)
 		gevent.spawn(worker.run)
 
@@ -315,7 +316,7 @@ class StreamWorker(object):
 	# See https://github.com/dbvideostriketeam/wubloader/issues/539
 	MAX_SEGMENT_TIME_SKEW = 0.01
 
-	def __init__(self, manager, quality, url, url_time, history_size):
+	def __init__(self, manager, quality, url, url_time, history_size, max_segment_getters):
 		self.manager = manager
 		self.logger = manager.logger.getChild("StreamWorker({})@{:x}".format(quality, id(self)))
 		self.quality = quality
@@ -340,6 +341,9 @@ class StreamWorker(object):
 		# If enabled, playlist history is saved after each segment fetch,
 		# showing the last N playlist fetches up until the one that resulted in that fetch.
 		self.history_size = history_size
+		# Limits number of concurrently running segment getters.
+		# This is needed for providers that give you all historical segments at once.
+		self.getter_pool = gevent.pool.Pool(max_segment_getters)
 
 	def __repr__(self):
 		return "<{} at 0x{:x} for stream {!r}>".format(type(self).__name__, id(self), self.quality)
@@ -452,7 +456,8 @@ class StreamWorker(object):
 						self.map_cache,
 						history,
 					)
-					gevent.spawn(self.getters[segment.uri].run)
+					# Note this will block if we hit max segment getters
+					self.getter_pool.spawn(self.getters[segment.uri].run)
 				if date is not None:
 					date += datetime.timedelta(seconds=segment.duration)
 				prev_segment = segment
@@ -713,7 +718,7 @@ def parse_channel(channel):
 	"This affects retry interval, error reporting and monitoring. "
 	"Non-twitch URLs can also be given with the form CHANNEL[!]:TYPE:URL"
 )
-def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, twitch_auth_file=None, playlist_debug=0):
+def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor_port=0, twitch_auth_file=None, playlist_debug=0, max_stream_segment_getters=64):
 	qualities = qualities.split(",") if qualities else []
 
 	twitch_auth_token = None
@@ -734,7 +739,7 @@ def main(channels, base_dir=".", qualities="source", metrics_port=8001, backdoor
 			channel_qualities = ["source"]
 		else:
 			raise ValueError(f"Unknown type {type!r}")
-		manager = StreamsManager(provider, channel, base_dir, channel_qualities, important=important, history_size=playlist_debug)
+		manager = StreamsManager(provider, channel, base_dir, channel_qualities, important=important, history_size=playlist_debug, max_stream_segment_getters=max_stream_segment_getters)
 		managers.append(manager)
 
 	def stop():
