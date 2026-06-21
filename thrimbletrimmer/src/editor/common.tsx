@@ -1,6 +1,9 @@
 import { Accessor, createSignal, Setter } from "solid-js";
 import { DateTime } from "luxon";
 
+export const CHAPTER_MARKER_DELIMITER = "\n==========\n";
+export const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
+
 export interface VideoData {
 	id: string;
 	sheet_name: string;
@@ -184,4 +187,11 @@ export function videoPlayerTimeForDisplayTime(time: string): number {
 	}
 
 	return hours * 3600 + minutes * 60 + seconds;
+}
+
+export enum EditorState {
+	Clean,
+	Dirty,
+	Submitting,
+	Submitted,
 }
