@@ -68,6 +68,13 @@ segment_time_skew_non_zero_count = prom.Counter(
 	["channel", "quality", "worker"],
 )
 
+segment_size = prom.Histogram(
+	"segment_size",
+	"Size of downloaded segment files in bytes",
+	["type", "channel", "quality"],
+	buckets=[0, 2**10, 2**14, 2**18, 2**19, 2**20, 2**21, 2**22, 2**24, 2**30],
+)
+
 
 class TimedOutError(Exception):
 	pass
@@ -633,6 +640,7 @@ class SegmentGetter(object):
 		temp_path = self.make_path("temp")
 		hash = hashlib.sha256()
 		file_created = False
+		bytes_written = 0
 		try:
 			self.logger.debug("Downloading segment {} to {}".format(self.segment, temp_path))
 			start_time = monotonic()
@@ -666,6 +674,7 @@ class SegmentGetter(object):
 					for chunk in resp.iter_content(8192):
 						common.writeall(f.write, chunk)
 						hash.update(chunk)
+						bytes_written += len(chunk)
 		except Exception as e:
 			if file_created:
 				partial_path = self.make_path("partial", hash)
@@ -677,13 +686,14 @@ class SegmentGetter(object):
 		else:
 			request_duration = monotonic() - start_time
 			segment_type = "full"
-			if self.suspect or request_duration >= self.FETCH_SUSPECT_TIME:
+			if self.suspect or request_duration >= self.FETCH_SUSPECT_TIME or bytes_written == 0:
 				segment_type = "suspect"
 			full_path = self.make_path(segment_type, hash)
 			self.logger.debug("Saving completed segment {} as {}".format(temp_path, full_path))
 			common.rename(temp_path, full_path)
 			segments_downloaded.labels(type=segment_type, channel=self.channel, quality=self.quality).inc()
 			segment_duration_downloaded.labels(type=segment_type, channel=self.channel, quality=self.quality).inc(self.segment.duration)
+			segment_size.labels(type=segment_type, channel=self.channel, quality=self.quality).observe(bytes_written)
 			# Prom doesn't provide a way to compare value to gauge's existing value,
 			# we need to reach into internals
 			stat = latest_segment.labels(channel=self.channel, quality=self.quality)
