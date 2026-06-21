@@ -11,22 +11,22 @@
 	},
 	"license": "MIT",
 	"devDependencies": {
-		"sass": "1.94.0",
-		"solid-devtools": "0.34.4",
-		"typescript": "5.9.3",
+		"sass": "1.101.0",
+		"solid-devtools": "0.34.5",
+		"typescript": "6.0.3",
 		"url": "0.11.4",
-		"vite": "7.2.2",
-		"vite-plugin-solid": "2.11.10",
-		"@types/luxon": "3.7.1"
+		"vite": "7.3.5",
+		"vite-plugin-solid": "2.11.12",
+		"@types/luxon": "3.7.2"
 	},
 	"dependencies": {
-		"cropperjs": "2.1.0",
-		"hls.js": "1.6.14",
+		"cropperjs": "2.1.1",
+		"hls.js": "1.6.16",
 		"luxon": "3.7.2",
 		"media-icons": "1.1.5",
-		"solid-js": "1.9.10",
-		"@solid-primitives/scheduled": "1.5.2",
+		"solid-js": "1.9.13",
+		"@solid-primitives/scheduled": "1.5.3",
 		"solidjs-use": "2.3.0",
-		"vidstack": "1.12.13"
+		"vidstack": "1.15.6"
 	}
 }
