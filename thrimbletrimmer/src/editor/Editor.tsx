@@ -36,6 +36,7 @@ import { Waveform } from "./Waveform";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
+import { Download } from "./Download";
 
 export const Editor: Component = () => {
 	const currentURL = new URL(location.href);
@@ -230,7 +231,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoData, setVideoData] = createSignal(initialVideoData);
 	const [playerTime, setPlayerTime] = createSignal(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
-	const [downloadType, setDownloadType] = createSignal("smart");
 	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
 	const [videoDuration, setVideoDuration] = createSignal(0);
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
@@ -383,21 +383,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 		return url;
 	};
 
-	const downloadVideoURL = () => {
-		const streamInfo = streamVideoInfo();
-		const startTime = wubloaderTimeFromDateTime(streamInfo.streamStartTime);
-		const params = new URLSearchParams({ type: downloadType(), allow_holes: "false" });
-		for (const range of videoData()) {
-			const rangeStartTime = range.startTime();
-			const rangeEndTime = range.endTime();
-			const rangeStart = rangeStartTime ? wubloaderTimeFromDateTime(rangeStartTime) : "";
-			const rangeEnd = rangeEndTime ? wubloaderTimeFromDateTime(rangeEndTime) : "";
-			const rangeString = `${rangeStart},${rangeEnd}`;
-			params.append("range", rangeString);
-		}
-		return `/cut/${streamInfo.streamName}/${props.data!.video_quality}.ts?${params.toString()}`;
-	};
-
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
 	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
@@ -487,9 +472,19 @@ const EditorContent: Component<ContentProps> = (props) => {
 				uploadLocations={props.data.upload_locations}
 				editorState={editorState}
 				setEditorState={setEditorState}
+				allowHoles={allowHoles}
+				setAllowHoles={setAllowHoles}
 				thumbnailData={thumbnail()}
 				originalVideoData={props.data}
 				videoFragmentTimes={videoFragmentTimes}
+			/>
+			<Download
+				streamVideoInfo={streamVideoInfo}
+				rangeData={videoData}
+				allowHoles={allowHoles}
+				videoPlayerTime={videoPlayerTime}
+				videoQuality={props.data.video_quality}
+				videoFragments={videoFragmentTimes}
 			/>
 		</>
 	);
