@@ -1,4 +1,9 @@
 
+"""
+This bot connects to Twitch TMI to watch for incoming DMs,
+posting a notification to zulip.
+"""
+
 import gevent.monkey
 gevent.monkey.patch_all()
 

@@ -1,4 +1,11 @@
 
+"""
+This bot watches relevant mastodon accounts and:
+- Saves them to a JSON file
+- Posts them to zulip
+As well as posting notifications to zulip when the VST account is mentioned.
+"""
+
 import json
 import logging
 import os

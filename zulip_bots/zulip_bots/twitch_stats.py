@@ -1,4 +1,9 @@
 
+"""
+This bot watches twitch APIs for a given channel,
+saving data on viewership numbers, predictions and polls.
+"""
+
 import json
 import logging
 import random

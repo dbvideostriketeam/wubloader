@@ -1,4 +1,9 @@
 
+"""
+This bot polls the DB challenge API, posting any newly seen challenges to Zulip
+so that editors know to go and link it to a video.
+"""
+
 import json
 import time
 
