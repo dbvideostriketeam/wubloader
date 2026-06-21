@@ -824,7 +824,7 @@ class VideoUpdater(object):
 						assert marked == 1
 						self.logger.info("Updated video {}".format(job.id))
 					else:
-						self.logger.warning("Updated video {}, but row has changed since. Did someone else already update it?".format(job.id))
+						self.logger.info("Updated video {}, but row has changed since".format(job.id))
 				self.wait(self.CHECK_INTERVAL)
 			except Exception:
 				self.logger.exception("Error in VideoUpdater")
