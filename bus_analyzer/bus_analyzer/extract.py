@@ -72,6 +72,29 @@ colour_profiles = {
 # 'speed_y_offset'
 # Y difference between center of speed gauge and top of main odo digits
 location_profiles = {
+	'DBfH_2026_ex': {
+		'area_coords': {
+			'odo': (1053, 850, 1170, 930),
+			'clock': (1508, 852, 1604, 910),
+			'heat': (458, 845, 528, 1070),
+			'speed': (660, 845, 758, 980),
+		},
+		'digit_x_coords': {
+			'odo': (0, 22, 44, 66, 99),
+			'clock': (0, 24, 55, 76),
+		},
+		'digit_bases': {
+			'odo': (1000, 100, 10, 1, 0.1),
+			'clock': (600, 60, 10, 1)
+		}, 
+		'digit_width': 17,
+		'digit_height': 24,
+        'last_digit_height': 39,
+		'last_digit_y_offset': 5,
+		'speed_y_offset': 72,
+		'sky_pixel': (1614, 192),
+		'dash_pixel': (945, 864),
+	},
 	'DBfH_2024': {
 		'area_coords': {
 			'odo': (1053, 850, 1170, 930),
@@ -113,6 +136,7 @@ location_profiles = {
 }
 
 profiles = {}
+profiles['DBfH_2026_ex'] = colour_profiles['DBfH_2025'] | location_profiles['DBfH_2026_ex']
 profiles['DBfH_2025'] = colour_profiles['DBfH_2025'] | location_profiles['DBfH_2024']
 profiles['DBfH_2024'] = colour_profiles['DBfH_2024'] | location_profiles['DBfH_2024']
 
@@ -126,7 +150,7 @@ cli = argh.EntryPoint()
 
 @cli
 @argh.arg("paths", nargs="+")
-def to_digits(output_dir, paths, box_only=False, type="odo", profile='DBfH_2025'):
+def to_digits(output_dir, paths, box_only=False, type="odo", profile='DBfH_2026_ex'):
 	"""Extracts each digit and saves to a file. Useful for testing or building prototypes."""
 	profile = profiles[profile]
 	if not os.path.exists(output_dir):
