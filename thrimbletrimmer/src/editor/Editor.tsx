@@ -14,7 +14,9 @@ import { DateTime } from "luxon";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
 import {
+	CHAPTER_MARKER_DELIMITER,
 	ChapterData,
+	EditorState,
 	FragmentTimes,
 	RangeData,
 	ThumbnailData,
@@ -27,15 +29,13 @@ import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
 import { NotesToEditor } from "./NotesToEditor";
 import { RangeSelection } from "./RangeSelection";
+import { Submission } from "./Submission";
 import { ThumbnailSettings } from "./ThumbnailSettings";
 import { VideoMetadata } from "./VideoMetadata";
 import { Waveform } from "./Waveform";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
-
-const CHAPTER_MARKER_DELIMITER = "\n==========\n";
-const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
 
 export const Editor: Component = () => {
 	const currentURL = new URL(location.href);
@@ -63,7 +63,6 @@ export const Editor: Component = () => {
 		);
 	}
 
-	const [pageErrors, setPageErrors] = createSignal<string[]>([]);
 	const [videoData] = createResource<VideoData | null>(async (source, { value, refetching }) => {
 		const response = await fetch(`/thrimshim/${videoID}`);
 		if (!response.ok) {
@@ -399,6 +398,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 		return `/cut/${streamInfo.streamName}/${props.data!.video_quality}.ts?${params.toString()}`;
 	};
 
+	const [editorState, setEditorState] = createSignal(EditorState.Clean);
+
+	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
+
 	return (
 		<>
 			<ul class={styles.errorList}>
@@ -439,7 +442,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 			/>
 			<NotesToEditor notes={props.data.notes} />
 			<CategoryNotes notes={props.data.category_notes} />
-			<ChapterToggle chaptersEnabled={chaptersEnabled} setChaptersEnabled={setChaptersEnabled} />
+			<ChapterToggle
+				chaptersEnabled={chaptersEnabled}
+				setChaptersEnabled={setChaptersEnabled}
+				allFieldsDisabled={allFieldsDisabled}
+			/>
 			<RangeSelection
 				rangeData={videoData}
 				setRangeData={setVideoData}
@@ -469,6 +476,19 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoFragments={videoFragmentTimes}
 				videoPlayerTime={videoPlayerTime}
 				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+			/>
+			<Submission
+				videoData={videoData}
+				videoTitle={videoTitle}
+				videoDescription={videoDescription}
+				videoTags={videoTags}
+				chaptersEnabled={chaptersEnabled}
+				uploadLocations={props.data.upload_locations}
+				editorState={editorState}
+				setEditorState={setEditorState}
+				thumbnailData={thumbnail()}
+				originalVideoData={props.data}
+				videoFragmentTimes={videoFragmentTimes}
 			/>
 		</>
 	);

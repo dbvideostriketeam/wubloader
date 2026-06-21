@@ -99,7 +99,7 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 
 	const seconds = Math.floor((timeAgoSeconds % 60) * 1000) / 1000;
 	const secondsString = seconds < 10 ? `0${seconds}` : seconds.toString();
-	const minutes = (timeAgoSeconds / 60) % 60 | 0;
+	const minutes = ((timeAgoSeconds / 60) % 60) | 0;
 	const minutesString = minutes < 10 ? `0${minutes}` : minutes.toString();
 	const hours = Math.floor(timeAgoSeconds / 3600);
 
