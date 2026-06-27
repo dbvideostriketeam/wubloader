@@ -10,6 +10,7 @@ import {
 	Show,
 	Suspense,
 } from "solid-js";
+import { Fragment } from "hls.js";
 import { DateTime } from "luxon";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
@@ -27,17 +28,18 @@ import {
 import { CategoryNotes } from "./CategoryNotes";
 import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
+import { DataCorrection } from "./DataCorrection";
+import { Download } from "./Download";
 import { NotesToEditor } from "./NotesToEditor";
 import { RangeSelection } from "./RangeSelection";
 import { Submission } from "./Submission";
 import { ThumbnailSettings } from "./ThumbnailSettings";
 import { VideoMetadata } from "./VideoMetadata";
 import { Waveform } from "./Waveform";
-import { StreamVideoInfo } from "../common/streamInfo";
+import { ChatDisplay } from "../common/chat";
 import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
+import { StreamVideoInfo } from "../common/streamInfo";
 import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
-import { Download } from "./Download";
-import { DataCorrection } from "./DataCorrection";
 
 export const Editor: Component = () => {
 	const currentURL = new URL(location.href);
@@ -234,6 +236,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
 	const [videoDuration, setVideoDuration] = createSignal(0);
+	const [allFragments, setAllFragments] = createSignal<Fragment[]>([]);
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
@@ -339,6 +342,8 @@ const EditorContent: Component<ContentProps> = (props) => {
 		const player = mediaPlayer();
 		if (player) {
 			player.addEventListener("hls-level-loaded", (event) => {
+				setAllFragments(event.detail.details.fragments);
+
 				const times: FragmentTimes[] = [];
 				for (const fragment of event.detail.details.fragments) {
 					if (fragment.rawProgramDateTime === null) {
@@ -488,6 +493,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoFragments={videoFragmentTimes}
 			/>
 			<DataCorrection videoID={props.data.id} />
+			<ChatDisplay streamInfo={streamVideoInfo()} fragments={allFragments} />
 		</>
 	);
 };
