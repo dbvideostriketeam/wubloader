@@ -151,7 +151,7 @@ function formatDisplayTime(timeSeconds: number): string {
 export interface ChatDisplayProps {
 	streamInfo: StreamVideoInfo;
 	fragments: Accessor<Fragment[]>;
-	videoTime: Accessor<number>;
+	videoTime?: Accessor<number>;
 }
 
 export const ChatDisplay: Component<ChatDisplayProps> = (props) => {
@@ -201,13 +201,14 @@ export const ChatDisplay: Component<ChatDisplayProps> = (props) => {
 export interface ChatMessageProps {
 	chatMessage: ChatMessageData;
 	chatLog: ChatLog;
-	videoTime: Accessor<number>;
+	videoTime?: Accessor<number>;
 }
 
 export const ChatMessage: Component<ChatMessageProps> = (props) => {
 	const message = props.chatMessage;
 
-	const displayChatMessage = () => props.videoTime() >= message.whenSeconds;
+	const displayChatMessage = () =>
+		props.videoTime ? props.videoTime() >= message.whenSeconds : true;
 
 	const mayClearMessage = props.chatLog.clearMessages.hasOwnProperty(message.messageID);
 	const mayClearUser =
@@ -216,12 +217,18 @@ export const ChatMessage: Component<ChatMessageProps> = (props) => {
 		props.chatLog.clearUsers[message.userID].some((clearTime) => clearTime > message.whenSeconds);
 
 	const messageCleared = () => {
+		if (!props.videoTime) {
+			return true;
+		}
 		const messageClearTime = props.chatLog.clearMessages[message.messageID];
 		const videoTime = props.videoTime();
 		return videoTime >= messageClearTime;
 	};
 	const userCleared = () => {
 		if (message.userID) {
+			if (!props.videoTime) {
+				return true;
+			}
 			let userClearTime = 0;
 			for (const clearTime of props.chatLog.clearUsers[message.userID]) {
 				if (clearTime >= message.whenSeconds) {
@@ -264,13 +271,14 @@ export const ChatMessage: Component<ChatMessageProps> = (props) => {
 
 export interface SystemMessageProps {
 	chatMessage: ChatMessageData;
-	videoTime: Accessor<number>;
+	videoTime?: Accessor<number>;
 }
 
 export const SystemMessage: Component<SystemMessageProps> = (props) => {
 	const message = props.chatMessage;
 
-	const displaySystemMessage = () => props.videoTime() >= message.whenSeconds;
+	const displaySystemMessage = () =>
+		props.videoTime ? props.videoTime() >= message.whenSeconds : true;
 
 	const systemMessage = () => {
 		const systemMsg = message.message.tags["system-msg"];
