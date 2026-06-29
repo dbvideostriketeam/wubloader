@@ -25,6 +25,7 @@
 		"luxon": "3.7.2",
 		"media-icons": "1.1.5",
 		"solid-js": "1.9.13",
+		"@solid-primitives/event-listener": "2.4.5",
 		"@solid-primitives/scheduled": "1.5.3",
 		"solidjs-use": "2.3.0",
 		"vidstack": "1.15.6"
