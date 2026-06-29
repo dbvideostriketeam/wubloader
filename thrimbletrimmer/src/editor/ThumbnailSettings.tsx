@@ -53,9 +53,31 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 	const [thumbnailTimeEntry, setThumbnailTimeEntry] = createSignal("");
 
+		createEffect(() => {
+			const thumbnailTime = props.thumbnailData.time();
+			const fragments = props.videoFragments();
+			if (fragments.length === 0) {
+				return;
+			}
+			if (thumbnailTime === null) {
+				setThumbnailTimeEntry("");
+				return;
+			}
+			const playerTime = videoPlayerTimeFromDateTime(thumbnailTime, fragments);
+			if (playerTime === null) {
+				setThumbnailTimeEntry("");
+				return;
+			}
+			const entryTime = displayTimeForVideoPlayerTime(playerTime);
+			setThumbnailTimeEntry(entryTime);
+		});
+
 	createEffect(() => {
 		const enteredTime = thumbnailTimeEntry();
 		const fragments = props.videoFragments();
+		if (fragments.length === 0) {
+			return;
+		}
 		if (enteredTime === "") {
 			props.thumbnailData.setTime(null);
 			return;
@@ -63,22 +85,6 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		const playerTime = videoPlayerTimeForDisplayTime(enteredTime);
 		const thumbnailTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
 		props.thumbnailData.setTime(thumbnailTime);
-	});
-
-	createEffect(() => {
-		const thumbnailTime = props.thumbnailData.time();
-		const fragments = props.videoFragments();
-		if (thumbnailTime === null) {
-			setThumbnailTimeEntry("");
-			return;
-		}
-		const playerTime = videoPlayerTimeFromDateTime(thumbnailTime, fragments);
-		if (playerTime === null) {
-			setThumbnailTimeEntry("");
-			return;
-		}
-		const entryTime = displayTimeForVideoPlayerTime(playerTime);
-		setThumbnailTimeEntry(entryTime);
 	});
 
 	const setThumbnailTime = (event) => {
