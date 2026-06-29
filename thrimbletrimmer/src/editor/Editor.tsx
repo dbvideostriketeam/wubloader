@@ -12,6 +12,7 @@ import {
 } from "solid-js";
 import { Fragment } from "hls.js";
 import { DateTime } from "luxon";
+import { makeEventListener } from "@solid-primitives/event-listener";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
 import {
@@ -22,6 +23,7 @@ import {
 	RangeData,
 	ThumbnailData,
 	ThumbnailTemplateDefinition,
+	ThumbnailType,
 	TransitionDefinition,
 	VideoData,
 } from "./common";
@@ -389,9 +391,131 @@ const EditorContent: Component<ContentProps> = (props) => {
 		return url;
 	};
 
+	const dataChanged = () => {
+		const videoRangeData = videoData();
+		if (videoData.length != (props.data?.video_ranges?.length ?? 0)) {
+			return true;
+		}
+		for (let rangeIndex = 0; rangeIndex < videoData.length; rangeIndex++) {
+			const origRangeStart = dateTimeFromWubloaderTime(props.data!.video_ranges![rangeIndex][0]);
+			const rangeStart = videoRangeData[rangeIndex].startTime();
+			if (rangeStart !== origRangeStart) {
+				return true;
+			}
+
+			const origRangeEnd = dateTimeFromWubloaderTime(props.data!.video_ranges![rangeIndex][1]);
+			const rangeEnd = videoRangeData[rangeIndex].endTime();
+			if (rangeEnd !== origRangeEnd) {
+				return true;
+			}
+
+			if (rangeIndex > 0) {
+				const transitionIndex = rangeIndex - 1;
+				const origTransitionData = props.data!.video_transitions![transitionIndex];
+				const transitionType = videoRangeData[rangeIndex].transitionType();
+				const transitionSeconds = videoRangeData[rangeIndex].transitionSeconds();
+				if ((origTransitionData === null && transitionType !== "") || (origTransitionData !== null && (origTransitionData[0] !== transitionType || origTransitionData[1] !== transitionSeconds))) {
+					return true;
+				}
+			}
+
+			// TODO: When chapter markers are in the database, compare those, too
+		}
+
+		if (videoTitle() !== (props.data?.video_title ?? props.data?.description ?? "")) {
+			return true;
+		}
+
+		// TODO: When chapter markers are in the database, stop comparing the description this way (compare them directly instead)
+		let origDescription = props.data?.video_description ?? "";
+		if (origDescription.indexOf(CHAPTER_MARKER_DELIMITER) !== -1) {
+			origDescription = origDescription.split(CHAPTER_MARKER_DELIMITER, 1)[0];
+		}
+
+		const tags = videoTags();
+		const origTags = props.data?.video_tags ?? props.data?.tags ?? [];
+		if (tags.length !== origTags.length) {
+			return true;
+		}
+		for (let tagIndex = 0; tagIndex < tags.length; tagIndex++) {
+			if (tags[tagIndex] !== origTags[tagIndex]) {
+				return true;
+			}
+		}
+
+		const origThumbnailType = props.data?.thumbnail_mode ?? initialThumbnailData.type();
+		const thumbnailType = thumbnail().type();
+		if (origThumbnailType !== thumbnailType) {
+			return true;
+		}
+		if (thumbnailType === ThumbnailType.Template) {
+			const origThumbnailTemplate = props.data?.thumbnail_template ?? initialThumbnailData.template();
+			const thumbnailTemplate = thumbnail().template();
+			if (origThumbnailTemplate !== thumbnailTemplate) {
+				return true;
+			}
+		}
+		if (thumbnailType === ThumbnailType.Frame || thumbnailType === ThumbnailType.Template || thumbnailType === ThumbnailType.CustomTemplate) {
+			const origThumbnailTime = dateTimeFromWubloaderTime(props.data?.thumbnail_time ?? null) ?? initialThumbnailData.time();
+			const thumbnailTime = thumbnail().time();
+			if ((thumbnailTime === null) !== (origThumbnailTime === null)) {
+				return true;
+			}
+			if (thumbnailTime !== null && origThumbnailTime !== null && !thumbnailTime.equals(origThumbnailTime)) {
+				return true;
+			}
+		}
+		if (thumbnailType === ThumbnailType.Template || thumbnailType === ThumbnailType.CustomTemplate) {
+			const origThumbnailCrop = props.data?.thumbnail_crop ?? initialThumbnailData.crop();;
+			const thumbnailCrop = thumbnail().crop();
+			let cropMatches = origThumbnailCrop === null && thumbnailCrop === null;
+			if (!cropMatches) {
+				if (origThumbnailCrop === null) {
+					return true;
+				}
+				if (thumbnailCrop === null) {
+					return true;
+				}
+				cropMatches = origThumbnailCrop[0] === thumbnailCrop[0] && origThumbnailCrop[1] === thumbnailCrop[1] && origThumbnailCrop[2] === thumbnailCrop[2] && origThumbnailCrop[3] === thumbnailCrop[3];
+			}
+			if (!cropMatches) {
+				return true;
+			}
+			const origThumbnailLocation = props.data?.thumbnail_location ?? initialThumbnailData.location();
+			const thumbnailLocation = thumbnail().location();
+			let locationMatches = origThumbnailLocation === null && thumbnailLocation === null;
+			if (!locationMatches) {
+				if (origThumbnailLocation === null) {
+					return true;
+				}
+				if (thumbnailLocation === null) {
+					return true;
+				}
+				locationMatches = origThumbnailLocation[0] === thumbnailLocation[0] && origThumbnailLocation[1] === thumbnailLocation[1] && origThumbnailLocation[2] === thumbnailLocation[2] && origThumbnailLocation[3] === thumbnailLocation[3];
+			}
+			if (!locationMatches) {
+				return true;
+			}
+		}
+		if (thumbnailType === ThumbnailType.CustomTemplate || thumbnailType === ThumbnailType.CustomThumbnail) {
+			const origThumbnailImage = props.data?.thumbnail_image ?? initialThumbnailData.image();
+			const thumbnailImage = thumbnail().image();
+			if (origThumbnailImage !== thumbnailImage) {
+				return true;
+			}
+		}
+
+		return false;
+	};
+
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
 	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
+	makeEventListener(window, "beforeunload", (event) => {
+		if (editorState() === EditorState.Entry && dataChanged()) {
+			event.preventDefault();
+		}
+	});
 
 	return (
 		<>
