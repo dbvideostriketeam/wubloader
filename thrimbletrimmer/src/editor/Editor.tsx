@@ -9,10 +9,12 @@ import {
 	Setter,
 	Show,
 	Suspense,
+	untrack,
 } from "solid-js";
 import { Fragment } from "hls.js";
 import { DateTime } from "luxon";
 import { makeEventListener } from "@solid-primitives/event-listener";
+import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
 import {
@@ -39,9 +41,18 @@ import { ThumbnailSettings } from "./ThumbnailSettings";
 import { VideoMetadata } from "./VideoMetadata";
 import { Waveform } from "./Waveform";
 import { ChatDisplay } from "../common/chat";
-import { dateTimeFromWubloaderTime, wubloaderTimeFromDateTime } from "../common/convertTime";
+import {
+	dateTimeFromVideoPlayerTime,
+	dateTimeFromWubloaderTime,
+	wubloaderTimeFromDateTime,
+} from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
-import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
+import {
+	KeyboardShortcuts,
+	StreamTimeSettings,
+	VIDEO_FRAMES_PER_SECOND,
+	VideoPlayer,
+} from "../common/video";
 
 export const Editor: Component = () => {
 	const currentURL = new URL(location.href);
@@ -538,6 +549,208 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 		return false;
 	};
+
+	const keyDownEvent = useKeyDownEvent();
+	createEffect(() => {
+		const event = keyDownEvent();
+		if (!event) {
+			return;
+		}
+
+		if (
+			(event.target as Node).nodeName === "INPUT" ||
+			(event.target as Node).nodeName === "TEXTAREA"
+		) {
+			// Let the key event work normally
+			return;
+		}
+
+		const player = untrack(mediaPlayer);
+		switch (event.key) {
+			case "0":
+				if (player) {
+					player.currentTime = 0;
+				}
+				break;
+			case "1":
+				if (player) {
+					player.currentTime = player.duration * 0.1;
+				}
+				break;
+			case "2":
+				if (player) {
+					player.currentTime = player.duration * 0.2;
+				}
+				break;
+			case "3":
+				if (player) {
+					player.currentTime = player.duration * 0.3;
+				}
+				break;
+			case "4":
+				if (player) {
+					player.currentTime = player.duration * 0.4;
+				}
+				break;
+			case "5":
+				if (player) {
+					player.currentTime = player.duration * 0.5;
+				}
+				break;
+			case "6":
+				if (player) {
+					player.currentTime = player.duration * 0.6;
+				}
+				break;
+			case "7":
+				if (player) {
+					player.currentTime = player.duration * 0.7;
+				}
+				break;
+			case "8":
+				if (player) {
+					player.currentTime = player.duration * 0.8;
+				}
+				break;
+			case "9":
+				if (player) {
+					player.currentTime = player.duration * 0.9;
+				}
+				break;
+			case "j":
+				if (player) {
+					player.currentTime -= 10;
+				}
+				break;
+			case "J":
+				if (player) {
+					player.currentTime -= 1;
+				}
+				break;
+			case "k":
+			case "K":
+			case " ":
+				if (player) {
+					if (player.paused) {
+						player.play();
+					} else {
+						player.pause();
+					}
+				}
+				event.preventDefault();
+				break;
+			case "l":
+				if (player) {
+					player.currentTime += 10;
+				}
+				break;
+			case "L":
+				if (player) {
+					player.currentTime += 1;
+				}
+				break;
+			case "m":
+				if (player) {
+					player.muted = !player.muted;
+				}
+				break;
+			case "o":
+				let activeIndexToDecrease = untrack(activeKeyboardIndex);
+				if (activeIndexToDecrease > 0) {
+					activeIndexToDecrease--;
+				}
+				setActiveKeyboardIndex(activeIndexToDecrease);
+				break;
+			case "p":
+				const activeIndexIncreased = untrack(activeKeyboardIndex) + 1;
+				const videoRangeData = untrack(videoData);
+				if (activeIndexIncreased >= videoRangeData.length) {
+					setVideoData([...videoRangeData, new RangeData()]);
+				}
+				setActiveKeyboardIndex(activeIndexIncreased);
+				break;
+			case ",":
+			case "<":
+				if (player) {
+					player.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
+				}
+				break;
+			case ".":
+			case ">":
+				if (player) {
+					player.currentTime += 1 / VIDEO_FRAMES_PER_SECOND;
+				}
+				break;
+			case "=":
+				if (player && player.playbackRate < 8) {
+					player.playbackRate += 0.25;
+				}
+				break;
+			case "+":
+				if (player) {
+					if (player.playbackRate < 2) {
+						player.playbackRate = 2;
+					} else {
+						player.playbackRate = 8;
+					}
+				}
+				break;
+			case "-":
+				if (player && player.playbackRate > 0.25) {
+					player.playbackRate -= 0.25;
+				}
+				break;
+			case "_":
+				if (player) {
+					player.playbackRate = 0.25;
+				}
+				break;
+			case "[":
+				if (!player) {
+					break;
+				}
+				const setStartRangeIndex = untrack(activeKeyboardIndex);
+				const setStartRangeData = untrack(videoData);
+				const startPlayerTime = player.currentTime;
+				const startTime = dateTimeFromVideoPlayerTime(untrack(allFragments), startPlayerTime);
+				setStartRangeData[setStartRangeIndex].setStartTime(startTime);
+				break;
+			case "]":
+				if (!player) {
+					break;
+				}
+				const setEndRangeIndex = untrack(activeKeyboardIndex);
+				const setEndRangeData = untrack(videoData);
+				const endPlayerTime = player.currentTime;
+				const endTime = dateTimeFromVideoPlayerTime(untrack(allFragments), endPlayerTime);
+				setEndRangeData[setEndRangeIndex].setEndTime(endTime);
+				break;
+			case "ArrowLeft":
+				if (player) {
+					if (event.shiftKey) {
+						player.currentTime -= 60;
+					} else {
+						player.currentTime -= 5;
+					}
+				}
+				break;
+			case "ArrowRight":
+				if (player) {
+					if (event.shiftKey) {
+						player.currentTime += 60;
+					} else {
+						player.currentTime += 5;
+					}
+				}
+				break;
+			case "Backspace":
+				event.preventDefault();
+				if (player) {
+					player.playbackRate = 1;
+				}
+				break;
+		}
+	});
 
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 

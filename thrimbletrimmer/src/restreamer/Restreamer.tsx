@@ -1,6 +1,7 @@
 import {
 	Accessor,
 	Component,
+	createEffect,
 	createResource,
 	createSignal,
 	For,
@@ -9,9 +10,11 @@ import {
 	Setter,
 	Show,
 	Suspense,
+	untrack,
 } from "solid-js";
 import { DateTime } from "luxon";
 import { Fragment } from "hls.js";
+import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Restreamer.module.scss";
 import {
@@ -20,7 +23,12 @@ import {
 	wubloaderTimeFromDateTime,
 } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
-import { KeyboardShortcuts, StreamTimeSettings, VideoPlayer } from "../common/video";
+import {
+	KeyboardShortcuts,
+	StreamTimeSettings,
+	VIDEO_FRAMES_PER_SECOND,
+	VideoPlayer,
+} from "../common/video";
 import { ChatDisplay } from "../common/chat";
 
 export interface DefaultsData {
@@ -42,16 +50,6 @@ export const Restreamer: Component = () => {
 			return await response.json();
 		},
 	);
-
-	const busStartTime = () => {
-		const defaults = defaultsData();
-		if (defaults && defaults.hasOwnProperty("bustime_start")) {
-			return dateTimeFromWubloaderTime(defaults.bustime_start);
-		}
-		return null;
-	};
-
-	const now = DateTime.utc();
 
 	return (
 		<>
@@ -93,11 +91,10 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const [busStartTime, setBusStartTime] = createSignal<DateTime>(busStartTimeDefault);
 	let defaultStreamInfo = StreamVideoInfo.defaultFromURL();
 	if (defaultStreamInfo === null) {
-		defaultStreamInfo = {
-			streamName: props.defaults.video_channel,
-			streamStartTime: DateTime.utc().minus({ minutes: 10 }),
-			streamEndTime: null,
-		};
+		defaultStreamInfo = new StreamVideoInfo();
+		defaultStreamInfo.streamName = props.defaults.video_channel;
+		defaultStreamInfo.streamStartTime = DateTime.utc().minus({ minutes: 10 });
+		defaultStreamInfo.streamEndTime = null;
 	}
 	const [streamVideoInfo, setStreamVideoInfo] = createSignal<StreamVideoInfo>(defaultStreamInfo);
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
@@ -126,6 +123,129 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		}
 	}, 100);
 	onCleanup(() => clearInterval(chatScrollTimer));
+
+	const keyDownEvent = useKeyDownEvent();
+	createEffect(() => {
+		const event = keyDownEvent();
+		if (!event) {
+			return;
+		}
+
+		if (
+			(event.target as Node).nodeName === "INPUT" ||
+			(event.target as Node).nodeName === "TEXTAREA"
+		) {
+			return;
+		}
+
+		const player = untrack(mediaPlayer);
+		if (!player) {
+			return;
+		}
+		switch (event.key) {
+			case "0":
+				player.currentTime = 0;
+				break;
+			case "1":
+				player.currentTime = player.duration * 0.1;
+				break;
+			case "2":
+				player.currentTime = player.duration * 0.2;
+				break;
+			case "3":
+				player.currentTime = player.duration * 0.3;
+				break;
+			case "4":
+				player.currentTime = player.duration * 0.4;
+				break;
+			case "5":
+				player.currentTime = player.duration * 0.5;
+				break;
+			case "6":
+				player.currentTime = player.duration * 0.6;
+				break;
+			case "7":
+				player.currentTime = player.duration * 0.7;
+				break;
+			case "8":
+				player.currentTime = player.duration * 0.8;
+				break;
+			case "9":
+				player.currentTime = player.duration * 0.9;
+				break;
+			case "j":
+				player.currentTime -= 10;
+				break;
+			case "J":
+				player.currentTime -= 1;
+				break;
+			case "k":
+			case "K":
+			case " ":
+				if (player.paused) {
+					player.play();
+				} else {
+					player.pause();
+				}
+				event.preventDefault();
+				break;
+			case "l":
+				player.currentTime += 10;
+				break;
+			case "L":
+				player.currentTime += 1;
+				break;
+			case "m":
+				player.muted = !player.muted;
+				break;
+			case ",":
+			case "<":
+				player.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
+				break;
+			case ".":
+			case ">":
+				player.currentTime += 1 / VIDEO_FRAMES_PER_SECOND;
+				break;
+			case "=":
+				if (player.playbackRate < 8) {
+					player.playbackRate += 0.25;
+				}
+				break;
+			case "+":
+				if (player.playbackRate < 2) {
+					player.playbackRate = 2;
+				} else {
+					player.playbackRate = 8;
+				}
+				break;
+			case "-":
+				if (player.playbackRate > 0.25) {
+					player.playbackRate -= 0.25;
+				}
+				break;
+			case "_":
+				player.playbackRate = 0.25;
+				break;
+			case "ArrowLeft":
+				if (event.shiftKey) {
+					player.currentTime -= 60;
+				} else {
+					player.currentTime -= 5;
+				}
+				break;
+			case "ArrowRight":
+				if (event.shiftKey) {
+					player.currentTime += 60;
+				} else {
+					player.currentTime += 5;
+				}
+				break;
+			case "Backspace":
+				event.preventDefault();
+				player.playbackRate = 1;
+				break;
+		}
+	});
 
 	const videoURL = () => {
 		const streamInfo = streamVideoInfo();
