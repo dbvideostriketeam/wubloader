@@ -237,6 +237,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 
 	onMount(() => {
 		const player = props.mediaPlayer();
+		player.keyDisabled = true;
 		player.subscribe(({ currentTime, duration, playbackRate }) => {
 			setPlayerTime(currentTime);
 			props.setPlayerTime(currentTime);
