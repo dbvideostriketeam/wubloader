@@ -188,6 +188,47 @@ def time_range_for_quality(channel, quality):
 	return parse_hour(first), parse_hour(last) + datetime.timedelta(hours=1)
 
 
+LIVE_TAIL_HOLE_GRACE = datetime.timedelta(seconds=15)
+
+
+def trim_live_tail_holes(segments):
+	"""Do not publish segments after small and recent holes in open-ended live playlists.
+
+	Segments can arrive slightly out of order near the live edge. If we publish a
+	later segment across that hole, and then later receive the missing segment,
+	the playlist will change in a non-compliant way and the player can stall or
+	glitch.
+	"""
+	segments = list(segments)
+	# Find the index of the last real segment, which we need for some checks later
+	last_segment_index = next(
+		(i for i in reversed(range(len(segments))) if segments[i] is not None),
+		None,
+	)
+	if last_segment_index is None:
+		# There are no real segments in this array, so just pass it through
+		return segments
+
+	# Ending timestamp of the latest available segments. This is the timestamp
+	# from which we calculate the grace period for out of order downloading.
+	live_tail = segments[last_segment_index].end
+
+	for i, segment in enumerate(segments):
+		# Look for the start of a "hole" of missing segments
+		if segment is not None:
+			continue
+		if i == 0 or segments[i - 1] is None:
+			continue
+
+		# Calculate the time from the start of this hole to the end of the last
+		# segment. If this hole is within the grace period of live, then end the
+		# playlist immediately before this hole.
+		if live_tail - segments[i - 1].end <= LIVE_TAIL_HOLE_GRACE:
+			return segments[:i + 1]
+
+	return segments
+
+
 @app.route('/playlist/<channel>.m3u8')
 @request_stats
 @has_path_args
@@ -254,6 +295,7 @@ def generate_media_playlist(channel, quality):
 
 	start = dateutil.parse_utc_only(request.args['start']) if 'start' in request.args else None
 	end = dateutil.parse_utc_only(request.args['end']) if 'end' in request.args else None
+	is_live_playlist = end is None
 	if start is None or end is None:
 		# If start or end are not given, use the earliest/latest time available.
 		# For end in particular, always pad an extra hour to force a discontinuity at the end
@@ -270,7 +312,9 @@ def generate_media_playlist(channel, quality):
 		return "Implicit range may not be longer than 12 hours", 400
 
 	def _generate_media_playlist():
-		cache_key = (hours_path, start, end)
+		# is_live_playlist added to cache key because trim_live_tail_holes can produce
+		# a different playlist or the same start/end times
+		cache_key = (hours_path, start, end, is_live_playlist)
 
 		if cache_key in _media_playlist_cache:
 			yield from _media_playlist_cache[cache_key].get()
@@ -290,6 +334,8 @@ def generate_media_playlist(channel, quality):
 			else:
 				# Note the None to indicate there was a "hole" at both start and end
 				segments = [None]
+			if is_live_playlist:
+				segments = trim_live_tail_holes(segments)
 			iterator = CachedIterator(generate_hls.generate_media(segments, os.path.join(app.static_url_path, channel, quality)))
 
 			# We set the result immediately so that everyone can start returning it.
