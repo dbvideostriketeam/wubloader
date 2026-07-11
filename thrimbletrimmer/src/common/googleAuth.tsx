@@ -8,11 +8,11 @@ function googleOnSignIn(googleUserData) {
 
 	const signInElem = document.getElementById("google-auth-sign-in");
 	if (signInElem) {
-		signInElem.classList.remove("hidden");
+		signInElem.classList.add("hidden");
 	}
 	const signOutElem = document.getElementById("google-auth-sign-out");
 	if (signOutElem) {
-		signOutElem.classList.add("hidden");
+		signOutElem.classList.remove("hidden");
 	}
 }
 
@@ -23,11 +23,11 @@ async function googleSignOut() {
 
 		const signInElem = document.getElementById("google-auth-sign-in");
 		if (signInElem) {
-			signInElem.classList.add("hidden");
+			signInElem.classList.remove("hidden");
 		}
 		const signOutElem = document.getElementById("google-auth-sign-out");
 		if (signOutElem) {
-			signOutElem.classList.remove("hidden");
+			signOutElem.classList.add("hidden");
 		}
 	}
 }
