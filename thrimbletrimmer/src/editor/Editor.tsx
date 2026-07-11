@@ -662,8 +662,9 @@ const EditorContent: Component<ContentProps> = (props) => {
 				setActiveKeyboardIndex(activeIndexToDecrease);
 				break;
 			case "p":
-				const activeIndexIncreased = untrack(activeKeyboardIndex) + 1;
 				const videoRangeData = untrack(videoData);
+				const activeIndexIncreased =
+					videoRangeData.length === 0 ? 0 : untrack(activeKeyboardIndex) + 1;
 				if (activeIndexIncreased >= videoRangeData.length) {
 					setVideoData([...videoRangeData, new RangeData()]);
 				}
