@@ -58,7 +58,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		setSubmissionError("");
 
 		const videoTitle = props.videoTitle();
-		const videoDescription = props.videoDescription();
+		let videoDescription = props.videoDescription();
 		if (videoTitle === "" || videoDescription === "") {
 			setSubmissionError("The video title and/or description must be filled in");
 			props.setEditorState(EditorState.Entry);
@@ -161,6 +161,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			}
 		}
 		transitions.shift();
+
+		if (chapters.length > 0) {
+			videoDescription = `${videoDescription}${CHAPTER_MARKER_DELIMITER}${chapters.join("\n")}`;
+		}
 
 		let thumbnailType = props.thumbnailData.type();
 		let thumbnailTemplate: string | null = null;
@@ -346,6 +350,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 		const videoRanges: [string | null, string | null][] = [];
 		const transitions: ([string, number] | null)[] = [];
+		const chapterDescriptions: string[] = [];
 		for (const [rangeDataIndex, rangeData] of props.videoData().entries()) {
 			const rangeStartDate = rangeData.startTime();
 			const rangeEndDate = rangeData.endTime();
@@ -354,17 +359,18 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			videoRanges.push([rangeStart, rangeEnd]);
 
 			if (props.chaptersEnabled()) {
-				const chapterDescriptions: string[] = [];
 				for (const chapterData of rangeData.chapters()) {
 					const chapterTime = chapterData.time ? wubloaderTimeFromDateTime(chapterData.time) : null;
 					chapterDescriptions.push(`${rangeDataIndex};${chapterTime} - ${chapterData.description}`);
 				}
-				videoDescription = `${videoDescription}${CHAPTER_MARKER_DELIMITER}${chapterDescriptions.join("\n")}`;
 			}
 
 			transitions.push([rangeData.transitionType(), rangeData.transitionSeconds()]);
 		}
 		transitions.shift();
+		if (chapterDescriptions.length > 0) {
+			videoDescription = `${videoDescription}${CHAPTER_MARKER_DELIMITER}${chapterDescriptions.join("\n")}`;
+		}
 
 		const editData = {
 			video_ranges: videoRanges,
