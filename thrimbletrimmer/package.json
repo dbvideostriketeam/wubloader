@@ -28,6 +28,7 @@
 		"@solid-primitives/event-listener": "2.4.5",
 		"@solid-primitives/keyboard": "1.3.5",
 		"@solid-primitives/scheduled": "1.5.3",
+		"@solid-primitives/timer": "1.4.4",
 		"solidjs-use": "2.3.0",
 		"vidstack": "1.15.6"
 	}
