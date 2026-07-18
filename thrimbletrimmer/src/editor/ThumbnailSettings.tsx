@@ -311,7 +311,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	});
 
-	const [aspectRatioLocked, setAspectRatioLocked] = createSignal(false);
+	const [aspectRatioLocked, setAspectRatioLocked] = createSignal(true);
 
 	const matchCropAspectRatioToLocation = (event) => {
 		const cropAspectRatio = cropWidth() / cropHeight();
