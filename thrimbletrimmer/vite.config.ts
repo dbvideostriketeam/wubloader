@@ -11,7 +11,7 @@ export default defineConfig({
 	},
 	build: {
 		target: "esnext",
-		// minify: false, // Uncomment this line if you need to debug unminified code
+		minify: false,
 		rollupOptions: {
 			input: {
 				index: fileURLToPath(new URL("index.html", import.meta.url)),
