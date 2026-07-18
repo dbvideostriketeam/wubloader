@@ -1,0 +1,24 @@
+.challenges {
+	border-collapse: collapse;
+
+	td {
+		border: 1px solid #fff;
+		padding: 2px;
+	}
+
+	form {
+		white-space: nowrap;
+	}
+}
+
+.loadError {
+	color: #f33;
+}
+
+.submitSuccess {
+	color: #3f3;
+}
+
+.submitError {
+	color: #f33;
+}

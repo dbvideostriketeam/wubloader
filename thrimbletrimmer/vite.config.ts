@@ -19,6 +19,7 @@ export default defineConfig({
 				utils: fileURLToPath(new URL("utils.html", import.meta.url)),
 				thumbnails: fileURLToPath(new URL("thumbnails.html", import.meta.url)),
 				driveclock: fileURLToPath(new URL("driveclock.html", import.meta.url)),
+				challenges: fileURLToPath(new URL("challenges.html", import.meta.url)),
 			},
 		},
 	},
