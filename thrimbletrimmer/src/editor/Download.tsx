@@ -22,8 +22,6 @@ function downloadTypeInternalName(downloadType: DownloadType): string {
 			return "smart";
 		case DownloadType.Rough:
 			return "rough";
-		case DownloadType.Fast:
-			return "fast";
 		case DownloadType.MPEGTS:
 			return "mpegts";
 	}
@@ -85,9 +83,6 @@ export const Download: Component<DownloadProps> = (props) => {
 				<option value={DownloadType.Smart}>Standard (preferred option)</option>
 				<option value={DownloadType.Rough}>
 					Rough (raw content, pads start and end by a few seconds)
-				</option>
-				<option value={DownloadType.Fast}>
-					Standard without retiming (use if Standard is broken)
 				</option>
 				<option value={DownloadType.MPEGTS}>
 					Reencode (slow, consumes server resources to reencode entire video)
