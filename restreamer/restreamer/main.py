@@ -264,6 +264,7 @@ def generate_master_playlist(channel):
 
 	return generate_hls.generate_master(playlists)
 
+MAX_IMPLICIT_RANGE_HOURS = 6
 
 # Generating large media playlists is expensive, especially on the first run
 # where the cache is cold. And the video player will make repeated requests.
@@ -308,8 +309,8 @@ def generate_media_playlist(channel, quality):
 			end = last + datetime.timedelta(hours=1)
 
 	# We still allow > 12hr ranges, but only if done explicitly (both start and end are set).
-	if end - start > datetime.timedelta(hours=12) and ('start' not in request.args or 'end' not in request.args):
-		return "Implicit range may not be longer than 12 hours", 400
+	if end - start > datetime.timedelta(hours=MAX_IMPLICIT_RANGE_HOURS) and ('start' not in request.args or 'end' not in request.args):
+		return f"Implicit range may not be longer than {MAX_IMPLICIT_RANGE_HOURS} hours", 400
 
 	def _generate_media_playlist():
 		# is_live_playlist added to cache key because trim_live_tail_holes can produce
