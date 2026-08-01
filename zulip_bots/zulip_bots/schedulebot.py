@@ -291,7 +291,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 	common_setup(metrics_port)
 
 	if shift_definitions is None:
-		shift_definitions = {'repeating':[['default shift', 0, 24]], 'one_off':[], 'timezone':'UTC'}
+		shift_definitions = {'repeating': [], 'one_off': [], 'timezone': 'UTC'}
 
 	config = get_config(conf_file)
 	client = Client(config["url"], config["api_user"]["email"], config["api_user"]["api_key"])
