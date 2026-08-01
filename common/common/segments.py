@@ -100,16 +100,16 @@ CUSTOM_XFADE_TRANSITIONS = {
 	"clockwipe": (
 		"A 360 degree clockwise sweep around the center of the screen, starting at the top.\n"
 		"Intended to mimic an analog clock and insinuate a passing of time.",
-		# Implemented by calculating the angle of the point off a center line (using atan2())
-		# then using the new video if progress > that angle (normalized to 0-1).
-		"if(lt((1-atan2(W/2-X,Y-H/2)/PI) / 2, P), A, B)",
+		# Implemented by calculating the angle of the point off a center line (using atan2()),
+		# with a rectangular hand around the leading edge of the wipe.
+		"if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2)),10)+between((X-W/2)*sin(((1-P))*2*PI)-(Y-H/2)*cos(((1-P))*2*PI),0,sqrt(pow(W/2,2)+pow(H/2,2)))*lt(abs((X-W/2)*cos(((1-P))*2*PI)+(Y-H/2)*sin(((1-P))*2*PI)),10),if(eq(PLANE,0),0,128),if(lt((atan2(W/2-X,Y-H/2)/PI/2+0.5),(1-P)),B,A))",
 	),
 	"starwipe": (
 		"Wipe using an expanding 5-pointed star from the center. Mostly a meme.",
-		# Implemented by converting to polar coordinates (distance and angle off center),
-		# then comparing distance to a star formula derived from here: https://math.stackexchange.com/questions/4293250/how-to-write-a-polar-equation-for-a-five-pointed-star
+		# Implemented by replicating a polygon edge into each point of the star,
+		# then comparing the point's signed distance to that edge.
 		# Made by SenseAmidstMadness.
-		"if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)),pow((1-P),2)*(0.75)*1/cos((2*asin(cos(5*(atan2(Y-H/2,X-W/2)+PI/2)))+PI*3)/(10))), B, A)",
+		"if(lt(abs(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))))/(sqrt(pow((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)),2)+pow((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0),2))+0.000001),0.028),if(eq(PLANE,0),0,128),if(gt(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))),0),B,A))",
 	),
 	"batman": (
 		"Wipe using an expanding Batman logo from the center.",
