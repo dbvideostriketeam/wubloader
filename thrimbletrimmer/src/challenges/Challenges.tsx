@@ -11,10 +11,12 @@ interface ChallengeData {
 }
 
 export const Challenges: Component = () => {
+	const [challengesLoadError, setChallengesLoadError] = createSignal("");
 	const [challenges, challengesActions] = createResource(
 		async () => {
 			const challengesResponse = await fetch("/thrimshim/challenges");
 			if (!challengesResponse.ok) {
+				setChallengesLoadError(await challengesResponse.text());
 				return null;
 			}
 			const challengesData: ChallengeData[] = await challengesResponse.json();
@@ -26,7 +28,10 @@ export const Challenges: Component = () => {
 	return (
 		<>
 			<Show when={challenges() === null}>
-				<div class={styles.loadError}>Failed to get challenges data.</div>
+				<div class={styles.loadError}>
+					<p>Failed to get challenges data.</p>
+					<p>{challengesLoadError()}</p>
+				</div>
 			</Show>
 			<table class={styles.challenges}>
 				<Index each={challenges() ?? []}>
@@ -77,7 +82,10 @@ export const Challenges: Component = () => {
 							if (submitResponse.ok) {
 								setSubmitResult({ isError: false, message: "Updated successfully." });
 							} else {
-								setSubmitResult({ isError: true, message: "Error during submission" });
+								setSubmitResult({
+									isError: true,
+									message: `Error during submission: ${await submitResponse.text()}`,
+								});
 							}
 						};
 
