@@ -23,8 +23,6 @@ import "vidstack/player/ui";
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
-export const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2, 4, 8];
-
 export interface StreamTimeSettingsProps {
 	/** Getter for the signal to get the time when the run starts. */
 	busStartTime: Accessor<DateTime>;
@@ -331,6 +329,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 										class="vds-icon vds-menu-settings-icon vds-rotate-icon"
 										type="settings"
 									/>
+									<span class={styles.playbackRateLabel}>{playbackSpeed()}x</span>
 								</media-menu-button>
 							</media-tooltip-trigger>
 							<media-tooltip-content class="vds-tooltip-content" placement="top">
