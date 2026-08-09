@@ -24,6 +24,10 @@ media-player:not([data-fullscreen]) media-controls {
 	height: auto;
 }
 
+media-menu-button {
+	min-width: 80px;
+}
+
 media-controls.vds-controls {
 	&:not([data-fullscreen]) {
 		visibility: visible;
