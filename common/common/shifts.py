@@ -89,7 +89,7 @@ def calculate_shift(time, shifts):
 	shifts -- the output from parse_shifts
 	"""
 	if time is None:
-		return ''
+		return None, None
 	
 	for shift in shifts['one_off']:
 		if shift[1] <= time < shift[2]:
