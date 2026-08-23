@@ -241,6 +241,7 @@
 
   // The spreadsheet id and worksheet names for sheet sync to act on
   // Set to null to disable syncing from sheets.
+  // Set playlist_worksheet to null to disable playlist tag sync.
   sheet_id:: "your_id_here",
   worksheets:: ["Tech Test & Preshow"] + ["Day %d" % n for n in std.range(1, 8)],
   playlist_worksheet:: "Tags",
@@ -587,12 +588,13 @@
           bustime_start: $.bustime_start,
           download_media: $.download_sheet_links,
         },
+      ] + (if $.playlist_worksheet == null then [] else [
         sync_sheet_base + {
           name+: "sheet-playlists",
           type: "playlists",
           worksheets: [$.playlist_worksheet],
         },
-      ] + (if $.archive_worksheet == null then [] else [
+      ]) + (if $.archive_worksheet == null then [] else [
         sync_sheet_base + {
           name: "sheet-archive",
           type: "archive",
