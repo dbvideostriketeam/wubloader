@@ -43,6 +43,18 @@ CREATE TYPE end_time AS (
 	value TIMESTAMP
 );
 
+-- Represents a chapter marker for a video.
+-- Do not use this type directly, but rather the associated domain type.
+CREATE TYPE _chapter_marker AS (
+	time INTERVAL,
+	name TEXT
+);
+
+-- The chapter marker type, but with fields non-NULL.
+CREATE DOMAIN chapter_marker AS _chapter_marker CHECK (
+	(VALUE).time IS NOT NULL AND (VALUE).name IS NOT NULL
+);
+
 -- Each row on the sheet is an event.
 CREATE TABLE events (
 	-- id is generated and attached to rows in the sheet to uniquely identify them
@@ -130,6 +142,17 @@ CREATE TABLE events (
 	video_title TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_title IS NOT NULL),
 	-- The video description. Defaults to the sheet description.
 	video_description TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_description IS NOT NULL),
+	-- An optional list of chapter markers for the video. Generally this is appended to the description.
+	-- This is a list of times within the video (ie. duration since start of video) plus a title.
+	-- If non-NULL, the list must be non-empty, not contain nulls, and the first time must be 0 (ie. start of video).
+	chapter_markers chapter_marker[] CHECK (
+		chapter_markers IS NULL
+		OR (
+			CARDINALITY(chapter_markers) > 0 -- non-empty
+			AND array_position(chapter_markers, NULL) IS NULL -- no element is null
+			AND (chapter_markers[1]).time = '0'::INTERVAL -- first element has time 0
+		)
+	),
 	-- Tags to set on the video. Defaults to the sheet tags, plus a preset list.
 	video_tags TEXT[] CHECK (state IN ('UNEDITED', 'DONE') OR video_tags IS NOT NULL),
 	-- The twitch channel to cut the video from.
