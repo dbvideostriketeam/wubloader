@@ -66,6 +66,7 @@ CUT_JOB_PARAMS = [
 	"video_transitions",
 	"video_title",
 	"video_description",
+	"chapter_markers",
 	"video_tags",
 	"video_channel",
 	"video_quality",
@@ -109,6 +110,33 @@ def format_job(job):
 		start=job.video_ranges[0].start.isoformat(),
 		duration=get_duration(job),
 	)
+
+
+def generate_full_description(description, chapter_markers):
+	"""Assembles a full video description from its input parts.
+	Shared logic between cutting and updating jobs."""
+	parts = [description]
+
+	if chapter_markers is not None:
+		over_an_hour = any(ch.time >= datetime.timedelta(hours=1) for ch in chapter_markers)
+		def format_time(time):
+			hours, rest = divmod(time.total_seconds(), 3600)
+			minutes, seconds = divmod(rest, 60)
+			hours = int(hours)
+			minutes = int(minutes)
+			seconds = int(seconds)
+			if over_an_hour:
+				return f"{hours:d}:{minutes:02d}:{seconds:02d}"
+			else:
+				assert hours == 0
+				return f"{minutes:02d}:{seconds:02d}"
+
+		parts.append("\n".join([
+			f"{format_time(chapter.time)} - {chapter.name}"
+			for chapter in chapter_markers
+		]))
+
+	return "\n\n".join(parts)
 
 
 class CandidateGone(Exception):
@@ -494,7 +522,7 @@ class Cutter(object):
 			try:
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
-					description=job.video_description,
+					description=generate_full_description(job.video_description, job.chapter_markers),
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
 					public=job.public,
@@ -721,6 +749,7 @@ UPDATE_JOB_PARAMS = [
 	"video_quality",
 	"video_title",
 	"video_description",
+	"chapter_markers",
 	"video_tags",
 	"public",
 	"thumbnail_mode",
@@ -773,7 +802,8 @@ class VideoUpdater(object):
 					try:
 						# Update video metadata
 						tags = list(set(self.tags + job.video_tags))
-						self.backend.update_video(job.video_id, job.video_title, job.video_description, tags, job.public)
+						description = generate_full_description(job.video_description, job.chapter_markers)
+						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
 						# but that should be very rare and can be dealt with out of band.

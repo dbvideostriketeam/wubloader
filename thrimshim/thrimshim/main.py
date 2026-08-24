@@ -343,8 +343,8 @@ def update_row(ident, editor=None):
 		'video_channel', 'video_quality', 'video_tags', 'thumbnail_mode', 'public'
 	]
 	edit_columns = non_null_edit_columns + [
-		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template',
-		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
+		'chapter_markers', 'allow_holes', 'uploader_whitelist', 'thumbnail_time',
+		'thumbnail_template', 'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
 	sheet_columns = [
 		'sheet_name', 'event_start', 'event_end',
@@ -353,7 +353,7 @@ def update_row(ident, editor=None):
 	# These columns may be modified when a video is in state 'DONE',
 	# and are a subset of edit_columns.
 	modifiable_columns = [
-		'video_title', 'video_description', 'video_tags', 'public',
+		'video_title', 'video_description', 'chapter_markers', 'video_tags', 'public',
 		'thumbnail_mode', 'thumbnail_time', 'thumbnail_template',
 		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
@@ -459,6 +459,12 @@ def update_row(ident, editor=None):
 			new_row['video_transitions'] = [
 				None if transition is None else tuple(transition)
 				for transition in new_row['video_transitions']
+			]
+
+		if new_row.get('chapter_markers') is not None:
+			new_row['chapter_markers'] = [
+				(datetime.timedelta(seconds=time), name)
+				for time, name in new_row['chapter_markers']
 			]
 
 		# Convert binary fields from base64 and do basic validation of contents
