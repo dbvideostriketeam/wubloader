@@ -333,13 +333,16 @@ def update_row(ident, editor=None):
 	new_row = flask.request.json
 	override_changes = new_row.get('override_changes', False)
 	state_columns = ['state', 'uploader', 'error', 'video_link']
-	# These have to be set before a video can be set as 'EDITED'
+	# These must always be set
 	non_null_columns = [
-		'upload_location', 'video_ranges', 'video_transitions',
-		'video_channel', 'video_quality', 'video_title',
-		'video_description', 'video_tags', 'thumbnail_mode', 'public'
+		'video_title', 'video_description'
 	]
-	edit_columns = non_null_columns + [
+	# These have to be set before a video can be set as 'EDITED'
+	non_null_edit_columns = non_null_columns + [
+		'upload_location', 'video_ranges', 'video_transitions',
+		'video_channel', 'video_quality', 'video_tags', 'thumbnail_mode', 'public'
+	]
+	edit_columns = non_null_edit_columns + [
 		'allow_holes', 'uploader_whitelist', 'thumbnail_time', 'thumbnail_template',
 		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
@@ -357,7 +360,7 @@ def update_row(ident, editor=None):
 	assert set(modifiable_columns) - set(edit_columns) == set()
 
 	# Check vital edit columns are in new_row
-	wanted = set(non_null_columns + ['state'] + sheet_columns)
+	wanted = set(['state'] + sheet_columns + non_null_columns)
 	missing = wanted - set(new_row)
 	if missing:
 		return 'Fields missing in JSON: {}'.format(', '.join(missing)), 400
@@ -416,7 +419,7 @@ def update_row(ident, editor=None):
 					for playlist in playlists
 				]
 				description_lines.append('') # blank line before footer
-			if new_row['thumbnail_mode'] == 'TEMPLATE' and new_row['thumbnail_template']:
+			if new_row.get('thumbnail_mode') == 'TEMPLATE' and new_row['thumbnail_template']:
 				results = database.query(conn, """
 					SELECT attribution FROM templates WHERE name = %s
 				""", new_row['thumbnail_template'])
@@ -436,28 +439,31 @@ def update_row(ident, editor=None):
 				return 'Title may not contain a {} character'.format(char), 400
 			if char in new_row['video_description']:
 				return 'Description may not contain a {} character'.format(char), 400
-		# Validate and convert video ranges and transitions.
-		num_ranges = len(new_row['video_ranges'])
-		if num_ranges == 0:
-			return 'Ranges must contain at least one range', 400
-		if len(new_row['video_transitions']) != num_ranges - 1:
-			return 'There must be exactly {} transitions for {} ranges'.format(
-				num_ranges - 1, num_ranges,
-			)
-		for start, end in new_row['video_ranges']:
-			if start > end:
-				return 'Range start must be less than end', 400
-		# We need these to be tuples not lists for psycopg2 to do the right thing,
-		# but since they come in as JSON they are currently lists.
-		new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
-		new_row['video_transitions'] = [
-			None if transition is None else tuple(transition)
-			for transition in new_row['video_transitions']
-		]
+
+		# Validate and convert video ranges and transitions, if any
+		if new_row.get('video_ranges') is not None:
+			num_ranges = len(new_row['video_ranges'])
+			if num_ranges == 0:
+				return 'Ranges must contain at least one range', 400
+			if len(new_row['video_transitions']) != num_ranges - 1:
+				return 'There must be exactly {} transitions for {} ranges'.format(
+					num_ranges - 1, num_ranges,
+				)
+			for start, end in new_row['video_ranges']:
+				if start > end:
+					return 'Range start must be less than end', 400
+
+			# We need these to be tuples not lists for psycopg2 to do the right thing,
+			# but since they come in as JSON they are currently lists.
+			new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
+			new_row['video_transitions'] = [
+				None if transition is None else tuple(transition)
+				for transition in new_row['video_transitions']
+			]
 
 		# Convert binary fields from base64 and do basic validation of contents
 		if new_row.get('thumbnail_image') is not None:
-			if new_row['thumbnail_mode'] != 'CUSTOM':
+			if new_row.get('thumbnail_mode') != 'CUSTOM':
 				return 'Can only upload custom image when thumbnail_mode = "CUSTOM"', 400
 			try:
 				new_row['thumbnail_image'] = base64.b64decode(new_row['thumbnail_image'])
@@ -495,7 +501,7 @@ def update_row(ident, editor=None):
 		if new_row['state'] == 'MODIFIED':
 			missing = []
 			# Modifying published rows is more limited, we ignore all other fields.
-			for column in set(modifiable_columns) & set(non_null_columns):
+			for column in set(modifiable_columns) & set(non_null_edit_columns):
 				if new_row.get(column) is None:
 					missing.append(column)
 			if missing:
@@ -517,8 +523,8 @@ def update_row(ident, editor=None):
 			# handle state columns
 			if new_row['state'] == 'EDITED':
 				missing = []
-				for column in non_null_columns:
-					if new_row[column] is None:
+				for column in non_null_edit_columns:
+					if new_row.get(column) is None:
 						missing.append(column)
 				if missing:
 					return 'Fields {} must be non-null for video to be cut'.format(', '.join(missing)), 400
