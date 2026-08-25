@@ -46,13 +46,20 @@ CREATE TYPE end_time AS (
 -- Represents a chapter marker for a video.
 -- Do not use this type directly, but rather the associated domain type.
 CREATE TYPE _chapter_marker AS (
-	time INTERVAL,
+	-- Index into video_ranges of the range this marker falls in.
+	-- Required as time may fall in multiple video ranges.
+	video_range INTEGER,
+	-- The timestamp of the marker. Must be within the video range.
+	time TIMESTAMP,
+	-- The chapter name.
 	name TEXT
 );
 
 -- The chapter marker type, but with fields non-NULL.
 CREATE DOMAIN chapter_marker AS _chapter_marker CHECK (
-	(VALUE).time IS NOT NULL AND (VALUE).name IS NOT NULL
+	(VALUE).video_range IS NOT NULL
+	AND (VALUE).time IS NOT NULL
+	AND (VALUE).name IS NOT NULL
 );
 
 -- Each row on the sheet is an event.
@@ -143,14 +150,15 @@ CREATE TABLE events (
 	-- The video description. Defaults to the sheet description.
 	video_description TEXT CHECK (state IN ('UNEDITED', 'DONE') OR video_description IS NOT NULL),
 	-- An optional list of chapter markers for the video. Generally this is appended to the description.
-	-- This is a list of times within the video (ie. duration since start of video) plus a title.
-	-- If non-NULL, the list must be non-empty, not contain nulls, and the first time must be 0 (ie. start of video).
+	-- This is a list of (video range index, timestamp) along with a name. The range index is needed to
+	-- uniquely identify the time in the video as the timestamp alone may be ambiguous.
+	-- If non-NULL, the list must be non-empty and not contain nulls, and video_ranges must be non-NULL.
 	chapter_markers chapter_marker[] CHECK (
 		chapter_markers IS NULL
 		OR (
 			CARDINALITY(chapter_markers) > 0 -- non-empty
 			AND array_position(chapter_markers, NULL) IS NULL -- no element is null
-			AND (chapter_markers[1]).time = '0'::INTERVAL -- first element has time 0
+			AND video_ranges IS NOT NULL
 		)
 	),
 	-- Tags to set on the video. Defaults to the sheet tags, plus a preset list.
