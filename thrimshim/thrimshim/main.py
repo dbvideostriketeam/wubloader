@@ -463,8 +463,7 @@ def update_row(ident, editor=None):
 
 		if new_row.get('chapter_markers') is not None:
 			new_row['chapter_markers'] = [
-				(datetime.timedelta(seconds=time), name)
-				for time, name in new_row['chapter_markers']
+				tuple(marker) for marker in new_row['chapter_markers']
 			]
 
 		# Convert binary fields from base64 and do basic validation of contents

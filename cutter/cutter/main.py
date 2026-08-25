@@ -8,6 +8,7 @@ import random
 import signal
 import socket
 from collections import namedtuple
+from itertools import zip_longest
 
 import gevent.backdoor
 import gevent.event
@@ -112,15 +113,32 @@ def format_job(job):
 	)
 
 
-def generate_full_description(description, chapter_markers):
-	"""Assembles a full video description from its input parts.
-	Shared logic between cutting and updating jobs."""
-	parts = [description]
+def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
+	"""Resolves chapter markers to a sequence of (video time in seconds, name)"""
+	chapter_markers = list(chapter_markers)
+	range_start_video_time = 0
+	for index, (video_range, transition_out) in enumerate(zip_longest(video_ranges, video_transitions)):
+		while chapter_markers and chapter_markers[0].video_range <= index:
+			chapter = chapter_markers.pop(0)
+			assert chapter.video_range == index, "Chapter markers not in order"
+			assert video_range.start <= chapter.time <= video_range.end, "Chapter marker not in time range"
+			video_time = range_start_video_time + (chapter.time - video_range.start).total_seconds()
+			yield (video_time, chapter.name)
+		range_start_video_time += (video_range.end - video_range.start).total_seconds()
+		if transition_out:
+			range_start_video_time -= transition_out.duration
+	assert not chapter_markers, "Chapter markers contain non-existent video ranges"
 
-	if chapter_markers is not None:
-		over_an_hour = any(ch.time >= datetime.timedelta(hours=1) for ch in chapter_markers)
+
+def generate_full_description(job):
+	"""Assembles a full video description from its input parts.
+	Shared logic between cutting and updating jobs - job can be a CutJob or an UpdateJob."""
+	parts = [job.video_description]
+
+	if job.chapter_markers is not None:
+		over_an_hour = get_duration(job) >= datetime.timedelta(hours=1)
 		def format_time(time):
-			hours, rest = divmod(time.total_seconds(), 3600)
+			hours, rest = divmod(time, 3600)
 			minutes, seconds = divmod(rest, 60)
 			hours = int(hours)
 			minutes = int(minutes)
@@ -132,8 +150,8 @@ def generate_full_description(description, chapter_markers):
 				return f"{minutes:02d}:{seconds:02d}"
 
 		parts.append("\n".join([
-			f"{format_time(chapter.time)} - {chapter.name}"
-			for chapter in chapter_markers
+			f"{format_time(time)} - {name}"
+			for time, name in markers_to_video_times(job.chapter_markers, job.video_ranges, job.video_transitions)
 		]))
 
 	return "\n\n".join(parts)
@@ -522,7 +540,7 @@ class Cutter(object):
 			try:
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
-					description=generate_full_description(job.video_description, job.chapter_markers),
+					description=generate_full_description(job),
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
 					public=job.public,
@@ -802,7 +820,7 @@ class VideoUpdater(object):
 					try:
 						# Update video metadata
 						tags = list(set(self.tags + job.video_tags))
-						description = generate_full_description(job.video_description, job.chapter_markers)
+						description = generate_full_description(job)
 						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
