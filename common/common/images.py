@@ -7,23 +7,16 @@ from PIL import Image
 from common import database
 
 
-def get_template(dbmanager, name, crop=None, location=None):
-	"""Fetch the thumbnail template and any missing parameters from the database"""
-	with dbmanager.get_conn() as conn:
-		query = """
-			SELECT image, crop, location FROM templates WHERE name = %s
-		"""
-		results = database.query(conn, query, name)
-		row = results.fetchone()
-		if row is None:
-			raise ValueError('Template {} not found'.format(name))
-		row = row._asdict()
-		if not crop:
-			crop = row['crop']
-		if not location:
-			location = row['location']
-
-		return row['image'], crop, location
+def get_template(conn, name):
+	"""Fetch the thumbnail template from the database"""
+	query = """
+		SELECT image, crop, location, attribution FROM templates WHERE name = %s
+	"""
+	results = database.query(conn, query, name)
+	row = results.fetchone()
+	if row is None:
+		raise ValueError('Template {} not found'.format(name))
+	return row
 
 
 def compose_thumbnail_template(template_data, frame_data, crop, location):
