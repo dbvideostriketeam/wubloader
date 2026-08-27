@@ -130,10 +130,13 @@ def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
 	assert not chapter_markers, "Chapter markers contain non-existent video ranges"
 
 
-def generate_full_description(job, description_footer):
+def generate_full_description(job, description_footer, attribution):
 	"""Assembles a full video description from its input parts.
 	Shared logic between cutting and updating jobs - job can be a CutJob or an UpdateJob."""
 	parts = [job.video_description]
+
+	if attribution is not None:
+		parts.append(f"Thumbnail Credit: {attribution}")
 
 	if job.chapter_markers is not None:
 		over_an_hour = get_duration(job) >= datetime.timedelta(hours=1)
@@ -510,12 +513,14 @@ class Cutter(object):
 			# collect chunks into one bytestring as we need to use it multiple times
 			frame = b''.join(frame)
 
+			attribution = None
 			if job.thumbnail_mode == 'BARE':
 				image_data = frame
 			elif job.thumbnail_mode == 'TEMPLATE':
 				template = get_template(self.conn, job.thumbnail_template)
 				self.logger.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 				image_data = compose_thumbnail_template(template.image, frame, job.thumbnail_crop, job.thumbnail_location)
+				attribution = template.attribution
 			else:
 				# shouldn't be able to happen given database constraints
 				assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
@@ -523,12 +528,12 @@ class Cutter(object):
 			# Save what we've generated to the database now, easier than doing it later
 			# and might save some effort if we need to retry.
 			set_row(thumbnail_image=image_data)
-			return image_data
+			return image_data, attribution
 
 		try:
 			# Get thumbnail image, generating it if needed
 			try:
-				thumbnail = generate_thumbnail()
+				thumbnail, attribution = generate_thumbnail()
 			except Exception as ex:
 				self.logger.exception("Error occurred while trying to generate thumbnail for job {}".format(format_job(job)))
 				# Assumed error is not retryable
@@ -544,7 +549,7 @@ class Cutter(object):
 			try:
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
-					description=generate_full_description(job, self.description_footer),
+					description=generate_full_description(job, self.description_footer, attribution),
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
 					public=job.public,
@@ -823,13 +828,9 @@ class VideoUpdater(object):
 
 					updates = {}
 					try:
-						# Update video metadata
-						tags = list(set(self.tags + job.video_tags))
-						description = generate_full_description(job, self.description_footer)
-						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
-
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
 						# but that should be very rare and can be dealt with out of band.
+						attribution = None
 						if job.thumbnail_mode != 'NONE':
 							thumbnail_image = job.thumbnail_image
 							if thumbnail_image is None:
@@ -844,6 +845,7 @@ class VideoUpdater(object):
 									template = get_template(self.conn, job.thumbnail_template)
 									self.logger.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 									thumbnail_image = compose_thumbnail_template(template.image, frame, job.thumbnail_crop, job.thumbnail_location)
+									attribution = template.attribution
 								else:
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
 								updates['thumbnail_image'] = thumbnail_image
@@ -854,6 +856,11 @@ class VideoUpdater(object):
 								updates['thumbnail_last_written'] = new_hash
 							else:
 								self.logger.info("No change in thumbnail image for {}".format(job.id))
+
+						# Update video metadata
+						tags = list(set(self.tags + job.video_tags))
+						description = generate_full_description(job, self.description_footer, attribution)
+						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 					except Exception as ex:
 						# for HTTPErrors, getting http response body is also useful
 						if isinstance(ex, requests.HTTPError):
