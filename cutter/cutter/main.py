@@ -130,7 +130,7 @@ def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
 	assert not chapter_markers, "Chapter markers contain non-existent video ranges"
 
 
-def generate_full_description(job):
+def generate_full_description(job, description_footer):
 	"""Assembles a full video description from its input parts.
 	Shared logic between cutting and updating jobs - job can be a CutJob or an UpdateJob."""
 	parts = [job.video_description]
@@ -154,6 +154,9 @@ def generate_full_description(job):
 			for time, name in markers_to_video_times(job.chapter_markers, job.video_ranges, job.video_transitions)
 		]))
 
+	if description_footer:
+		parts.append(description_footer)
+
 	return "\n\n".join(parts)
 
 
@@ -170,7 +173,7 @@ class Cutter(object):
 	ERROR_RETRY_INTERVAL = 5
 	RETRYABLE_UPLOAD_ERROR_WAIT_INTERVAL = 5
 
-	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags, uploader_explicit_only=False):
+	def __init__(self, upload_locations, dbmanager, stop, name, segments_path, tags, description_footer, uploader_explicit_only=False):
 		"""upload_locations is a map {location name: upload location backend}
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
@@ -183,6 +186,7 @@ class Cutter(object):
 		self.stop = stop
 		self.segments_path = segments_path
 		self.tags = tags
+		self.description_footer = description_footer
 		self.uploader_explicit_only = uploader_explicit_only
 		self.logger = logging.getLogger(type(self).__name__)
 		self.refresh_conn()
@@ -540,7 +544,7 @@ class Cutter(object):
 			try:
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
-					description=generate_full_description(job),
+					description=generate_full_description(job, self.description_footer),
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
 					public=job.public,
@@ -783,7 +787,7 @@ class VideoUpdater(object):
 	CHECK_INTERVAL = 10 # this is slow to reduce the chance of multiple cutters updating the same row
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, location, segments_path, backend, dbmanager, tags, stop):
+	def __init__(self, location, segments_path, backend, dbmanager, tags, description_footer, stop):
 		"""
 		backend is an upload backend that supports video updates.
 		Stop is an Event triggering graceful shutdown when set.
@@ -793,6 +797,7 @@ class VideoUpdater(object):
 		self.backend = backend
 		self.dbmanager = dbmanager
 		self.tags = tags
+		self.description_footer
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
@@ -820,7 +825,7 @@ class VideoUpdater(object):
 					try:
 						# Update video metadata
 						tags = list(set(self.tags + job.video_tags))
-						description = generate_full_description(job)
+						description = generate_full_description(job, self.description_footer)
 						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
@@ -933,6 +938,7 @@ def main(
 	name=None,
 	base_dir=".",
 	tags='',
+	description_footer='',
 	metrics_port=8003,
 	backdoor_port=0,
 	uploader_explicit_only=False,
@@ -955,6 +961,8 @@ def main(
 	name defaults to hostname.
 
 	tags should be a comma-seperated list of tags to attach to all videos.
+
+	description_footer should be a string to append to all video descriptions.
 	"""
 	common.PromLogCountsHandler.install()
 	common.install_stacksampler()
@@ -1028,13 +1036,13 @@ def main(
 		if not no_updater:
 			needs_updater[location] = backend
 
-	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, uploader_explicit_only)
+	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, description_footer, uploader_explicit_only)
 	transcode_checkers = [
 		TranscodeChecker(location, backend, dbmanager, stop, zulip_client)
 		for location, (backend, zulip_client) in needs_transcode_check.items()
 	]
 	updaters = [
-		VideoUpdater(location, base_dir, backend, dbmanager, tags, stop)
+		VideoUpdater(location, base_dir, backend, dbmanager, tags, description_footer, stop)
 		for location, backend in needs_updater.items()
 	]
 	jobs = [gevent.spawn(cutter.run)] + [
