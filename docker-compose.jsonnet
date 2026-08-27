@@ -522,6 +522,7 @@
         "--base-dir", "/mnt",
         "--backdoor-port", std.toString($.backdoor_port),
         "--tags", std.join(",", $.video_tags),
+        "--description-footer", $.description_footer,
         "--name", $.localhost,
         $.db_connect,
         std.manifestJson($.cutter_config),
@@ -548,7 +549,6 @@
       command: [
         "--backdoor-port", std.toString($.backdoor_port),
         "--title-header", $.title_header,
-        "--description-footer", $.description_footer,
         "--upload-locations", std.join(",", [$.default_location] + [
           location for location in std.objectFields($.cutter_config)
           if location != $.default_location

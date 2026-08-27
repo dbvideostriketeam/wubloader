@@ -306,10 +306,9 @@ def get_row(ident):
 		and response["video_title"].startswith(title_header)
 	):
 		response["video_title"] = response["video_title"][len(title_header):]
-	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?({}[^\n]+\n)?{}$".format(
+	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?({}[^\n]+\n)?$".format(
 		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
 		re.escape(DESCRIPTION_THUMBNAIL_HEADER),
-		re.escape(app.description_footer),
 	))
 	if (not is_archive) and response["video_description"] is not None:
 		match = description_playlist_re.search(response["video_description"])
@@ -426,7 +425,6 @@ def update_row(ident, editor=None):
 				template = results.fetchone()
 				if template and template.attribution:
 					description_lines += [DESCRIPTION_THUMBNAIL_HEADER + template.attribution]
-			description_lines.append(app.description_footer)
 			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
 		# Validate youtube requirements on title and description
@@ -1039,7 +1037,6 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 @argh.arg('--backdoor-port', help='Port for gevent.backdoor access. By default disabled.')
 @argh.arg('--no-authentication', help='Bypass authentication (act as though all calls are authenticated)')
 @argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
-@argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
 @argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
 @argh.arg('--playlist-upload-locations', help='A comma-seperated list of upload locations that should be added to playlists.')
 @argh.arg('--archive-sheet', help="\n".join([
@@ -1053,7 +1050,7 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 @argh.arg('--challenge-api-key', help="Auth token for the desertbus.org challenge API")
 def main(
 	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False, title_header=None, description_footer=None, upload_locations='', playlist_upload_locations='',
+	no_authentication=False, title_header=None, upload_locations='', playlist_upload_locations='',
 	archive_sheet=None, archive_location=None, challenge_api_key=None,
 ):
 	server = WSGIServer((host, port), cors(app))
@@ -1062,7 +1059,6 @@ def main(
 	app.default_channel = default_channel
 	app.bustime_start = bustime_start
 	app.title_header = "" if title_header is None else "{} - ".format(title_header)
-	app.description_footer = "" if description_footer is None else description_footer
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
 	app.playlist_upload_locations = playlist_upload_locations.split(',') if playlist_upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
