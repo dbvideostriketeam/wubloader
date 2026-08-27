@@ -556,16 +556,17 @@ def get_thumbnail_named_template(channel, quality):
 			Should be a comma-seperated list of numbers.
 			Default is to use the location in the databse.
 	"""
-	crop = request.args.get('crop', None)
-	location = request.args.get('location', None)
 	if app.db_manager is None:
 		return 'A database connection is required to generate thumbnails', 501
-	try:
-		template, crop, location = get_template(app.db_manager, request.args['template'], crop, location)
-	except ValueError:
-		return 'Template {} not found'.format(request.args['template']), 404
+	with app.db_manager.get_conn() as conn:
+		try:
+			template = get_template(conn, request.args['template'])
+		except ValueError:
+			return 'Template {} not found'.format(request.args['template']), 404
+	crop = request.args.get('crop', template.crop)
+	location = request.args.get('location', template.location)
 	logging.info('Generating thumbnail from the video frame at {} using {} as template'.format(request.args['timestamp'], request.args['template']))
-	return get_thumbnail(channel, quality, request.args['timestamp'], template, crop, location)
+	return get_thumbnail(channel, quality, request.args['timestamp'], template.image, crop, location)
 
 
 @app.route('/thumbnail/<channel>/<quality>.png', methods=['POST'])
