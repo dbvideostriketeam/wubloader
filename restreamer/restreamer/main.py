@@ -509,6 +509,8 @@ def generate_waveform(channel, quality):
 		return "We have no content available within the requested time range.", 406
 
 	color = request.args.get('color', '#000000')
+	something = request.args.get('something', '#000001')
+	logging.warning(f"COLOR DEBUG: {color!r}, {something!r}")
 	if not re.match("^#?[0-9A-Fa-f]{,6}$", color):
 		return "The color provided is not a valid color code.", 400
 
