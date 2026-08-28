@@ -273,7 +273,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 
 		const editData = {
-			video_ranges: videoRanges,
+			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
 			video_title: videoTitle,
 			video_description: videoDescription,
@@ -373,7 +373,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 
 		const editData = {
-			video_ranges: videoRanges,
+			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
 			video_title: props.videoTitle(),
 			video_description: videoDescription,
