@@ -438,7 +438,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			// TODO: When chapter markers are in the database, compare those, too
 		}
 
-		if (videoTitle() !== (props.data?.video_title ?? props.data?.description ?? "")) {
+		if (videoTitle() !== (props.data?.video_title ?? "")) {
 			return true;
 		}
 
