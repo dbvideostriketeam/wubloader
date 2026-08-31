@@ -549,6 +549,7 @@
           location for location in std.objectFields($.cutter_config)
           if location != $.default_location
         ]),
+        "--playlist-upload-locations", std.join(",", $.youtube_upload_locations),
         $.db_connect,
         $.clean_channels[0], // use first element as default channel
         $.bustime_start,

@@ -891,6 +891,34 @@ def finish_encode(editor=None):
 	return "", 200
 
 
+@app.route('/thrimshim/video_playlists')
+@request_stats
+def get_video_playlists():
+	"""Returns a list of playlist ids that each video is in, as {video_id: [playlist_id]}"""
+	with app.db_manager.get_conn() as conn:
+		videos = database.query(conn, """
+			SELECT video_id, tags
+			FROM events
+			WHERE state = 'DONE' AND upload_location = ANY (%s) AND public
+		""", app.playlist_upload_locations).fetchall()
+		playlists = database.query(conn, """
+			SELECT playlist_id, tags
+			FROM playlists
+			WHERE playlist_id IS NOT NULL
+				AND tags IS NOT NULL
+				AND show_in_description
+		""").fetchall()
+
+	result = {
+		[video.video_id]: [
+			playlist.playlist_id for playlist in playlists
+			if all(tag in [t.lower() for t in video.tags] for tag in playlist.tags)
+		]
+		for video in videos
+	}
+	return json_response(result)
+
+
 @app.route('/thrimshim/bus/<channel>')
 @request_stats
 def get_odometer(channel):
@@ -1029,6 +1057,7 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 @argh.arg('--title-header', help='A header to prefix all titles with, seperated from the submitted title by " - "')
 @argh.arg('--description-footer', help='A footer to suffix all descriptions with, seperated from the submitted description by a blank line.')
 @argh.arg('--upload-locations', help='A comma-seperated list of valid upload locations, to pass to thrimbletrimmer. The first is the default. Note this is NOT validated on write.')
+@argh.arg('--playlist-upload-locations', help='A comma-seperated list of upload locations that should be added to playlists.')
 @argh.arg('--archive-sheet', help="\n".join([
 	'Events with this value for the sheet_name field are treated as "archive" events with different behaviour. In particular:',
 	'  - The value of --archive-location is prepended to the upload locations, making it the default location.',
@@ -1041,7 +1070,7 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 @argh.arg('--challenge-api-key', help="Auth token for the desertbus.org challenge API")
 def main(
 	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
-	no_authentication=False, title_header=None, description_footer=None, upload_locations='',
+	no_authentication=False, title_header=None, description_footer=None, upload_locations='', playlist_upload_locations='',
 	archive_sheet=None, archive_location=None, challenge_api_url=None, challenge_api_key=None,
 ):
 	server = WSGIServer((host, port), cors(app))
@@ -1052,6 +1081,7 @@ def main(
 	app.title_header = "" if title_header is None else "{} - ".format(title_header)
 	app.description_footer = "" if description_footer is None else description_footer
 	app.upload_locations = upload_locations.split(',') if upload_locations else []
+	app.playlist_upload_locations = playlist_upload_locations.split(',') if playlist_upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
 	app.challenge_api_url = challenge_api_url
 	app.challenge_api_key = challenge_api_key
