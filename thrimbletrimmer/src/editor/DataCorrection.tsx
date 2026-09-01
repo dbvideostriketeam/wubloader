@@ -1,11 +1,11 @@
-import { Component, Show, createSignal } from "solid-js";
+import { Accessor, Component, Show, createSignal } from "solid-js";
 import { bindingInputChecked, bindingInputOnChange } from "../common/binding";
-import { googleUser } from "../common/googleAuth";
 
 import styles from "./DataCorrection.module.scss";
 
 interface DataCorrectionProps {
 	videoID: string;
+	accountToken: Accessor<string | null>;
 }
 
 export const DataCorrection: Component<DataCorrectionProps> = (props) => {
@@ -26,10 +26,11 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 		const request = {
 			link,
 			upload_location: uploadLocation,
-			token: undefined,
+			token: undefined as string | undefined,
 		};
-		if (googleUser) {
-			request.token = googleUser.getAuthResponse().id_token;
+		const accountToken = props.accountToken();
+		if (accountToken) {
+			request.token = accountToken;
 		} else {
 			delete request.token;
 		}
@@ -56,10 +57,11 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 
 	const cancelUpload = async (event) => {
 		const request = {
-			token: undefined,
+			token: undefined as string | undefined,
 		};
-		if (googleUser) {
-			request.token = googleUser.getAuthResponse().id_token;
+		const accountToken = props.accountToken();
+		if (accountToken) {
+			request.token = accountToken;
 		} else {
 			delete request.token;
 		}
@@ -84,10 +86,11 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 
 	const resetRow = async (event) => {
 		const request = {
-			token: undefined,
+			token: undefined as string | undefined,
 		};
-		if (googleUser) {
-			request.token = googleUser.getAuthResponse().id_token;
+		const accountToken = props.accountToken();
+		if (accountToken) {
+			request.token = accountToken;
 		} else {
 			delete request.token;
 		}

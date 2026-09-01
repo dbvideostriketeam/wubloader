@@ -1,48 +1,43 @@
-import { Component } from "solid-js";
+import { Accessor, Component, Setter, createEffect, createSignal, onMount } from "solid-js";
+import { createScriptLoader } from "@solid-primitives/script-loader";
 
-export let googleUser: any = null;
-declare var gapi: any; // This is a global we use from the Google Sign In script
-
-function googleOnSignIn(googleUserData) {
-	googleUser = googleUserData;
-
-	const signInElem = document.getElementById("google-auth-sign-in");
-	if (signInElem) {
-		signInElem.classList.add("hidden");
-	}
-	const signOutElem = document.getElementById("google-auth-sign-out");
-	if (signOutElem) {
-		signOutElem.classList.remove("hidden");
-	}
+export interface GoogleSignInProps {
+	accountToken: Accessor<string | null>;
+	setAccountToken: Setter<string | null>;
 }
 
-async function googleSignOut() {
-	if (googleUser) {
-		googleUser = null;
-		await gapi.auth2.getAuthInstance().signOut();
+export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
+	let loginButtonParent!: HTMLDivElement;
 
-		const signInElem = document.getElementById("google-auth-sign-in");
-		if (signInElem) {
-			signInElem.classList.remove("hidden");
+	const [scriptLoaded, setScriptLoaded] = createSignal(false);
+	const [mounted, setMounted] = createSignal(false);
+
+	createScriptLoader({
+		src: "https://accounts.google.com/gsi/client",
+		onLoad: async () => {
+			setScriptLoaded(true);
+		},
+	});
+
+	const handleSignIn = (response) => {
+		props.setAccountToken(response.credential);
+	};
+
+	onMount(() => {
+		setMounted(true);
+	});
+
+	createEffect(() => {
+		const loadComplete = scriptLoaded();
+		const mountComplete = mounted();
+		if (loadComplete && mountComplete) {
+			google.accounts.id.initialize({
+				client_id: "345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com",
+				callback: handleSignIn,
+			});
+			google.accounts.id.renderButton(loginButtonParent, { theme: "outline_dark", width: "250" });
 		}
-		const signOutElem = document.getElementById("google-auth-sign-out");
-		if (signOutElem) {
-			signOutElem.classList.add("hidden");
-		}
-	}
-}
+	});
 
-// The googleOnSignIn amd googleSignOut functions need to be available to the global scope for Google code to invoke it
-(window as any).googleOnSignIn = googleOnSignIn;
-(window as any).googleSignOut = googleSignOut;
-
-export const GoogleSignIn: Component = () => {
-	return (
-		<div>
-			<div id="google-auth-sign-in" class="g-signin2" data-onsuccess="googleOnSignIn"></div>
-			<a href="javascript:googleSignOut" id="google-auth-sign-out" class="hidden">
-				Sign Out of Google Account
-			</a>
-		</div>
-	);
+	return <div ref={loginButtonParent}></div>;
 };
