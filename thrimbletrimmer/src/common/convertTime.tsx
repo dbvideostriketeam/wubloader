@@ -1,5 +1,4 @@
 import { DateTime } from "luxon";
-import { HLSProvider } from "vidstack";
 import { Fragment } from "hls.js";
 
 export enum TimeType {
