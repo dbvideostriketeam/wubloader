@@ -1,5 +1,5 @@
 import { Accessor, Component, createSignal, For, Index, onMount, Setter, Show } from "solid-js";
-import { GoogleSignIn, googleUser } from "../common/googleAuth";
+import { GoogleSignIn } from "../common/googleAuth";
 import { BASE64_PNG_PREFIX } from "../common/thumbnails";
 import styles from "./ThumbnailManager.module.scss";
 
@@ -21,6 +21,7 @@ class Template {
 const ThumbnailManager: Component = () => {
 	const [templates, setTemplates] = createSignal<Template[]>([]);
 	const [newTemplateErrors, setNewTemplateErrors] = createSignal<string[]>([]);
+	const [accountToken, setAccountToken] = createSignal<string | null>(null);
 
 	onMount(async () => {
 		const templateDataResponse = await fetch("/thrimshim/templates");
@@ -116,8 +117,9 @@ const ThumbnailManager: Component = () => {
 			});
 		}
 
-		if (googleUser) {
-			submitData.set("token", googleUser.getAuthResponse().id_token);
+		const userAccountToken = accountToken();
+		if (userAccountToken) {
+			submitData.set("token", userAccountToken);
 		}
 
 		if (errorList().length > 0) {
@@ -472,7 +474,7 @@ const ThumbnailManager: Component = () => {
 				<button type="submit">Add Template</button>
 				<button type="reset">Reset</button>
 			</form>
-			<GoogleSignIn />
+			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 		</>
 	);
 };
