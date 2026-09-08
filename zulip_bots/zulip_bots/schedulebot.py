@@ -16,7 +16,7 @@ import logging
 import time
 from calendar import timegm
 from datetime import datetime, timedelta
-import pytz
+from pytz import timezone
 
 import gevent.pool
 import argh
@@ -255,7 +255,7 @@ def parse_reminders(reminder_strings: list[str]):
 
 
 def check_reminders(reminders, send_client):
-	moonbase_hour = datetime.now(pytz.timezone("America/Vancouver")).hour
+	moonbase_hour = datetime.now(timezone("America/Vancouver")).hour
 	for reminder in reminders:
 		if moonbase_hour in reminder[0]:
 			send_client.send_to_stream(reminder[1], reminder[2], reminder[3])
