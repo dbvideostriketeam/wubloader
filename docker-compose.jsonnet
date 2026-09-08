@@ -345,6 +345,22 @@
     ],
   },
 
+  // schedulebot reminders
+  reminders:: [
+    // Example reminder
+    //{
+    //  stream: "general",
+    //  topic: "Important reminders",
+    //  hours: [0, 12],
+    //  text: |||
+    //    It's time to...
+    //    ```spoiler Time to what?
+    //    **ROTATE THE CUSHIONS**
+    //    ```
+    //  |||,
+    //},
+  ],
+
   tootbot:: {
     zulip: {
       email: "tootbot-bot@chat.videostrike.team",
@@ -840,7 +856,15 @@
         start_time: $.bustime_start,
         schedule: "/schedule",
         google_credentials_file: "/creds.json",
-      }, $.schedulebot.args) + {
+      }, $.schedulebot.args + [
+        "--reminder=%s:%s:%s:%s" % [
+        r.stream,
+        r.topic,
+        std.join(",", std.map(std.toString, r.hours)),
+        r.text,
+        ]
+        for r in $.reminders
+      ]) + {
         volumes: ["%s:/creds.json" % $.schedulebot.google_credentials_file],
       },
 
