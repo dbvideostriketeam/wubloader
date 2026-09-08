@@ -76,7 +76,7 @@ def update_groups(client, group_ids, schedule, hour, start_time, last):
 
 def hour_to_shift(hour, start_time, shift_definitions):
 	"""Converts an hour number into a datetime, shift emoji name, and hour-of-shift (1-6)"""
-	start_time = datetime.utcfromtimestamp(start_time)
+	start_time = datetime.fromtimestamp(start_time, timezone("utc"))
 	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
 	shifts = parse_shifts(shift_definitions) # need to do this each hour to check for Omega shift start time
 	shift, shift_hour = calculate_shift(current_time, shifts)
