@@ -16,6 +16,7 @@ import logging
 import time
 from calendar import timegm
 from datetime import datetime, timedelta
+import pytz
 
 import gevent.pool
 import argh
@@ -244,7 +245,23 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, shifts=None, last=-1, metrics_port=8012):
+def parse_reminders(reminder_strings: list[str]):
+	reminders = list()
+	for reminder_string in reminder_strings:
+		stream, topic, timespec, text = reminder_string.split(':', 3)
+		times = [int(t) for t in timespec.split(',')]
+		reminders.append((times, stream, topic, text))
+	return reminders
+
+
+def check_reminders(reminders, send_client):
+	moonbase_hour = datetime.now(pytz.timezone("America/Vancouver")).hour
+	for reminder in reminders:
+		if moonbase_hour in reminder[0]:
+			send_client.send_to_stream(reminder[1], reminder[2], reminder[3])
+
+
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, shifts=None, last=-1, metrics_port=8012, reminder: list[str] = None):
 	"""
 	config:
 		url: the base url of the instance
@@ -289,6 +306,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		config["schedule_sheet_id"],
 		config["schedule_sheet_name"]
 	)
+	reminders = parse_reminders(reminder)
 
 	# Accept start time timestamp with or without trailing "Z" indicating UTC.
 	start_time = config["start_time"]
@@ -324,6 +342,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			if stream:
 				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shifts)
 		no_initial = False
+		check_reminders(reminders, send_client)
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()
 		if remaining > 0:
