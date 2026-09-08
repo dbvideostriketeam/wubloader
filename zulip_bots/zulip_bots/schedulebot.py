@@ -16,6 +16,8 @@ import logging
 import time
 from calendar import timegm
 from datetime import datetime, timedelta
+from pytz import timezone
+from collections import namedtuple
 
 import gevent.pool
 import argh
@@ -74,7 +76,7 @@ def update_groups(client, group_ids, schedule, hour, start_time, last):
 
 def hour_to_shift(hour, start_time, shift_definitions):
 	"""Converts an hour number into a datetime, shift emoji name, and hour-of-shift (1-6)"""
-	start_time = datetime.utcfromtimestamp(start_time)
+	start_time = datetime.fromtimestamp(start_time, timezone("utc"))
 	current_time = (start_time + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0)
 	shifts = parse_shifts(shift_definitions) # need to do this each hour to check for Omega shift start time
 	shift, shift_hour = calculate_shift(current_time, shifts)
@@ -244,7 +246,28 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 	return schedule
 
 
-def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, shifts=None, last=-1, metrics_port=8012):
+Reminder = namedtuple("Reminder", ["times", "stream", "topic", "text"])
+def parse_reminders(reminder_strings: list[str]):
+	reminders = list()
+	for reminder_string in reminder_strings:
+		stream, topic, timespec, text = reminder_string.split(':', 3)
+		times = [int(t) for t in timespec.split(',')]
+		reminders.append(Reminder(times, stream, topic, text))
+	return reminders
+
+
+def check_reminders(reminders: list[Reminder], hour, start_time, send_client):
+	if hour < 0: return # Don't send reminders before the run starts
+	moonbase_start = datetime.fromtimestamp(start_time, timezone("America/Vancouver"))
+	moonbase_hour = (moonbase_start + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0).hour
+	for reminder in reminders:
+		if moonbase_hour in reminder.times:
+			send_client.send_to_stream(reminder.stream, reminder.topic, reminder.text)
+
+
+
+@argh.arg("--reminder", action="append", metavar="STREAM:TOPIC:HOUR{,HOUR}:TEXT")
+def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=False, no_initial=False, shifts=None, last=-1, metrics_port=8012, reminder: list[str] = None):
 	"""
 	config:
 		url: the base url of the instance
@@ -289,6 +312,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 		config["schedule_sheet_id"],
 		config["schedule_sheet_name"]
 	)
+	reminders = parse_reminders(reminder or [])
 
 	# Accept start time timestamp with or without trailing "Z" indicating UTC.
 	start_time = config["start_time"]
@@ -324,6 +348,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			if stream:
 				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shifts)
 		no_initial = False
+		check_reminders(reminders, hour, start_time, send_client)
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()
 		if remaining > 0:
