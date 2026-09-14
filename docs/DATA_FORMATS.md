@@ -45,7 +45,7 @@ Messages may be present in both batches.
 Website blog posts are captured by blogbot with filepaths:
 `blogs/ID-HASH.json`
 Multiple files with the same ID represent edits of the same blog post.
-Each JSON file contains an object with the html content plus some other metadata.
+Each JSON file contains an object with the JSON content plus some other metadata.
 
 ## Coverage maps
 
