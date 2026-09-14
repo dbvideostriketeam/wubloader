@@ -256,9 +256,9 @@ def parse_reminders(reminder_strings: list[str]):
 	return reminders
 
 
-def check_reminders(reminders: list[Reminder], hour, start_time, send_client):
+def check_reminders(reminders: list[Reminder], hour, start_time, shifts, send_client):
 	if hour < 0: return # Don't send reminders before the run starts
-	moonbase_start = datetime.fromtimestamp(start_time, timezone("America/Vancouver"))
+	moonbase_start = datetime.fromtimestamp(start_time, timezone(shifts['timezone']))
 	moonbase_hour = (moonbase_start + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0).hour
 	for reminder in reminders:
 		if moonbase_hour in reminder.times:
@@ -348,7 +348,7 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 			if stream:
 				post_schedule(client, send_client, start_time, schedule, stream, hour, no_mentions, last, shifts)
 		no_initial = False
-		check_reminders(reminders, hour, start_time, send_client)
+		check_reminders(reminders, hour, start_time, shifts, send_client)
 		next_hour = start_time + 3600 * (hour + 1)
 		remaining = next_hour - time.time()
 		if remaining > 0:
