@@ -1,4 +1,5 @@
 
+import re
 from urllib.parse import urlparse
 
 from common.requests import InstrumentedSession
@@ -94,6 +95,57 @@ class EventStream:
 			if message.topic != "phoenix":
 				yield message
 
+
+def block_to_md(block):
+	"""Lossy attempt to convert the content block format used in website objects to markdown"""
+	if block["type"] == "text":
+		text = block["text"]
+		MARK_FORMAT = {
+			"bold": "**",
+			"italic": "*",
+			"strike": "~~",
+		}
+		for mark in block.get("marks") or []:
+			if mark["type"] in MARK_FORMAT:
+				attr = MARK_FORMAT[mark["type"]]
+				text = f"{attr}{text}{attr}"
+			if mark["type"] == "link":
+				url = mark["attrs"]["href"]
+				text = f"[{text}]({url})"
+		return text
+
+	if block["type"] == "hardBreak":
+		return "\n"
+
+	if block["type"] == "image":
+		url = block["attrs"]["url"]
+		alt = block["attrs"].get("alt") or block["attrs"].get("caption") or url
+		return f"[{alt}]({url})"
+
+	if block["type"] == "youtube":
+		url = block["attrs"]["src"]
+		match = re.match(r"https://www\.youtube-nocookie\.com/embed/(.+)", url)
+		if match:
+			id = match.group(1)
+			url = f"https://youtu.be/{id}"
+		alt = block["attrs"].get("alt") or block["attrs"].get("caption") or url
+		return f"[{alt}]({url})"
+
+	if block["type"] in ("gallery", "bulletList", "orderedList"):
+		return "\n".join(
+			f"* {block_to_md(child)}\n"
+			for child in block["content"]
+		)
+
+	inner = "".join(block_to_md(child) for child in block["content"])
+
+	if block["type"] == "heading":
+		level = block["attrs"]["level"]
+		inner = f"{'#' * level} {inner}"
+	if block["type"] == "blockquote":
+		inner = f"```quote\n{inner}```"
+	if block["type"] == "paragraph":
+		inner = f"{inner}\n"
 
 if __name__ == '__main__':
 	import json
