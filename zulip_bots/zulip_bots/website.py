@@ -8,15 +8,24 @@ from . import phoenix
 
 
 class Client:
-	def __init__(self, event_id=None, base_url="https://desertbus.org/api"):
+	def __init__(self, event_id=None, base_url="https://desertbus.org/api", auth_token=None):
 		self.session = InstrumentedSession()
 		self.base_url = base_url
+		self.auth_token = auth_token
 		self.event_id = event_id or self.default_event_id()
 
-	def _get(self, name, url):
-		resp = self.session.get(url, metric_name=name)
+	def _request(self, method, name, url, data=None):
+		headers = {
+			"User-Agent": "VST Bot",
+		}
+		if self.auth_token is not None:
+			headers["Authorization"] = f"Bearer {self.auth_token}"
+		resp = self.session.request(method, url, metric_name=name, headers=headers, json=data)
 		resp.raise_for_status()
-		return resp.json()
+		return resp
+
+	def _get(self, name, url):
+		return self._request("GET", name, url).json()
 
 	def _event_get(self, name, path):
 		return self._get(name, "/".join([self.base_url, "events", self.event_id, path]))
@@ -58,6 +67,13 @@ class Client:
 
 	def prize(self, id):
 		return self._event_get("get_prize", f"prizes/{id}")["prize"]
+
+	def challenges(self):
+		"""Note: requires auth token"""
+		return self._event_get("list_challenges", "challenges/vst")["challenges"]
+
+	def set_challenge_url(self, id, url):
+		self._request("POST", "set_challenge_url", f"challenges/{id}/vst", data={"vst_url": url})
 
 	def event_stream(self):
 		url = urlparse(self.base_url)
