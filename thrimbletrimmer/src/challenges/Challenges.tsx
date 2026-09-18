@@ -6,8 +6,8 @@ import styles from "./Challenges.module.scss";
 
 interface ChallengeData {
 	id: string;
-	description: string;
-	vstURL: string;
+	description_text: string;
+	vst_url: string;
 }
 
 export const Challenges: Component = () => {
@@ -36,7 +36,7 @@ export const Challenges: Component = () => {
 			<table class={styles.challenges}>
 				<Index each={challenges() ?? []}>
 					{(challenge, index) => {
-						const [enteredURL, setEnteredURL] = createSignal(challenge().vstURL);
+						const [enteredURL, setEnteredURL] = createSignal(challenge().vst_url);
 						const [submitResult, setSubmitResult] = createSignal({ isError: false, message: "" });
 
 						const submitHandler = async (event: SubmitEvent) => {
@@ -91,7 +91,7 @@ export const Challenges: Component = () => {
 
 						return (
 							<tr>
-								<td>{challenge().description}</td>
+								<td>{challenge().description_text}</td>
 								<td>
 									<form on:submit={submitHandler}>
 										<div class={submitResult().isError ? styles.submitError : styles.submitSuccess}>
