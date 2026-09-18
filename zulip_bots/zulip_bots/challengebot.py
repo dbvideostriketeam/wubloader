@@ -5,12 +5,14 @@ so that editors know to go and link it to a video.
 """
 
 import json
+import logging
 import time
 
 import argh
 import requests
 
-from common.zulip import Client
+from common.zulip import Client as ZulipClient
+from common import website
 
 from .config import common_setup, get_config
 
@@ -26,7 +28,7 @@ def main(config_file, interval=60, metrics_port=8020, test=False, once=False, fi
 	"""
 	Config:
 		zulip: url, email, api_key
-		challenge_api: url, api_key
+		challenge_api_key
 		state: path to state file
 	"""
 	common_setup(metrics_port)
@@ -34,19 +36,24 @@ def main(config_file, interval=60, metrics_port=8020, test=False, once=False, fi
 	with open(config['state']) as f:
 		# state is {id: {}}
 		state = json.load(f)
-	client = Client(config['zulip']['url'], config['zulip']['email'], config['zulip']['api_key'])
+	zulip = ZulipClient(config['zulip']['url'], config['zulip']['email'], config['zulip']['api_key'])
+	web = website.Client(auth_token=config["challenge_api_key"])
 	while True:
 		start = time.time()
-		challenges = get_challenges(**config["challenge_api"])
+		challenges = web.challenges()
 		for challenge in challenges[::-1]:
 			if challenge["id"] in state:
 				continue
-			text = challenge["description"]
-			message = f"```quote\n{text}\n```"
+			try:
+				text = website.block_to_md(challenge["description"])
+				message = f"```quote\n{text}\n```"
+			except Exception:
+				logging.warning(f"Failed to parse challenge: {challenge}", exc_info=True)
+				message = f"Failed to parse challenge {challenge['id']}, see log"
 			if test:
 				print(message)
 			elif not first_run:
-				client.send_to_stream("editors", "Completed Challenges", message)
+				zulip.send_to_stream("editors", "Completed Challenges", message)
 			state[challenge["id"]] = challenge
 		if not test:
 			with open(config['state'], 'w') as f:
