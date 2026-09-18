@@ -25,9 +25,9 @@ import argh
 from common import atomic_write
 from common import media
 from common import zulip
+from common import website
 
 from .config import common_setup, get_config
-from . import website
 
 def try_save_image(media_dir, url):
     if media_dir is None:
