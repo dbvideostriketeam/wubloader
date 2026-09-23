@@ -163,6 +163,8 @@ def block_to_md(block):
 	if block["type"] == "paragraph":
 		inner = f"{inner}\n"
 
+	return inner
+
 if __name__ == '__main__':
 	import json
 
