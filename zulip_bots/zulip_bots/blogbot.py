@@ -15,7 +15,6 @@ gevent.monkey.patch_all()
 import json
 import logging
 import os
-import re
 from base64 import b64encode
 from datetime import datetime
 from hashlib import sha256
@@ -37,22 +36,23 @@ def try_save_image(media_dir, url):
     except media.Rejected as e:
         return {"error": str(e)}
 
-def blog_to_md(post):
+def blog_to_md(event, post):
 	title = "UNKNOWN"
 	author = "UNKNOWN"
 	date = "UNKNOWN"
 
 	try:
-		title = post["title"]
 		author = post["author"]
 		date = f"<time:{post['published_at']}>"
+		url = f"https://desertbus.org/{event['url']}?id={post['id']}"
+		title = f"[{post['title']}]({url})"
 		md_content = website.block_to_md(post["description"])
 	except Exception as e:
 		logging.warning(f"Failed to parse blog post: {post}", exc_info=True)
 		md_content = f"Parsing blog failed, please see logs: {e}"
 
 	return "\n".join([
-		f"Blog Post: [{title}](https://desertbus.org/?id={id})",
+		f"Blog Post: {title}",
 		f"Posted by {author} at {date}",
 		"```quote",
 		md_content,
@@ -67,8 +67,8 @@ def find_images(post):
 			yield from _find_images(child)
 	yield from _find_images(post["description"])
 
-def send_post(client, stream, topic, post):
-	client.send_to_stream(stream, topic, blog_to_md(post))
+def send_post(client, stream, topic, event, post):
+	client.send_to_stream(stream, topic, blog_to_md(event, post))
 
 def save_post(save_dir, media_dir, post):
 	hash_content = json.dumps(post, sort_keys=True).encode()
@@ -94,6 +94,7 @@ def main(config_file, test=False, event_id=None, stream='bot-spam', topic='Blog 
 	zulip_client = zulip.Client(config["zulip_url"], config["zulip_email"], config["zulip_api_key"])
 
 	webclient = website.Client(event_id=event_id)
+	event = webclient.event()
 	events = webclient.event_stream()
 	events.subscribe_blog()
 
@@ -111,14 +112,14 @@ def main(config_file, test=False, event_id=None, stream='bot-spam', topic='Blog 
 		if latest is None:
 			logging.warning("Ignoring --test, no blog posts found")
 		else:
-			send_post(zulip_client, stream, topic, latest)
+			send_post(zulip_client, stream, topic, event, latest)
 
 	for message in events.recv():
 		if message.event != "post":
 			continue
 		if save_dir is not None:
 			save_post(save_dir, media_dir, message.payload)
-		send_post(zulip_client, stream, topic, message.payload)
+		send_post(zulip_client, stream, topic, event, message.payload)
 
 
 if __name__ == '__main__':
