@@ -264,8 +264,8 @@ class EventsSync(SheetSync):
 		'submitter_winner',
 		'poster_moment',
 		'image_links',
-		'notes',
 		'tags',
+		'notes',
 	}
 	output_columns = {
 		'video_link',
