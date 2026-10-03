@@ -35,7 +35,6 @@
     schedulebot: false,
     tootbot: false,
     twitchbot: false,
-    pubbot: false,
     blogbot: false,
     prizebot: false,
     youtubebot: false,
@@ -384,16 +383,6 @@
     args:: [],
   },
 
-  pubbot:: {
-    zulip_email: "blog-bot@chat.videostrike.team",
-    zulip_api_key: "",
-    year: "2024",
-    # The id for this year's total
-    total_id: "RZZQRDQNLNLW",
-    # The ids of any prizes to watch
-    prize_ids: [],
-  },
-
   blogbot:: {
     zulip_email: "blog-bot@chat.videostrike.team",
     zulip_api_key: "",
@@ -728,7 +717,6 @@
         schedulebot: 8012,
         tootbot: 8013,
         twitchbot: 8014,
-        pubbot: 8015,
         blogbot: 8016,
         prizebot: 8017,
         youtubebot: 8018,
@@ -877,11 +865,6 @@
       bot_service("twitchbot", $.twitchbot + {
         zulip_url: $.zulip_url,
       }),
-
-    [if $.enabled.pubbot then "pubbot"]:
-      bot_service("pubbot", $.pubbot + {
-        zulip_url: $.zulip_url,
-      }, ["/mnt/pubnub-log.json"], mount_segments=true),
 
     [if $.enabled.blogbot then "blogbot"]:
       local args = ["--save-dir", "/mnt/blogs"]

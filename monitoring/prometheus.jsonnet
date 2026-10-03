@@ -20,7 +20,6 @@ local services_by_role = {
   backup: self.edit + [
     "postgres_exporter",
     "buscribe_api",
-    "pubbot",
     "prizebot",
     "tootbot",
     "blogbot",
