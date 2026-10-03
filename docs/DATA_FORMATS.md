@@ -83,18 +83,6 @@ Note the URL hash will include any query string, etc.
 A file may be retrieved multiple times, if this results in different content then multiple files will be present
 under the same URL hash.
 
-## Pubnub data
-
-`pubbot` watches known PubNub streams and saves an event log `pubnub-log.json`.
-This is a newline-delimited json file containing messages which can be distingished by the `type` field:
-- `startup`: Records that pubbot just started. May be used to imply there may have been missed messages preceeding it.
-- `total`: An update to the donation total
-- `prize`: An update to the highest bid on a prize
-- `unknown`: An unrecognized pubnub message
-- `error`: Something went wrong while handling the message
-
-The details of what is contained in each type depend on pubnub - you should read the pubbot code.
-
 ## Twitch stats
 
 `twitch_stats` bot watches the twitch Hermes event stream via a websocket.
@@ -118,23 +106,13 @@ Known formats:
 It writes these update events to `tootbot.json`. The content of these depends on the mastodon API,
 see `tootbot` for details.
 
-## Prize info
+## Prize and donation info
 
-`prizebot` watches the desertbus.org website and periodically scrapes prize data.
-It writes scraped data once per minute to `prizes.json`.
-This is a newline-delimited json file containing entries with keys:
-- `time`: the unix timestamp of the scrape
-- `live`: list of live auction prizes
-- `silent`: list of silent auction prizes
-- `giveaway`: list of giveaway prizes
-
-Where each prize list item has the keys:
-- `id`: website id of prize, NOT the same as the internal prize id that crafters work with
-- `link`: URL of the prize's page on the website
-- `type`: `live`, `silent` or `giveaway`
-- `title`: The name of the prize
-- `state`: One of:
-	- `pending`: Not started yet
-	- `active`: Currently open or waiting to draw
-	- `sold`: A winner has been announced
-- `result`: Free-form text taken from the website describing the outcome if state == `sold`, eg. `Won by NoDonorAccount`
+`prizebot` watches the desertbus.org website for prize data.
+It writes observed data to `prizes.json`.
+This is a newline-delimited json file containing either a prize entry with keys:
+- `time`: the unix timestamp the data was seen
+- `prize`: the prize data as per the website api
+Or a donation entry with keys:
+- `time`: the unix timestamp the data was seen
+- `donation`: the donation data as per the website api
