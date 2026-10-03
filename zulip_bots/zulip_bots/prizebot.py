@@ -54,6 +54,7 @@ def high_bid(event, prize):
 def main(
 	config_file,
 	stream="bot-spam",
+	firehose_stream="firehose",
 	test=False,
 	all=False,
 	metrics_port=8017,
@@ -80,7 +81,7 @@ def main(
 		log_file = open(log_file, "a")
 	event = website.event()
 
-	def send(topic, content):
+	def send(stream, topic, content):
 		if test:
 			print(f"{stream}->{topic}: {content}")
 		else:
@@ -92,6 +93,11 @@ def main(
 			log_file.write(json.dumps(data) + "\n")
 			log_file.flush()
 
+	def save_state():
+		if not test:
+			with open(config['state'], 'w') as f:
+				f.write(json.dumps(state) + '\n')
+
 	def process_prize(prize):
 		log({"prize": prize})
 		id = prize["id"]
@@ -100,23 +106,33 @@ def main(
 
 		# prize sold
 		if prize["state"] == "sold" and (all or old.get("state") != "sold"):
-			send("Prize Winners", sold_message(event, prize))
+			send(stream, "Prize Winners", sold_message(event, prize))
 
 		# prize giveaway amount set
 		if prize["giveaway_amount"] is not None and prize["giveaway_amount"] != old.get("giveaway_amount"):
-			send("Bids", giveaway_set(event, prize))
+			send(stream, "Bids", giveaway_set(event, prize))
 
 		# prize bid
 		if prize["current_high_bid"] is not None and prize["current_high_bid"] != old.get("current_high_bid"):
-			send("Bids", high_bid(event, prize))
+			send(stream, "Bids", high_bid(event, prize))
 
 		state["prizes"][id] = prize
-		if not test:
-			with open(config['state'], 'w') as f:
-				f.write(json.dumps(state) + '\n')
+
+	def process_donation(donation):
+		log({"donation": donation})
+
+		message = f"{donation['display_name']} donated ${donation['amount']['amount']} at <time:{donation['processed_at']}>"
+		amount = float(donation["amount"]["amount"])
+
+		if amount >= 500:
+			send(stream, "Notable Donations", message)
+		send(firehose_stream, "Donations", message)
+
+		state["donation_token"] = donation["token"]
 
 	stream = website.event_stream()
 	stream.subscribe_prizes()
+	stream.subscribe_donations(last_seen=state.get("donation_token"))
 
 	for prize in website.prizes():
 		process_prize(prize)
@@ -124,6 +140,8 @@ def main(
 	for message in stream.recv():
 		if message.event == "prize":
 			process_prize(message.payload)
+		if message.event == "donation":
+			process_donation(message.payload)
 
 if __name__ == '__main__':
 	argh.dispatch_command(main)
