@@ -83,18 +83,6 @@ Note the URL hash will include any query string, etc.
 A file may be retrieved multiple times, if this results in different content then multiple files will be present
 under the same URL hash.
 
-## Pubnub data
-
-`pubbot` watches known PubNub streams and saves an event log `pubnub-log.json`.
-This is a newline-delimited json file containing messages which can be distingished by the `type` field:
-- `startup`: Records that pubbot just started. May be used to imply there may have been missed messages preceeding it.
-- `total`: An update to the donation total
-- `prize`: An update to the highest bid on a prize
-- `unknown`: An unrecognized pubnub message
-- `error`: Something went wrong while handling the message
-
-The details of what is contained in each type depend on pubnub - you should read the pubbot code.
-
 ## Twitch stats
 
 `twitch_stats` bot watches the twitch Hermes event stream via a websocket.
