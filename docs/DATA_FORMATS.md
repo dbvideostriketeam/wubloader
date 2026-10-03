@@ -118,10 +118,13 @@ Known formats:
 It writes these update events to `tootbot.json`. The content of these depends on the mastodon API,
 see `tootbot` for details.
 
-## Prize info
+## Prize and donation info
 
 `prizebot` watches the desertbus.org website for prize data.
 It writes observed data to `prizes.json`.
-This is a newline-delimited json file containing entries with keys:
+This is a newline-delimited json file containing either a prize entry with keys:
 - `time`: the unix timestamp the data was seen
 - `prize`: the prize data as per the website api
+Or a donation entry with keys:
+- `time`: the unix timestamp the data was seen
+- `donation`: the donation data as per the website api
