@@ -3,115 +3,127 @@
 This bot watches the website pages for prizes, tracking their state and posting to zulip
 when a prize becomes Sold. It also saves the info to a file as JSON.
 It tracks the previously-seen state for each prize in a state file.
+
+It also tracks and saves donations.
 """
 
 from collections import namedtuple
 import json
 import logging
+import os
 import time
-import re
 
 import argh
-import requests
-from bs4 import BeautifulSoup
 
-from common.zulip import Client
+from common.zulip import Client as ZulipClient
+from common.website import Client as WebClient
 
 from .config import common_setup, get_config
 
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
 
 
-def get_prizes(year, type):
-	resp = requests.get(f"https://desertbus.org/{year}/prizes/{type}", {"User-Agent": ""})
-	resp.raise_for_status()
-	html = BeautifulSoup(resp.content.decode(), "html.parser")
-
-	main = html.body.main
-	prizes = []
-	for a in main.find_all("a"):
-		# look for prize links
-		match = re.match("^/[^/]+/prize/([A-Z]+)$", a["href"])
-		if not match:
-			continue
-		# skip image links
-		if a.find("img") is not None:
-			continue
-		# skip "See More" link
-		if "See More >" in a.string:
-			continue
-		id = match.group(1)
-		title = a.string
-		div = a.parent.parent
-		current = div.find_all("div", recursive=False)[1].contents[0].strip()
-		result = None
-		if current.startswith("Starts"):
-			state = "pending"
-		elif current.startswith("High Bid"):
-			state = "active"
-		elif current.startswith("Entries open"):
-			state = "active"
-		elif current.startswith("Giveaway closed"):
-			state = "active"
-		elif current.startswith("Winner"):
-			state = "sold"
-			result = " - ".join([
-				"".join(d.strings).strip() for d in div.find_all("div", recursive=False)
-				if "text-brand-green" in d["class"]
-			])
-		else:
-			state = "unknown"
-		link = f"https://desertbus.org{a['href']}"
-		prizes.append(Prize(id, link, type, title, state, result))
-	return prizes
+def prize_name(event, prize):
+	url = f"https://desertbus.org/{event['url']}/prize/{prize['id']}"
+	return f"[{prize["name"]}]({url})"
 
 
-def send_message(client, prize, test=False):
-	message = f"[{prize.title}]({prize.link}) {prize.result}"
-	if prize.type == "giveaway":
-		message += "\n@*editors* Remember to go back and edit the giveaway video"
-	if test:
-		print(message)
+def sold_message(event, prize):
+	name = prize_name(event, prize)
+	winners = ", ".join(winner["display_name"] for winner in prize["winners"])
+	raised = f"${prize['raised']['amount']}"
+	if prize["type"] == "giveaway":
+		return f"{name} won by {winners}, raised {raised}\n@*editors* Remember to go back and edit the giveaway video"
 	else:
-		client.send_to_stream("bot-spam", "Prize Winners", message)
+		return f"{name} won by {winners} for {raised}"
 
 
-def main(config_file, test=False, all=False, once=False, interval=60, metrics_port=8017, log_file=None):
+def giveaway_set(event, prize):
+	name = prize_name(event, prize)
+	amount = f"${prize["giveaway_amount"]}"
+	time = lambda s: f"<time:{s}>"
+	return f"{name} is being given away for {amount} from {time(prize['starts_at'])} to {time(prize['ends_at'])}"
+
+
+def high_bid(event, prize):
+	name = prize_name(event, prize)
+	bid = prize["current_high_bid"]
+	return f"At <time:{time.time()}>, {bid['name']} has the high bid of ${bid['amount']['amount']} for {name}"
+
+
+def main(
+	config_file,
+	stream="bot-spam",
+	test=False,
+	all=False,
+	metrics_port=8017,
+	log_file=None,
+	event_id=None,
+):
 	"""
 	Config:
 		url, email, api_key: zulip creds
-		year: the correct URL part for the prizes page: https://desertbus.org/YEAR/prizes/giveaway
 		state: path to state file
 	"""
 	common_setup(metrics_port)
 	config = get_config(config_file)
-	with open(config['state']) as f:
-		# state is {id: last seen state}
-		state = json.load(f)
-	client = Client(config['url'], config['email'], config['api_key'])
-	while True:
-		start = time.time()
-		log = {"time": start}
-		for type in ('live', 'silent', 'giveaway'):
-			prizes = get_prizes(config['year'], type)
-			log[type] = prizes
-			for prize in prizes:
-				logging.info(f"Got prize: {prize}")
-				if prize.state == "sold" and (all or state.get(prize.id, "sold") != "sold"):
-					send_message(client, prize, test=test)
-				state[prize.id] = prize.state
+	if os.path.exists(config["state"]):
+		with open(config['state']) as f:
+			# state is {prizes: {id: last seen prize json}}
+			state = json.load(f)
+	else:
+		state = {"prizes": {}}
+	if not test:
+		zulip = ZulipClient(config['url'], config['email'], config['api_key'])
+	website = WebClient(event_id=event_id)
+	if log_file is not None:
+		log_file = open(log_file, "a")
+	event = website.event()
+
+	def send(topic, content):
+		if test:
+			print(f"{stream}->{topic}: {content}")
+		else:
+			zulip.send_to_stream(stream, topic, content)
+
+	def log(data):
+		if log_file is not None:
+			log["time"] = time.time()
+			log_file.write(json.dumps(data) + "\n")
+			log_file.flush()
+
+	def process_prize(prize):
+		log({"prize": prize})
+		id = prize["id"]
+		logging.info(f"Got prize (in state = {id in state}): {prize}")
+		old = state["prizes"].get(id, {})
+
+		# prize sold
+		if prize["state"] == "sold" and (all or old.get("state") != "sold"):
+			send("Prize Winners", sold_message(event, prize))
+
+		# prize giveaway amount set
+		if prize["giveaway_amount"] is not None and prize["giveaway_amount"] != old.get("giveaway_amount"):
+			send("Bids", giveaway_set(event, prize))
+
+		# prize bid
+		if prize["current_high_bid"] is not None and prize["current_high_bid"] != old.get("current_high_bid"):
+			send("Bids", high_bid(event, prize))
+
+		state["prizes"][id] = prize
 		if not test:
 			with open(config['state'], 'w') as f:
 				f.write(json.dumps(state) + '\n')
-		if log_file:
-			with open(log_file, 'a') as f:
-				f.write(json.dumps(log) + "\n")
-		if once:
-			break
-		remaining = start + interval - time.time()
-		if remaining > 0:
-			time.sleep(remaining)
 
+	stream = website.event_stream()
+	stream.subscribe_prizes()
+
+	for prize in website.prizes():
+		process_prize(prize)
+
+	for message in stream.recv():
+		if message.event == "prize":
+			process_prize(message.payload)
 
 if __name__ == '__main__':
 	argh.dispatch_command(main)
