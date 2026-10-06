@@ -136,7 +136,7 @@ def block_to_md(block):
 	if block["type"] == "image":
 		url = block["attrs"]["url"]
 		alt = block["attrs"].get("alt") or block["attrs"].get("caption") or url
-		return f"[{alt}]({url})"
+		return f"[{alt}]({url})\n"
 
 	if block["type"] == "youtube":
 		url = block["attrs"]["src"]
@@ -145,7 +145,7 @@ def block_to_md(block):
 			id = match.group(1)
 			url = f"https://youtu.be/{id}"
 		alt = block["attrs"].get("alt") or block["attrs"].get("caption") or url
-		return f"[{alt}]({url})"
+		return f"[{alt}]({url})\n"
 
 	if block["type"] in ("gallery", "bulletList", "orderedList"):
 		return "\n".join(
@@ -157,9 +157,9 @@ def block_to_md(block):
 
 	if block["type"] == "heading":
 		level = block["attrs"]["level"]
-		inner = f"{'#' * level} {inner}"
+		inner = f"{'#' * level} {inner}\n"
 	if block["type"] == "blockquote":
-		inner = f"```quote\n{inner}```"
+		inner = f"```quote\n{inner}```\n"
 	if block["type"] == "paragraph":
 		inner = f"{inner}\n"
 
