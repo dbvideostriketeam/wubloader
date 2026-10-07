@@ -729,8 +729,8 @@ async function getUploadedImageAsBase64(fileElement: HTMLInputElement): Promise<
 	}
 
 	const fileHandle = fileElement.files[0];
-	if (fileHandle.size > 2097151) {
-		return uploadedImageDataFromErrorMessage("Uploaded file is too large (limit: almost 2MB)");
+	if (fileHandle.size > 50 * 1048576) {
+		return uploadedImageDataFromErrorMessage("Uploaded file is too large (limit: 50MB)");
 	}
 	const fileReader = new FileReader();
 
