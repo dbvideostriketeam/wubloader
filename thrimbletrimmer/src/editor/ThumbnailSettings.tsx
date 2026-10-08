@@ -26,7 +26,6 @@ import { wubloaderTimeFromDateTime } from "../common/convertTime";
 
 import "cropperjs"; // This is required for Cropper.js to work, even with the specific import below
 import { CropperImage, CropperSelection } from "cropperjs";
-import { createSingletonPromise } from "solidjs-use";
 
 interface ThumbnailSettingsProps {
 	allThumbnailTemplates: ThumbnailTemplateDefinition[];
