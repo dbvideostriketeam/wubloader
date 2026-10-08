@@ -169,6 +169,16 @@ CREATE TABLE events (
 	-- something else for testing.
 	video_quality TEXT NOT NULL DEFAULT 'source',
 
+	-- An optional subtitle track to attach to the video
+	subtitle_data TEXT,
+	-- SHA256 hash of the most recently uploaded subtitle track.
+	-- Used to know if we need to update the subtitle track.
+	subtitle_last_written BYTEA CHECK (
+		state != 'DONE'
+		OR subtitle_file IS NULL
+		OR subtitle_last_written IS NOT NULL
+	),
+
 	-- The thumbnail mode, which determines which other thumbnail columns will be used.
 	-- Unused columns are NOT enforced to be NULL, so that if you switch modes then switch
 	-- back the old settings aren't lost.

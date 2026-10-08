@@ -105,6 +105,9 @@ class UploadBackend(object):
 	def set_thumbnail(self, video_id, thumbnail):
 		raise NotImplementedError
 
+	def set_subtitle_track(self, video_id, subtitle_data):
+		raise NotImplementedError
+
 
 class Youtube(UploadBackend):
 	"""Represents a youtube channel to upload to, and settings for doing so.
@@ -138,6 +141,10 @@ class Youtube(UploadBackend):
 		'-r:a', '48000', # set audio sample rate at 48000Hz, as requested
 		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
 	]
+
+	# Captions are identified by (language, name). Name should be blank for "default" caption.
+	CAPTION_LANGUAGE = 'en'
+	CAPTION_NAME = ''
 
 	def __init__(self, credentials, category_id=23, language="en", use_yt_recommended_encoding=False,
 		mime_type='video/MP2T', unlisted_only=False):
@@ -275,6 +282,55 @@ class Youtube(UploadBackend):
 		)
 		resp.raise_for_status()
 
+	def set_subtitle_track(self, video_id, subtitle_data):
+		# Get id of existing track if any
+		id = self._find_caption_id(video_id)
+		# Insert or replace
+		if id is None:
+			resp = self.client.request('POST',
+				"https://www.googleapis.com/youtube/v3/captions",
+				params={"part": "snippet"},
+				json={
+					'snippet': {
+						'videoId': video_id,
+						'language': self.CAPTION_LANGUAGE,
+						'name': self.CAPTION_NAME,
+					},
+				},
+				metric_name='insert_caption',
+			)
+		else:
+			resp = self.client.request('PUT',
+				"https://www.googleapis.com/youtube/v3/captions",
+				params={"part": "id"},
+				json={"id": id},
+				metric_name='update_caption',
+			)
+		resp.raise_for_status()
+		upload_url = resp.headers['Location']
+		resp = self.client.request(
+			'POST', upload_url,
+			data=subtitle_data,
+			metric_name='upload_subtitles',
+		)
+		resp.raise_for_status()
+
+	def _find_caption_id(self, video_id):
+		resp = self.client.request(
+			'GET',
+			"https://www.googleapis.com/youtube/v3/captions",
+			params={
+				'part': 'id,snippet',
+				'videoId': video_id,
+			},
+			metric_name='find_caption',
+		)
+		resp.raise_for_status()
+		data = resp.json()['items']
+		for caption in data:
+			if caption['snippet']['language'] == self.CAPTION_LANGUAGE and caption['snippet']['name'] == self.CAPTION_NAME:
+				return caption['id']
+		return None
 
 class Local(UploadBackend):
 	"""An "upload" backend that just saves the file to local disk.
