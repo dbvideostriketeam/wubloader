@@ -332,7 +332,7 @@ def update_row(ident, editor=None):
 		'video_channel', 'video_quality', 'video_tags', 'thumbnail_mode', 'public'
 	]
 	edit_columns = non_null_edit_columns + [
-		'chapter_markers', 'allow_holes', 'uploader_whitelist', 'thumbnail_time',
+		'chapter_markers', 'allow_holes', 'uploader_whitelist', 'subtitle_data', 'thumbnail_time',
 		'thumbnail_template', 'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
 	sheet_columns = [
@@ -343,7 +343,7 @@ def update_row(ident, editor=None):
 	# and are a subset of edit_columns.
 	modifiable_columns = [
 		'video_title', 'video_description', 'chapter_markers', 'video_tags', 'public',
-		'thumbnail_mode', 'thumbnail_time', 'thumbnail_template',
+		'subtitle_data', 'thumbnail_mode', 'thumbnail_time', 'thumbnail_template',
 		'thumbnail_image', 'thumbnail_crop', 'thumbnail_location',
 	]
 	assert set(modifiable_columns) - set(edit_columns) == set()

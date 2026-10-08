@@ -72,6 +72,7 @@ CUT_JOB_PARAMS = [
 	"video_tags",
 	"video_channel",
 	"video_quality",
+	"subtitle_data",
 	"thumbnail_mode",
 	"thumbnail_time",
 	"thumbnail_template",
@@ -587,6 +588,8 @@ class Cutter(object):
 				upload_finished = 'finished'
 				if thumbnail is not None:
 					upload_backend.set_thumbnail(video_id, thumbnail)
+				if job.subtitle_data is not None:
+					upload_backend.set_subtitle_track(video_id, job.subtitle_data)
 			except (JobConsistencyError, JobCancelled, UploadError):
 				raise # this ensures these aren't not caught in the except Exception block
 			except Exception as ex:
@@ -673,13 +676,15 @@ class Cutter(object):
 			return
 
 		# Success! Set TRANSCODING or DONE and clear any previous error.
-		# Also set thumbnail_last_written if we wrote a thumbnail.
+		# Also set thumbnail_last_written/subtitle_last_written if needed.
 		success_state = 'TRANSCODING' if upload_backend.needs_transcode else 'DONE'
 		kwargs = {}
 		if success_state == 'DONE':
 			kwargs["upload_time"] = datetime.datetime.utcnow()
 		if thumbnail is not None:
 			kwargs["thumbnail_last_written"] = hashlib.sha256(thumbnail).digest()
+		if job.subtitle_data is not None:
+			kwargs["subtitle_last_written"] = hashlib.sha256(job.subtitle_data).digest()
 		set_row(state=success_state, video_id=video_id, video_link=video_link, error=None, **kwargs)
 
 		self.logger.info("Successfully cut and uploaded job {} as {}".format(format_job(job), video_link))
@@ -809,6 +814,8 @@ UPDATE_JOB_PARAMS = [
 	"tags",
 	"video_tags",
 	"public",
+	"subtitle_data",
+	"subtitle_last_written",
 	"thumbnail_mode",
 	"thumbnail_time",
 	"thumbnail_template",
@@ -892,6 +899,16 @@ class VideoUpdater(object):
 						tags = list(set(self.tags + job.video_tags))
 						description = generate_full_description(job, self.description_footer, playlists, attribution)
 						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
+
+						# Update the subtitle track if needed.
+						if job.subtitle_data is not None:
+							new_hash = hashlib.sha256(job.subtitle_data.encode()).digest()
+							if job.subtitle_last_written is None or bytes(job.subtitle_last_written) != new_hash:
+								self.logger.info(f"Setting subtitle track for {job.id}")
+								self.backend.set_subtitle_track(job.video_id, job.subtitle_data)
+								updates["subtitle_last_written"] = new_hash
+							else:
+								self.logger.info(f"No change in subtitle track for {job.id}")
 					except Exception as ex:
 						# for HTTPErrors, getting http response body is also useful
 						if isinstance(ex, requests.HTTPError):
