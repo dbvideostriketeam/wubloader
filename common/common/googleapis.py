@@ -69,3 +69,29 @@ class GoogleAPIClient(object):
 		# merge in auth header
 		headers = dict(headers, Authorization='Bearer {}'.format(self.access_token))
 		return requests.request(method, url, headers=headers, **kwargs)
+
+
+if __name__ == '__main__':
+	import json as j
+	import sys
+
+	import argh
+
+	@argh.dispatch_command
+	def main(creds_file, url, post=False, json=None):
+		with open(creds_file) as f:
+			creds = j.load(f)
+		client = GoogleAPIClient(creds['client_id'], creds['client_secret'], creds['refresh_token'])
+		method = 'GET'
+		kwargs = {}
+		if json:
+			method = 'POST'
+			kwargs["json"] = json
+		elif post:
+			method = 'POST'
+			kwargs["body"] = sys.stdin
+		resp = client.request(method, url, **kwargs)
+		if resp.ok:
+			print(resp.text)
+		else:
+			print(f"{resp.status_code}: {resp.text}", file=sys.stderr)
