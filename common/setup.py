@@ -8,5 +8,6 @@ setup(
 		"gevent",
 		"monotonic",
 		"prometheus-client",
+		"websockets",
 	],
 )
