@@ -11,7 +11,7 @@ import {
 	videoPlayerTimeFromDateTime,
 } from "./common";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
-import { GoogleSignIn, googleUser } from "../common/googleAuth";
+import { GoogleSignIn } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { DateTime } from "luxon";
 
@@ -43,6 +43,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	const [uploaderAllowlist, setUploaderAllowlist] = createSignal("");
 	const [submissionError, setSubmissionError] = createSignal("");
 	const [needsOverrideMessage, setNeedsOverrideMessage] = createSignal("");
+	const [accountToken, setAccountToken] = createSignal<string | null>(null);
 
 	const toggleAdvancedSubmissionOptions = (event) => {
 		setShowAdvancedSubmissionOptions(!showAdvancedSubmissionOptions());
@@ -273,7 +274,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 
 		const editData = {
-			video_ranges: videoRanges,
+			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
 			video_title: videoTitle,
 			video_description: videoDescription,
@@ -305,10 +306,11 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			tags: props.originalVideoData.tags,
 
 			// These are added optionally below
-			token: undefined,
+			token: undefined as string | undefined,
 		};
-		if (googleUser) {
-			editData.token = googleUser.getAuthResponse().id_token;
+		const userAccountToken = accountToken();
+		if (userAccountToken) {
+			editData.token = userAccountToken;
 		} else {
 			delete editData.token;
 		}
@@ -373,7 +375,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 
 		const editData = {
-			video_ranges: videoRanges,
+			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
 			video_title: props.videoTitle(),
 			video_description: videoDescription,
@@ -405,10 +407,11 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			tags: props.originalVideoData.tags,
 
 			// These are added optionally below
-			token: undefined,
+			token: undefined as string | undefined,
 		};
-		if (googleUser) {
-			editData.token = googleUser.getAuthResponse().id_token;
+		const userAccountToken = accountToken();
+		if (userAccountToken) {
+			editData.token = userAccountToken;
 		} else {
 			delete editData.token;
 		}
@@ -504,7 +507,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					</label>
 				</div>
 			</Show>
-			<GoogleSignIn />
+			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 		</>
 	);
 };

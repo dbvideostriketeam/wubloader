@@ -431,7 +431,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													return;
 												}
 
-												const chapterData = currentChapter();
+												const chapterData = structuredClone(currentChapter());
 												chapterData.time = time;
 
 												const rangeChapters = currentRangeData().chapters().slice();

@@ -1,6 +1,6 @@
 import { Component, createResource, createSignal, Index, Show } from "solid-js";
 import { bindingInputOnChange } from "../common/binding";
-import { GoogleSignIn, googleUser } from "../common/googleAuth";
+import { GoogleSignIn } from "../common/googleAuth";
 
 import styles from "./Challenges.module.scss";
 
@@ -24,6 +24,7 @@ export const Challenges: Component = () => {
 		},
 		{ initialValue: [] },
 	);
+	const [accountToken, setAccountToken] = createSignal<string | null>(null);
 
 	return (
 		<>
@@ -60,8 +61,9 @@ export const Challenges: Component = () => {
 							}
 
 							let authToken: string;
-							if (googleUser) {
-								authToken = googleUser.getAuthResponse.id_token;
+							const userAccountToken = accountToken();
+							if (userAccountToken) {
+								authToken = userAccountToken;
 							} else {
 								setSubmitResult({ isError: true, message: "You're not logged in." });
 								return;
@@ -110,7 +112,7 @@ export const Challenges: Component = () => {
 					}}
 				</Index>
 			</table>
-			<GoogleSignIn />
+			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 		</>
 	);
 };
