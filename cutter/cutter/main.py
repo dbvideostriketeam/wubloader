@@ -59,6 +59,7 @@ videos_marked_done = prom.Counter(
 CUT_JOB_PARAMS = [
 	"sheet_name",
 	"category",
+	"tags",
 	"allow_holes",
 	"uploader_whitelist",
 	"upload_location",
@@ -130,10 +131,37 @@ def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
 	assert not chapter_markers, "Chapter markers contain non-existent video ranges"
 
 
-def generate_full_description(job, description_footer, attribution):
+def get_description_playlists(conn, tags):
+	playlists = query(conn, """
+		SELECT playlist_id, name, tags
+		FROM playlists
+		WHERE show_in_description AND tags IS NOT NULL AND playlist_id IS NOT NULL
+	""")
+	# Filter for matching playlists for this video
+	return [
+		playlist for playlist in playlists
+		if all(
+			tag.lower() in [t.lower() for t in tags]
+			for tag in playlist.tags
+		)
+	]
+
+
+def generate_full_description(job, description_footer, playlists, attribution):
 	"""Assembles a full video description from its input parts.
 	Shared logic between cutting and updating jobs - job can be a CutJob or an UpdateJob."""
 	parts = [job.video_description]
+
+	if playlists:
+		parts.append(
+			"\n".join(
+				["This video is part of the following playlists:"]
+				+ [
+					f"- [{playlist.name}](https://youtube.com/playlist?list={playlist.id})"
+					for playlist in playlists
+				]
+			)
+		)
 
 	if attribution is not None:
 		parts.append(f"Thumbnail Credit: {attribution}")
@@ -547,9 +575,10 @@ class Cutter(object):
 			# the same as UploadErrors in the main try block, so we wrap
 			# a second try around the whole thing.
 			try:
+				playlists = get_description_playlists(self.conn, job.tags)
 				video_id, video_link = upload_backend.upload_video(
 					title=job.video_title,
-					description=generate_full_description(job, self.description_footer, attribution),
+					description=generate_full_description(job, self.description_footer, playlists, attribution),
 					# Merge static and video-specific tags
 					tags=list(set(self.tags + job.video_tags)),
 					public=job.public,
@@ -777,6 +806,7 @@ UPDATE_JOB_PARAMS = [
 	"video_title",
 	"video_description",
 	"chapter_markers",
+	"tags",
 	"video_tags",
 	"public",
 	"thumbnail_mode",
@@ -858,8 +888,9 @@ class VideoUpdater(object):
 								self.logger.info("No change in thumbnail image for {}".format(job.id))
 
 						# Update video metadata
+						playlists = get_description_playlists(self.conn, job.tags)
 						tags = list(set(self.tags + job.video_tags))
-						description = generate_full_description(job, self.description_footer, attribution)
+						description = generate_full_description(job, self.description_footer, playlists, attribution)
 						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 					except Exception as ex:
 						# for HTTPErrors, getting http response body is also useful
