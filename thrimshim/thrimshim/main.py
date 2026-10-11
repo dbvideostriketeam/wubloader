@@ -28,7 +28,6 @@ app.after_request(after_request)
 
 MAX_TITLE_LENGTH = 100 # Youtube only allows 100-character titles
 MAX_DESCRIPTION_LENGTH = 5000 # Youtube only allows 5000-character descriptions
-DESCRIPTION_PLAYLISTS_HEADER = "This video is part of the following playlists:"
 
 # For specific categories (ie. event types), automatically append this message to notes
 # as a reminder to editors.
@@ -305,13 +304,6 @@ def get_row(ident):
 		and response["video_title"].startswith(title_header)
 	):
 		response["video_title"] = response["video_title"][len(title_header):]
-	description_playlist_re = re.compile(r"\n\n({}\n(- .* \[https://youtube.com/playlist\?list=[A-Za-z0-9_-]+\]\n)+\n)?$".format(
-		re.escape(DESCRIPTION_PLAYLISTS_HEADER),
-	))
-	if (not is_archive) and response["video_description"] is not None:
-		match = description_playlist_re.search(response["video_description"])
-		if match:
-			response["video_description"] = response["video_description"][:match.start()]
 
 	# Append canned notes for specific event types
 	if response['category'] in CATEGORY_NOTES:
@@ -387,42 +379,16 @@ def update_row(ident, editor=None):
 
 		is_archive = old_row["sheet_name"] == app.archive_sheet
 
-		# archive events skip title and description munging
+		# archive events skip title munging
 		if not is_archive:
-
-			playlists = database.query(conn, """
-				SELECT playlist_id, name, tags
-				FROM playlists
-				WHERE show_in_description AND tags IS NOT NULL AND playlist_id IS NOT NULL
-			""")
-			# Filter for matching playlists for this video
-			playlists = [
-				playlist for playlist in playlists
-				if all(
-					tag.lower() in [t.lower() for t in old_row['tags']]
-					for tag in playlist.tags
-				)
-			]
-
 			# Include headers and footers
 			new_row['video_title'] = app.title_header + new_row['video_title']
-			description_lines = []
-			if playlists:
-				# NOTE: If you change this format, you need to also change the regex that matches this
-				# on the GET handler.
-				description_lines.append(DESCRIPTION_PLAYLISTS_HEADER)
-				description_lines += [
-					"- {} [https://youtube.com/playlist?list={}]".format(playlist.name, playlist.playlist_id)
-					for playlist in playlists
-				]
-				description_lines.append('') # blank line before footer
-			new_row['video_description'] += "\n\n" + "\n".join(description_lines)
 
 		# Validate youtube requirements on title and description
 		if len(new_row['video_title']) > MAX_TITLE_LENGTH:
 			return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
 		if len(new_row['video_description']) > MAX_DESCRIPTION_LENGTH:
-			return 'Description must be {} characters or less, including footer'.format(MAX_DESCRIPTION_LENGTH), 400
+			return 'Description must be {} characters or less'.format(MAX_DESCRIPTION_LENGTH), 400
 		for char in ['<', '>']:
 			if char in new_row['video_title']:
 				return 'Title may not contain a {} character'.format(char), 400
