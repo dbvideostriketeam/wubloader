@@ -67,17 +67,44 @@ def get_json(channel):
 
     db_conn = app.db_manager.get_conn()
 
+    last_processed = get_last_processed(db_conn)
     results = fetch_lines(db_conn, start_time, end_time, query, limit, offset)
 
-    return jsonify([{"id": row.id,
-                     "start_time": row.start_time.isoformat(),
-                     "start_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.start_time), "second"),
-                     "end_time": row.end_time.isoformat(),
-                     "end_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.end_time), "second"),
-                     "verifier": row.verifier,
-                     "speakers": row.names,
-                     "text": row.highlighted_text if row.highlighted_text is not None else ""} for row in results])
+    if end_time is None or end_time < last_processed:
+        if bus_end_time_string is not None or bus_start_time_string is not None:
+            # when time given in bustime, return not_processed as bustime
+            not_processed = format_bustime(dt_to_bustime(app.bustime_start, last_processed), "second")
+        else:
+            not_processed = last_processed.isoformat()
+    else:
+        not_processed = None
 
+    return jsonify({
+        "lines": [
+            {
+                "id": row.id,
+                "start_time": row.start_time.isoformat(),
+                "start_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.start_time), "second"),
+                "end_time": row.end_time.isoformat(),
+                "end_bus_time": format_bustime(dt_to_bustime(app.bustime_start, row.end_time), "second"),
+                "verifier": row.verifier,
+                "speakers": row.names,
+                "text": row.highlighted_text if row.highlighted_text is not None else "",
+            } for row in results
+        ],
+        "not_processed": not_processed,
+    })
+
+
+def get_last_processed(db_conn):
+    result = database.query(db_conn, """
+        SELECT end_time
+        FROM buscribe_transcriptions
+        ORDER BY end_time DESC
+        LIMIT 1
+    """)
+    row = result.fetchone()
+    return row.end_time
 
 def fetch_lines(db_conn, start_time, end_time, ts_query=None, limit=None, offset=None):
     query = f"""

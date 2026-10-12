@@ -47,7 +47,14 @@ function fillResults(results) {
 
     const channel = document.getElementById("channel_select").value;
 
-    for (const line of results) {
+	if (results.not_processed_after !== null) {
+		const not_processed_div = document.createElement("div");
+		not_processed_div.classList.add("not_processed");
+		not_processed_div.innerHTML = `Only showing results up to most recently processed time ${results.not_processed_after}`;
+		results_element.append(not_processed_div);
+	}
+
+    for (const line of results.lines) {
         const line_div = document.createElement("div");
 
         line_div.classList.add("line");
