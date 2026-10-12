@@ -94,6 +94,7 @@ function showContext(time) {
     let end_time_string = end_time.toISOString();
     end_time_string = end_time_string.substring(0, end_time_string.length - 1)
 
+    switchToUTC();
     document.getElementById("start_time").value = start_time_string;
     document.getElementById("end_time").value = end_time_string;
     document.getElementById("search_text").value = "";
