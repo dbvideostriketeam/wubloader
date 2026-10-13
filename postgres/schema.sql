@@ -175,7 +175,7 @@ CREATE TABLE events (
 	-- Used to know if we need to update the subtitle track.
 	subtitle_last_written BYTEA CHECK (
 		state != 'DONE'
-		OR subtitle_file IS NULL
+		OR subtitle_data IS NULL
 		OR subtitle_last_written IS NOT NULL
 	),
 
