@@ -46,6 +46,7 @@ import {
 	dateTimeFromWubloaderTime,
 	wubloaderTimeFromDateTime,
 } from "../common/convertTime";
+import { GoogleSignIn } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
 	KeyboardShortcuts,
@@ -256,6 +257,8 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoDescription, setVideoDescription] = createSignal(description);
 	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
 	const [allowHoles, setAllowHoles] = createSignal(false);
+
+	const [accountToken, setAccountToken] = createSignal<string | null>(null);
 
 	const videoFragmentTimes = () => {
 		return allFragmentTimes()[currentQualityLevel()];
@@ -852,6 +855,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				thumbnailData={thumbnail()}
 				originalVideoData={props.data}
 				videoFragmentTimes={videoFragmentTimes}
+				accountToken={accountToken}
 			/>
 			<Download
 				streamVideoInfo={streamVideoInfo}
@@ -861,7 +865,8 @@ const EditorContent: Component<ContentProps> = (props) => {
 				videoQuality={props.data.video_quality}
 				videoFragments={videoFragmentTimes}
 			/>
-			<DataCorrection videoID={props.data.id} />
+			<DataCorrection videoID={props.data.id} accountToken={accountToken} />
+			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 			<ChatDisplay streamInfo={streamVideoInfo()} fragments={allFragments} />
 		</>
 	);

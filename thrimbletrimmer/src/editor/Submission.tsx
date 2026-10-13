@@ -11,7 +11,6 @@ import {
 	videoPlayerTimeFromDateTime,
 } from "./common";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
-import { GoogleSignIn } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { DateTime } from "luxon";
 
@@ -32,6 +31,7 @@ interface SubmissionProps {
 	thumbnailData: ThumbnailData;
 	originalVideoData: VideoData;
 	videoFragmentTimes: Accessor<FragmentTimes[]>;
+	accountToken: Accessor<string | null>;
 }
 
 export const Submission: Component<SubmissionProps> = (props) => {
@@ -43,7 +43,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	const [uploaderAllowlist, setUploaderAllowlist] = createSignal("");
 	const [submissionError, setSubmissionError] = createSignal("");
 	const [needsOverrideMessage, setNeedsOverrideMessage] = createSignal("");
-	const [accountToken, setAccountToken] = createSignal<string | null>(null);
 
 	const toggleAdvancedSubmissionOptions = (event) => {
 		setShowAdvancedSubmissionOptions(!showAdvancedSubmissionOptions());
@@ -308,7 +307,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			// These are added optionally below
 			token: undefined as string | undefined,
 		};
-		const userAccountToken = accountToken();
+		const userAccountToken = props.accountToken();
 		if (userAccountToken) {
 			editData.token = userAccountToken;
 		} else {
@@ -409,7 +408,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			// These are added optionally below
 			token: undefined as string | undefined,
 		};
-		const userAccountToken = accountToken();
+		const userAccountToken = props.accountToken();
 		if (userAccountToken) {
 			editData.token = userAccountToken;
 		} else {
@@ -507,7 +506,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					</label>
 				</div>
 			</Show>
-			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 		</>
 	);
 };
