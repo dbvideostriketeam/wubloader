@@ -819,7 +819,7 @@
     [if $.enabled.bus_analyzer then "bus_analyzer"]: {
       image: $.get_image("bus_analyzer"),
       restart: "always",
-      command: ["main", $.db_connect, $.bus_channel, "--base-dir", "/mnt"],
+      command: ["main", $.db_connect, $.bus_channel, "--base-dir", "/mnt", "--process"],
       volumes: ["%s:/mnt" % $.segments_path],
       [if "bus_analyzer" in $.ports then "ports"]: ["%s:8011" % $.ports.bus_analyzer],
       environment: $.env,
