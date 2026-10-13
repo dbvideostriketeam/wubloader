@@ -295,7 +295,6 @@
   bus_channel:: "buscam",
 
   // If you don't know what these are, leave them blank.
-  challenge_api_url:: null,
   challenge_api_key:: null,
 
   // The channel to run buscribe on. Future work: Have it run for more than one channel.
@@ -563,8 +562,7 @@
         "--archive-sheet", $.archive_worksheet,
         "--archive-location", $.archive_location,
       ] else [])
-      + (if $.challenge_api_url != null then [
-        "--challenge-api-url", $.challenge_api_url,
+      + (if $.challenge_api_key != null then [
         "--challenge-api-key", $.challenge_api_key,
       ] else []),
       // Mount the segments directory at /mnt
@@ -898,11 +896,8 @@
           email: $.challengebot.email,
           api_key: $.challengebot.api_key,
         },
-        challenge_api: {
-          url: $.challenge_api_url,
-          api_key: $.challenge_api_key,
-        },
-        state: "/state.json"
+        challenge_api_key: $.challenge_api_key,
+        state: "/state.json",
       }, $.challengebot.args) + {
         volumes: ["%s:/state.json" % $.challengebot.state_path],
       },
