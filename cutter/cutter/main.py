@@ -839,7 +839,7 @@ class VideoUpdater(object):
 		self.backend = backend
 		self.dbmanager = dbmanager
 		self.tags = tags
-		self.description_footer
+		self.description_footer = description_footer
 		self.stop = stop
 		self.logger = logging.getLogger(type(self).__name__)
 
