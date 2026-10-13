@@ -171,9 +171,9 @@ if __name__ == '__main__':
 	import argh
 
 	@argh.dispatch_command
-	@argh.arg("endpoint", choices=["events", "blog_posts", "donations", "guests", "prizes"])
-	def main(endpoint, base_url="https://desertbus.org/api", event_id=None):
-		client = Client(event_id=event_id, base_url=base_url)
+	@argh.arg("endpoint", choices=["events", "blog_posts", "donations", "guests", "prizes", "challenges"])
+	def main(endpoint, base_url="https://desertbus.org/api", event_id=None, auth_token=None):
+		client = Client(event_id=event_id, base_url=base_url, auth_token=auth_token)
 		data = getattr(client, endpoint)()
 		for item in data:
 			print(json.dumps(item, indent=4))
