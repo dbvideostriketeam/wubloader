@@ -14,12 +14,6 @@ import psycopg2.extras
 from psycogreen.gevent import patch_psycopg
 
 
-COMPOSITE_TYPES = [
-	"_chapter_marker",
-	"video_range",
-	"video_transition",
-	"end_time",
-]
 COLUMN_CASTS = {
 	"chapter_markers": "chapter_marker[]",
 	"video_ranges": "video_range[]",
@@ -36,6 +30,52 @@ def get_column_placeholder(column):
 			placeholder, psycopg2.sql.SQL(COLUMN_CASTS[column])
 		)
 	return placeholder
+
+
+def register_types(conn):
+	"""Looks up all custom composite types + domains in the type catalog
+	and registers them globally with psycopg2 for automatic conversion.
+	Only checks in the public namespace to avoid system types or schemas we can't access.
+	"""
+	# Find custom composite types.
+	# We use pg_class.relkind = 'c' instead of pg_type.typtype = 'c' to find them
+	# because this excludes certain implicit types generated from tables, views, etc.
+	result = query(conn, """
+		SELECT c.relname AS name
+		FROM pg_class c
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		WHERE
+			c.relkind = 'c'
+			AND n.nspname = 'public'
+	""")
+	rows = result.fetchall() # fully read result before reusing conn
+	for row in rows:
+		# globally is required in order for the later string_types lookups to work
+		psycopg2.extras.register_composite(row.name, conn, globally=True)
+
+	# Find custom domains using pgtype.typtype = 'd'.
+	# In addition to the same namespace filtering as above, we also need
+	# the base type and the array type (and check the array type exists).
+	result = query(conn, """
+		SELECT 
+			t.typname AS name,
+			t.typarray AS array_oid,
+			t.typbasetype AS base_oid
+		FROM pg_type t
+		JOIN pg_namespace n ON n.oid = t.typnamespace
+		WHERE
+			t.typtype = 'd'
+			AND t.typarray != 0
+			AND n.nspname = 'public'
+	""")
+	rows = result.fetchall() # fully read result before reusing conn
+
+	for row in rows:
+		# Despite the name, "string_types" here is the registry of all types.
+		base_caster = psycopg2.extensions.string_types[row.base_oid]
+		array_name = f"{row.name.upper()}[]"
+		array_caster = psycopg2.extensions.new_array_type((row.array_oid,), array_name, base_caster)
+		psycopg2.extensions.register_type(array_caster)
 
 
 class DBManager(object):
@@ -76,8 +116,9 @@ class DBManager(object):
 		conn.isolation_level = psycopg2.extensions.ISOLATION_LEVEL_SERIALIZABLE
 		conn.autocommit = True
 		if self.register_types:
-			for composite in COMPOSITE_TYPES:
-				psycopg2.extras.register_composite(composite, conn)
+			register_types(conn)
+			# register_types registers globally, it's a one-shot operation
+			self.register_types = False
 		return conn
 
 

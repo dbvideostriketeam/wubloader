@@ -1,7 +1,4 @@
 
--- NOTE: If you add any new composite types here,
--- they also need to be added to common/common/database.py!
-
 CREATE TYPE event_state as ENUM (
 	'UNEDITED',
 	'EDITED',
