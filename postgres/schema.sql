@@ -59,10 +59,13 @@ CREATE TYPE _chapter_marker AS (
 );
 
 -- The chapter marker type, but with fields non-NULL.
+-- Note we need to specifically allow for a fully NULL value or weird things happen.
 CREATE DOMAIN chapter_marker AS _chapter_marker CHECK (
-	(VALUE).video_range IS NOT NULL
-	AND (VALUE).time IS NOT NULL
-	AND (VALUE).name IS NOT NULL
+	VALUE IS NULL OR (
+		(VALUE).video_range IS NOT NULL
+		AND (VALUE).time IS NOT NULL
+		AND (VALUE).name IS NOT NULL
+	)
 );
 
 -- Each row on the sheet is an event.
