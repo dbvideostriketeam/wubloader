@@ -15,11 +15,13 @@ from psycogreen.gevent import patch_psycopg
 
 
 COMPOSITE_TYPES = [
+	"chapter_marker",
 	"video_range",
 	"video_transition",
 	"end_time",
 ]
 COLUMN_CASTS = {
+	"chapter_markers": "chapter_marker[]",
 	"video_ranges": "video_range[]",
 	"video_transitions": "video_transition[]",
 }
