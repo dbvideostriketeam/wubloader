@@ -15,7 +15,7 @@ from psycogreen.gevent import patch_psycopg
 
 
 COMPOSITE_TYPES = [
-	"chapter_marker",
+	"_chapter_marker",
 	"video_range",
 	"video_transition",
 	"end_time",
