@@ -468,7 +468,7 @@ def main(dbconnect, sync_configs, metrics_port=8005, backdoor_port=0, media_dir=
 			conn = dbmanager.get_conn()
 		except Exception:
 			delay = common.jitter(10)
-			logging.info('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
+			logging.exception('Cannot connect to database. Retrying in {:.0f} s'.format(delay))
 			stop.wait(delay)
 		else:
 			# put it back so it gets reused on next get_conn()
