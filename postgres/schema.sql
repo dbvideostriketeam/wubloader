@@ -60,7 +60,6 @@ CREATE TYPE _chapter_marker AS (
 CREATE DOMAIN chapter_marker AS _chapter_marker CHECK (
 	VALUE IS NULL OR (
 		(VALUE).video_range IS NOT NULL
-		AND (VALUE).time IS NOT NULL
 		AND (VALUE).name IS NOT NULL
 	)
 );
