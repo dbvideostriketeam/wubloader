@@ -130,14 +130,14 @@ def main(
 
 		state["donation_token"] = donation["token"]
 
-	stream = website.event_stream()
-	stream.subscribe_prizes()
-	stream.subscribe_donations(last_seen=state.get("donation_token"))
+	events = website.event_stream()
+	events.subscribe_prizes()
+	events.subscribe_donations(last_seen=state.get("donation_token"))
 
 	for prize in website.prizes():
 		process_prize(prize)
 
-	for message in stream.recv():
+	for message in events.recv():
 		if message.event == "prize":
 			process_prize(message.payload)
 		if message.event == "donation":
