@@ -416,10 +416,13 @@ def update_row(ident, editor=None):
 				for transition in new_row['video_transitions']
 			]
 
+		# Validate and convert chapter markers, if any
 		if new_row.get('chapter_markers') is not None:
 			new_row['chapter_markers'] = [
 				tuple(marker) for marker in new_row['chapter_markers']
 			]
+			if new_row['state'] != 'UNEDITED' and any(marker.time is None for marker in new_row['chapter_markers']):
+				return 'All chapter markers must have a time', 400
 
 		# Convert binary fields from base64 and do basic validation of contents
 		if new_row.get('thumbnail_image') is not None:
