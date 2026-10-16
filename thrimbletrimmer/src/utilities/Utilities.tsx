@@ -2,6 +2,7 @@ import { Component, createSignal, onMount } from "solid-js";
 import { DateTime } from "luxon";
 import Clock from "./Clock";
 import TimeConverter from "./TimeConverter";
+import { dateTimeFromWubloaderTime } from "../common/convertTime";
 
 const Utilities: Component = () => {
 	const [busStartTime, setBusStartTime] = createSignal<DateTime | null>(null);
@@ -9,7 +10,7 @@ const Utilities: Component = () => {
 	onMount(async () => {
 		const dataResponse = await fetch("/thrimshim/defaults");
 		const data = await dataResponse.json();
-		setBusStartTime(DateTime.fromISO(data.bustime_start));
+		setBusStartTime(dateTimeFromWubloaderTime(data.bustime_start));
 	});
 
 	return (
