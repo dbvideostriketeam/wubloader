@@ -355,6 +355,7 @@ const ThumbnailManager: Component = () => {
 			</div>
 			<form
 				onSubmit={async (event) => {
+					event.preventDefault();
 					const submitData = await submitHandler(
 						"",
 						true,
