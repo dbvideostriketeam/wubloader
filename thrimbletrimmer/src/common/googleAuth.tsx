@@ -1,5 +1,6 @@
 import { Accessor, Component, Setter, Show, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
+import { jwtDecode } from "jwt-decode";
 
 export interface GoogleSignInProps {
 	accountToken: Accessor<string | null>;
@@ -12,10 +13,12 @@ const TOKEN_STORAGE_KEY = "thrimbletrimmer.googleToken";
 // fresh sign-in prompt
 function tokenExpiresAt(token: string): number {
 	try {
-		const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
-		const { exp } = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, "=")));
+		const { exp } = jwtDecode(token);
+		if (typeof exp !== "number") {
+			return 0;
+		}
 		const expiresAt = exp * 1000;
-		return typeof exp === "number" && Number.isFinite(expiresAt) ? expiresAt : 0;
+		return Number.isFinite(expiresAt) ? expiresAt : 0;
 	} catch {
 		return 0;
 	}
@@ -25,10 +28,11 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	let loginButtonParent!: HTMLDivElement;
 
 	const [scriptLoaded, setScriptLoaded] = createSignal(false);
-	const [mounted, setMounted] = createSignal(false);
 	const [authConfig] = createResource(async () => {
 		const response = await fetch("/thrimshim/auth-config");
-		if (!response.ok) throw new Error("Unable to load sign-in configuration.");
+		if (!response.ok) {
+			throw new Error("Unable to load sign-in configuration.");
+		}
 		const config = await response.json();
 		if (typeof config.google_client_id !== "string" || !config.google_client_id) {
 			throw new Error("Google sign-in is not configured.");
@@ -50,15 +54,15 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	onMount(() => {
 		try {
 			const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
-			if (token && tokenExpiresAt(token) > Date.now()) props.setAccountToken(token);
+			if (token && tokenExpiresAt(token) > Date.now()) {
+				props.setAccountToken(token);
+			}
 		} catch {
 			// Browser storage is unavailable
 		}
-		setMounted(true);
 	});
 
 	createEffect(() => {
-		if (!mounted()) return;
 		const token = props.accountToken();
 		const expiresAt = token ? tokenExpiresAt(token) : 0;
 		if (token && expiresAt <= Date.now()) {
@@ -71,15 +75,20 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 		} catch {
 			// Browser storage is unavailable but we can still use the token on this pageview
 		}
-		if (!token) return;
+		if (!token) {
+			return;
+		}
 
 		let timer: number;
 		// Clear the token when it expires, rechecking periodically
 		const checkExpiry = () => {
 			window.clearTimeout(timer);
 			const remaining = expiresAt - Date.now();
-			if (remaining <= 0) props.setAccountToken(null);
-			else timer = window.setTimeout(checkExpiry, Math.min(remaining, 2147483647));
+			if (remaining <= 0) {
+				props.setAccountToken(null);
+			} else {
+				timer = window.setTimeout(checkExpiry, Math.min(remaining, 2147483647));
+			}
 		};
 		checkExpiry();
 		window.addEventListener("focus", checkExpiry);
@@ -91,14 +100,15 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 
 	const handleSignOut = () => {
 		props.setAccountToken(null);
-		if (scriptLoaded()) google.accounts.id.disableAutoSelect();
+		if (scriptLoaded()) {
+			google.accounts.id.disableAutoSelect();
+		}
 	};
 
 	createEffect(() => {
 		const loadComplete = scriptLoaded();
-		const mountComplete = mounted();
 		const config = authConfig.error ? undefined : authConfig();
-		if (loadComplete && mountComplete && config) {
+		if (loadComplete && config) {
 			google.accounts.id.initialize({
 				client_id: config.google_client_id,
 				callback: handleSignIn,

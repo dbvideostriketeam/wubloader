@@ -23,6 +23,7 @@
 	"dependencies": {
 		"cropperjs": "2.3.0",
 		"hls.js": "1.7.3",
+		"jwt-decode": "4.0.0",
 		"luxon": "3.7.2",
 		"media-icons": "1.1.5",
 		"solid-js": "1.9.17",
