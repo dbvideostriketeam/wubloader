@@ -1,9 +1,6 @@
 import { Accessor, createSignal, Setter } from "solid-js";
 import { DateTime } from "luxon";
 
-export const CHAPTER_MARKER_DELIMITER = "\n==========\n";
-export const CHAPTER_MARKER_DELIMITER_PARTIAL = "==========";
-
 export interface VideoData {
 	id: string;
 	sheet_name: string;
@@ -48,6 +45,7 @@ export interface VideoData {
 	bustime_start: string;
 	upload_locations: string[];
 	category_notes?: string;
+	chapter_markers?: [number, string | null, string][];
 }
 
 export class RangeData {

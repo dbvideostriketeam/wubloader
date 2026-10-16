@@ -1,7 +1,5 @@
 import { Accessor, Component, createSignal, For, Match, Setter, Show, Switch } from "solid-js";
 import {
-	CHAPTER_MARKER_DELIMITER,
-	CHAPTER_MARKER_DELIMITER_PARTIAL,
 	EditorState,
 	FragmentTimes,
 	RangeData,
@@ -64,19 +62,15 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			props.setEditorState(EditorState.Entry);
 			return;
 		}
-		if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
-			setSubmissionError("Description contains manually entered chapter marker delimiter");
-			props.setEditorState(EditorState.Entry);
-			return;
-		}
 
 		const videoRanges: [string, string][] = [];
 		const transitions: ([string, number] | null)[] = [];
 		const chapters: string[] = [];
+		const chapterMarkers: [number, string | null, string][] = [];
 		let currentRangeStartSecs = 0;
 		let checkedFirstChapter = false;
 		let lastChapterTime: number | null = null;
-		for (const rangeData of props.videoData()) {
+		for (const [rangeDataIndex, rangeData] of props.videoData().entries()) {
 			const rangeStartDate = rangeData.startTime();
 			const rangeEndDate = rangeData.endTime();
 			if (rangeStartDate === null || rangeEndDate === null) {
@@ -144,6 +138,11 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 					const outputVideoTime = `${Math.floor(outputVideoTimeSeconds / 60)}:${Math.floor(outputVideoTimeSeconds % 60)}`;
 					chapters.push(`${outputVideoTime} - ${chapterData.description}`);
+					chapterMarkers.push([
+						rangeDataIndex,
+						wubloaderTimeFromDateTime(chapterData.time!),
+						chapterData.description,
+					]);
 				}
 			}
 
@@ -163,7 +162,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		transitions.shift();
 
 		if (chapters.length > 0) {
-			videoDescription = `${videoDescription}${CHAPTER_MARKER_DELIMITER}${chapters.join("\n")}`;
+			videoDescription = `${videoDescription}\n==========\n${chapters.join("\n")}`;
 		}
 
 		let thumbnailType = props.thumbnailData.type();
@@ -278,6 +277,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_title: videoTitle,
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
+			chapter_markers: chapterMarkers.length === 0 ? null : chapterMarkers,
 			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
@@ -343,15 +343,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		setSubmissionError("");
 
 		let videoDescription = props.videoDescription();
-		if (videoDescription.indexOf(CHAPTER_MARKER_DELIMITER_PARTIAL) !== -1) {
-			setSubmissionError("Description contains manually entered chapter marker delimiter");
-			props.setEditorState(EditorState.Entry);
-			return;
-		}
 
 		const videoRanges: [string | null, string | null][] = [];
 		const transitions: ([string, number] | null)[] = [];
-		const chapterDescriptions: string[] = [];
+		const chapterMarkers: [number, string | null, string][] = [];
 		for (const [rangeDataIndex, rangeData] of props.videoData().entries()) {
 			const rangeStartDate = rangeData.startTime();
 			const rangeEndDate = rangeData.endTime();
@@ -362,16 +357,13 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			if (props.chaptersEnabled()) {
 				for (const chapterData of rangeData.chapters()) {
 					const chapterTime = chapterData.time ? wubloaderTimeFromDateTime(chapterData.time) : null;
-					chapterDescriptions.push(`${rangeDataIndex};${chapterTime} - ${chapterData.description}`);
+					chapterMarkers.push([rangeDataIndex, chapterTime, chapterData.description]);
 				}
 			}
 
 			transitions.push([rangeData.transitionType(), rangeData.transitionSeconds()]);
 		}
 		transitions.shift();
-		if (chapterDescriptions.length > 0) {
-			videoDescription = `${videoDescription}${CHAPTER_MARKER_DELIMITER}${chapterDescriptions.join("\n")}`;
-		}
 
 		const editData = {
 			video_ranges: videoRanges.length === 0 ? null : videoRanges,
@@ -379,6 +371,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_title: props.videoTitle(),
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
+			chapter_markers: chapterMarkers.length === 0 ? null : chapterMarkers,
 			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),
 			public: !makeUnlisted(),
