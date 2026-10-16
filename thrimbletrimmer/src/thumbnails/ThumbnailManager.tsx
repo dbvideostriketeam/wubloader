@@ -85,10 +85,7 @@ const ThumbnailManager: Component = () => {
 			isNaN(locEndX) ||
 			isNaN(locEndY)
 		) {
-			setErrorList((errors) => {
-				errors.push("All crop and location information must be entered.");
-				return errors;
-			});
+			setErrorList((errors) => [...errors, "All crop and location information must be entered."]);
 		}
 
 		const imageFile = formData.get("image") as Blob;
@@ -111,10 +108,7 @@ const ThumbnailManager: Component = () => {
 		if (imageDataURL.startsWith(BASE64_PNG_PREFIX)) {
 			submitData.set("image", imageDataURL.substring(22));
 		} else if (noImageIsError) {
-			setErrorList((errors) => {
-				errors.push("A PNG image must be selected.");
-				return errors;
-			});
+			setErrorList((errors) => [...errors, "A PNG image must be selected."]);
 		}
 
 		const userAccountToken = accountToken();
@@ -138,10 +132,7 @@ const ThumbnailManager: Component = () => {
 		});
 		if (!submitResponse.ok) {
 			const errorText = await submitResponse.text();
-			setErrorList((errors) => {
-				errors.push(errorText);
-				return errors;
-			});
+			setErrorList((errors) => [...errors, errorText]);
 			return null;
 		}
 
