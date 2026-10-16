@@ -230,6 +230,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 		initialVideoData.push(rangeData);
 	}
 
+	if (initialVideoData.length === 0) {
+		initialVideoData.push(new RangeData());
+	}
+
 	let initialTitle = props.data.video_title;
 	if (props.data.category === "RDP" && !initialTitle) {
 		initialTitle = props.data.description;
