@@ -40,7 +40,7 @@ def sold_message(event, prize):
 
 def giveaway_set(event, prize):
 	name = prize_name(event, prize)
-	amount = f"${prize["giveaway_amount"]}"
+	amount = f"${prize["giveaway_amount"]["amount"]}"
 	time = lambda s: f"<time:{s}>"
 	return f"{name} is being given away for {amount} from {time(prize['starts_at'])} to {time(prize['ends_at'])}"
 
