@@ -39,6 +39,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		props.uploadLocations.length > 0 ? props.uploadLocations[0] : "",
 	);
 	const [uploaderAllowlist, setUploaderAllowlist] = createSignal("");
+	const [submissionSuccessMessage, setSubmissionSuccessMessage] = createSignal("");
 	const [submissionError, setSubmissionError] = createSignal("");
 	const [needsOverrideMessage, setNeedsOverrideMessage] = createSignal("");
 
@@ -53,6 +54,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 	const submitVideo = async (event) => {
 		props.setEditorState(EditorState.Submitting);
+		setSubmissionSuccessMessage("");
 		setSubmissionError("");
 
 		const videoTitle = props.videoTitle();
@@ -320,6 +322,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		if (submitResponse.ok) {
 			props.setEditorState(EditorState.Submitted);
 			setNeedsOverrideMessage("");
+			setSubmissionSuccessMessage("Video submitted.");
 		} else {
 			props.setEditorState(EditorState.Entry);
 			if (submitResponse.status === 409) {
@@ -334,6 +337,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 	const saveVideoDraft = async (event) => {
 		props.setEditorState(EditorState.Submitting);
+		setSubmissionSuccessMessage("");
 		setSubmissionError("");
 
 		let videoDescription = props.videoDescription();
@@ -414,6 +418,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		props.setEditorState(EditorState.Entry);
 		if (submitResponse.ok) {
 			setNeedsOverrideMessage("");
+			setSubmissionSuccessMessage("Draft saved.");
 		} else {
 			if (submitResponse.status === 409) {
 				setNeedsOverrideMessage(await submitResponse.text());
@@ -456,6 +461,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					</Show>
 				</button>
 			</div>
+			<div class={styles.submissionSuccess}>{submissionSuccessMessage()}</div>
 			<div class={styles.submissionError}>{submissionError()}</div>
 			<Show when={showAdvancedSubmissionOptions()}>
 				<div>
