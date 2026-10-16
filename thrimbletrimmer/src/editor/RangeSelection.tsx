@@ -402,6 +402,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 											createEffect(() => {
 												const chapterTimeString = enteredChapterTime();
 												const fragments = props.videoFragments();
+												if (fragments.length === 0) {
+													// If there are no fragments, we haven't loaded any video yet, which doesn't mean that we should throw away all the chapter times.
+													return;
+												}
 												if (chapterTimeString === "") {
 													const chapterData = untrack(currentChapter);
 													chapterData.time = null;
