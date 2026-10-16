@@ -89,7 +89,7 @@ def main(
 
 	def log(data):
 		if log_file is not None:
-			log["time"] = time.time()
+			data["time"] = time.time()
 			log_file.write(json.dumps(data) + "\n")
 			log_file.flush()
 
