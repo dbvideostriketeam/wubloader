@@ -65,7 +65,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 		const videoRanges: [string, string][] = [];
 		const transitions: ([string, number] | null)[] = [];
-		const chapters: string[] = [];
 		const chapterMarkers: [number, string | null, string][] = [];
 		let currentRangeStartSecs = 0;
 		let checkedFirstChapter = false;
@@ -137,7 +136,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					lastChapterTime = outputVideoTimeSeconds;
 
 					const outputVideoTime = `${Math.floor(outputVideoTimeSeconds / 60)}:${Math.floor(outputVideoTimeSeconds % 60)}`;
-					chapters.push(`${outputVideoTime} - ${chapterData.description}`);
 					chapterMarkers.push([
 						rangeDataIndex,
 						wubloaderTimeFromDateTime(chapterData.time!),
@@ -160,10 +158,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			}
 		}
 		transitions.shift();
-
-		if (chapters.length > 0) {
-			videoDescription = `${videoDescription}\n==========\n${chapters.join("\n")}`;
-		}
 
 		let thumbnailType = props.thumbnailData.type();
 		let thumbnailTemplate: string | null = null;
