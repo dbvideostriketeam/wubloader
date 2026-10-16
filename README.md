@@ -46,6 +46,21 @@ A docker-compose file is provided to run all components. See `docker-compose.jso
 to set configuration options, then generate the compose file with `./generate-docker-compose`.
 Then run `docker-compose up`.
 
+For local configuration, create a git-ignored `docker-compose.local.jsonnet`
+with whatever settings you want to change:
+
+```jsonnet
+(import 'docker-compose.jsonnet') + {
+  segments_path:: '/data/wubloader/segments',
+  enabled+:: { postgres: true },
+}
+```
+
+`./generate-docker-compose` uses this file when present, otherwise it uses
+`docker-compose.jsonnet`. To override simple boolean, string, or numeric values,
+use `::`. To merge changes into an array (such as the list of components to
+run), use `+::`.
+
 To install wubloader, please refer to [INSTALL.md](./INSTALL.md) for more granular steps. 
 
 #### Alternate Setups
