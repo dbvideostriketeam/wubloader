@@ -107,6 +107,8 @@
   localhost:: "node_name", // the name in the nodes table of the database
   
   authentication:: true, // set to false to disable auth in thrimshim
+  // Client ID for a Web Application client in Google Auth Platform.
+  google_client_id:: "345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com",
 
   thrimbletrimmer:: true, // set to false to not have nginx serve thrimbletrimmer pages.
   buscribe:: true, // set to false to not have nginx serve buscribe pages.
@@ -572,7 +574,7 @@
       // Expose on the configured host port by mapping that port to the default
       // port for thrimshim, which is 8004.
       [if "thrimshim" in $.ports then "ports"]: ["%s:8004" % $.ports.thrimshim],
-      environment: $.env,
+      environment: $.env + { GOOGLE_CLIENT_ID: $.google_client_id },
     },
 
     [if $.enabled.sheetsync then "sheetsync"]: {

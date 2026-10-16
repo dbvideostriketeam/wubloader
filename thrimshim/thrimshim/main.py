@@ -2,6 +2,7 @@ import datetime
 from functools import wraps
 import json
 import logging
+import os
 import re
 
 import argh
@@ -23,6 +24,10 @@ import google.oauth2.id_token
 import google.auth.transport.requests
 
 app = flask.Flask('thrimshim')
+app.config['GOOGLE_CLIENT_ID'] = os.environ.get(
+	'GOOGLE_CLIENT_ID',
+	'345276493482-r84m2giavk10glnmqna0lbq8e1hdaus0.apps.googleusercontent.com',
+)
 app.after_request(after_request)
 
 
@@ -76,7 +81,7 @@ def check_user(request, role):
 		return 'User token required', 401
 	# check whether token is valid
 	try:
-		idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), None)
+		idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), app.config['GOOGLE_CLIENT_ID'])
 		if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
 			raise ValueError('Wrong issuer.')
 	except ValueError:
@@ -134,6 +139,15 @@ def authenticate_editor(f):
 @authenticate_editor
 def test(editor=None):
 	return json_response(editor)
+
+
+@app.route('/thrimshim/auth-config')
+@request_stats
+def auth_config():
+	"""Public runtime configuration for Google sign-in; client IDs are not secrets."""
+	response = json_response({"google_client_id": app.config['GOOGLE_CLIENT_ID']})
+	response.headers['Cache-Control'] = 'no-store'
+	return response
 
 
 # To make nginx proxying simpler, we want to allow /metrics/* to work
