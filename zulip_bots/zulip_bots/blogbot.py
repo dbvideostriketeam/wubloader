@@ -110,7 +110,7 @@ def find_images(post):
 	def _find_images(block):
 		if block["type"] == "image":
 			yield block["attrs"]["url"]
-		for child in block.get("content", []):
+		for child in block.get("content") or []:
 			yield from _find_images(child)
 	yield from _find_images(post["description"])
 
