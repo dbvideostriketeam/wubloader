@@ -1,20 +1,24 @@
-import {
-	Accessor,
-	Component,
-	Setter,
-	createEffect,
-	createSignal,
-	createResource,
-	Match,
-	onMount,
-	Switch,
-	Show,
-} from "solid-js";
+import { Accessor, Component, Setter, Show, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
 
 export interface GoogleSignInProps {
 	accountToken: Accessor<string | null>;
 	setAccountToken: Setter<string | null>;
+}
+
+const TOKEN_STORAGE_KEY = "thrimbletrimmer.googleToken";
+
+// Tokens by default expire after an hour, we need to detect this to show the user a
+// fresh sign-in prompt
+function tokenExpiresAt(token: string): number {
+	try {
+		const payload = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+		const { exp } = JSON.parse(atob(payload.padEnd(Math.ceil(payload.length / 4) * 4, "=")));
+		const expiresAt = exp * 1000;
+		return typeof exp === "number" && Number.isFinite(expiresAt) ? expiresAt : 0;
+	} catch {
+		return 0;
+	}
 }
 
 export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
@@ -39,17 +43,56 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 		},
 	});
 
-	const handleSignIn = (response) => {
+	const handleSignIn = (response: google.accounts.id.CredentialResponse) => {
 		props.setAccountToken(response.credential);
 	};
 
-	const handleSignOut = (event) => {
-		props.setAccountToken(null);
-	};
-
 	onMount(() => {
+		try {
+			const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+			if (token && tokenExpiresAt(token) > Date.now()) props.setAccountToken(token);
+		} catch {
+			// Browser storage is unavailable
+		}
 		setMounted(true);
 	});
+
+	createEffect(() => {
+		if (!mounted()) return;
+		const token = props.accountToken();
+		const expiresAt = token ? tokenExpiresAt(token) : 0;
+		if (token && expiresAt <= Date.now()) {
+			props.setAccountToken(null);
+			return;
+		}
+		try {
+			if (token) sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+			else sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+		} catch {
+			// Browser storage is unavailable but we can still use the token on this pageview
+		}
+		if (!token) return;
+
+		let timer: number;
+		// Clear the token when it expires, rechecking periodically
+		const checkExpiry = () => {
+			window.clearTimeout(timer);
+			const remaining = expiresAt - Date.now();
+			if (remaining <= 0) props.setAccountToken(null);
+			else timer = window.setTimeout(checkExpiry, Math.min(remaining, 2147483647));
+		};
+		checkExpiry();
+		window.addEventListener("focus", checkExpiry);
+		onCleanup(() => {
+			window.clearTimeout(timer);
+			window.removeEventListener("focus", checkExpiry);
+		});
+	});
+
+	const handleSignOut = () => {
+		props.setAccountToken(null);
+		if (scriptLoaded()) google.accounts.id.disableAutoSelect();
+	};
 
 	createEffect(() => {
 		const loadComplete = scriptLoaded();
@@ -60,20 +103,20 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 				client_id: config.google_client_id,
 				callback: handleSignIn,
 			});
-			google.accounts.id.renderButton(loginButtonParent, { theme: "outline_dark", width: "250" });
+			google.accounts.id.renderButton(loginButtonParent, { theme: "outline_dark", width: 250 });
 		}
 	});
 
 	return (
-		<>
+		<div>
 			<Show when={authConfig.error}>
 				<span role="alert">Unable to load sign-in configuration. Please reload to try again.</span>
 			</Show>
-			<Switch fallback={<a onClick={handleSignOut}>Sign Out of Google</a>}>
-				<Match when={props.accountToken() === null}>
-					<div ref={loginButtonParent}></div>
-				</Match>
-			</Switch>
-		</>
+			<div ref={loginButtonParent} hidden={!!props.accountToken()}></div>
+			<Show when={props.accountToken()}>
+				<span>Signed in. </span>
+				<button type="button" onClick={handleSignOut}>Sign out</button>
+			</Show>
+		</div>
 	);
 };
