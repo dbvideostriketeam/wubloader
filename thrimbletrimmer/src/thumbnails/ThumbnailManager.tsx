@@ -142,6 +142,7 @@ const ThumbnailManager: Component = () => {
 				errors.push(errorText);
 				return errors;
 			});
+			return null;
 		}
 
 		form.reset();
