@@ -1,4 +1,13 @@
-import { Accessor, Component, Setter, createEffect, createSignal, onMount } from "solid-js";
+import {
+	Accessor,
+	Component,
+	Setter,
+	createEffect,
+	createSignal,
+	Match,
+	onMount,
+	Switch,
+} from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
 
 export interface GoogleSignInProps {
@@ -23,6 +32,10 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 		props.setAccountToken(response.credential);
 	};
 
+	const handleSignOut = (event) => {
+		props.setAccountToken(null);
+	};
+
 	onMount(() => {
 		setMounted(true);
 	});
@@ -39,5 +52,11 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 		}
 	});
 
-	return <div ref={loginButtonParent}></div>;
+	return (
+		<Switch fallback={<a onClick={handleSignOut}>Sign Out of Google</a>}>
+			<Match when={props.accountToken() === null}>
+				<div ref={loginButtonParent}></div>
+			</Match>
+		</Switch>
+	);
 };
