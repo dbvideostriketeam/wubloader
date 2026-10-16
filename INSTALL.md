@@ -27,7 +27,7 @@ Use github to clone the repository into a working directory.  If you intend to m
   
 ## Generate the docker-compose file
 
-You can edit the `docker-compose.jsonnet` file to set the configuration options. Important options include:
+You can create a `docker-compose.local.jsonnet` file to override any configuration options from `docker-compose.jsonnet`, or edit `docker-compose.jsonnet` directly. Important options include:
 
 * `channel`, the Twitch channel to capture from.
 * `segments_path`, the local path to save segments to.
@@ -38,11 +38,49 @@ You can edit the `docker-compose.jsonnet` file to set the configuration options.
 * `cutter_config`, the configuration for cutter upload locations.
 * `default_location`, the default cutter upload location.
 
+Here is an example of how to set these and other configuration options in a `docker-compose.local.jsonnet` file:
+
+```jsonnet
+(import 'docker-compose.jsonnet') + {
+  // In general, just list the variables you want to override using the same format as docker-compose.jsonnet
+  image_tag:: '5b44a5a0c5765a63c52c7efc491892f6fba59f3f',
+  localhost:: 'your_system_hostname',
+  channels:: [
+    'desertbus!',
+  ],
+
+  // You can edit multiple settings within a nested variable, without overriding the whole object, using +::
+  db_args+:: {
+    user: 'wubloader',
+    password: 'correct horse battery staple',
+  },
+  chat_archiver+:: {
+    user: 'Your_Twitch_Name',
+    backfill: false,
+  },
+  enabled+:: {
+    cutter: false,
+    postgres: true,
+    chat_archiver: true,
+  },
+}
+```
+
+There is no need to include any variables that you do not want to change, and you do not need to worry about other variables that may dynamically change based on your changes. For example, if you set:
+
+```jsonnet
+(import 'docker-compose.jsonnet') + {
+  thrimbletrimmer_web_dev_path:: '/repos/wubloader/thrimbletrimmer/dist/',
+}
+```
+
+`docker-compose.jsonnet` will later conditionally mount that path into the `nginx` container. It is not necessary for you to do anything special to make this happen - do not try to define `nginx.volumes` in your `docker-compose.local.jsonnet`. The conditionals in a `jsonnet` file see the final merged state of the variables, after your overrides, so overriding a variable in your `docker-compose.local.jsonnet` is as if you had changed that variable wherever in `docker-compose.jsonnet` it is defined.
+
 To generate the `docker-compose.yml` file used by `docker-compose`, run `generate-docker-compose`
 
   `bash generate-docker-compose`
   
-After making any changes to `docker-compose.jsonnet`, you will need to rerun `generate-docker-compose`.
+After making any changes to `docker-compose.jsonnet` or `docker-compose.local.jsonnet`, you will need to rerun `generate-docker-compose`.
 
 By default the `downloader`, `restreamer`, `backfiller`, `cutter`, `thrimshim`, `segment_coverage` and `nginx` services of the wubloader will be run. To change which services are run edit the `enabled` object in `docker-compose.jsonnet`. A complete wubloader set up also requires one and only one `database` service (though having a backup database is a good idea), one and only one `sheetsync` service and one and only one `playlist_manager` service.
 
