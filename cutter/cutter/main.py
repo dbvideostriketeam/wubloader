@@ -123,6 +123,7 @@ def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
 		while chapter_markers and chapter_markers[0].video_range <= index:
 			chapter = chapter_markers.pop(0)
 			assert chapter.video_range == index, "Chapter markers not in order"
+			assert chapter.time is not None, "Chapter marker time not set"
 			assert video_range.start <= chapter.time <= video_range.end, "Chapter marker not in time range"
 			video_time = range_start_video_time + (chapter.time - video_range.start).total_seconds()
 			yield (video_time, chapter.name)
