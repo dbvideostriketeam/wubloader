@@ -9,6 +9,7 @@ setup(
 		"flask",
 		"gevent",
 		"google-auth",
+		"PyJWT[crypto]>=2.10.1,<3",
 		"psycogreen",
 		"psycopg2",
 		"python-dateutil",
