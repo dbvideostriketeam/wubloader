@@ -24,7 +24,9 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	const [mounted, setMounted] = createSignal(false);
 	const [authConfig] = createResource(async () => {
 		const response = await fetch("/thrimshim/auth-config");
-		if (!response.ok) throw new Error("Unable to load sign-in configuration.");
+		if (!response.ok) {
+			throw new Error("Unable to load sign-in configuration.");
+		}
 		const config = await response.json();
 		if (typeof config.google_client_id !== "string" || !config.google_client_id) {
 			throw new Error("Google sign-in is not configured.");
@@ -65,15 +67,17 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	});
 
 	return (
-		<>
-			<Show when={authConfig.error}>
+		<Show
+			when={!authConfig.error}
+			fallback={
 				<span role="alert">Unable to load sign-in configuration. Please reload to try again.</span>
-			</Show>
+			}
+		>
 			<Switch fallback={<a onClick={handleSignOut}>Sign Out of Google</a>}>
 				<Match when={props.accountToken() === null}>
 					<div ref={loginButtonParent}></div>
 				</Match>
 			</Switch>
-		</>
+		</Show>
 	);
 };
