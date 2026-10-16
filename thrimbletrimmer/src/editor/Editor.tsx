@@ -18,7 +18,6 @@ import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Editor.module.scss";
 import {
-	CHAPTER_MARKER_DELIMITER,
 	ChapterData,
 	EditorState,
 	FragmentTimes,
@@ -166,35 +165,26 @@ const EditorContent: Component<ContentProps> = (props) => {
 		dateTimeFromWubloaderTime(props.data.bustime_start)!,
 	);
 	const [chaptersEnabled, setChaptersEnabled] = createSignal(
-		(props.data.video_description ?? "").indexOf(CHAPTER_MARKER_DELIMITER) !== -1,
+		props.data.hasOwnProperty("chapter_markers"),
 	);
 
-	const descriptionParts = (props.data.video_description ?? "").split(CHAPTER_MARKER_DELIMITER, 2);
-	const description = descriptionParts[0];
-	const chaptersRawString = descriptionParts.length > 1 ? descriptionParts[1] : "";
-	const chaptersRawLines = chaptersRawString === "" ? [] : chaptersRawString.split("\n");
+	const description = props.data.video_description;
 	const chaptersByRange: ChapterData[][] = [];
-	for (const chapterLine of chaptersRawLines) {
-		const parts = chapterLine.split(" - ");
-		const timeData = parts.shift();
-		if (!timeData) {
-			continue;
+	if (props.data.chapter_markers) {
+		for (const chapterMarker of props.data.chapter_markers) {
+			const rangeIndex = chapterMarker[0];
+			const time = dateTimeFromWubloaderTime(chapterMarker[1]);
+
+			const chapterDefinition = {
+				time: time,
+				description: chapterMarker[2],
+			};
+
+			while (chaptersByRange.length <= rangeIndex) {
+				chaptersByRange.push([]);
+			}
+			chaptersByRange[rangeIndex].push(chapterDefinition);
 		}
-		const description = parts.join(" - ");
-
-		const timeParts = timeData.split(";");
-		const rangeIndex = +timeParts[0];
-		const time = dateTimeFromWubloaderTime(timeParts[1]);
-
-		const chapterDefinition = {
-			time: time,
-			description: description,
-		};
-
-		while (chaptersByRange.length <= rangeIndex) {
-			chaptersByRange.push([]);
-		}
-		chaptersByRange[rangeIndex].push(chapterDefinition);
 	}
 	for (const rangeChapters of chaptersByRange) {
 		rangeChapters.sort((a, b) => {
@@ -254,7 +244,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
-	const [videoDescription, setVideoDescription] = createSignal(description);
+	const [videoDescription, setVideoDescription] = createSignal(description ?? "");
 	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
 	const [allowHoles, setAllowHoles] = createSignal(false);
 
@@ -410,6 +400,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		if (videoData.length != (props.data?.video_ranges?.length ?? 0)) {
 			return true;
 		}
+		let currentVideoChapterIndex = 0;
 		for (let rangeIndex = 0; rangeIndex < videoData.length; rangeIndex++) {
 			const origRangeStart = dateTimeFromWubloaderTime(props.data!.video_ranges![rangeIndex][0]);
 			const rangeStart = videoRangeData[rangeIndex].startTime();
@@ -438,17 +429,34 @@ const EditorContent: Component<ContentProps> = (props) => {
 				}
 			}
 
-			// TODO: When chapter markers are in the database, compare those, too
+			for (const chapterData of videoRangeData[rangeIndex].chapters()) {
+				if (currentVideoChapterIndex >= (props.data?.chapter_markers?.length ?? 0)) {
+					return true;
+				}
+				const currentVideoChapter = props.data!.chapter_markers![currentVideoChapterIndex];
+				const currentVideoChapterTime = dateTimeFromWubloaderTime(currentVideoChapter[1]);
+				if (
+					currentVideoChapter[0] !== rangeIndex ||
+					currentVideoChapterTime !== chapterData.time ||
+					currentVideoChapter[2] !== chapterData.description
+				) {
+					return true;
+				}
+
+				currentVideoChapterIndex++;
+			}
+		}
+		if (currentVideoChapterIndex !== (props.data?.chapter_markers?.length ?? 0)) {
+			return true;
 		}
 
 		if (videoTitle() !== (props.data?.video_title ?? "")) {
 			return true;
 		}
 
-		// TODO: When chapter markers are in the database, stop comparing the description this way (compare them directly instead)
-		let origDescription = props.data?.video_description ?? "";
-		if (origDescription.indexOf(CHAPTER_MARKER_DELIMITER) !== -1) {
-			origDescription = origDescription.split(CHAPTER_MARKER_DELIMITER, 1)[0];
+		const origDescription = props.data?.video_description ?? "";
+		if (videoDescription() !== origDescription) {
+			return true;
 		}
 
 		const tags = videoTags();
