@@ -102,3 +102,17 @@ To promote the standby server to primary touch the trigger file in the docker co
 `docker exec wubloader_postgres_1 touch /tmp/touch_to_promote_to_master`
 
 Be careful to prevent the original primary from restarting as another primary.
+
+### Google sign-in client
+
+To use your own Google OAuth Web Application client, set `google_client_id` in
+`docker-compose.jsonnet`, regenerate Compose, and recreate thrimshim. Register
+this deployment's browser origin (scheme, hostname, and port) in the client's
+Authorized JavaScript origins. No client secret or redirect endpoint is needed.
+
+Thrimshim passes the public client ID to the frontend through
+`/thrimshim/auth-config` and uses the same ID to validate token audiences. When
+running thrimshim outside Compose, set `GOOGLE_CLIENT_ID` in its environment.
+The default remains the existing Wubloader client ID. The frontend and backend
+must both be updated when first deploying this feature; later client ID changes
+only require recreating thrimshim, without rebuilding the frontend.
