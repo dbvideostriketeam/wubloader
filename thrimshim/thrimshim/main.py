@@ -384,6 +384,8 @@ def update_row(ident, editor=None):
 			# Include headers and footers
 			new_row['video_title'] = app.title_header + new_row['video_title']
 
+		is_draft = new_row['state'] == 'UNEDITED'
+
 		# Validate youtube requirements on title and description
 		if len(new_row['video_title']) > MAX_TITLE_LENGTH:
 			return 'Title must be {} characters or less, including prefix'.format(MAX_TITLE_LENGTH), 400
@@ -404,9 +406,13 @@ def update_row(ident, editor=None):
 				return 'There must be exactly {} transitions for {} ranges'.format(
 					num_ranges - 1, num_ranges,
 				)
-			for start, end in new_row['video_ranges']:
-				if start > end:
-					return 'Range start must be less than end', 400
+			for idx, (start, end) in enumerate(new_row['video_ranges']):
+				if start is None or end is None:
+					if not is_draft:
+						return f"Range {idx} must contain a start and end time", 400
+				else:
+					if start > end:
+						return f"Range {idx} start must be less than end", 400
 
 			# We need these to be tuples not lists for psycopg2 to do the right thing,
 			# but since they come in as JSON they are currently lists.
