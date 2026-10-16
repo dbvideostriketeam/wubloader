@@ -424,11 +424,23 @@ def update_row(ident, editor=None):
 
 		# Validate and convert chapter markers, if any
 		if new_row.get('chapter_markers') is not None:
+			ranges = new_row.get("video_ranges")
+			if ranges is None:
+				return "Cannot set chapters with no video ranges", 400
+			for idx, (range_idx, marker_time, name) in enumerate(new_row['chapter_markers']):
+				if not (0 <= range_idx < len(ranges)):
+					return f"Chapter {idx} references non-existent video range {range_idx}", 400
+				if marker_time is None:
+					if not is_draft:
+						return f"Chapter {idx} must have a time", 400
+				else:
+					start, end = ranges[range_idx]
+					if (start is not None and marker_time < start) or (end is not None and end < marker_time):
+						return f"Chapter {idx} time is not in given range", 400
+				
 			new_row['chapter_markers'] = [
 				tuple(marker) for marker in new_row['chapter_markers']
 			]
-			if new_row['state'] != 'UNEDITED' and any(marker.time is None for marker in new_row['chapter_markers']):
-				return 'All chapter markers must have a time', 400
 
 		# Convert binary fields from base64 and do basic validation of contents
 		if new_row.get('thumbnail_image') is not None:
