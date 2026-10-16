@@ -1,6 +1,7 @@
-import { Accessor, Component, Setter, Show, createEffect, createResource, createSignal, onCleanup, onMount } from "solid-js";
+import { Accessor, Component, Setter, Show, createEffect, createResource, createSignal, onMount } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
 import { jwtDecode } from "jwt-decode";
+import { createTimeoutLoop } from "@solid-primitives/timer";
 
 export interface GoogleSignInProps {
 	accountToken: Accessor<string | null>;
@@ -79,23 +80,12 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 			return;
 		}
 
-		let timer: number;
-		// Clear the token when it expires, rechecking periodically
 		const checkExpiry = () => {
-			window.clearTimeout(timer);
-			const remaining = expiresAt - Date.now();
-			if (remaining <= 0) {
+			if (expiresAt <= Date.now()) {
 				props.setAccountToken(null);
-			} else {
-				timer = window.setTimeout(checkExpiry, Math.min(remaining, 2147483647));
 			}
 		};
-		checkExpiry();
-		window.addEventListener("focus", checkExpiry);
-		onCleanup(() => {
-			window.clearTimeout(timer);
-			window.removeEventListener("focus", checkExpiry);
-		});
+		createTimeoutLoop(checkExpiry, () => Math.min(expiresAt - Date.now(), 2147483647));
 	});
 
 	const handleSignOut = () => {
