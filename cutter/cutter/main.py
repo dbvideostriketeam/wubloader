@@ -533,24 +533,27 @@ class Cutter(object):
 			# from the upload backend are not recoverable.
 
 		def generate_thumbnail():
+			# determine attribution first, before early returns
+			attribution = None
+			if job.thumbnail_mode == 'TEMPLATE':
+				template = get_template(self.conn, job.thumbnail_template)
+				attribution = template.attribution
+
 			# no need to generate if it already exists, or no thumbnail is desired
 			if job.thumbnail_mode == 'NONE':
-				return None
+				return None, attribution
 			if job.thumbnail_image is not None:
-				return job.thumbnail_image
+				return job.thumbnail_image, attribution
 
 			frame = extract_frame(job.thumbnail_segments, job.thumbnail_time)
 			# collect chunks into one bytestring as we need to use it multiple times
 			frame = b''.join(frame)
 
-			attribution = None
 			if job.thumbnail_mode == 'BARE':
 				image_data = frame
 			elif job.thumbnail_mode == 'TEMPLATE':
-				template = get_template(self.conn, job.thumbnail_template)
 				self.logger.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 				image_data = compose_thumbnail_template(template.image, frame, job.thumbnail_crop, job.thumbnail_location)
-				attribution = template.attribution
 			else:
 				# shouldn't be able to happen given database constraints
 				assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
