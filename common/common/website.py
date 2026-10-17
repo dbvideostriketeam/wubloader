@@ -150,10 +150,10 @@ def block_to_md(block):
 	if block["type"] in ("gallery", "bulletList", "orderedList"):
 		return "\n".join(
 			f"* {block_to_md(child)}\n"
-			for child in block["content"]
+			for child in block.get("content") or []
 		)
 
-	inner = "".join(block_to_md(child) for child in block["content"])
+	inner = "".join(block_to_md(child) for child in block.get("content") or [])
 
 	if block["type"] == "heading":
 		level = block["attrs"]["level"]
