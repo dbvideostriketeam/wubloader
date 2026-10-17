@@ -413,6 +413,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 				const renderPreview = () => {
 					canvasContext.reset();
+					canvasContext.scale(0.25, 0.25); // The scaling used here is relative to a base size of 1280x720.
 					canvasContext.drawImage(
 						cropImage,
 						cropX(),
@@ -693,7 +694,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 			</Show>
 			<Show when={canShowCropTools() && showThumbnailPreview()}>
 				<div>
-					<canvas width={1280} height={720} ref={previewCanvas}></canvas>
+					<canvas width={320} height={180} ref={previewCanvas}></canvas>
 				</div>
 			</Show>
 		</div>
