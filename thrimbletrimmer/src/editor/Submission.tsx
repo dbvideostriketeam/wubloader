@@ -268,7 +268,9 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailType = ThumbnailType.CustomThumbnail;
 		}
 
-		let allowedUploaders: string[] | null = uploaderAllowlist().split(",").filter((name) => name !== "");
+		let allowedUploaders: string[] | null = uploaderAllowlist()
+			.split(",")
+			.filter((name) => name !== "");
 		if (allowedUploaders.length === 0) {
 			allowedUploaders = null;
 		}
