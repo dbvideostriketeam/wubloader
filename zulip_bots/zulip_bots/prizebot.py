@@ -117,6 +117,7 @@ def main(
 			send(stream, "Bids", high_bid(event, prize))
 
 		state["prizes"][id] = prize
+		save_state()
 
 	def process_donation(donation):
 		log({"donation": donation})
@@ -129,6 +130,7 @@ def main(
 		send(firehose_stream, "Donations", message)
 
 		state["donation_token"] = donation["token"]
+		save_state()
 
 	events = website.event_stream()
 	events.subscribe_prizes()
