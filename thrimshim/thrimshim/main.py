@@ -20,8 +20,9 @@ from common import database, dateutil, requests, website
 from common.flask_stats import request_stats, after_request
 from common.segments import KNOWN_XFADE_TRANSITIONS, CUSTOM_XFADE_TRANSITIONS
 
-import google.oauth2.id_token
-import google.auth.transport.requests
+import jwt
+
+from thrimshim.google_auth import verify_google_identity
 
 app = flask.Flask('thrimshim')
 app.config['GOOGLE_CLIENT_ID'] = os.environ.get(
@@ -79,12 +80,12 @@ def check_user(request, role):
 		userToken = request.json['token']
 	except (KeyError, TypeError):
 		return 'User token required', 401
-	# check whether token is valid
+	# check whether token is valid, except do not check whether it is expired
 	try:
-		idinfo = google.oauth2.id_token.verify_oauth2_token(userToken, google.auth.transport.requests.Request(), app.config['GOOGLE_CLIENT_ID'])
+		idinfo = verify_google_identity(userToken, app.config['GOOGLE_CLIENT_ID'])
 		if idinfo['iss'] not in ['accounts.google.com', 'https://accounts.google.com']:
 			raise ValueError('Wrong issuer.')
-	except ValueError:
+	except (ValueError, jwt.PyJWTError):
 		return 'Invalid token. Access denied.', 403
 
 	# check whether user is in the database

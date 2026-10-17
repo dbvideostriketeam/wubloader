@@ -5,9 +5,7 @@ import {
 	createEffect,
 	createSignal,
 	createResource,
-	Match,
 	onMount,
-	Switch,
 	Show,
 } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
@@ -17,11 +15,12 @@ export interface GoogleSignInProps {
 	setAccountToken: Setter<string | null>;
 }
 
+const TOKEN_STORAGE_KEY = "thrimbletrimmer.googleToken";
+
 export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	let loginButtonParent!: HTMLDivElement;
 
 	const [scriptLoaded, setScriptLoaded] = createSignal(false);
-	const [mounted, setMounted] = createSignal(false);
 	const [authConfig] = createResource(async () => {
 		const response = await fetch("/thrimshim/auth-config");
 		if (!response.ok) {
@@ -41,23 +40,42 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 		},
 	});
 
-	const handleSignIn = (response) => {
+	const handleSignIn = (response: google.accounts.id.CredentialResponse) => {
 		props.setAccountToken(response.credential);
 	};
 
-	const handleSignOut = (event) => {
+	const handleSignOut = () => {
 		props.setAccountToken(null);
+		if (scriptLoaded()) {
+			google.accounts.id.disableAutoSelect();
+		}
 	};
 
 	onMount(() => {
-		setMounted(true);
+		try {
+			const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+			if (token) {
+				props.setAccountToken(token);
+			}
+		} catch {
+			// Sign-in still works without browser storage.
+		}
+	});
+
+	createEffect(() => {
+		const token = props.accountToken();
+		try {
+			if (token) sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+			else sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+		} catch {
+			// Persistence is optional; authentication is verified by the server.
+		}
 	});
 
 	createEffect(() => {
 		const loadComplete = scriptLoaded();
-		const mountComplete = mounted();
 		const config = authConfig.error ? undefined : authConfig();
-		if (loadComplete && mountComplete && config) {
+		if (loadComplete && config) {
 			google.accounts.id.initialize({
 				client_id: config.google_client_id,
 				callback: handleSignIn,
@@ -73,11 +91,13 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 				<span role="alert">Unable to load sign-in configuration. Please reload to try again.</span>
 			}
 		>
-			<Switch fallback={<a onClick={handleSignOut}>Sign Out of Google</a>}>
-				<Match when={props.accountToken() === null}>
-					<div ref={loginButtonParent}></div>
-				</Match>
-			</Switch>
+			<div>
+				<div ref={loginButtonParent} hidden={!!props.accountToken()}></div>
+				<Show when={props.accountToken()}>
+					<span>Signed in. </span>
+					<button type="button" onClick={handleSignOut}>Sign out</button>
+				</Show>
+			</div>
 		</Show>
 	);
 };
