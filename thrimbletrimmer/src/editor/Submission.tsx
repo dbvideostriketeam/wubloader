@@ -8,6 +8,7 @@ import {
 	VideoData,
 	videoPlayerTimeFromDateTime,
 } from "./common";
+import { bindingInputChecked, bindingInputOnChange } from "../common/binding";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { DateTime } from "luxon";
