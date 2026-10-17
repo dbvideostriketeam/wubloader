@@ -267,6 +267,11 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			thumbnailType = ThumbnailType.CustomThumbnail;
 		}
 
+		let allowedUploaders: string[] | null = uploaderAllowlist().split(",").filter((name) => name !== "");
+		if (allowedUploaders.length === 0) {
+			allowedUploaders = null;
+		}
+
 		const editData = {
 			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
@@ -279,9 +284,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			public: !makeUnlisted(),
 			video_channel: props.streamVideoInfo().streamName,
 			video_quality: props.originalVideoData.video_quality,
-			uploader_whitelist: uploaderAllowlist()
-				.split(",")
-				.filter((name) => name !== ""),
+			uploader_whitelist: allowedUploaders,
 			state: props.originalVideoData.uploader === null ? "EDITED" : "MODIFIED",
 			thumbnail_mode: thumbnailType.toString(),
 			thumbnail_template: thumbnailTemplate,
