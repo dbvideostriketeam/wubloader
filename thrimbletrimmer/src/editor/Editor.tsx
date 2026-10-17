@@ -401,20 +401,20 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 	const dataChanged = () => {
 		const videoRangeData = videoData();
-		if (videoData.length != (props.data?.video_ranges?.length ?? 0)) {
+		if (videoRangeData.length != (props.data?.video_ranges?.length ?? 0)) {
 			return true;
 		}
 		let currentVideoChapterIndex = 0;
-		for (let rangeIndex = 0; rangeIndex < videoData.length; rangeIndex++) {
+		for (let rangeIndex = 0; rangeIndex < videoRangeData.length; rangeIndex++) {
 			const origRangeStart = dateTimeFromWubloaderTime(props.data!.video_ranges![rangeIndex][0]);
 			const rangeStart = videoRangeData[rangeIndex].startTime();
-			if (rangeStart !== origRangeStart) {
+			if (rangeStart?.toMillis() !== origRangeStart?.toMillis()) {
 				return true;
 			}
 
 			const origRangeEnd = dateTimeFromWubloaderTime(props.data!.video_ranges![rangeIndex][1]);
 			const rangeEnd = videoRangeData[rangeIndex].endTime();
-			if (rangeEnd !== origRangeEnd) {
+			if (rangeEnd?.toMillis() !== origRangeEnd?.toMillis()) {
 				return true;
 			}
 
@@ -441,7 +441,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				const currentVideoChapterTime = dateTimeFromWubloaderTime(currentVideoChapter[1]);
 				if (
 					currentVideoChapter[0] !== rangeIndex ||
-					currentVideoChapterTime !== chapterData.time ||
+					currentVideoChapterTime?.toMillis() !== chapterData.time?.toMillis() ||
 					currentVideoChapter[2] !== chapterData.description
 				) {
 					return true;

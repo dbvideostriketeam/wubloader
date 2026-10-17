@@ -25,7 +25,7 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 	});
 
 	createEffect(() => {
-		props.setTags(enteredTags().split(","));
+		props.setTags(enteredTags().split(",").filter((tag) => tag.trim() !== ""));
 	});
 
 	return (
