@@ -33,6 +33,15 @@ interface SubmissionProps {
 	accountToken: Accessor<string | null>;
 }
 
+interface ThumbnailInfo {
+	type: ThumbnailType;
+	template: string | null;
+	time: DateTime | null;
+	image: string | null;
+	crop: [number, number, number, number] | null;
+	location: [number, number, number, number] | null;
+}
+
 export const Submission: Component<SubmissionProps> = (props) => {
 	const [showAdvancedSubmissionOptions, setShowAdvancedSubmissionOptions] = createSignal(false);
 	const [makeUnlisted, setMakeUnlisted] = createSignal(false);
@@ -51,6 +60,123 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	const updateUploadLocation = (event: Event) => {
 		const value = (event.currentTarget as HTMLSelectElement).value;
 		setUploadLocation(value);
+	};
+
+	const getThumbnailInfo = async (): Promise<ThumbnailInfo | null> => {
+		let thumbnailType = props.thumbnailData.type();
+		let thumbnailTemplate: string | null = null;
+		let thumbnailTime: DateTime | null = null;
+		let thumbnailImage: string | null = null;
+		let thumbnailCrop: [number, number, number, number] | null = null;
+		let thumbnailLocation: [number, number, number, number] | null = null;
+
+		if (thumbnailType === ThumbnailType.Frame || thumbnailType === ThumbnailType.Template) {
+			thumbnailTime = props.thumbnailData.time();
+			if (thumbnailTime === null) {
+				setSubmissionError("The thumbnail time is invalid");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+		}
+
+		if (thumbnailType === ThumbnailType.Template) {
+			thumbnailTemplate = props.thumbnailData.template();
+			if (thumbnailTemplate === null) {
+				setSubmissionError("Thumbnail template is missing");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			thumbnailCrop = props.thumbnailData.crop();
+			thumbnailLocation = props.thumbnailData.location();
+			if (thumbnailCrop === null || thumbnailLocation === null) {
+				setSubmissionError("The thumbnail crop/location options are invalid");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+		}
+
+		if (thumbnailType === ThumbnailType.CustomThumbnail) {
+			thumbnailImage = props.thumbnailData.image();
+			if (thumbnailImage === null) {
+				setSubmissionError("The thumbnail image was invalid or not uploaded");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+		}
+
+		if (thumbnailType === ThumbnailType.CustomTemplate) {
+			const customTime = props.thumbnailData.time();
+			if (customTime === null) {
+				setSubmissionError("The thumbnail time is invalid");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			const customCrop = props.thumbnailData.crop();
+			const customLocation = props.thumbnailData.location();
+			if (customCrop === null || customLocation === null) {
+				setSubmissionError("The thumbnail crop/location options are invalid");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			const query = new URLSearchParams({
+				timestamp: wubloaderTimeFromDateTime(customTime),
+				crop: customCrop.join(","),
+				location: customLocation.join(","),
+			});
+
+			const customTemplate = props.thumbnailData.image();
+			if (customTemplate === null) {
+				setSubmissionError("The template image was not uploaded or invalid");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			// Client-side javascript makes it shockingly hard to correctly decode base64.
+			// See https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
+			// The "cleanest" solution is to "fetch" the data URL containing base64 data.
+			const templateResponse = await fetch(
+				`data:application/octet-stream;base64,${customTemplate}`,
+			);
+			const templateBody = new Uint8Array(await templateResponse.arrayBuffer());
+			const thumbnailResponse = await fetch(
+				`/thumbnail/${props.streamVideoInfo().streamName}/source.png?${query}`,
+				{ method: "POST", body: templateBody },
+			);
+			if (!thumbnailResponse.ok) {
+				setSubmissionError(
+					`Rendering thumbnail failed with ${thumbnailResponse.status} ${thumbnailResponse.statusText}`,
+				);
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			const thumbnailBlob = await thumbnailResponse.blob();
+			const thumbnailData: string = await new Promise((resolve) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve(reader.result as string);
+				reader.readAsDataURL(thumbnailBlob);
+			});
+			if (thumbnailData.substring(0, 22) !== "data:image/png;base64,") {
+				setSubmissionError("An error occurred converting the generated thumbnail to base64");
+				props.setEditorState(EditorState.Entry);
+				return null;
+			}
+
+			thumbnailImage = thumbnailData.substring(22);
+			thumbnailType = ThumbnailType.CustomThumbnail;
+		}
+
+		return {
+			type: thumbnailType,
+			template: thumbnailTemplate,
+			time: thumbnailTime,
+			image: thumbnailImage,
+			crop: thumbnailCrop,
+			location: thumbnailLocation,
+		};
 	};
 
 	const submitVideo = async (event) => {
@@ -162,110 +288,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 		transitions.shift();
 
-		let thumbnailType = props.thumbnailData.type();
-		let thumbnailTemplate: string | null = null;
-		let thumbnailTime: DateTime | null = null;
-		let thumbnailImage: string | null = null;
-		let thumbnailCrop: [number, number, number, number] | null = null;
-		let thumbnailLocation: [number, number, number, number] | null = null;
-
-		if (thumbnailType === ThumbnailType.Frame || thumbnailType === ThumbnailType.Template) {
-			thumbnailTime = props.thumbnailData.time();
-			if (thumbnailTime === null) {
-				setSubmissionError("The thumbnail time is invalid");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-		}
-
-		if (thumbnailType === ThumbnailType.Template) {
-			thumbnailTemplate = props.thumbnailData.template();
-			if (thumbnailTemplate === null) {
-				setSubmissionError("Thumbnail template is missing");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			thumbnailCrop = props.thumbnailData.crop();
-			thumbnailLocation = props.thumbnailData.location();
-			if (thumbnailCrop === null || thumbnailLocation === null) {
-				setSubmissionError("The thumbnail crop/location options are invalid");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-		}
-
-		if (thumbnailType === ThumbnailType.CustomThumbnail) {
-			thumbnailImage = props.thumbnailData.image();
-			if (thumbnailImage === null) {
-				setSubmissionError("The thumbnail image was invalid or not uploaded");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-		}
-
-		if (thumbnailType === ThumbnailType.CustomTemplate) {
-			const customTime = props.thumbnailData.time();
-			if (customTime === null) {
-				setSubmissionError("The thumbnail time is invalid");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			const customCrop = props.thumbnailData.crop();
-			const customLocation = props.thumbnailData.location();
-			if (customCrop === null || customLocation === null) {
-				setSubmissionError("The thumbnail crop/location options are invalid");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			const query = new URLSearchParams({
-				timestamp: wubloaderTimeFromDateTime(customTime),
-				crop: customCrop.join(","),
-				location: customLocation.join(","),
-			});
-
-			const customTemplate = props.thumbnailData.image();
-			if (customTemplate === null) {
-				setSubmissionError("The template image was not uploaded or invalid");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			// Client-side javascript makes it shockingly hard to correctly decode base64.
-			// See https://developer.mozilla.org/en-US/docs/Glossary/Base64#the_unicode_problem
-			// The "cleanest" solution is to "fetch" the data URL containing base64 data.
-			const templateResponse = await fetch(
-				`data:application/octet-stream;base64,${customTemplate}`,
-			);
-			const templateBody = new Uint8Array(await templateResponse.arrayBuffer());
-			const thumbnailResponse = await fetch(
-				`/thumbnail/${props.streamVideoInfo().streamName}/source.png?${query}`,
-				{ method: "POST", body: templateBody },
-			);
-			if (!thumbnailResponse.ok) {
-				setSubmissionError(
-					`Rendering thumbnail failed with ${thumbnailResponse.status} ${thumbnailResponse.statusText}`,
-				);
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			const thumbnailBlob = await thumbnailResponse.blob();
-			const thumbnailData: string = await new Promise((resolve) => {
-				const reader = new FileReader();
-				reader.onload = () => resolve(reader.result as string);
-				reader.readAsDataURL(thumbnailBlob);
-			});
-			if (thumbnailData.substring(0, 22) !== "data:image/png;base64,") {
-				setSubmissionError("An error occurred converting the generated thumbnail to base64");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			thumbnailImage = thumbnailData.substring(22);
-			thumbnailType = ThumbnailType.CustomThumbnail;
+		const thumbnailInfo = await getThumbnailInfo();
+		if (thumbnailInfo === null) {
+			// An error was already set by getThumbnailInfo.
+			return;
 		}
 
 		let allowedUploaders: string[] | null = uploaderAllowlist()
@@ -289,12 +315,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_quality: props.originalVideoData.video_quality,
 			uploader_whitelist: allowedUploaders,
 			state: props.originalVideoData.uploader === null ? "EDITED" : "MODIFIED",
-			thumbnail_mode: thumbnailType.toString(),
-			thumbnail_template: thumbnailTemplate,
-			thumbnail_crop: thumbnailCrop,
-			thumbnail_location: thumbnailLocation,
-			thumbnail_time: thumbnailTime,
-			thumbnail_image: thumbnailImage,
+			thumbnail_mode: thumbnailInfo.type.toString(),
+			thumbnail_template: thumbnailInfo.template,
+			thumbnail_crop: thumbnailInfo.crop,
+			thumbnail_location: thumbnailInfo.location,
+			thumbnail_time: thumbnailInfo.time,
+			thumbnail_image: thumbnailInfo.image,
 			override_changes: needsOverrideMessage() !== "",
 
 			// We also provide some information to verify data hasn't changed.
@@ -369,6 +395,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 		transitions.shift();
 
+		const thumbnailInfo = await getThumbnailInfo();
+		if (thumbnailInfo === null) {
+			// An error was already set by getThumbnailInfo.
+			return;
+		}
+
 		const editData = {
 			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
@@ -385,12 +417,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				.split(",")
 				.filter((name) => name !== ""),
 			state: "UNEDITED",
-			thumbnail_mode: props.thumbnailData.type().toString(),
-			thumbnail_template: props.thumbnailData.template(),
-			thumbnail_crop: props.thumbnailData.crop(),
-			thumbnail_location: props.thumbnailData.location(),
-			thumbnail_time: props.thumbnailData.time(),
-			thumbnail_image: props.thumbnailData.image(),
+			thumbnail_mode: thumbnailInfo.type,
+			thumbnail_template: thumbnailInfo.template,
+			thumbnail_crop: thumbnailInfo.crop,
+			thumbnail_location: thumbnailInfo.location,
+			thumbnail_time: thumbnailInfo.time,
+			thumbnail_image: thumbnailInfo.image,
 			override_changes: needsOverrideMessage() !== "",
 
 			// We also provide some information to verify data hasn't changed.
