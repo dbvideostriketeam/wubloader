@@ -168,7 +168,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		props.data.hasOwnProperty("chapter_markers"),
 	);
 
-	const description = props.data.video_description;
+	const description = props.data.video_description === null ? props.data.description : props.data.video_description;
 	const chaptersByRange: ChapterData[][] = [];
 	if (props.data.chapter_markers) {
 		for (const chapterMarker of props.data.chapter_markers) {
@@ -458,7 +458,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			return true;
 		}
 
-		const origDescription = props.data?.video_description ?? "";
+		const origDescription = props.data?.video_description ?? props.data?.description ?? "";
 		if (videoDescription() !== origDescription) {
 			return true;
 		}
