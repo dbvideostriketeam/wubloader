@@ -152,15 +152,24 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	};
 
+	const ASPECT_RATIO = 1920 / 1080;
+	const CROPPABLE_SCREENGRAB_WIDTH = 1920;
+	const CROPPABLE_SCREENGRAB_HEIGHT = CROPPABLE_SCREENGRAB_WIDTH / ASPECT_RATIO;
+	const TEMPLATE_WIDTH = 1280;
+	const TEMPLATE_HEIGHT = TEMPLATE_WIDTH / ASPECT_RATIO;
+	const CROPPER_CANVAS_WIDTH = 640;
+	const CROPPER_CANVAS_HEIGHT = CROPPER_CANVAS_WIDTH / ASPECT_RATIO;
+	const CROP_SCALE_FACTOR = CROPPABLE_SCREENGRAB_WIDTH / CROPPER_CANVAS_WIDTH;
+	const LOCATION_SCALE_FACTOR = TEMPLATE_WIDTH / CROPPER_CANVAS_WIDTH;
 	let cropSelection: CropperSelection | undefined;
 	let locationSelection: CropperSelection | undefined;
 	const onCropSelectionChange = (event) => {
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
-		const minX = Math.round(newSelection.x * 3);
-		const minY = Math.round(newSelection.y * 3);
-		const maxX = Math.round((newSelection.x + newSelection.width) * 3);
-		const maxY = Math.round((newSelection.y + newSelection.height) * 3);
+		const minX = Math.round(newSelection.x * CROP_SCALE_FACTOR);
+		const minY = Math.round(newSelection.y * CROP_SCALE_FACTOR);
+		const maxX = Math.round((newSelection.x + newSelection.width) * CROP_SCALE_FACTOR);
+		const maxY = Math.round((newSelection.y + newSelection.height) * CROP_SCALE_FACTOR);
 
 		props.thumbnailData.setCrop([minX, minY, maxX, maxY]);
 	};
@@ -168,18 +177,18 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	const onLocSelectionChange = (event) => {
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
-		const minX = Math.round(newSelection.x * 2);
-		const minY = Math.round(newSelection.y * 2);
-		const maxX = Math.round((newSelection.x + newSelection.width) * 2);
-		const maxY = Math.round((newSelection.y + newSelection.height) * 2);
+		const minX = Math.round(newSelection.x * LOCATION_SCALE_FACTOR);
+		const minY = Math.round(newSelection.y * LOCATION_SCALE_FACTOR);
+		const maxX = Math.round((newSelection.x + newSelection.width) * LOCATION_SCALE_FACTOR);
+		const maxY = Math.round((newSelection.y + newSelection.height) * LOCATION_SCALE_FACTOR);
 
 		props.thumbnailData.setLocation([minX, minY, maxX, maxY]);
 	};
 
 	const [cropX, setCropX] = createSignal(0);
 	const [cropY, setCropY] = createSignal(0);
-	const [cropWidth, setCropWidth] = createSignal(1920);
-	const [cropHeight, setCropHeight] = createSignal(1080);
+	const [cropWidth, setCropWidth] = createSignal(CROPPABLE_SCREENGRAB_WIDTH);
+	const [cropHeight, setCropHeight] = createSignal(CROPPABLE_SCREENGRAB_HEIGHT);
 
 	createEffect(() => {
 		const crop = props.thumbnailData.crop();
@@ -222,8 +231,8 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 	const [locX, setLocX] = createSignal(0);
 	const [locY, setLocY] = createSignal(0);
-	const [locWidth, setLocWidth] = createSignal(1280);
-	const [locHeight, setLocHeight] = createSignal(720);
+	const [locWidth, setLocWidth] = createSignal(TEMPLATE_WIDTH);
+	const [locHeight, setLocHeight] = createSignal(TEMPLATE_HEIGHT);
 
 	createEffect(() => {
 		const location = props.thumbnailData.location();
@@ -361,7 +370,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				}
 
 				const cropImage = new Image();
-				const templateImage = new Image(1280, 720);
+				const templateImage = new Image(TEMPLATE_WIDTH, TEMPLATE_HEIGHT);
 				cropImage.src = cropURL;
 				templateImage.src = locURL;
 
@@ -591,10 +600,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 						<cropper-shade />
 						<cropper-handle action="select" plain />
 						<cropper-selection
-							x={cropX() / 3}
-							y={cropY() / 3}
-							width={cropWidth() / 3}
-							height={cropHeight() / 3}
+							x={cropX() / CROP_SCALE_FACTOR}
+							y={cropY() / CROP_SCALE_FACTOR}
+							width={cropWidth() / CROP_SCALE_FACTOR}
+							height={cropHeight() / CROP_SCALE_FACTOR}
 							min-inset="0"
 							precise
 							movable
@@ -623,10 +632,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 						<cropper-shade />
 						<cropper-handle action="select" plain />
 						<cropper-selection
-							x={locX() / 2}
-							y={locY() / 2}
-							width={locWidth() / 2}
-							height={locHeight() / 2}
+							x={locX() / LOCATION_SCALE_FACTOR}
+							y={locY() / LOCATION_SCALE_FACTOR}
+							width={locWidth() / LOCATION_SCALE_FACTOR}
+							height={locHeight() / LOCATION_SCALE_FACTOR}
 							min-inset="0"
 							precise
 							movable
