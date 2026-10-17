@@ -185,7 +185,7 @@ def check_playlist(playlist_id):
 	playlist_id = playlist_id.strip()
 	if not playlist_id:
 		return None
-	if len(playlist_id) != 34 or not playlist_id.startswith('PL'):
+	if len(playlist_id) < 13 or not playlist_id.startswith('PL'):
 		raise ValueError("Playlist ID appears to be invalid")
 	return playlist_id
 
