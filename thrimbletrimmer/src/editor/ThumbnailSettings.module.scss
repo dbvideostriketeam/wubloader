@@ -53,14 +53,15 @@
 	margin-right: 3px;
 }
 
-.cropCropper {
-	width: 1920px;
-	height: 1080px;
-	margin: 5px 0;
+.croppers {
+	display: flex;
+	flex-wrap: wrap;
+	column-gap: 10px;
 }
 
-.locationCropper {
-	width: 1280px;
-	height: 720px;
+.cropper {
+	flex: none;
+	width: 640px;
+	height: 360px;
 	margin: 5px 0;
 }
