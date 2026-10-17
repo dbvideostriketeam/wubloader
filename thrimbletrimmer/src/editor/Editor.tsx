@@ -115,11 +115,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 	const [pageErrors, setPageErrors] = createSignal<string[]>([]);
 
-	const initialVideoRanges: [DateTime, DateTime][] = [];
+	const initialVideoRanges: [DateTime | null, DateTime | null][] = [];
 	if (props.data.video_ranges) {
 		for (const range of props.data.video_ranges) {
-			const rangeStart = dateTimeFromWubloaderTime(range[0])!;
-			const rangeEnd = dateTimeFromWubloaderTime(range[1])!;
+			const rangeStart = dateTimeFromWubloaderTime(range[0]);
+			const rangeEnd = dateTimeFromWubloaderTime(range[1]);
 			initialVideoRanges.push([rangeStart, rangeEnd]);
 		}
 	}
@@ -142,10 +142,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 	let streamEnd = dateTimeFromWubloaderTime(props.data.event_end);
 
 	for (const range of initialVideoRanges) {
-		if (range[0] < streamStart) {
+		if (range[0] && range[0] < streamStart) {
 			streamStart = range[0];
 		}
-		if (!streamEnd || range[1] > streamEnd) {
+		if (range[1] && (!streamEnd || range[1] > streamEnd)) {
 			streamEnd = range[1];
 		}
 	}
