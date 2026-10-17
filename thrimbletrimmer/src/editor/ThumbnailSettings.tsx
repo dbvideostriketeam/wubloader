@@ -25,7 +25,7 @@ import PlayToIcon from "../assets/play_to.png";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
 
 import "cropperjs"; // This is required for Cropper.js to work, even with the specific import below
-import { CropperImage, CropperSelection } from "cropperjs";
+import { CropperSelection } from "cropperjs";
 
 interface ThumbnailSettingsProps {
 	allThumbnailTemplates: ThumbnailTemplateDefinition[];
@@ -152,72 +152,26 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	};
 
-	let cropImage: CropperImage;
 	let cropSelection: CropperSelection | undefined;
 	let locationSelection: CropperSelection | undefined;
-
 	const onCropSelectionChange = (event) => {
-		const selection = cropSelection!;
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
-		const minX = newSelection.x;
-		const minY = newSelection.y;
-		const maxX = minX + newSelection.width;
-		const maxY = minY + newSelection.height;
-
-		if (minX < 0) {
-			event.preventDefault();
-			selection.$moveTo(0, newSelection.y);
-			return;
-		}
-		if (minY < 0) {
-			event.preventDefault();
-			selection.$moveTo(newSelection.x, 0);
-			return;
-		}
-		if (maxX > 1920) {
-			event.preventDefault();
-			selection.$moveTo(1919 - selection.width, newSelection.y);
-			return;
-		}
-		if (maxY > 1080) {
-			event.preventDefault();
-			selection.$moveTo(newSelection.x, 1079 - selection.height);
-			return;
-		}
+		const minX = Math.round(newSelection.x * 3);
+		const minY = Math.round(newSelection.y * 3);
+		const maxX = Math.round((newSelection.x + newSelection.width) * 3);
+		const maxY = Math.round((newSelection.y + newSelection.height) * 3);
 
 		props.thumbnailData.setCrop([minX, minY, maxX, maxY]);
 	};
 
 	const onLocSelectionChange = (event) => {
-		const selection = locationSelection!;
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
-		const minX = newSelection.x;
-		const minY = newSelection.y;
-		const maxX = minX + newSelection.width;
-		const maxY = minY + newSelection.height;
-
-		if (minX < 0) {
-			event.preventDefault();
-			selection.$moveTo(0, newSelection.y);
-			return;
-		}
-		if (minY < 0) {
-			event.preventDefault();
-			selection.$moveTo(newSelection.x, 0);
-			return;
-		}
-		if (maxX > 1280) {
-			event.preventDefault();
-			selection.$moveTo(1279 - selection.width, newSelection.y);
-			return;
-		}
-		if (maxY > 720) {
-			event.preventDefault();
-			selection.$moveTo(newSelection.x, 719 - selection.height);
-			return;
-		}
+		const minX = Math.round(newSelection.x * 2);
+		const minY = Math.round(newSelection.y * 2);
+		const maxX = Math.round((newSelection.x + newSelection.width) * 2);
+		const maxY = Math.round((newSelection.y + newSelection.height) * 2);
 
 		props.thumbnailData.setLocation([minX, minY, maxX, maxY]);
 	};
@@ -248,10 +202,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	});
 
 	createEffect(() => {
-		const minX = cropX();
-		const minY = cropY();
-		const maxX = minX + cropWidth();
-		const maxY = minY + cropHeight();
+		const minX = Math.round(cropX());
+		const minY = Math.round(cropY());
+		const maxX = Math.round(cropX() + cropWidth());
+		const maxY = Math.round(cropY() + cropHeight());
 
 		const currentCrop = untrack(props.thumbnailData.crop);
 
@@ -292,10 +246,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	});
 
 	createEffect(() => {
-		const minX = locX();
-		const minY = locY();
-		const maxX = minX + locWidth();
-		const maxY = minY + locHeight();
+		const minX = Math.round(locX());
+		const minY = Math.round(locY());
+		const maxX = Math.round(locX() + locWidth());
+		const maxY = Math.round(locY() + locHeight());
 
 		const currentLoc = untrack(props.thumbnailData.location);
 
@@ -630,68 +584,72 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 					/>
 				</div>
 			</Show>
-			<Show when={canShowCropTools() && showFrameCropTool()}>
-				<cropper-canvas class={styles.cropCropper}>
-					<cropper-image src={cropBaseImageURL()} ref={cropImage} />
-					<cropper-shade />
-					<cropper-handle action="select" plain />
-					<cropper-selection
-						x={cropX()}
-						y={cropY()}
-						width={cropWidth()}
-						height={cropHeight()}
-						aspectRadio={aspectRatioLocked() ? cropWidth() / cropHeight() : NaN}
-						movable
-						resizable
-						outlined
-						ref={cropSelection}
-						onChange={onCropSelectionChange}
-					>
-						<cropper-grid covered />
-						<cropper-crosshair centered />
-						<cropper-handle action="move" />
-						<cropper-handle action="n-resize" />
-						<cropper-handle action="e-resize" />
-						<cropper-handle action="s-resize" />
-						<cropper-handle action="w-resize" />
-						<cropper-handle action="nw-resize" />
-						<cropper-handle action="ne-resize" />
-						<cropper-handle action="se-resize" />
-						<cropper-handle action="sw-resize" />
-					</cropper-selection>
-				</cropper-canvas>
-			</Show>
-			<Show when={canShowCropTools() && showTemplateLocationTool()}>
-				<cropper-canvas class={styles.locationCropper}>
-					<cropper-image src={locBaseImageURL()} />
-					<cropper-shade />
-					<cropper-handle action="select" plain />
-					<cropper-selection
-						x={locX()}
-						y={locY()}
-						width={locWidth()}
-						height={locHeight()}
-						aspectRatio={aspectRatioLocked() ? locWidth() / locHeight() : NaN}
-						movable
-						resizable
-						outlined
-						ref={locationSelection}
-						onChange={onLocSelectionChange}
-					>
-						<cropper-grid covered />
-						<cropper-crosshair centered />
-						<cropper-handle action="move" />
-						<cropper-handle action="n-resize" />
-						<cropper-handle action="e-resize" />
-						<cropper-handle action="s-resize" />
-						<cropper-handle action="w-resize" />
-						<cropper-handle action="nw-resize" />
-						<cropper-handle action="ne-resize" />
-						<cropper-handle action="se-resize" />
-						<cropper-handle action="sw-resize" />
-					</cropper-selection>
-				</cropper-canvas>
-			</Show>
+			<div class={styles.croppers}>
+				<Show when={canShowCropTools() && showFrameCropTool()}>
+					<cropper-canvas class={styles.cropper}>
+						<cropper-image src={cropBaseImageURL()} />
+						<cropper-shade />
+						<cropper-handle action="select" plain />
+						<cropper-selection
+							x={cropX() / 3}
+							y={cropY() / 3}
+							width={cropWidth() / 3}
+							height={cropHeight() / 3}
+							min-inset="0"
+							precise
+							movable
+							resizable
+							outlined
+							ref={cropSelection}
+							onChange={onCropSelectionChange}
+						>
+							<cropper-grid covered />
+							<cropper-crosshair centered />
+							<cropper-handle action="move" />
+							<cropper-handle action="n-resize" />
+							<cropper-handle action="e-resize" />
+							<cropper-handle action="s-resize" />
+							<cropper-handle action="w-resize" />
+							<cropper-handle action="nw-resize" />
+							<cropper-handle action="ne-resize" />
+							<cropper-handle action="se-resize" />
+							<cropper-handle action="sw-resize" />
+						</cropper-selection>
+					</cropper-canvas>
+				</Show>
+				<Show when={canShowCropTools() && showTemplateLocationTool()}>
+					<cropper-canvas class={styles.cropper}>
+						<cropper-image src={locBaseImageURL()} />
+						<cropper-shade />
+						<cropper-handle action="select" plain />
+						<cropper-selection
+							x={locX() / 2}
+							y={locY() / 2}
+							width={locWidth() / 2}
+							height={locHeight() / 2}
+							min-inset="0"
+							precise
+							movable
+							resizable
+							outlined
+							ref={locationSelection}
+							onChange={onLocSelectionChange}
+						>
+							<cropper-grid covered />
+							<cropper-crosshair centered />
+							<cropper-handle action="move" />
+							<cropper-handle action="n-resize" />
+							<cropper-handle action="e-resize" />
+							<cropper-handle action="s-resize" />
+							<cropper-handle action="w-resize" />
+							<cropper-handle action="nw-resize" />
+							<cropper-handle action="ne-resize" />
+							<cropper-handle action="se-resize" />
+							<cropper-handle action="sw-resize" />
+						</cropper-selection>
+					</cropper-canvas>
+				</Show>
+			</div>
 			<Show when={canShowCropTools() && showThumbnailPreview()}>
 				<div>
 					<canvas width={320} height={180} ref={previewCanvas}></canvas>
