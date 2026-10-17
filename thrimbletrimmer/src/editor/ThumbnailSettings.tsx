@@ -693,7 +693,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 			</Show>
 			<Show when={canShowCropTools() && showThumbnailPreview()}>
 				<div>
-					<canvas width={1280} height={720} ref={previewCanvas}></canvas>
+					<canvas width={320} height={180} ref={previewCanvas}></canvas>
 				</div>
 			</Show>
 		</div>
