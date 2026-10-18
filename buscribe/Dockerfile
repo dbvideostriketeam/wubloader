@@ -1,8 +1,8 @@
-FROM debian:13
+FROM debian:13 AS build
 
-RUN apt update &&\
-    apt install -y python3 libpq-dev python3-pip curl unzip ffmpeg &&\
-	rm /usr/lib/python3.13/EXTERNALLY-MANAGED
+RUN apt update && apt install -y --no-install-recommends python3 libpq-dev python3-pip gcc python3-dev curl unzip \
+    && rm /usr/lib/python3.13/EXTERNALLY-MANAGED \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN cd /tmp \
 	&& curl \
@@ -21,4 +21,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY buscribe /tmp/buscribe
 RUN pip install /tmp/buscribe && rm -r /tmp/buscribe
 
+FROM debian:13
+RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq5 ffmpeg && rm -rf /var/lib/apt/lists/*
+COPY --from=build /usr/local /usr/local
+COPY --from=build /usr/share/buscribe /usr/share/buscribe
 ENTRYPOINT ["python3", "-m", "buscribe", "--base-dir", "/mnt"]
