@@ -18,6 +18,9 @@ COPY bus_analyzer /tmp/bus_analyzer
 RUN pip install /tmp/bus_analyzer && cp -r /tmp/bus_analyzer/prototypes / && rm -r /tmp/bus_analyzer
 
 FROM debian:13
+# install python
+# install ffmpeg for doing OCR stuff
+# install libpq5 for postgres connectivity
 RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq5 ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 COPY --from=build /prototypes /prototypes

@@ -17,6 +17,8 @@ COPY backfiller /tmp/backfiller
 RUN pip install /tmp/backfiller && rm -r /tmp/backfiller
 
 FROM debian:13
+# install python
+# install libpq5 for postgres connectivity
 RUN apt update && apt install -y python3 ca-certificates libpq5 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader

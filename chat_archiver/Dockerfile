@@ -20,6 +20,7 @@ COPY chat_archiver /tmp/archiver
 RUN pip install /tmp/archiver && rm -r /tmp/archiver
 
 FROM debian:13
+# install python
 RUN apt update && apt install -y python3 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
