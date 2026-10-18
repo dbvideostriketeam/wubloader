@@ -19,8 +19,6 @@ def verify_google_identity(token, audience):
 	the token to Google at any point. So we can get persistent login by simply
 	accepting expired tokens.
 	"""
-	if not audience:
-		raise ValueError("Google client ID is required")
 	key = _key_client.get_signing_key_from_jwt(token)
 	claims = jwt.decode(
 		token,
