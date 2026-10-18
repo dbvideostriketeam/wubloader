@@ -1,4 +1,4 @@
-FROM debian:13
+FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install libpq-dev for postgres connectivity
 # install postgresql-client for postgres connectivity
@@ -17,5 +17,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY sheetsync /tmp/sheetsync
 RUN pip install /tmp/sheetsync && rm -r /tmp/sheetsync
 
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates libpq-dev postgresql-client
+COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "sheetsync"]

@@ -1,4 +1,4 @@
-FROM debian:13
+FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install wget so we can download a deno binary (deno is not packaged for debian)
 # install unzip so we can unpack deno
@@ -25,5 +25,8 @@ RUN mv deno /usr/local/bin/deno
 # Install yt-dlp last as it changes often
 RUN pip install 'yt-dlp[default]'
 
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates
+COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "downloader", "--base-dir", "/mnt"]
