@@ -18,6 +18,9 @@ COPY sheetsync /tmp/sheetsync
 RUN pip install /tmp/sheetsync && rm -r /tmp/sheetsync
 
 FROM debian:13
+# install python
+# install libpq5 for postgres connectivity
+# install postgresql-client for postgres connectivity
 RUN apt update && apt install -y python3 ca-certificates libpq5 postgresql-client && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader

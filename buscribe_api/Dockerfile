@@ -18,6 +18,8 @@ RUN pip install /tmp/buscribe_api && cp -r /tmp/buscribe_api/templates /template
     && rm -r /tmp/buscribe_api
 
 FROM debian:13
+# install python
+# install libpq5 for postgres connectivity
 RUN apt update && apt install -y python3 ca-certificates libpq5 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 COPY --from=build /templates /templates

@@ -19,6 +19,9 @@ COPY cutter /tmp/cutter
 RUN pip install /tmp/cutter && rm -r /tmp/cutter
 
 FROM debian:13
+# install python
+# install libpq5 for postgres connectivity
+# install ffmpeg for video cuts
 RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq5 ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
