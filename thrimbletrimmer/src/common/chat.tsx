@@ -1,4 +1,14 @@
-import { Accessor, Component, createResource, For, Index, JSX, Show, Suspense } from "solid-js";
+import {
+	Accessor,
+	Component,
+	createEffect,
+	createResource,
+	createSignal,
+	For,
+	JSX,
+	Show,
+	Suspense,
+} from "solid-js";
 import { StreamVideoInfo } from "./streamInfo";
 import { DateTime } from "luxon";
 import { FragmentTimes } from "./video";
@@ -61,26 +71,7 @@ export class ChatLog {
 	static default = () => new ChatLog([], {}, {});
 }
 
-export async function chatData(
-	streamInfo: StreamVideoInfo,
-	fragments: FragmentTimes[],
-): Promise<ChatLog> {
-	const streamName = streamInfo.streamName;
-	const streamStartTime = streamInfo.streamStartTime;
-	const streamEndTime = streamInfo.streamEndTime;
-	if (!streamEndTime) {
-		return ChatLog.default();
-	}
-	const startWubloaderTime = wubloaderTimeFromDateTime(streamStartTime);
-	const endWubloaderTime = wubloaderTimeFromDateTime(streamEndTime);
-	const params = new URLSearchParams({ start: startWubloaderTime, end: endWubloaderTime });
-
-	const chatResponse = await fetch(`/${streamName}/chat.json?${params}`);
-	if (!chatResponse.ok) {
-		return ChatLog.default();
-	}
-	const chatMessages: RawChatMessage[] = await chatResponse.json();
-
+export function chatData(fragments: FragmentTimes[], chatMessages: RawChatMessage[]): ChatLog {
 	if (!fragments || fragments.length === 0) {
 		return ChatLog.default();
 	}
@@ -150,34 +141,45 @@ function formatDisplayTime(timeSeconds: number): string {
 }
 
 export interface ChatDisplayProps {
-	streamInfo: StreamVideoInfo;
+	streamInfo: Accessor<StreamVideoInfo>;
 	fragments: Accessor<FragmentTimes[]>;
 	videoTime?: Accessor<number>;
 }
 
 export const ChatDisplay: Component<ChatDisplayProps> = (props) => {
-	const streamDataAndFragments = () => {
-		const fragments = props.fragments();
-		if (!fragments || fragments.length === 0) {
-			return null;
-		}
-		return {
-			streamInfo: props.streamInfo,
-			fragments: fragments,
-		};
-	};
-	const [possibleChatLog] = createResource(streamDataAndFragments, async () => {
-		const { streamInfo, fragments } = streamDataAndFragments()!;
-		return await chatData(streamInfo, fragments);
-	});
+	const [possibleChatLog] = createResource(
+		props.streamInfo,
+		async (): Promise<RawChatMessage[]> => {
+			const { streamName, streamStartTime, streamEndTime } = props.streamInfo();
+			if (!streamEndTime) {
+				return [];
+			}
+			const startTime = wubloaderTimeFromDateTime(streamStartTime);
+			const endTime = wubloaderTimeFromDateTime(streamEndTime);
+			const params = new URLSearchParams({ start: startTime, end: endTime });
 
-	const chatLog = () => {
+			const chatResponse = await fetch(`/${streamName}/chat.json?${params}`);
+			if (!chatResponse.ok) {
+				return [];
+			}
+			return await chatResponse.json();
+		},
+	);
+
+	const rawChatLog = () => {
 		const chatLogData = possibleChatLog();
 		if (chatLogData) {
 			return chatLogData;
 		}
-		return ChatLog.default();
+		return [];
 	};
+
+	const [chatLog, setChatLog] = createSignal(ChatLog.default());
+
+	createEffect(() => {
+		const data = chatData(props.fragments(), rawChatLog());
+		setChatLog(data);
+	});
 
 	return (
 		<Suspense>
