@@ -45,7 +45,7 @@ import {
 	dateTimeFromWubloaderTime,
 	wubloaderTimeFromDateTime,
 } from "../common/convertTime";
-import { GoogleSignIn } from "../common/googleAuth";
+import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
 	KeyboardShortcuts,
@@ -253,7 +253,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
 	const [allowHoles, setAllowHoles] = createSignal(false);
 
-	const [accountToken, setAccountToken] = createSignal<string | null>(null);
+	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 
 	const videoFragmentTimes = () => {
 		return allFragmentTimes()[currentQualityLevel()];
