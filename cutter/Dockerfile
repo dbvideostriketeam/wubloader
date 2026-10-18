@@ -19,7 +19,7 @@ COPY cutter /tmp/cutter
 RUN pip install /tmp/cutter && rm -r /tmp/cutter
 
 FROM debian:13
-RUN apt update && apt install -y python3 ca-certificates libpq-dev ffmpeg libjpeg-dev zlib1g-dev
+RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq-dev ffmpeg libjpeg-dev zlib1g-dev
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "cutter", "--base-dir", "/mnt"]
