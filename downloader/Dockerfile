@@ -26,7 +26,7 @@ RUN pip install /tmp/downloader && rm -r /tmp/downloader
 RUN pip install 'yt-dlp[default]'
 
 FROM debian:13
-RUN apt update && apt install -y python3 ca-certificates
+RUN apt update && apt install -y python3 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "downloader", "--base-dir", "/mnt"]

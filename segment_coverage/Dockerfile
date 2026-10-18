@@ -20,7 +20,7 @@ COPY segment_coverage /tmp/segment_coverage
 RUN pip install /tmp/segment_coverage && rm -r /tmp/segment_coverage
 
 FROM debian:13
-RUN apt update && apt install -y python3 ca-certificates libpq-dev libjpeg-dev zlib1g-dev libfreetype-dev libpng-dev python3-packaging
+RUN apt update && apt install -y python3 ca-certificates libpq-dev libjpeg-dev zlib1g-dev libfreetype-dev libpng-dev python3-packaging && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "segment_coverage"]
