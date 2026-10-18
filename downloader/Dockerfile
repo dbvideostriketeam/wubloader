@@ -11,9 +11,9 @@ RUN pip install gevent
 
 # fetch deno binary from github release
 ENV DENO_VERSION=2.9.6
-RUN wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip
-RUN unzip deno-x86_64-unknown-linux-gnu.zip && rm deno-x86_64-unknown-linux-gnu.zip
-RUN mv deno /usr/local/bin/deno
+RUN wget https://github.com/denoland/deno/releases/download/v${DENO_VERSION}/deno-x86_64-unknown-linux-gnu.zip \
+    && unzip deno-x86_64-unknown-linux-gnu.zip -d /usr/local/bin \
+    && rm deno-x86_64-unknown-linux-gnu.zip
 
 # Install common lib first as it changes less
 COPY common /tmp/common
