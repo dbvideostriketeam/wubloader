@@ -1,7 +1,7 @@
 import { Accessor, Component, createResource, For, Index, JSX, Show, Suspense } from "solid-js";
 import { StreamVideoInfo } from "./streamInfo";
 import { DateTime } from "luxon";
-import { Fragment } from "hls.js";
+import { FragmentTimes } from "./video";
 import { wubloaderTimeFromDateTime } from "./convertTime";
 import styles from "./chat.module.scss";
 
@@ -63,7 +63,7 @@ export class ChatLog {
 
 export async function chatData(
 	streamInfo: StreamVideoInfo,
-	fragments: Fragment[],
+	fragments: FragmentTimes[],
 ): Promise<ChatLog> {
 	const streamName = streamInfo.streamName;
 	const streamStartTime = streamInfo.streamStartTime;
@@ -86,7 +86,7 @@ export async function chatData(
 	}
 
 	let currentFragmentIndex = 0;
-	let currentFragmentStartTime = DateTime.fromISO(fragments[0].rawProgramDateTime!)!;
+	let currentFragmentStartTime = fragments[0].rawStart;
 	const chatData: ChatMessageData[] = [];
 	const clearMessages: { [messageID: string]: number } = {};
 	const clearUsers: { [userID: string]: number[] } = {};
@@ -97,12 +97,10 @@ export async function chatData(
 			currentFragmentStartTime.plus({ seconds: fragments[currentFragmentIndex].duration }) <= when
 		) {
 			currentFragmentIndex += 1;
-			currentFragmentStartTime = DateTime.fromISO(
-				fragments[currentFragmentIndex].rawProgramDateTime!,
-			);
+			currentFragmentStartTime = fragments[currentFragmentIndex].rawStart;
 		}
 		const messageTimeOffset = when.diff(currentFragmentStartTime).milliseconds / 1000;
-		const messageVideoTime = fragments[currentFragmentIndex].start + messageTimeOffset;
+		const messageVideoTime = fragments[currentFragmentIndex].playerStart + messageTimeOffset;
 		if (messageVideoTime < 0) {
 			continue;
 		}
@@ -153,7 +151,7 @@ function formatDisplayTime(timeSeconds: number): string {
 
 export interface ChatDisplayProps {
 	streamInfo: StreamVideoInfo;
-	fragments: Accessor<Fragment[]>;
+	fragments: Accessor<FragmentTimes[]>;
 	videoTime?: Accessor<number>;
 }
 

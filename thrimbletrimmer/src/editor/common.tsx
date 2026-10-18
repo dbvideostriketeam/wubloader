@@ -1,5 +1,6 @@
 import { Accessor, createSignal, Setter } from "solid-js";
 import { DateTime } from "luxon";
+import { FragmentTimes } from "../common/video";
 
 export interface VideoData {
 	id: string;
@@ -77,13 +78,6 @@ export class ChapterData {
 		this.time = null;
 		this.description = "";
 	}
-}
-
-export class FragmentTimes {
-	rawStart: DateTime;
-	rawEnd: DateTime;
-	playerStart: number;
-	duration: number;
 }
 
 export class TransitionDefinition {
