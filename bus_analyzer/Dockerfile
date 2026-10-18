@@ -1,4 +1,4 @@
-FROM debian:13
+FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install ffmpeg, libjpeg-dev, zlib1g-dev for doing OCR stuff
 # install libpq-dev for postgres connectivity
@@ -17,5 +17,9 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY bus_analyzer /tmp/bus_analyzer
 RUN pip install /tmp/bus_analyzer && cp -r /tmp/bus_analyzer/prototypes / && rm -r /tmp/bus_analyzer
 
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates libpq-dev ffmpeg libjpeg-dev zlib1g-dev
+COPY --from=build /usr/local /usr/local
+COPY --from=build /prototypes /prototypes
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "bus_analyzer"]

@@ -1,8 +1,17 @@
-FROM debian:13
+FROM debian:13 AS build
 
 RUN apt update &&\
     apt install -y python3 libpq-dev python3-pip curl unzip ffmpeg &&\
 	rm /usr/lib/python3.13/EXTERNALLY-MANAGED
+
+COPY common /tmp/common
+RUN pip install /tmp/common && rm -r /tmp/common
+
+COPY buscribe /tmp/buscribe
+RUN pip install /tmp/buscribe && rm -r /tmp/buscribe
+
+FROM debian:13 AS models
+RUN apt update && apt install -y --no-install-recommends curl unzip ca-certificates && rm -rf /var/lib/apt/lists/*
 
 RUN cd /tmp \
 	&& curl \
@@ -15,10 +24,9 @@ RUN cd /tmp \
 	&& unzip vosk-model-spk-0.4.zip -d /usr/share/buscribe \
 	&& rm *.zip
 
-COPY common /tmp/common
-RUN pip install /tmp/common && rm -r /tmp/common
 
-COPY buscribe /tmp/buscribe
-RUN pip install /tmp/buscribe && rm -r /tmp/buscribe
-
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates libpq-dev ffmpeg
+COPY --from=build /usr/local /usr/local
+COPY --from=models /usr/share/buscribe /usr/share/buscribe
 ENTRYPOINT ["python3", "-m", "buscribe", "--base-dir", "/mnt"]

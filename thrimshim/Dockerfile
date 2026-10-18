@@ -1,4 +1,4 @@
-FROM debian:13
+FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install libpq-dev for postgres connectivity
 RUN apt update && apt install -y python3 python3-pip && rm /usr/lib/python3.13/EXTERNALLY-MANAGED
@@ -15,5 +15,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY thrimshim /tmp/thrimshim
 RUN pip install /tmp/thrimshim && rm -r /tmp/thrimshim
 
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates libpq-dev
+COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "thrimshim"]

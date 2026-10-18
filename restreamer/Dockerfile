@@ -1,4 +1,4 @@
-FROM debian:13
+FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install libpq-dev for postgres connectivity
 # install ffmpeg for video cuts
@@ -18,5 +18,8 @@ RUN pip install /tmp/common && rm -r /tmp/common
 COPY restreamer /tmp/restreamer
 RUN pip install /tmp/restreamer && rm -r /tmp/restreamer
 
+FROM debian:13
+RUN apt update && apt install -y python3 ca-certificates libpq-dev ffmpeg libjpeg-dev zlib1g-dev
+COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "restreamer", "--base-dir", "/mnt"]
