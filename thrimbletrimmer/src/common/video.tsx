@@ -318,7 +318,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 		const videoDateTime = dateTimeFromVideoPlayerTime(props.fragments(), videoTime);
 		if (!videoDateTime) {
 			return "";
-		};
+		}
 		return videoDateTime.setZone("America/Vancouver").toLocaleString(DateTime.TIME_SIMPLE);
 	};
 

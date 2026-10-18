@@ -878,7 +878,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			/>
 			<DataCorrection videoID={props.data.id} accountToken={accountToken} />
 			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
-			<ChatDisplay streamInfo={streamVideoInfo()} fragments={videoFragmentTimes} />
+			<ChatDisplay streamInfo={streamVideoInfo} fragments={videoFragmentTimes} />
 		</>
 	);
 };

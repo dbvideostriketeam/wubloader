@@ -348,7 +348,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				}}
 			>
 				<ChatDisplay
-					streamInfo={streamVideoInfo()}
+					streamInfo={streamVideoInfo}
 					fragments={videoFragmentTimes}
 					videoTime={playerTime}
 				/>
