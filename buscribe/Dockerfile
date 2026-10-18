@@ -26,7 +26,7 @@ RUN cd /tmp \
 
 
 FROM debian:13
-RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq-dev ffmpeg
+RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq-dev ffmpeg && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 COPY --from=models /usr/share/buscribe /usr/share/buscribe
 ENTRYPOINT ["python3", "-m", "buscribe", "--base-dir", "/mnt"]
