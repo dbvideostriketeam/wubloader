@@ -16,7 +16,7 @@ COPY playlist_manager /tmp/playlist_manager
 RUN pip install /tmp/playlist_manager && rm -r /tmp/playlist_manager
 
 FROM debian:13
-RUN apt update && apt install -y python3 ca-certificates libpq-dev && rm -rf /var/lib/apt/lists/*
+RUN apt update && apt install -y python3 ca-certificates libpq5 && rm -rf /var/lib/apt/lists/*
 COPY --from=build /usr/local /usr/local
 LABEL org.opencontainers.image.source https://github.com/dbvideostriketeam/wubloader
 ENTRYPOINT ["python3", "-m", "playlist_manager"]
