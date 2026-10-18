@@ -17,6 +17,15 @@ export interface GoogleSignInProps {
 
 const TOKEN_STORAGE_KEY = "thrimbletrimmer.googleToken";
 
+export function defaultAccountToken(): string | null {
+	try {
+		return localStorage.getItem(TOKEN_STORAGE_KEY);
+	} catch {
+		// Sign-in still works without browser storage.
+		return null;
+	}
+}
+
 export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	let loginButtonParent!: HTMLDivElement;
 
@@ -50,19 +59,6 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 			google.accounts.id.disableAutoSelect();
 		}
 	};
-
-	onMount(() => {
-		let token: string | null;
-		try {
-			token = localStorage.getItem(TOKEN_STORAGE_KEY);
-		} catch {
-			// Sign-in still works without browser storage.
-			return;
-		}
-		if (token) {
-			props.setAccountToken(token);
-		}
-	});
 
 	createEffect(() => {
 		const token = props.accountToken();

@@ -1,6 +1,6 @@
 import { Component, createResource, createSignal, Index, Show } from "solid-js";
 import { bindingInputOnChange } from "../common/binding";
-import { GoogleSignIn } from "../common/googleAuth";
+import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
 import styles from "./Challenges.module.scss";
 
@@ -24,7 +24,7 @@ export const Challenges: Component = () => {
 		},
 		{ initialValue: [] },
 	);
-	const [accountToken, setAccountToken] = createSignal<string | null>(null);
+	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 
 	return (
 		<>
