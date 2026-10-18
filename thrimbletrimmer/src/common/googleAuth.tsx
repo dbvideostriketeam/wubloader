@@ -54,7 +54,7 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	onMount(() => {
 		let token: string | null;
 		try {
-			token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
+			token = localStorage.getItem(TOKEN_STORAGE_KEY);
 		} catch {
 			// Sign-in still works without browser storage.
 			return;
@@ -67,8 +67,8 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	createEffect(() => {
 		const token = props.accountToken();
 		try {
-			if (token) sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
-			else sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+			if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+			else localStorage.removeItem(TOKEN_STORAGE_KEY);
 		} catch {
 			// Persistence is optional; authentication is verified by the server.
 		}
