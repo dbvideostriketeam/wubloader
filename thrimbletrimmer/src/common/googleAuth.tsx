@@ -52,13 +52,15 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	};
 
 	onMount(() => {
+		let token: string | null;
 		try {
-			const token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
-			if (token) {
-				props.setAccountToken(token);
-			}
+			token = sessionStorage.getItem(TOKEN_STORAGE_KEY);
 		} catch {
 			// Sign-in still works without browser storage.
+			return;
+		}
+		if (token) {
+			props.setAccountToken(token);
 		}
 	});
 
