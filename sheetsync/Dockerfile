@@ -2,7 +2,7 @@ FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install libpq-dev for postgres connectivity
 # install postgresql-client for postgres connectivity
-RUN apt update && apt install -y python3 python3-pip libpq-dev postgresql-client \
+RUN apt update && apt install -y --no-install-recommends python3 python3-pip gcc python3-dev libpq-dev postgresql-client \
     && rm /usr/lib/python3.13/EXTERNALLY-MANAGED \
     && rm -rf /var/lib/apt/lists/*
 

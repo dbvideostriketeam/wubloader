@@ -3,7 +3,7 @@ FROM debian:13 AS build
 # install libpq-dev for postgres connectivity
 # install libjpeg and zlib for image manipulation
 # install libfreetype-dev and libpng-dev for matplotlib
-RUN apt update && apt install -y python3 python3-pip libpq-dev libjpeg-dev zlib1g-dev libfreetype-dev libpng-dev \
+RUN apt update && apt install -y --no-install-recommends python3 python3-pip gcc python3-dev libpq-dev libjpeg-dev zlib1g-dev libfreetype-dev libpng-dev \
     && rm /usr/lib/python3.13/EXTERNALLY-MANAGED \
     && rm -rf /var/lib/apt/lists/*
 
