@@ -1,8 +1,9 @@
 FROM debian:13 AS build
 # install python & pip, and tell python we're fine with messing with the system env
 # install libpq-dev for postgres connectivity
-RUN apt update && apt install -y python3 python3-pip && rm /usr/lib/python3.13/EXTERNALLY-MANAGED
-RUN apt update && apt install -y libpq-dev
+RUN apt update && apt install -y python3 python3-pip libpq-dev \
+    && rm /usr/lib/python3.13/EXTERNALLY-MANAGED \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install gevent so that we don't need to re-install it when common changes
 RUN pip install gevent
