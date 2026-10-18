@@ -21,7 +21,7 @@ export function defaultAccountToken(): string | null {
 	try {
 		return localStorage.getItem(TOKEN_STORAGE_KEY);
 	} catch {
-		// Sign-in still works without browser storage.
+		// If there are any problems, it's OK to treat this as "couldn't read the token."
 		return null;
 	}
 }
@@ -69,7 +69,8 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 				localStorage.removeItem(TOKEN_STORAGE_KEY);
 			}
 		} catch {
-			// Persistence is optional; authentication is verified by the server.
+			// If it failed to persist, that's unfortunate, but fine. The only consequence of that would be that the user needs
+			// to sign in again next time.
 		}
 	});
 
