@@ -67,8 +67,11 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 	createEffect(() => {
 		const token = props.accountToken();
 		try {
-			if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
-			else localStorage.removeItem(TOKEN_STORAGE_KEY);
+			if (token) {
+				localStorage.setItem(TOKEN_STORAGE_KEY, token);
+			} else {
+				localStorage.removeItem(TOKEN_STORAGE_KEY);
+			}
 		} catch {
 			// Persistence is optional; authentication is verified by the server.
 		}
@@ -97,7 +100,9 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 				<div ref={loginButtonParent} hidden={!!props.accountToken()}></div>
 				<Show when={props.accountToken()}>
 					<span>Signed in. </span>
-					<button type="button" onClick={handleSignOut}>Sign out</button>
+					<button type="button" onClick={handleSignOut}>
+						Sign out
+					</button>
 				</Show>
 			</div>
 		</Show>
