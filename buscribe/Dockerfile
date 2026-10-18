@@ -1,6 +1,6 @@
 FROM debian:13 AS build
 
-RUN apt update && apt install -y python3 libpq-dev python3-pip curl unzip \
+RUN apt update && apt install -y --no-install-recommends python3 libpq-dev python3-pip gcc python3-dev \
     && rm /usr/lib/python3.13/EXTERNALLY-MANAGED \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,7 +23,6 @@ RUN cd /tmp \
 	&& unzip vosk-model-small-en-us-0.15.zip -d /usr/share/buscribe \
 	&& unzip vosk-model-spk-0.4.zip -d /usr/share/buscribe \
 	&& rm *.zip
-
 
 FROM debian:13
 RUN apt update && apt install -y --no-install-recommends python3 ca-certificates libpq5 ffmpeg && rm -rf /var/lib/apt/lists/*
