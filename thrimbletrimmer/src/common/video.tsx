@@ -1,6 +1,7 @@
 import { Accessor, Component, createEffect, createSignal, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
 import { Fragment } from "hls.js";
+import { arrayEquals } from "./common";
 import {
 	TimeType,
 	wubloaderTimeFromDateTime,
@@ -24,6 +25,52 @@ import "vidstack/player/layouts/default";
 import "vidstack/player/ui";
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
+
+export class FragmentTimes {
+	rawStart: DateTime;
+	rawEnd: DateTime;
+	playerStart: number;
+	duration: number;
+
+	equals(other: FragmentTimes): boolean {
+		if (this.rawStart.toMillis() !== other.rawStart.toMillis()) {
+			return false;
+		}
+		if (this.rawEnd.toMillis() !== other.rawEnd.toMillis()) {
+			return false;
+		}
+		if (this.playerStart !== other.playerStart) {
+			return false;
+		}
+		if (this.duration !== other.duration) {
+			return false;
+		}
+		return true;
+	}
+}
+
+export function fragmentTimesListsAreEqual(
+	lhs: FragmentTimes[][],
+	rhs: FragmentTimes[][],
+): boolean {
+	return arrayEquals(lhs, rhs, (lhs, rhs) => arrayEquals(lhs, rhs, (lhs, rhs) => lhs.equals(rhs)));
+}
+
+export function fragmentTimesFromFragments(fragments: Fragment[]): FragmentTimes[] {
+	const times: FragmentTimes[] = [];
+	for (const fragment of fragments) {
+		if (fragment.rawProgramDateTime === null) {
+			continue;
+		}
+		const timeDefinition = new FragmentTimes();
+		timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
+		timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
+		timeDefinition.playerStart = fragment.start;
+		timeDefinition.duration = fragment.duration;
+		times.push(timeDefinition);
+	}
+	return times;
+}
 
 export interface StreamTimeSettingsProps {
 	/** Getter for the signal to get the time when the run starts. */

@@ -2,6 +2,7 @@ import {
 	Accessor,
 	Component,
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	Index,
@@ -20,7 +21,6 @@ import styles from "./Editor.module.scss";
 import {
 	ChapterData,
 	EditorState,
-	FragmentTimes,
 	RangeData,
 	ThumbnailData,
 	ThumbnailTemplateDefinition,
@@ -48,10 +48,13 @@ import {
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
+	FragmentTimes,
 	KeyboardShortcuts,
 	StreamTimeSettings,
 	VIDEO_FRAMES_PER_SECOND,
 	VideoPlayer,
+	fragmentTimesFromFragments,
+	fragmentTimesListsAreEqual,
 } from "../common/video";
 
 export const Editor: Component = () => {
@@ -246,7 +249,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
 	const [videoDuration, setVideoDuration] = createSignal(0);
 	const [allFragments, setAllFragments] = createSignal<Fragment[]>([]);
-	const [allFragmentTimes, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
+	const [allFragmentTimesRaw, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
 	const [videoDescription, setVideoDescription] = createSignal(description ?? "");
@@ -254,6 +257,11 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [allowHoles, setAllowHoles] = createSignal(false);
 
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
+
+	const allFragmentTimes = createMemo(allFragmentTimesRaw, [], {
+		equals: fragmentTimesListsAreEqual,
+		name: "allFragmentTimes",
+	});
 
 	const videoFragmentTimes = () => {
 		return allFragmentTimes()[currentQualityLevel()];
@@ -355,18 +363,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			player.addEventListener("hls-level-loaded", (event) => {
 				setAllFragments(event.detail.details.fragments);
 
-				const times: FragmentTimes[] = [];
-				for (const fragment of event.detail.details.fragments) {
-					if (fragment.rawProgramDateTime === null) {
-						continue;
-					}
-					const timeDefinition = new FragmentTimes();
-					timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
-					timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
-					timeDefinition.playerStart = fragment.start;
-					timeDefinition.duration = fragment.duration;
-					times.push(timeDefinition);
-				}
+				const times = fragmentTimesFromFragments(event.detail.details.fragments);
 				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
 				while (fragmentTimes.length <= event.detail.level) {
 					fragmentTimes.push([]);
@@ -881,7 +878,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 			/>
 			<DataCorrection videoID={props.data.id} accountToken={accountToken} />
 			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
-			<ChatDisplay streamInfo={streamVideoInfo()} fragments={allFragments} />
+			<ChatDisplay streamInfo={streamVideoInfo()} fragments={videoFragmentTimes} />
 		</>
 	);
 };

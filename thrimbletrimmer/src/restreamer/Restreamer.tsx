@@ -2,6 +2,7 @@ import {
 	Accessor,
 	Component,
 	createEffect,
+	createMemo,
 	createResource,
 	createSignal,
 	For,
@@ -24,10 +25,13 @@ import {
 } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
+	FragmentTimes,
 	KeyboardShortcuts,
 	StreamTimeSettings,
 	VIDEO_FRAMES_PER_SECOND,
 	VideoPlayer,
+	fragmentTimesFromFragments,
+	fragmentTimesListsAreEqual,
 } from "../common/video";
 import { ChatDisplay } from "../common/chat";
 
@@ -100,14 +104,36 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	const [videoFragments, setVideoFragments] = createSignal<Fragment[]>([]);
+	const [allFragmentTimesRaw, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([]);
+	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [chatContainerElement, setChatContainerElement] = createSignal<HTMLDivElement>();
 	const [chatScrolledToBottom, setChatScrolledToBottom] = createSignal(true);
+
+	const allFragmentTimes = createMemo(allFragmentTimesRaw, [], {
+		equals: fragmentTimesListsAreEqual,
+		name: "allFragmentTimes",
+	});
+
+	const videoFragmentTimes = () => {
+		return allFragmentTimes()[currentQualityLevel()];
+	};
 
 	onMount(() => {
 		const player = mediaPlayer();
 		if (player) {
 			player.addEventListener("hls-level-loaded", (event) => {
 				setVideoFragments(event.detail.details.fragments);
+
+				const times = fragmentTimesFromFragments(event.detail.details.fragments);
+				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
+				while (fragmentTimes.length <= event.detail.level) {
+					fragmentTimes.push([]);
+				}
+				fragmentTimes[event.detail.level] = times;
+				setAllFragmentTimes(fragmentTimes);
+			});
+			player.addEventListener("hls-level-switched", (event) => {
+				setCurrentQualityLevel(event.detail.level);
 			});
 		}
 	});
@@ -323,7 +349,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 			>
 				<ChatDisplay
 					streamInfo={streamVideoInfo()}
-					fragments={videoFragments}
+					fragments={videoFragmentTimes}
 					videoTime={playerTime}
 				/>
 			</div>
