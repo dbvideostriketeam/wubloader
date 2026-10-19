@@ -41,9 +41,9 @@ class Client:
 			if self.heartbeater.ready():
 				try:
 					self.heartbeater.get()
-					assert False, "heartbeater should not return successfully"
 				except Exception as e:
 					raise Exception("Heartbeater failed") from e
+				assert False, "heartbeater should not return successfully"
 			message = self.socket.recv()
 			self.logger.debug(f"Recieved {message!r}")
 			message = Message(*json.loads(message))
