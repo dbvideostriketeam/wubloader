@@ -132,18 +132,21 @@ def main(
 		state["donation_token"] = donation["token"]
 		save_state()
 
-	events = website.event_stream()
-	events.subscribe_prizes()
-	events.subscribe_donations(last_seen=state.get("donation_token"))
+	while True:
+		logging.info("Connecting to event stream")
 
-	for prize in website.prizes():
-		process_prize(prize)
+		events = website.event_stream()
+		events.subscribe_prizes()
+		events.subscribe_donations(last_seen=state.get("donation_token"))
 
-	for message in events.recv():
-		if message.event == "prize":
-			process_prize(message.payload)
-		if message.event == "donation":
-			process_donation(message.payload)
+		for prize in website.prizes():
+			process_prize(prize)
+
+		for message in events.recv():
+			if message.event == "prize":
+				process_prize(message.payload)
+			if message.event == "donation":
+				process_donation(message.payload)
 
 if __name__ == '__main__':
 	argh.dispatch_command(main)
