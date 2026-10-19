@@ -103,6 +103,9 @@ export async function chatData(
 		}
 		const messageTimeOffset = when.diff(currentFragmentStartTime).milliseconds / 1000;
 		const messageVideoTime = fragments[currentFragmentIndex].start + messageTimeOffset;
+		if (messageVideoTime < 0) {
+			continue;
+		}
 		if (chatMessage.command === "PRIVMSG") {
 			chatData.push({
 				message: chatMessage,
