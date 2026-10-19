@@ -13,6 +13,7 @@ import logging
 
 from websockets.sync.client import connect
 import gevent
+import websockets
 
 
 Message = namedtuple("Message", ["join_ref", "msg_ref", "topic", "event", "payload"])
@@ -36,7 +37,7 @@ class Client:
 		return join_id, message_id
 
 	def recv(self):
-		"""Iterator that streams incoming events"""
+		"""Iterator that streams incoming events until socket is closed"""
 		while True:
 			if self.heartbeater.ready():
 				try:
@@ -44,7 +45,11 @@ class Client:
 				except Exception as e:
 					raise Exception("Heartbeater failed") from e
 				assert False, "heartbeater should not return successfully"
-			message = self.socket.recv()
+			try:
+				message = self.socket.recv()
+			except websockets.exceptions.ConnectionClosed:
+				self.logger.debug("Socket closed")
+				return
 			self.logger.debug(f"Recieved {message!r}")
 			message = Message(*json.loads(message))
 			if message.event == "phx_reply" and message.payload["status"] != "ok":

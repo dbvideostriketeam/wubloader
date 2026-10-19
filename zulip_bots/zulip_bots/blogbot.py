@@ -175,31 +175,36 @@ def main(config_file, test=False, event_id=None, stream='bot-spam', topic='Blog 
 
 	webclient = website.Client(event_id=event_id)
 	event = webclient.event()
-	events = webclient.event_stream()
-	events.subscribe_blog()
 
-	# On startup, save all existing posts in case we missed any.
-	# Note we do this *after* subscribing to avoid a race window.
-	# Double-saving is fine.
-	latest = None
-	for post in webclient.blog_posts():
-		if latest is None:
-			latest = post
-		if save_dir is not None:
-			save_post(save_dir, media_dir, post)
+	while True:
+		logging.info("Connecting to event stream")
 
-	if test:
-		if latest is None:
-			logging.warning("Ignoring --test, no blog posts found")
-		else:
-			send_post(zulip_client, stream, topic, save_dir, event, latest)
+		events = webclient.event_stream()
+		events.subscribe_blog()
 
-	for message in events.recv():
-		if message.event != "post":
-			continue
-		if save_dir is not None:
-			save_post(save_dir, media_dir, message.payload)
-		send_post(zulip_client, stream, topic, save_dir, event, message.payload)
+		# On startup/reconnect, save all existing posts in case we missed any.
+		# Note we do this *after* subscribing to avoid a race window.
+		# Double-saving is fine.
+		latest = None
+		for post in webclient.blog_posts():
+			if latest is None:
+				latest = post
+			if save_dir is not None:
+				save_post(save_dir, media_dir, post)
+
+		if test:
+			if latest is None:
+				logging.warning("Ignoring --test, no blog posts found")
+			else:
+				send_post(zulip_client, stream, topic, save_dir, event, latest)
+			test = False # avoid re-sending test message on reconnect
+
+		for message in events.recv():
+			if message.event != "post":
+				continue
+			if save_dir is not None:
+				save_post(save_dir, media_dir, message.payload)
+			send_post(zulip_client, stream, topic, save_dir, event, message.payload)
 
 
 if __name__ == '__main__':
