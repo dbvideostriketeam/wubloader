@@ -128,11 +128,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	}
 
 	const streamInfo = new StreamVideoInfo();
-	if (props.data.upload_location) {
-		streamInfo.streamName = props.data.upload_location;
-	} else {
-		streamInfo.streamName = props.data.video_channel;
-	}
+	streamInfo.streamName = props.data.video_channel;
 	let streamStart = dateTimeFromWubloaderTime(props.data.event_start);
 	if (!streamStart) {
 		return (
