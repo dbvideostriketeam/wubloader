@@ -207,7 +207,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	}
 
 	const initialVideoData: RangeData[] = [];
-	const transitions = props.data.video_transitions;
+	const transitions = props.data.video_transitions?.slice() ?? null;
 	if (transitions !== null) {
 		transitions.unshift(null);
 	}
