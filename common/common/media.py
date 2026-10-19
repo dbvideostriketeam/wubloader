@@ -114,8 +114,9 @@ def download_media(
 					gevent.sleep(jitter(retry_interval))
 
 				try:
-					if download_imgur_url(output_dir, max_size, url):
-						return
+					path = download_imgur_url(output_dir, max_size, url)
+					if path is not None:
+						return path
 
 					resp = _request(urls[-1], max_size, content_types)
 
@@ -124,8 +125,7 @@ def download_media(
 						urls.append(resolve_relative_url(urls[-1], new_url))
 						break # break from retry loop, continuing in the redirect loop
 
-					_save_response(output_dir, urls, resp, max_size, chunk_size)
-					return
+					return _save_response(output_dir, urls, resp, max_size, chunk_size)
 				except Rejected:
 					raise
 				except Exception as e:
@@ -229,6 +229,8 @@ def _save_response(output_dir, urls, resp, max_size, chunk_size):
 		}
 		atomic_write(metadata_path, json.dumps(metadata, indent=4))
 
+	return filepath
+
 
 def _save_content(output_dir, urls, ext, content):
 	"""Alternate version of _save_response() for cases where content is explicitly generated
@@ -251,6 +253,7 @@ def _save_content(output_dir, urls, ext, content):
 			"fetch_time": time.time(),
 		}
 		atomic_write(metadata_path, json.dumps(metadata, indent=4))
+	return filepath
 
 
 def _request(url, max_size, content_types):
@@ -340,19 +343,19 @@ def download_imgur_url(output_dir, max_size, url):
 	parsed = urllib.parse.urlparse(url)
 	if parsed.hostname not in ("imgur.com", "i.stack.imgur.com"):
 		# not an imgur link that needs special handling
-		return False
+		return None
 	match = re.match(r"^/([^/.]+)(?:\.([a-z]+))?$", parsed.path)
 	if match:
 		id, ext = match.groups()
 		if ext is None:
 			# Try to get a video ("gif") first, if that 400s then get a png.
 			try:
-				download_imgur_image(output_dir, max_size, url, id, "mp4")
+				path = download_imgur_image(output_dir, max_size, url, id, "mp4")
 			except requests.HTTPError:
-				download_imgur_image(output_dir, max_size, url, id, "png")
+				path = download_imgur_image(output_dir, max_size, url, id, "png")
 		else:
-			download_imgur_image(output_dir, max_size, url, id, ext)
-		return True
+			path = download_imgur_image(output_dir, max_size, url, id, ext)
+		return path
 	elif parsed.path.startswith("/a/"):
 		# paths look like /a/some-name-then-ID
 		id = parsed.path.removeprefix("/a/").split("-")[-1]
@@ -361,7 +364,7 @@ def download_imgur_url(output_dir, max_size, url):
 		contents = download_imgur_gallery(url, parsed.path.removeprefix("/gallery/"))
 	else:
 		# no match, treat like non-imgur link
-		return False
+		return None
 
 	# Common part for albums and galleries
 	pool = Pool(16)
@@ -376,12 +379,12 @@ def download_imgur_url(output_dir, max_size, url):
 	# but only raise for image download errors after, so we at least know about everything that
 	# succeeded.
 	contents_urls = [f"https://imgur.com/{id}" for id, ext in contents]
-	_save_content(output_dir, [url], "json", json.dumps(contents_urls))
+	path = _save_content(output_dir, [url], "json", json.dumps(contents_urls))
 
 	if failed:
 		raise Exception(str(failed))
 
-	return True
+	return path
 
 
 def imgur_request(url):
@@ -430,7 +433,7 @@ def download_imgur_image(output_dir, max_size, url, id, ext):
 	"""Fetch imgur image and save it as per download_media()"""
 	image_url = f"https://i.imgur.com/{id}.{ext}"
 	resp = imgur_request(image_url)
-	_save_content(output_dir, [url, image_url], ext, resp.content)
+	return _save_content(output_dir, [url, image_url], ext, resp.content)
 
 
 if __name__ == '__main__':
