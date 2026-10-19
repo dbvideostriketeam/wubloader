@@ -71,7 +71,7 @@ def blog_to_md(event, post):
 	])
 
 def diff_blogs(post_a, post_b):
-	"""Given two posts, returns markdown containing the formatted diff"""
+	"""Given two posts, returns markdown containing the formatted diff, or None if equal"""
 	updated_old = post_a.get("updated_at", post_a.get("published_at"))
 	updated_old = "UNKNOWN" if updated_old is None else md_time(updated_old)
 	# only include keys we want in the diff
@@ -79,6 +79,8 @@ def diff_blogs(post_a, post_b):
 		{key: post.get(key) for key in ("author", "title", "description")}
 		for post in (post_a, post_b)
 	]
+	if post_a == post_b:
+		return None
 	# format as 2-indent json
 	lines_a, lines_b = [json.dumps(post, indent=2).split("\n") for post in (post_a, post_b)]
 
@@ -88,6 +90,7 @@ def diff_blogs(post_a, post_b):
 	return md_spoiler(f"Diff from previous edit at {updated_old}", md_block(diff, type="diff"))
 
 def edit_to_md(event, prev_post, post):
+	"""Returns 'post edited' markdown, or None if post has no changes from prev_post"""
 	title = "UNKNOWN"
 	updated = "UNKNOWN"
 
@@ -99,6 +102,9 @@ def edit_to_md(event, prev_post, post):
 	except Exception as e:
 		logging.warning(f"Failed to parse blog edit: {prev_post}, {post}", exc_info=True)
 		diff = f"Generating diff failed, please see logs: {e}"
+
+	if diff is None:
+		return None
 
 	return "\n".join([
 		f"Blog post {title} was updated at {updated}",
@@ -120,6 +126,9 @@ def send_post(client, stream, topic, save_dir, event, post):
 		prev_post = find_post(save_dir, post["id"], exclude=post)
 		if prev_post is not None:
 			content = edit_to_md(event, prev_post, post)
+			if content is None:
+				logging.info(f"Not sending message for identical post {post}")
+				return
 	client.send_to_stream(stream, topic, content)
 
 def save_post(save_dir, media_dir, post):
