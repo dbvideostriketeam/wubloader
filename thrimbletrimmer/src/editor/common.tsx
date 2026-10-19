@@ -144,20 +144,13 @@ export function dateTimeFromVideoPlayerTime(
 }
 
 export function displayTimeForVideoPlayerTime(time: number): string {
-	const minutes = Math.trunc(time / 60);
-	const secondsRaw = Math.trunc(time % 60);
-	const seconds = secondsRaw < 10 ? `0${secondsRaw}` : secondsRaw;
-	const millisecondsRaw = Math.round((time % 1) * 1000);
-	let milliseconds: string | number;
-	if (millisecondsRaw < 10) {
-		milliseconds = `00${millisecondsRaw}`;
-	} else if (millisecondsRaw < 100) {
-		milliseconds = `0${millisecondsRaw}`;
-	} else {
-		milliseconds = millisecondsRaw;
-	}
+	// Round to the nearest millisecond, and split to minutes, seconds, and ms
+	const totalMilliseconds = Math.round(time * 1000);
+	const minutes = Math.trunc(totalMilliseconds / 60000);
+	const seconds = Math.trunc((totalMilliseconds % 60000) / 1000);
+	const milliseconds = totalMilliseconds % 1000;
 
-	return `${minutes}:${seconds}.${milliseconds}`;
+	return `${minutes}:${String(seconds).padStart(2, "0")}.${String(milliseconds).padStart(3, "0")}`;
 }
 
 export function videoPlayerTimeForDisplayTime(time: string): number {
