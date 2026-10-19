@@ -446,9 +446,6 @@
     tag,
   ],
 
-  // docker-compose version
-  version: "3",
-
   services: {
 
     [if $.enabled.downloader then "downloader"]: {
