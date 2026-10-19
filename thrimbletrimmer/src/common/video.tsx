@@ -1,5 +1,6 @@
 import { Accessor, Component, createEffect, createSignal, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
+import { Fragment } from "hls.js";
 import {
 	TimeType,
 	wubloaderTimeFromDateTime,
@@ -8,6 +9,7 @@ import {
 	dateTimeFromWubloaderTime,
 	dateTimeFromBusTime,
 	dateTimeFromTimeAgo,
+	dateTimeFromVideoPlayerTime,
 } from "./convertTime";
 import styles from "./video.module.scss";
 import "./video.scss";
@@ -220,6 +222,7 @@ export interface VideoPlayerProps {
 	setPlayerTime: Setter<number>;
 	mediaPlayer: Accessor<MediaPlayerElement>;
 	setMediaPlayer: Setter<MediaPlayerElement>;
+	fragments: Accessor<Fragment[]>;
 }
 
 export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
@@ -261,6 +264,15 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 			return `${minutesDisplay}:${secondsDisplay}.${millisecondsDisplay}`;
 		}
 		return `${hours}:${minutesDisplay}:${secondsDisplay}.${millisecondsDisplay}`;
+	};
+
+	const localTimeDisplay = () => {
+		const videoTime = playerTime();
+		const videoDateTime = dateTimeFromVideoPlayerTime(props.fragments(), videoTime);
+		if (!videoDateTime) {
+			return "";
+		};
+		return videoDateTime.setZone("America/Vancouver").toLocaleString(DateTime.TIME_SIMPLE);
 	};
 
 	return (
@@ -317,6 +329,8 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 						<span>{formatTime(playerTime())}</span>
 						<span class="vds-time-divider">/</span>
 						<span>{formatTime(duration())}</span>
+						<span class={styles.localTimeSeparator}></span>
+						<span>{localTimeDisplay()}</span>
 					</div>
 
 					<div class="vds-controls-spacer"></div>

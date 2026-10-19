@@ -304,6 +304,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				setPlayerTime={setPlayerTime}
 				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
+				fragments={videoFragments}
 			/>
 			<div class={styles.videoLinks}>
 				<a href={downloadVideoURL()}>Download Video</a>
