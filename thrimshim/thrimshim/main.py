@@ -142,66 +142,6 @@ def test(editor=None):
 	return json_response(editor)
 
 
-@app.route('/thrimshim/auth-status', methods=['GET', 'POST'])
-@request_stats
-def auth_status():
-	"""Show identity and effective write permissions for the browser's stored token."""
-	if flask.request.method == 'GET':
-		response = flask.make_response("""<!doctype html>
-<html lang="en">
-<head><meta charset="utf-8"><title>Authentication status</title></head>
-<body>
-<h1>Authentication status</h1>
-<pre id="status">Checking...</pre>
-<script>
-(async () => {
-	const output = document.getElementById("status");
-	try {
-		const response = await fetch("/thrimshim/auth-status", {
-			method: "POST",
-			headers: {"Content-Type": "application/json"},
-			body: JSON.stringify({token: localStorage.getItem("thrimbletrimmer.googleToken")}),
-		});
-		output.textContent = "HTTP " + response.status + "\\n" + await response.text();
-	} catch (error) {
-		output.textContent = error.message;
-	}
-})();
-</script>
-</body>
-</html>""")
-	else:
-		email = name = None
-		editor = artist = app.no_authentication
-		if not app.no_authentication:
-			body = flask.request.get_json(silent=True)
-			token = body.get('token') if isinstance(body, dict) else None
-			if not isinstance(token, str) or not token:
-				return 'User token required', 401, {'Cache-Control': 'no-store'}
-			try:
-				identity = verify_google_identity(token, app.config['GOOGLE_CLIENT_ID'])
-			except (ValueError, jwt.PyJWTError):
-				return 'Invalid token. Access denied.', 403, {'Cache-Control': 'no-store'}
-			email = identity['email'].lower()
-			conn = app.db_manager.get_conn()
-			try:
-				row = database.query(conn, '''
-					SELECT name, editor, artist FROM roles WHERE lower(email) = %s
-				''', email).fetchone()
-			finally:
-				app.db_manager.put_conn(conn)
-			if row:
-				name, editor, artist = row
-		response = json_response({
-			'email': email,
-			'name': name,
-			'authentication_required': not app.no_authentication,
-			'permissions': {'edit': editor, 'manage_thumbnails': artist},
-		})
-	response.headers['Cache-Control'] = 'no-store'
-	return response
-
-
 @app.route('/thrimshim/auth-config')
 @request_stats
 def auth_config():
