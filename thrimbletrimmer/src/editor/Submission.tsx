@@ -273,8 +273,13 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				}
 			}
 
+			const transitionType = rangeData.transitionType();
 			const transitionSeconds = rangeData.transitionSeconds();
-			transitions.push([rangeData.transitionType(), transitionSeconds]);
+			if (transitionType === "") {
+				transitions.push(null);
+			} else {
+				transitions.push([transitionType, transitionSeconds]);
+			}
 
 			currentRangeStartSecs += rangePlayerEnd - rangePlayerStart - transitionSeconds;
 
@@ -391,7 +396,12 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				}
 			}
 
-			transitions.push([rangeData.transitionType(), rangeData.transitionSeconds()]);
+			const transitionType = rangeData.transitionType();
+			if (transitionType === "") {
+				transitions.push(null);
+			} else {
+				transitions.push([transitionType, rangeData.transitionSeconds()]);
+			}
 		}
 		transitions.shift();
 
