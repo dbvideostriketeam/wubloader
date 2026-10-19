@@ -169,7 +169,7 @@ def generate_full_description(job, description_footer, playlists, attribution):
 		parts.append(f"Thumbnail Credit: {attribution}")
 
 	if job.chapter_markers is not None:
-		over_an_hour = get_duration(job) >= datetime.timedelta(hours=1)
+		over_an_hour = get_duration(job) >= datetime.timedelta(hours=1).total_seconds()
 		def format_time(time):
 			hours, rest = divmod(time, 3600)
 			minutes, seconds = divmod(rest, 60)
