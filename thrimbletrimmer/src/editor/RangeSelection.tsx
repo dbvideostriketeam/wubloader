@@ -262,13 +262,21 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 								<div>
 									<span class={styles.transitionLabel}>Transition:</span>
 									<select onChange={setTransitionType}>
-										<option value="" title="Hard cut between the time ranges">
+										<option
+											value=""
+											title="Hard cut between the time ranges"
+											selected={currentRangeData().transitionType() === ""}
+										>
 											cut
 										</option>
 										<For each={props.allTransitions}>
 											{(item: TransitionDefinition, index: Accessor<number>) => {
 												return (
-													<option value={item.name} title={item.description}>
+													<option
+														value={item.name}
+														title={item.description}
+														selected={currentRangeData().transitionType() === item.name}
+													>
 														{item.name}
 													</option>
 												);

@@ -215,7 +215,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		const rangeStart = initialVideoRanges[index][0];
 		const rangeEnd = initialVideoRanges[index][1];
 
-		let transitionType = "cut";
+		let transitionType = "";
 		let transitionSeconds = 0;
 		if (transitions && index < transitions.length) {
 			const thisTransition = transitions[index];
