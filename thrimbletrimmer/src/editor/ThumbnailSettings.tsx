@@ -108,13 +108,9 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	};
 
-	const [showFrameCropTool, setShowFrameCropTool] = createSignal(false);
-	const toggleFrameCropTool = (event) => {
-		setShowFrameCropTool(!showFrameCropTool());
-	};
-	const [showTemplateLocationTool, setShowTemplateLocationTool] = createSignal(false);
-	const toggleTemplateLocationTool = (event) => {
-		setShowTemplateLocationTool(!showTemplateLocationTool());
+	const [showAdvancedThumbnailControls, setShowAdvancedThumbnailControls] = createSignal(false);
+	const toggleAdvancedThumbnailControls = () => {
+		setShowAdvancedThumbnailControls(!showAdvancedThumbnailControls());
 	};
 	const canShowCropTools = () => {
 		return (
@@ -303,12 +299,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 	createEffect(() => {
 		const ratioLocked = aspectRatioLocked();
-		const cropSelectionDisplayed = showFrameCropTool();
-		const locSelectionDisplayed = showTemplateLocationTool();
-		if (!cropSelectionDisplayed && !locSelectionDisplayed) {
-			// If these aren't set, neither cropper exists yet, so neither will be able
+		if (!showAdvancedThumbnailControls()) {
+			// If this isn't set, neither cropper exists yet, so neither will be able
 			// to be updated. Both should get this set when starting to display (the Show
-			// Crop Tool button for the respective cropper is clicked).
+			// Advanced Thumbnail Controls button).
 			return;
 		}
 
@@ -331,15 +325,11 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	});
 
-	const [showThumbnailPreview, setShowThumbnailPreview] = createSignal(false);
-	const togglePreview = (event) => {
-		setShowThumbnailPreview(!showThumbnailPreview());
-	};
 	let previewCanvas: HTMLCanvasElement | undefined;
 	createEffect(
 		on(
 			[
-				showThumbnailPreview,
+				canShowCropTools,
 				cropBaseImageURL,
 				locBaseImageURL,
 				cropX,
@@ -483,37 +473,29 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 			</Show>
 			<div class={styles.cropOptions}>
 				<Show when={canShowCropTools()}>
-					<button type="button" onClick={toggleFrameCropTool}>
-						<Show when={showFrameCropTool()} fallback="Show Frame Crop Tool">
-							Hide Frame Crop Tool
+					<button type="button" onClick={toggleAdvancedThumbnailControls}>
+						<Show when={showAdvancedThumbnailControls()} fallback="Show Advanced Thumbnail Controls">
+							Hide Advanced Thumbnail Controls
 						</Show>
 					</button>
-					<button type="button" onClick={toggleTemplateLocationTool}>
-						<Show when={showTemplateLocationTool()} fallback="Show Template Location Tool">
-							Hide Template Location Tool
-						</Show>
-					</button>
-					<button type="button" onClick={matchCropAspectRatioToLocation}>
-						Match Crop Aspect Ratio to Location
-					</button>
-					<button type="button" onClick={matchLocationAspectRatioToCrop}>
-						Match Location Aspect Ratio to Crop
-					</button>
-					<label>
-						<input
-							type="checkbox"
-							use:bindingInputChecked={[aspectRatioLocked, setAspectRatioLocked]}
-						/>
-						Lock Aspect Ratio
-					</label>
-					<button type="button" onClick={togglePreview}>
-						<Show when={showThumbnailPreview()} fallback="Show Thumbnail Preview">
-							Hide Thumbnail Preview
-						</Show>
-					</button>
+					<Show when={showAdvancedThumbnailControls()}>
+						<button type="button" onClick={matchCropAspectRatioToLocation}>
+							Match Crop Aspect Ratio to Location
+						</button>
+						<button type="button" onClick={matchLocationAspectRatioToCrop}>
+							Match Location Aspect Ratio to Crop
+						</button>
+						<label>
+							<input
+								type="checkbox"
+								use:bindingInputChecked={[aspectRatioLocked, setAspectRatioLocked]}
+							/>
+							Lock Aspect Ratio
+						</label>
+					</Show>
 				</Show>
 			</div>
-			<Show when={canShowCropTools()}>
+			<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
 				<div>
 					<span class={styles.cropCoordinatesLabel}>Image crop coordinates:</span>
 					<input
@@ -594,7 +576,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				</div>
 			</Show>
 			<div class={styles.croppers}>
-				<Show when={canShowCropTools() && showFrameCropTool()}>
+				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
 					<cropper-canvas class={styles.cropper}>
 						<cropper-image src={cropBaseImageURL()} />
 						<cropper-shade />
@@ -626,7 +608,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 						</cropper-selection>
 					</cropper-canvas>
 				</Show>
-				<Show when={canShowCropTools() && showTemplateLocationTool()}>
+				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
 					<cropper-canvas class={styles.cropper}>
 						<cropper-image src={locBaseImageURL()} />
 						<cropper-shade />
@@ -659,7 +641,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 					</cropper-canvas>
 				</Show>
 			</div>
-			<Show when={canShowCropTools() && showThumbnailPreview()}>
+			<Show when={canShowCropTools()}>
 				<div>
 					<canvas width={320} height={180} ref={previewCanvas}></canvas>
 				</div>
