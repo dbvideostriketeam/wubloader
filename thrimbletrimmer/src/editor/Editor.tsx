@@ -804,6 +804,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				setPlayerTime={setPlayerTime}
 				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
+				fragments={allFragments}
 			/>
 			<ClipBar
 				rangeData={videoData}
