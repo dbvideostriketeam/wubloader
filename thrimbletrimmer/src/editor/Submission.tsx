@@ -44,7 +44,7 @@ interface ThumbnailInfo {
 
 export const Submission: Component<SubmissionProps> = (props) => {
 	const [showAdvancedSubmissionOptions, setShowAdvancedSubmissionOptions] = createSignal(false);
-	const [makeUnlisted, setMakeUnlisted] = createSignal(false);
+	const [makeUnlisted, setMakeUnlisted] = createSignal(props.originalVideoData.public === false);
 	const [uploadLocation, setUploadLocation] = createSignal(
 		props.uploadLocations.length > 0 ? props.uploadLocations[0] : "",
 	);
