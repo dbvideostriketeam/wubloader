@@ -165,7 +165,7 @@ def generate_full_description(job, description_footer, playlists, attribution):
 			)
 		)
 
-	if attribution is not None:
+	if attribution:
 		parts.append(f"Thumbnail Credit: {attribution}")
 
 	if job.chapter_markers is not None:
@@ -534,7 +534,7 @@ class Cutter(object):
 
 		def generate_thumbnail():
 			# determine attribution first, before early returns
-			attribution = None
+			attribution = ""
 			if job.thumbnail_mode == 'TEMPLATE':
 				template = get_template(self.conn, job.thumbnail_template)
 				attribution = template.attribution
@@ -871,7 +871,7 @@ class VideoUpdater(object):
 					try:
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
 						# but that should be very rare and can be dealt with out of band.
-						attribution = None
+						attribution = ""
 						if job.thumbnail_mode != 'NONE':
 							thumbnail_image = job.thumbnail_image
 							if thumbnail_image is None:
