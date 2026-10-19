@@ -207,9 +207,9 @@ const EditorContent: Component<ContentProps> = (props) => {
 	}
 
 	const initialVideoData: RangeData[] = [];
-	const transitions = props.data.video_transitions?.slice() ?? null;
+	let transitions = props.data.video_transitions;
 	if (transitions !== null) {
-		transitions.unshift(null);
+		transitions = [null, ...transitions];
 	}
 	for (let index = 0; index < initialVideoRanges.length; index++) {
 		const rangeStart = initialVideoRanges[index][0];
