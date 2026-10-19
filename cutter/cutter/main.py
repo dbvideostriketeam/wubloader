@@ -815,6 +815,9 @@ UPDATE_JOB_PARAMS = [
 	"video_title",
 	"video_description",
 	"chapter_markers",
+	# Required to resolve chapter markers into times in the uploaded video.
+	"video_ranges",
+	"video_transitions",
 	"tags",
 	"video_tags",
 	"public",
