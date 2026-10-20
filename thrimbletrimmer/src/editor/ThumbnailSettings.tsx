@@ -342,8 +342,8 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				locHeight,
 			],
 			(values) => {
-				const showingPreview = values[0];
-				if (!showingPreview || !previewCanvas) {
+				const canShowCropTools = values[0];
+				if (!canShowCropTools || !previewCanvas) {
 					return;
 				}
 
