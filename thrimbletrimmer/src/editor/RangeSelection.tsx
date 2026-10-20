@@ -40,6 +40,7 @@ interface RangeSelectionProps {
 	setRangeData: Setter<RangeData[]>;
 	allTransitions: TransitionDefinition[];
 	activeKeyboardIndex: Accessor<number>;
+	setActiveKeyboardIndex: Setter<number>;
 	streamInfo: Accessor<StreamVideoInfo>;
 	allowHoles: Accessor<boolean>;
 	videoPlayerTime: Accessor<number>;
@@ -247,9 +248,15 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 
 					const removeHandler = () => {
 						const ranges = props.rangeData();
+						if (ranges.length <= 1) {
+							return;
+						}
 						const newRanges = ranges.slice();
 						newRanges.splice(index, 1);
 						props.setRangeData(newRanges);
+						props.setActiveKeyboardIndex((activeIndex) =>
+							activeIndex >= index ? Math.max(0, activeIndex - 1) : activeIndex,
+						);
 					};
 
 					const addChapter = (event) => {
@@ -366,13 +373,15 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 									/>
 								</div>
 								<div class={styles.timeRangeIcon}>
-									<img
-										class={styles.clickable}
-										src={RemoveIcon}
-										alt="Remove this time range"
-										title="Remove this time range"
-										onClick={removeHandler}
-									/>
+									<Show when={props.rangeData().length > 1}>
+										<img
+											class={styles.clickable}
+											src={RemoveIcon}
+											alt="Remove this time range"
+											title="Remove this time range"
+											onClick={removeHandler}
+										/>
+									</Show>
 								</div>
 								<div class={styles.timeRangeIcon}>
 									<Show when={props.activeKeyboardIndex() === index}>
