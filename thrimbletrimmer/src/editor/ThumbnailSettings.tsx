@@ -416,7 +416,11 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 					<select value={props.thumbnailData.template() ?? ""} onChange={setThumbnailTemplate}>
 						<For each={props.allThumbnailTemplates}>
 							{(template: ThumbnailTemplateDefinition) => (
-								<option value={template.name} title={template.description}>
+								<option
+									value={template.name}
+									title={template.description}
+									selected={template.name === (props.thumbnailData.template() ?? "")}
+								>
 									{template.name}
 								</option>
 							)}
