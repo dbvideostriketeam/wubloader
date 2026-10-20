@@ -12,7 +12,6 @@ import {
 import styles from "./RangeSelection.module.scss";
 import {
 	ChapterData,
-	dateTimeFromVideoPlayerTime,
 	displayTimeForVideoPlayerTime,
 	FragmentTimes,
 	RangeData,
@@ -21,7 +20,7 @@ import {
 	videoPlayerTimeFromDateTime,
 } from "./common";
 import { bindingInputOnChange } from "../common/binding";
-import { wubloaderTimeFromDateTime } from "../common/convertTime";
+import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { VideoPlayer } from "../common/video";
 import { MediaPlayerElement } from "vidstack/elements";

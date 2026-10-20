@@ -1,7 +1,6 @@
 import { Accessor, Component, createEffect, createSignal, For, on, Show, untrack } from "solid-js";
 import { MediaPlayerElement } from "vidstack/elements";
 import {
-	dateTimeFromVideoPlayerTime,
 	displayTimeForVideoPlayerTime,
 	FragmentTimes,
 	ThumbnailData,
@@ -22,7 +21,7 @@ import styles from "./ThumbnailSettings.module.scss";
 
 import PencilIcon from "../assets/pencil.png";
 import PlayToIcon from "../assets/play_to.png";
-import { wubloaderTimeFromDateTime } from "../common/convertTime";
+import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 
 import "cropperjs"; // This is required for Cropper.js to work, even with the specific import below
 import { CropperSelection } from "cropperjs";

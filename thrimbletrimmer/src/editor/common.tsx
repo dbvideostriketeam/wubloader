@@ -134,21 +134,6 @@ export function videoPlayerTimeFromDateTime(
 	return null;
 }
 
-export function dateTimeFromVideoPlayerTime(
-	time: number,
-	fragments: FragmentTimes[],
-): DateTime | null {
-	for (const fragmentTimes of fragments) {
-		const fragmentStart = fragmentTimes.playerStart;
-		const fragmentEnd = fragmentStart + fragmentTimes.duration;
-		if (time >= fragmentStart && time <= fragmentEnd) {
-			const offset = time - fragmentStart;
-			return fragmentTimes.rawStart.plus({ seconds: offset });
-		}
-	}
-	return null;
-}
-
 export function displayTimeForVideoPlayerTime(time: number): string {
 	// Round to the nearest millisecond, and split to minutes, seconds, and ms
 	const totalMilliseconds = Math.round(time * 1000);

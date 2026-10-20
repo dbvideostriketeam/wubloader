@@ -13,7 +13,6 @@ import {
 	Switch,
 	untrack,
 } from "solid-js";
-import { Fragment } from "hls.js";
 import { DateTime } from "luxon";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { useKeyDownEvent } from "@solid-primitives/keyboard";
@@ -246,7 +245,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
 	const [videoPlayerTime, setVideoPlayerTime] = createSignal(0);
 	const [videoDuration, setVideoDuration] = createSignal(0);
-	const [allFragments, setAllFragments] = createSignal<Fragment[]>([]);
 	const [allFragmentTimesRaw, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([[]]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
@@ -359,8 +357,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 		const player = mediaPlayer();
 		if (player) {
 			player.addEventListener("hls-level-loaded", (event) => {
-				setAllFragments(event.detail.details.fragments);
-
 				const times = fragmentTimesFromFragments(event.detail.details.fragments);
 				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
 				while (fragmentTimes.length <= event.detail.level) {
@@ -724,7 +720,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				const setStartRangeIndex = untrack(activeKeyboardIndex);
 				const setStartRangeData = untrack(videoData);
 				const startPlayerTime = player.currentTime;
-				const startTime = dateTimeFromVideoPlayerTime(untrack(allFragments), startPlayerTime);
+				const startTime = dateTimeFromVideoPlayerTime(startPlayerTime, untrack(videoFragmentTimes));
 				setStartRangeData[setStartRangeIndex].setStartTime(startTime);
 				break;
 			case "]":
@@ -734,7 +730,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				const setEndRangeIndex = untrack(activeKeyboardIndex);
 				const setEndRangeData = untrack(videoData);
 				const endPlayerTime = player.currentTime;
-				const endTime = dateTimeFromVideoPlayerTime(untrack(allFragments), endPlayerTime);
+				const endTime = dateTimeFromVideoPlayerTime(endPlayerTime, untrack(videoFragmentTimes));
 				setEndRangeData[setEndRangeIndex].setEndTime(endTime);
 				break;
 			case "ArrowLeft":
@@ -843,7 +839,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 					setPlayerTime={setPlayerTime}
 					mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 					setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
-					fragments={allFragments}
+					fragmentTimes={videoFragmentTimes}
 				/>
 				<ClipBar
 					rangeData={videoData}

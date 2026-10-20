@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import { Fragment } from "hls.js";
+import type { FragmentTimes } from "./video";
 
 export enum TimeType {
 	UTC,
@@ -106,23 +106,16 @@ export function timeAgoFromDateTime(dateTime: DateTime): string {
 }
 
 export function dateTimeFromVideoPlayerTime(
-	fragments: Fragment[],
 	videoTime: number,
+	fragments: FragmentTimes[],
 ): DateTime | null {
-	let fragmentStartTime: number | undefined = undefined;
-	let fragmentStartISOTime: string | undefined = undefined;
 	for (const fragment of fragments) {
-		const fragmentEndTime = fragment.start + fragment.duration;
-		if (videoTime >= fragment.start && videoTime < fragmentEndTime) {
-			fragmentStartTime = fragment.start;
-			fragmentStartISOTime = fragment.rawProgramDateTime!;
-			break;
+		const fragmentStart = fragment.playerStart;
+		const fragmentEnd = fragmentStart + fragment.duration;
+		if (videoTime >= fragmentStart && videoTime <= fragmentEnd) {
+			const offset = videoTime - fragmentStart;
+			return fragment.rawStart.toUTC().plus({ seconds: offset });
 		}
 	}
-	if (fragmentStartTime === undefined || fragmentStartISOTime === undefined) {
-		return null;
-	}
-	const wubloaderTime = DateTime.fromISO(fragmentStartISOTime);
-	const offset = videoTime - fragmentStartTime;
-	return wubloaderTime.plus({ seconds: offset });
+	return null;
 }

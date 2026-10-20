@@ -271,7 +271,7 @@ export interface VideoPlayerProps {
 	setMediaPlayer: Setter<MediaPlayerElement>;
 	// Fragments are included in the main video stream, but not in rendered
 	// transition previews, which are served as a single webm stream.
-	fragments?: Accessor<Fragment[]>;
+	fragmentTimes?: Accessor<FragmentTimes[]>;
 }
 
 export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
@@ -316,13 +316,13 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	};
 
 	const localTimeDisplay = () => {
-		const fragments = props.fragments?.();
-		if (!fragments) {
+		const fragmentTimes = props.fragmentTimes?.();
+		if (!fragmentTimes) {
 			// There will not be fragments when playing a transition preview
 			return "";
 		}
 		const videoTime = playerTime();
-		const videoDateTime = dateTimeFromVideoPlayerTime(fragments, videoTime);
+		const videoDateTime = dateTimeFromVideoPlayerTime(videoTime, fragmentTimes);
 		if (!videoDateTime) {
 			return "";
 		}
