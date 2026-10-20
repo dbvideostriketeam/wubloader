@@ -165,9 +165,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [busStartTime, setBusStartTime] = createSignal(
 		dateTimeFromWubloaderTime(props.data.bustime_start)!,
 	);
-	const [chaptersEnabled, setChaptersEnabled] = createSignal(
-		props.data.hasOwnProperty("chapter_markers"),
-	);
+	const [chaptersEnabled, setChaptersEnabled] = createSignal(props.data.chapter_markers !== null);
 
 	const description =
 		props.data.video_description === null ? props.data.description : props.data.video_description;
