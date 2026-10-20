@@ -1,5 +1,5 @@
 import { DateTime } from "luxon";
-import type { FragmentTimes } from "./video";
+import { FragmentTimes } from "./common";
 
 export enum TimeType {
 	UTC,

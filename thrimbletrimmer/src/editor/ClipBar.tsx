@@ -1,5 +1,6 @@
 import { Accessor, Component, For, Show } from "solid-js";
-import { FragmentTimes, RangeData, videoPlayerTimeFromDateTime } from "./common";
+import { FragmentTimes } from "../common/common";
+import { RangeData, videoPlayerTimeFromDateTime } from "./common";
 import styles from "./ClipBar.module.scss";
 
 interface ClipBarProperties {

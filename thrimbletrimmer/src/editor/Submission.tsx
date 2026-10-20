@@ -1,13 +1,13 @@
 import { Accessor, Component, createSignal, For, Match, Setter, Show, Switch } from "solid-js";
 import {
 	EditorState,
-	FragmentTimes,
 	RangeData,
 	ThumbnailData,
 	ThumbnailType,
 	VideoData,
 	videoPlayerTimeFromDateTime,
 } from "./common";
+import { FragmentTimes } from "../common/common";
 import { bindingInputChecked, bindingInputOnChange } from "../common/binding";
 import { wubloaderTimeFromDateTime } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
