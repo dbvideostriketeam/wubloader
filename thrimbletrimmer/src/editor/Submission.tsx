@@ -30,6 +30,7 @@ interface SubmissionProps {
 	thumbnailData: ThumbnailData;
 	originalVideoData: VideoData;
 	videoFragmentTimes: Accessor<FragmentTimes[]>;
+	editingCompletedVideo: Accessor<boolean>;
 	accountToken: Accessor<string | null>;
 }
 
@@ -184,6 +185,9 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		setSubmissionSuccessMessage("");
 		setSubmissionError("");
 
+		const editingCompletedVideoWithoutVideo =
+			props.videoFragmentTimes().length === 0 && props.editingCompletedVideo();
+
 		const videoTitle = props.videoTitle();
 		let videoDescription = props.videoDescription();
 		if (videoTitle === "" || videoDescription === "") {
@@ -215,64 +219,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const rangeEnd = wubloaderTimeFromDateTime(rangeEndDate);
 			videoRanges.push([rangeStart, rangeEnd]);
 
-			const rangePlayerStart = videoPlayerTimeFromDateTime(
-				rangeStartDate,
-				props.videoFragmentTimes(),
-			);
-			const rangePlayerEnd = videoPlayerTimeFromDateTime(rangeEndDate, props.videoFragmentTimes());
-			if (rangePlayerStart === null || rangePlayerEnd === null) {
-				setSubmissionError("The start and/or end time of a range don't resolve to video times.");
-				props.setEditorState(EditorState.Entry);
-				return;
-			}
-
-			if (props.chaptersEnabled()) {
-				const sortedChapters = rangeData
-					.chapters()
-					.filter((data) => data.time !== null)
-					.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
-				for (const chapterData of sortedChapters) {
-					const chapterTime = videoPlayerTimeFromDateTime(
-						chapterData.time!,
-						props.videoFragmentTimes(),
-					);
-					if (chapterTime === null) {
-						setSubmissionError("A chapter time doesn't resolve to video times");
-						props.setEditorState(EditorState.Entry);
-						return;
-					}
-
-					if (!chapterData.description) {
-						setSubmissionError("A chapter is missing a description");
-						props.setEditorState(EditorState.Entry);
-						return;
-					}
-
-					const outputVideoTimeSeconds = chapterTime - rangePlayerStart + currentRangeStartSecs;
-					if (!checkedFirstChapter) {
-						checkedFirstChapter = true;
-						if (outputVideoTimeSeconds !== 0) {
-							setSubmissionError("The first chapter must start at the beginning of the video");
-							props.setEditorState(EditorState.Entry);
-							return;
-						}
-					}
-					if (lastChapterTime !== null && outputVideoTimeSeconds - lastChapterTime < 10) {
-						setSubmissionError("Chapters must be at least 10 seconds apart");
-						props.setEditorState(EditorState.Entry);
-						return;
-					}
-					lastChapterTime = outputVideoTimeSeconds;
-
-					const outputVideoTime = `${Math.floor(outputVideoTimeSeconds / 60)}:${Math.floor(outputVideoTimeSeconds % 60)}`;
-					chapterMarkers.push([
-						rangeDataIndex,
-						wubloaderTimeFromDateTime(chapterData.time!),
-						chapterData.description,
-					]);
-				}
-			}
-
 			const transitionType = rangeData.transitionType();
 			const transitionSeconds = rangeData.transitionSeconds();
 			if (transitionType === "") {
@@ -281,14 +227,76 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				transitions.push([transitionType, transitionSeconds]);
 			}
 
-			currentRangeStartSecs += rangePlayerEnd - rangePlayerStart - transitionSeconds;
-
-			if (currentRangeStartSecs < 0) {
-				setSubmissionError(
-					"Time ranges and transition data resulted in a negative video time at some point in the time calculations",
+			if (!editingCompletedVideoWithoutVideo) {
+				const rangePlayerStart = videoPlayerTimeFromDateTime(
+					rangeStartDate,
+					props.videoFragmentTimes(),
 				);
-				props.setEditorState(EditorState.Entry);
-				return;
+				const rangePlayerEnd = videoPlayerTimeFromDateTime(
+					rangeEndDate,
+					props.videoFragmentTimes(),
+				);
+				if (rangePlayerStart === null || rangePlayerEnd === null) {
+					setSubmissionError("The start and/or end time of a range don't resolve to video times.");
+					props.setEditorState(EditorState.Entry);
+					return;
+				}
+
+				currentRangeStartSecs += rangePlayerEnd - rangePlayerStart - transitionSeconds;
+
+				if (currentRangeStartSecs < 0) {
+					setSubmissionError(
+						"Time ranges and transition data resulted in a negative video time at some point in the time calculations",
+					);
+					props.setEditorState(EditorState.Entry);
+					return;
+				}
+
+				if (props.chaptersEnabled()) {
+					const sortedChapters = rangeData
+						.chapters()
+						.filter((data) => data.time !== null)
+						.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
+					for (const chapterData of sortedChapters) {
+						const chapterTime = videoPlayerTimeFromDateTime(
+							chapterData.time!,
+							props.videoFragmentTimes(),
+						);
+						if (chapterTime === null) {
+							setSubmissionError("A chapter time doesn't resolve to video times");
+							props.setEditorState(EditorState.Entry);
+							return;
+						}
+
+						if (!chapterData.description) {
+							setSubmissionError("A chapter is missing a description");
+							props.setEditorState(EditorState.Entry);
+							return;
+						}
+
+						const outputVideoTimeSeconds = chapterTime - rangePlayerStart + currentRangeStartSecs;
+						if (!checkedFirstChapter) {
+							checkedFirstChapter = true;
+							if (outputVideoTimeSeconds !== 0) {
+								setSubmissionError("The first chapter must start at the beginning of the video");
+								props.setEditorState(EditorState.Entry);
+								return;
+							}
+						}
+						if (lastChapterTime !== null && outputVideoTimeSeconds - lastChapterTime < 10) {
+							setSubmissionError("Chapters must be at least 10 seconds apart");
+							props.setEditorState(EditorState.Entry);
+							return;
+						}
+						lastChapterTime = outputVideoTimeSeconds;
+
+						chapterMarkers.push([
+							rangeDataIndex,
+							wubloaderTimeFromDateTime(chapterData.time!),
+							chapterData.description,
+						]);
+					}
+				}
 			}
 		}
 		transitions.shift();

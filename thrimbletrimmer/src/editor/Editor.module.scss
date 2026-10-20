@@ -12,8 +12,21 @@
 		background: #300;
 		padding: 4px;
 	}
+
+	&:empty {
+		margin: 0;
+	}
 }
 
 .errorRemoveLink {
 	float: right;
+}
+
+.noVideoLoaded {
+	p {
+		margin-top: 0;
+		margin-bottom: 0;
+	}
+	margin-top: 0;
+	margin-bottom: 10px;
 }
