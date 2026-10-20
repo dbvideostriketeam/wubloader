@@ -478,7 +478,10 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 			<div class={styles.cropOptions}>
 				<Show when={canShowCropTools()}>
 					<button type="button" onClick={toggleAdvancedThumbnailControls}>
-						<Show when={showAdvancedThumbnailControls()} fallback="Show Advanced Thumbnail Controls">
+						<Show
+							when={showAdvancedThumbnailControls()}
+							fallback="Show Advanced Thumbnail Controls"
+						>
 							Hide Advanced Thumbnail Controls
 						</Show>
 					</button>
