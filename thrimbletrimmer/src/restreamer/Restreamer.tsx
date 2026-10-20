@@ -14,7 +14,6 @@ import {
 	untrack,
 } from "solid-js";
 import { DateTime } from "luxon";
-import { Fragment } from "hls.js";
 import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
 import styles from "./Restreamer.module.scss";
@@ -103,7 +102,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const [streamVideoInfo, setStreamVideoInfo] = createSignal<StreamVideoInfo>(defaultStreamInfo);
 	const [playerTime, setPlayerTime] = createSignal<number>(0);
 	const [mediaPlayer, setMediaPlayer] = createSignal<MediaPlayerElement>();
-	const [videoFragments, setVideoFragments] = createSignal<Fragment[]>([]);
 	const [allFragmentTimesRaw, setAllFragmentTimes] = createSignal<FragmentTimes[][]>([]);
 	const [currentQualityLevel, setCurrentQualityLevel] = createSignal(0);
 	const [chatContainerElement, setChatContainerElement] = createSignal<HTMLDivElement>();
@@ -122,8 +120,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		const player = mediaPlayer();
 		if (player) {
 			player.addEventListener("hls-level-loaded", (event) => {
-				setVideoFragments(event.detail.details.fragments);
-
 				const times = fragmentTimesFromFragments(event.detail.details.fragments);
 				const fragmentTimes = allFragmentTimes().slice(); // With no arguments, `slice` shallow clones the array
 				while (fragmentTimes.length <= event.detail.level) {
@@ -302,12 +298,12 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 
 	const downloadFrameURL = () => {
 		const streamInfo = streamVideoInfo();
-		const fragments = videoFragments();
+		const fragments = videoFragmentTimes();
 		const videoTime = playerTime();
 		if (!fragments || fragments.length === 0) {
 			return "";
 		}
-		const currentTime = dateTimeFromVideoPlayerTime(fragments, videoTime);
+		const currentTime = dateTimeFromVideoPlayerTime(videoTime, fragments);
 		if (currentTime === null) {
 			return "";
 		}
@@ -330,7 +326,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				setPlayerTime={setPlayerTime}
 				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
-				fragments={videoFragments}
+				fragmentTimes={videoFragmentTimes}
 			/>
 			<div class={styles.videoLinks}>
 				<a href={downloadVideoURL()}>Download Video</a>
