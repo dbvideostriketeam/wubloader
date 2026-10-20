@@ -822,6 +822,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 				setRangeData={setVideoData}
 				allTransitions={allTransitions.latest ?? []}
 				activeKeyboardIndex={activeKeyboardIndex}
+				setActiveKeyboardIndex={setActiveKeyboardIndex}
 				streamInfo={streamVideoInfo}
 				allowHoles={allowHoles}
 				videoPlayerTime={videoPlayerTime}
