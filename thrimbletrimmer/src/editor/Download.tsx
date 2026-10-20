@@ -42,7 +42,10 @@ export const Download: Component<DownloadProps> = (props) => {
 			if (isFirstRange) {
 				isFirstRange = false;
 			} else {
-				query.append("transition", `${range.transitionType()},${range.transitionSeconds()}`);
+				query.append(
+					"transition",
+					range.transitionType() === "" ? "" : `${range.transitionType()},${range.transitionSeconds()}`,
+				);
 			}
 
 			let timeRangeString = "";
