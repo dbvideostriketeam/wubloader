@@ -6,7 +6,6 @@ import {
 	createResource,
 	createSignal,
 	Index,
-	onMount,
 	Setter,
 	Show,
 	Suspense,
@@ -353,7 +352,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 	const [activeKeyboardIndex, setActiveKeyboardIndex] = createSignal(0);
 
-	onMount(() => {
+	createEffect(() => {
 		const player = mediaPlayer();
 		if (player) {
 			player.addEventListener("hls-level-loaded", (event) => {
@@ -762,6 +761,14 @@ const EditorContent: Component<ContentProps> = (props) => {
 		}
 	});
 
+	const editingCompletedVideo = () =>
+		!!props.data && (props.data.state === "DONE" || props.data.state === "MODIFIED");
+
+	const [showingVideo, setShowingVideo] = createSignal(!editingCompletedVideo());
+	const showVideo = (event: MouseEvent) => {
+		setShowingVideo(true);
+	};
+
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
 	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
@@ -783,53 +790,67 @@ const EditorContent: Component<ContentProps> = (props) => {
 					)}
 				</Index>
 			</ul>
+			<Show when={!showingVideo()}>
+				<div class={styles.noVideoLoaded}>
+					<p>This video has been submitted and uploaded. You can edit some metadata here.</p>
+					<p>
+						To view the video, view or edit other settings, or access the download options, load the
+						video.
+					</p>
+					<button onClick={showVideo}>Load Video</button>
+				</div>
+			</Show>
 			<KeyboardShortcuts includeEditorShortcuts={true} />
-			<StreamTimeSettings
-				busStartTime={busStartTime}
-				streamVideoInfo={streamVideoInfo}
-				setStreamVideoInfo={setStreamVideoInfo}
-				showTimeRangeLink={false}
-				errorList={pageErrors}
-				setErrorList={setPageErrors}
-			/>
-			<VideoPlayer
-				src={videoURL}
-				setPlayerTime={setPlayerTime}
-				mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-				setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
-				fragments={allFragments}
-			/>
-			<ClipBar
-				rangeData={videoData}
-				videoFragments={videoFragmentTimes}
-				videoDuration={videoDuration}
-			/>
-			<Waveform
-				videoInfo={streamVideoInfo}
-				videoQuality={props.data.video_quality}
-				videoTime={videoPlayerTime}
-				videoDuration={videoDuration}
-			/>
+			<Show when={showingVideo()}>
+				<StreamTimeSettings
+					busStartTime={busStartTime}
+					streamVideoInfo={streamVideoInfo}
+					setStreamVideoInfo={setStreamVideoInfo}
+					showTimeRangeLink={false}
+					errorList={pageErrors}
+					setErrorList={setPageErrors}
+				/>
+				<VideoPlayer
+					src={videoURL}
+					setPlayerTime={setPlayerTime}
+					mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+					setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
+					fragments={allFragments}
+				/>
+				<ClipBar
+					rangeData={videoData}
+					videoFragments={videoFragmentTimes}
+					videoDuration={videoDuration}
+				/>
+				<Waveform
+					videoInfo={streamVideoInfo}
+					videoQuality={props.data.video_quality}
+					videoTime={videoPlayerTime}
+					videoDuration={videoDuration}
+				/>
+			</Show>
 			<NotesToEditor notes={props.data.notes} />
 			<CategoryNotes notes={props.data.category_notes} />
-			<ChapterToggle
-				chaptersEnabled={chaptersEnabled}
-				setChaptersEnabled={setChaptersEnabled}
-				allFieldsDisabled={allFieldsDisabled}
-			/>
-			<RangeSelection
-				rangeData={videoData}
-				setRangeData={setVideoData}
-				allTransitions={allTransitions.latest ?? []}
-				activeKeyboardIndex={activeKeyboardIndex}
-				setActiveKeyboardIndex={setActiveKeyboardIndex}
-				streamInfo={streamVideoInfo}
-				allowHoles={allowHoles}
-				videoPlayerTime={videoPlayerTime}
-				videoFragments={videoFragmentTimes}
-				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-				enableChapterEntry={chaptersEnabled}
-			/>
+			<Show when={showingVideo()}>
+				<ChapterToggle
+					chaptersEnabled={chaptersEnabled}
+					setChaptersEnabled={setChaptersEnabled}
+					allFieldsDisabled={allFieldsDisabled}
+				/>
+				<RangeSelection
+					rangeData={videoData}
+					setRangeData={setVideoData}
+					allTransitions={allTransitions.latest ?? []}
+					activeKeyboardIndex={activeKeyboardIndex}
+					setActiveKeyboardIndex={setActiveKeyboardIndex}
+					streamInfo={streamVideoInfo}
+					allowHoles={allowHoles}
+					videoPlayerTime={videoPlayerTime}
+					videoFragments={videoFragmentTimes}
+					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+					enableChapterEntry={chaptersEnabled}
+				/>
+			</Show>
 			<VideoMetadata
 				titlePrefix={props.data.title_prefix}
 				titleMaxLength={props.data.title_max_length}
@@ -840,14 +861,16 @@ const EditorContent: Component<ContentProps> = (props) => {
 				tags={videoTags}
 				setTags={setVideoTags}
 			/>
-			<ThumbnailSettings
-				allThumbnailTemplates={allThumbnailTemplates() ?? []}
-				thumbnailData={thumbnail()}
-				streamInfo={streamVideoInfo}
-				videoFragments={videoFragmentTimes}
-				videoPlayerTime={videoPlayerTime}
-				videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-			/>
+			<Show when={showingVideo()}>
+				<ThumbnailSettings
+					allThumbnailTemplates={allThumbnailTemplates() ?? []}
+					thumbnailData={thumbnail()}
+					streamInfo={streamVideoInfo}
+					videoFragments={videoFragmentTimes}
+					videoPlayerTime={videoPlayerTime}
+					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+				/>
+			</Show>
 			<Submission
 				streamVideoInfo={streamVideoInfo}
 				videoData={videoData}
@@ -863,19 +886,24 @@ const EditorContent: Component<ContentProps> = (props) => {
 				thumbnailData={thumbnail()}
 				originalVideoData={props.data}
 				videoFragmentTimes={videoFragmentTimes}
+				editingCompletedVideo={editingCompletedVideo}
 				accountToken={accountToken}
 			/>
-			<Download
-				streamVideoInfo={streamVideoInfo}
-				rangeData={videoData}
-				allowHoles={allowHoles}
-				videoPlayerTime={videoPlayerTime}
-				videoQuality={props.data.video_quality}
-				videoFragments={videoFragmentTimes}
-			/>
+			<Show when={showingVideo()}>
+				<Download
+					streamVideoInfo={streamVideoInfo}
+					rangeData={videoData}
+					allowHoles={allowHoles}
+					videoPlayerTime={videoPlayerTime}
+					videoQuality={props.data.video_quality}
+					videoFragments={videoFragmentTimes}
+				/>
+			</Show>
 			<DataCorrection videoID={props.data.id} accountToken={accountToken} />
 			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
-			<ChatDisplay streamInfo={streamVideoInfo} fragments={videoFragmentTimes} />
+			<Show when={showingVideo()}>
+				<ChatDisplay streamInfo={streamVideoInfo} fragments={videoFragmentTimes} />
+			</Show>
 		</>
 	);
 };
