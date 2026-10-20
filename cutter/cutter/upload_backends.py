@@ -137,7 +137,7 @@ class Youtube(UploadBackend):
 		'-flags', '+cgop', # Use closed GOP, as requested
 		'-pix_fmt', 'yuv420p', # chroma subsampling 4:2:0, as requrested
 		'-codec:a', 'aac', '-strict', '-2', # audio codec aac, as requested
-		'-b:a', '384k' # audio bitrate at 348k for 2 channel, use 512k if 5.1 audio
+		'-b:a', '384k', # audio bitrate at 348k for 2 channel, use 512k if 5.1 audio
 		'-r:a', '48000', # set audio sample rate at 48000Hz, as requested
 		'-movflags', 'faststart', # put MOOV atom at the front of the file, as requested
 	]
