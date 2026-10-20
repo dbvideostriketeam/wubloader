@@ -1,10 +1,10 @@
 import { Accessor, Component, createEffect, createSignal, Setter } from "solid-js";
-import { FragmentTimes, RangeData } from "./common";
+import { FragmentTimes } from "../common/common";
+import { RangeData } from "./common";
 import { bindingDownloadTypeSelectOnChange } from "../common/binding";
 import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { DownloadType } from "../common/downloads";
 import { StreamVideoInfo } from "../common/streamInfo";
-
 import styles from "./Download.module.scss";
 
 interface DownloadProps {

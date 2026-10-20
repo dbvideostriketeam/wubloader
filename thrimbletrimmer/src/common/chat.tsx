@@ -9,9 +9,9 @@ import {
 	Show,
 	Suspense,
 } from "solid-js";
+import { FragmentTimes } from "./common";
 import { StreamVideoInfo } from "./streamInfo";
 import { DateTime } from "luxon";
-import { FragmentTimes } from "./video";
 import { wubloaderTimeFromDateTime } from "./convertTime";
 import styles from "./chat.module.scss";
 

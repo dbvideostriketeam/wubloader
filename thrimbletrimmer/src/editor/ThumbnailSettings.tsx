@@ -2,7 +2,6 @@ import { Accessor, Component, createEffect, createSignal, For, on, Show, untrack
 import { MediaPlayerElement } from "vidstack/elements";
 import {
 	displayTimeForVideoPlayerTime,
-	FragmentTimes,
 	ThumbnailData,
 	ThumbnailTemplateDefinition,
 	ThumbnailType,
@@ -15,6 +14,7 @@ import {
 	bindingInputPositiveNumberOnChange,
 	bindingInputPositiveNumberOrZeroOnChange,
 } from "../common/binding";
+import { FragmentTimes } from "../common/common";
 import { StreamVideoInfo } from "../common/streamInfo";
 import { BASE64_PNG_PREFIX, BASE64_PNG_PREFIX_LENGTH } from "../common/thumbnails";
 import styles from "./ThumbnailSettings.module.scss";

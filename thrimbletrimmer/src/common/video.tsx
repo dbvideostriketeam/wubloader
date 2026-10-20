@@ -1,7 +1,7 @@
 import { Accessor, Component, createEffect, createSignal, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
 import { Fragment } from "hls.js";
-import { arrayEquals } from "./common";
+import { arrayEquals, FragmentTimes } from "./common";
 import {
 	TimeType,
 	wubloaderTimeFromDateTime,
@@ -25,29 +25,6 @@ import "vidstack/player/layouts/default";
 import "vidstack/player/ui";
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
-
-export class FragmentTimes {
-	rawStart: DateTime;
-	rawEnd: DateTime;
-	playerStart: number;
-	duration: number;
-
-	equals(other: FragmentTimes): boolean {
-		if (this.rawStart.toMillis() !== other.rawStart.toMillis()) {
-			return false;
-		}
-		if (this.rawEnd.toMillis() !== other.rawEnd.toMillis()) {
-			return false;
-		}
-		if (this.playerStart !== other.playerStart) {
-			return false;
-		}
-		if (this.duration !== other.duration) {
-			return false;
-		}
-		return true;
-	}
-}
 
 export function fragmentTimesListsAreEqual(
 	lhs: FragmentTimes[][],

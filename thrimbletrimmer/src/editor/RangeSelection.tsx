@@ -9,11 +9,11 @@ import {
 	Show,
 	untrack,
 } from "solid-js";
+import { FragmentTimes } from "../common/common";
 import styles from "./RangeSelection.module.scss";
 import {
 	ChapterData,
 	displayTimeForVideoPlayerTime,
-	FragmentTimes,
 	RangeData,
 	TransitionDefinition,
 	videoPlayerTimeForDisplayTime,

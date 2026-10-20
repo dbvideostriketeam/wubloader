@@ -17,6 +17,7 @@ import { DateTime } from "luxon";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
+import { FragmentTimes } from "../common/common";
 import styles from "./Editor.module.scss";
 import {
 	ChapterData,
@@ -49,7 +50,6 @@ import {
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
-	FragmentTimes,
 	KeyboardShortcuts,
 	StreamTimeSettings,
 	VIDEO_FRAMES_PER_SECOND,

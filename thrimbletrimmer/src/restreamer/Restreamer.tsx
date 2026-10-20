@@ -16,6 +16,7 @@ import {
 import { DateTime } from "luxon";
 import { useKeyDownEvent } from "@solid-primitives/keyboard";
 import { MediaPlayerElement } from "vidstack/elements";
+import { FragmentTimes } from "../common/common";
 import styles from "./Restreamer.module.scss";
 import {
 	dateTimeFromVideoPlayerTime,
@@ -24,7 +25,6 @@ import {
 } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
 import {
-	FragmentTimes,
 	KeyboardShortcuts,
 	StreamTimeSettings,
 	VIDEO_FRAMES_PER_SECOND,

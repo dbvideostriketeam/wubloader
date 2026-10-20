@@ -1,6 +1,6 @@
 import { Accessor, createSignal, Setter } from "solid-js";
 import { DateTime } from "luxon";
-import { FragmentTimes } from "../common/video";
+import { FragmentTimes } from "../common/common";
 
 export interface VideoData {
 	id: string;
