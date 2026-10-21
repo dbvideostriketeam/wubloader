@@ -44,7 +44,9 @@ export const Download: Component<DownloadProps> = (props) => {
 			} else {
 				query.append(
 					"transition",
-					range.transitionType() === "" ? "" : `${range.transitionType()},${range.transitionSeconds()}`,
+					range.transitionType() === ""
+						? ""
+						: `${range.transitionType()},${range.transitionSeconds()}`,
 				);
 			}
 
