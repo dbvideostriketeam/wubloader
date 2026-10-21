@@ -46,7 +46,6 @@ interface RangeSelectionProps {
 	videoPlayerTime: Accessor<number>;
 	videoFragments: Accessor<FragmentTimes[]>;
 	videoPlayer: Accessor<MediaPlayerElement>;
-	enableChapterEntry: Accessor<boolean>;
 }
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
@@ -393,165 +392,163 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 									</Show>
 								</div>
 							</div>
-							<Show when={props.enableChapterEntry()}>
-								<div>
-									<Index each={currentRangeData().chapters()}>
-										{(currentChapter: Accessor<ChapterData>, index: number) => {
-											const [enteredChapterTime, setEnteredChapterTime] = createSignal("");
-											const [enteredDescription, setEnteredDescription] = createSignal("");
+							<div>
+								<Index each={currentRangeData().chapters()}>
+									{(currentChapter: Accessor<ChapterData>, index: number) => {
+										const [enteredChapterTime, setEnteredChapterTime] = createSignal("");
+										const [enteredDescription, setEnteredDescription] = createSignal("");
 
-											createEffect(() => {
-												const chapterTime = currentChapter().time;
-												const fragments = props.videoFragments();
-												if (chapterTime === null) {
-													return;
-												}
-												const videoPlayerChapter = videoPlayerTimeFromDateTime(
-													chapterTime,
-													fragments,
-												);
-												if (videoPlayerChapter === null) {
-													return;
-												}
-												setEnteredChapterTime(displayTimeForVideoPlayerTime(videoPlayerChapter));
-											});
-
-											createEffect(() => {
-												const chapterTimeString = enteredChapterTime();
-												const fragments = props.videoFragments();
-												if (fragments.length === 0) {
-													// If there are no fragments, we haven't loaded any video yet, which doesn't mean that we should throw away all the chapter times.
-													return;
-												}
-												if (chapterTimeString === "") {
-													const chapterData = untrack(currentChapter);
-													chapterData.time = null;
-
-													const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
-													rangeChapters[index] = chapterData;
-													untrack(currentRangeData).setChapters(rangeChapters);
-													return;
-												}
-
-												const playerTime = videoPlayerTimeForDisplayTime(chapterTimeString);
-												const chapterTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
-
-												const chapterData = untrack(currentChapter);
-												chapterData.time = chapterTime;
-
-												const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
-												rangeChapters[index] = chapterData;
-												untrack(currentRangeData).setChapters(rangeChapters);
-											});
-
-											const setChapterTime = () => {
-												const currentTime = props.videoPlayerTime();
-												const fragments = props.videoFragments();
-												const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
-												if (time === null) {
-													return;
-												}
-
-												const chapterData = structuredClone(currentChapter());
-												chapterData.time = time;
-
-												const rangeChapters = currentRangeData().chapters().slice();
-												rangeChapters[index] = chapterData;
-												currentRangeData().setChapters(rangeChapters);
-											};
-
-											const playFromChapterTime = () => {
-												const currentTime = currentChapter().time;
-												const fragments = props.videoFragments();
-												if (currentTime === null) {
-													return;
-												}
-												const time = videoPlayerTimeFromDateTime(currentTime, fragments);
-												if (time === null) {
-													return;
-												}
-												props.videoPlayer().currentTime = time;
-											};
-
-											createEffect(() => {
-												const chapterDescription = currentChapter().description;
-												setEnteredDescription(chapterDescription);
-											});
-
-											createEffect(() => {
-												const chapterDescription = enteredDescription();
-												const chapterData = currentChapter();
-												chapterData.description = chapterDescription;
-
-												const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
-												rangeChapters[index] = chapterData;
-												untrack(currentRangeData).setChapters(rangeChapters);
-											});
-
-											const removeChapter = (event) => {
-												const chapters = currentRangeData().chapters().slice();
-												chapters.splice(index, 1);
-												currentRangeData().setChapters(chapters);
-											};
-
-											return (
-												<div class={styles.timeRangeEntryRow}>
-													<div class={styles.timeRangeIcon}>
-														<media-icon type="chapters" />
-													</div>
-													<div class={styles.timeRangeSelect}>
-														<input
-															type="text"
-															use:bindingInputOnChange={[enteredChapterTime, setEnteredChapterTime]}
-														/>
-													</div>
-													<div class={styles.timeRangeIcon}>
-														<img
-															class={styles.clickable}
-															src={PencilIcon}
-															alt="Set chapter time to current video time"
-															title="Set chapter time to current video time"
-															onClick={setChapterTime}
-														/>
-													</div>
-													<div class={styles.timeRangeIcon}>
-														<img
-															class={styles.clickable}
-															src={PlayToIcon}
-															alt="Play from chapter marker"
-															title="Play from chapter marker"
-															onClick={playFromChapterTime}
-														/>
-													</div>
-													<div class={styles.timeRangeDescription}>
-														<input
-															type="text"
-															placeholder="Description"
-															use:bindingInputOnChange={[enteredDescription, setEnteredDescription]}
-														/>
-													</div>
-													<div class={styles.timeRangeIcon}>
-														<img
-															class={styles.clickable}
-															src={RemoveIcon}
-															alt="Remove this chapter"
-															title="Remove this chapter"
-															onClick={removeChapter}
-														/>
-													</div>
-												</div>
+										createEffect(() => {
+											const chapterTime = currentChapter().time;
+											const fragments = props.videoFragments();
+											if (chapterTime === null) {
+												return;
+											}
+											const videoPlayerChapter = videoPlayerTimeFromDateTime(
+												chapterTime,
+												fragments,
 											);
-										}}
-									</Index>
-									<img
-										class={`${styles.clickable} ${styles.addChapter}`}
-										src={AddIcon}
-										alt="Add chapter"
-										title="Add chapter"
-										onClick={addChapter}
-									/>
-								</div>
-							</Show>
+											if (videoPlayerChapter === null) {
+												return;
+											}
+											setEnteredChapterTime(displayTimeForVideoPlayerTime(videoPlayerChapter));
+										});
+
+										createEffect(() => {
+											const chapterTimeString = enteredChapterTime();
+											const fragments = props.videoFragments();
+											if (fragments.length === 0) {
+												// If there are no fragments, we haven't loaded any video yet, which doesn't mean that we should throw away all the chapter times.
+												return;
+											}
+											if (chapterTimeString === "") {
+												const chapterData = untrack(currentChapter);
+												chapterData.time = null;
+
+												const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
+												rangeChapters[index] = chapterData;
+												untrack(currentRangeData).setChapters(rangeChapters);
+												return;
+											}
+
+											const playerTime = videoPlayerTimeForDisplayTime(chapterTimeString);
+											const chapterTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
+
+											const chapterData = untrack(currentChapter);
+											chapterData.time = chapterTime;
+
+											const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
+											rangeChapters[index] = chapterData;
+											untrack(currentRangeData).setChapters(rangeChapters);
+										});
+
+										const setChapterTime = () => {
+											const currentTime = props.videoPlayerTime();
+											const fragments = props.videoFragments();
+											const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
+											if (time === null) {
+												return;
+											}
+
+											const chapterData = structuredClone(currentChapter());
+											chapterData.time = time;
+
+											const rangeChapters = currentRangeData().chapters().slice();
+											rangeChapters[index] = chapterData;
+											currentRangeData().setChapters(rangeChapters);
+										};
+
+										const playFromChapterTime = () => {
+											const currentTime = currentChapter().time;
+											const fragments = props.videoFragments();
+											if (currentTime === null) {
+												return;
+											}
+											const time = videoPlayerTimeFromDateTime(currentTime, fragments);
+											if (time === null) {
+												return;
+											}
+											props.videoPlayer().currentTime = time;
+										};
+
+										createEffect(() => {
+											const chapterDescription = currentChapter().description;
+											setEnteredDescription(chapterDescription);
+										});
+
+										createEffect(() => {
+											const chapterDescription = enteredDescription();
+											const chapterData = currentChapter();
+											chapterData.description = chapterDescription;
+
+											const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
+											rangeChapters[index] = chapterData;
+											untrack(currentRangeData).setChapters(rangeChapters);
+										});
+
+										const removeChapter = (event) => {
+											const chapters = currentRangeData().chapters().slice();
+											chapters.splice(index, 1);
+											currentRangeData().setChapters(chapters);
+										};
+
+										return (
+											<div class={styles.timeRangeEntryRow}>
+												<div class={styles.timeRangeIcon}>
+													<media-icon type="chapters" />
+												</div>
+												<div class={styles.timeRangeSelect}>
+													<input
+														type="text"
+														use:bindingInputOnChange={[enteredChapterTime, setEnteredChapterTime]}
+													/>
+												</div>
+												<div class={styles.timeRangeIcon}>
+													<img
+														class={styles.clickable}
+														src={PencilIcon}
+														alt="Set chapter time to current video time"
+														title="Set chapter time to current video time"
+														onClick={setChapterTime}
+													/>
+												</div>
+												<div class={styles.timeRangeIcon}>
+													<img
+														class={styles.clickable}
+														src={PlayToIcon}
+														alt="Play from chapter marker"
+														title="Play from chapter marker"
+														onClick={playFromChapterTime}
+													/>
+												</div>
+												<div class={styles.timeRangeDescription}>
+													<input
+														type="text"
+														placeholder="Description"
+														use:bindingInputOnChange={[enteredDescription, setEnteredDescription]}
+													/>
+												</div>
+												<div class={styles.timeRangeIcon}>
+													<img
+														class={styles.clickable}
+														src={RemoveIcon}
+														alt="Remove this chapter"
+														title="Remove this chapter"
+														onClick={removeChapter}
+													/>
+												</div>
+											</div>
+										);
+									}}
+								</Index>
+								<img
+									class={`${styles.clickable} ${styles.addChapter}`}
+									src={AddIcon}
+									alt="Add chapter"
+									title="Add chapter"
+									onClick={addChapter}
+								/>
+							</div>
 						</>
 					);
 				}}

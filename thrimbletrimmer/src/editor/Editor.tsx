@@ -31,7 +31,6 @@ import {
 	VideoHiddenReason,
 } from "./common";
 import { CategoryNotes } from "./CategoryNotes";
-import { ChapterToggle } from "./ChapterToggle";
 import { ClipBar } from "./ClipBar";
 import { DataCorrection } from "./DataCorrection";
 import { Download } from "./Download";
@@ -165,7 +164,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [busStartTime, setBusStartTime] = createSignal(
 		dateTimeFromWubloaderTime(props.data.bustime_start)!,
 	);
-	const [chaptersEnabled, setChaptersEnabled] = createSignal(props.data.chapter_markers !== null);
 
 	const description =
 		props.data.video_description === null ? props.data.description : props.data.video_description;
@@ -858,11 +856,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 			<NotesToEditor notes={props.data.notes} />
 			<CategoryNotes notes={props.data.category_notes} />
 			<Show when={showingVideo()}>
-				<ChapterToggle
-					chaptersEnabled={chaptersEnabled}
-					setChaptersEnabled={setChaptersEnabled}
-					allFieldsDisabled={allFieldsDisabled}
-				/>
 				<RangeSelection
 					rangeData={videoData}
 					setRangeData={setVideoData}
@@ -874,7 +867,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 					videoPlayerTime={videoPlayerTime}
 					videoFragments={videoFragmentTimes}
 					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-					enableChapterEntry={chaptersEnabled}
 				/>
 			</Show>
 			<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
@@ -906,7 +898,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 					videoTitle={videoTitle}
 					videoDescription={videoDescription}
 					videoTags={videoTags}
-					chaptersEnabled={chaptersEnabled}
 					uploadLocations={props.data.upload_locations}
 					editorState={editorState}
 					setEditorState={setEditorState}
