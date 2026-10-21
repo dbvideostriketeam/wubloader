@@ -21,7 +21,6 @@ interface SubmissionProps {
 	videoTitle: Accessor<string>;
 	videoDescription: Accessor<string>;
 	videoTags: Accessor<string[]>;
-	chaptersEnabled: Accessor<boolean>;
 	uploadLocations: string[];
 	editorState: Accessor<EditorState>;
 	setEditorState: Setter<EditorState>;
@@ -252,50 +251,48 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					return;
 				}
 
-				if (props.chaptersEnabled()) {
-					const sortedChapters = rangeData
-						.chapters()
-						.filter((data) => data.time !== null)
-						.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
-					for (const chapterData of sortedChapters) {
-						const chapterTime = videoPlayerTimeFromDateTime(
-							chapterData.time!,
-							props.videoFragmentTimes(),
-						);
-						if (chapterTime === null) {
-							setSubmissionError("A chapter time doesn't resolve to video times");
-							props.setEditorState(EditorState.Entry);
-							return;
-						}
-
-						if (!chapterData.description) {
-							setSubmissionError("A chapter is missing a description");
-							props.setEditorState(EditorState.Entry);
-							return;
-						}
-
-						const outputVideoTimeSeconds = chapterTime - rangePlayerStart + currentRangeStartSecs;
-						if (!checkedFirstChapter) {
-							checkedFirstChapter = true;
-							if (outputVideoTimeSeconds !== 0) {
-								setSubmissionError("The first chapter must start at the beginning of the video");
-								props.setEditorState(EditorState.Entry);
-								return;
-							}
-						}
-						if (lastChapterTime !== null && outputVideoTimeSeconds - lastChapterTime < 10) {
-							setSubmissionError("Chapters must be at least 10 seconds apart");
-							props.setEditorState(EditorState.Entry);
-							return;
-						}
-						lastChapterTime = outputVideoTimeSeconds;
-
-						chapterMarkers.push([
-							rangeDataIndex,
-							wubloaderTimeFromDateTime(chapterData.time!),
-							chapterData.description,
-						]);
+				const sortedChapters = rangeData
+					.chapters()
+					.filter((data) => data.time !== null)
+					.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
+				for (const chapterData of sortedChapters) {
+					const chapterTime = videoPlayerTimeFromDateTime(
+						chapterData.time!,
+						props.videoFragmentTimes(),
+					);
+					if (chapterTime === null) {
+						setSubmissionError("A chapter time doesn't resolve to video times");
+						props.setEditorState(EditorState.Entry);
+						return;
 					}
+
+					if (!chapterData.description) {
+						setSubmissionError("A chapter is missing a description");
+						props.setEditorState(EditorState.Entry);
+						return;
+					}
+
+					const outputVideoTimeSeconds = chapterTime - rangePlayerStart + currentRangeStartSecs;
+					if (!checkedFirstChapter) {
+						checkedFirstChapter = true;
+						if (outputVideoTimeSeconds !== 0) {
+							setSubmissionError("The first chapter must start at the beginning of the video");
+							props.setEditorState(EditorState.Entry);
+							return;
+						}
+					}
+					if (lastChapterTime !== null && outputVideoTimeSeconds - lastChapterTime < 10) {
+						setSubmissionError("Chapters must be at least 10 seconds apart");
+						props.setEditorState(EditorState.Entry);
+						return;
+					}
+					lastChapterTime = outputVideoTimeSeconds;
+
+					chapterMarkers.push([
+						rangeDataIndex,
+						wubloaderTimeFromDateTime(chapterData.time!),
+						chapterData.description,
+					]);
 				}
 			}
 		}
@@ -397,11 +394,9 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			const rangeEnd = rangeEndDate ? wubloaderTimeFromDateTime(rangeEndDate) : null;
 			videoRanges.push([rangeStart, rangeEnd]);
 
-			if (props.chaptersEnabled()) {
-				for (const chapterData of rangeData.chapters()) {
-					const chapterTime = chapterData.time ? wubloaderTimeFromDateTime(chapterData.time) : null;
-					chapterMarkers.push([rangeDataIndex, chapterTime, chapterData.description]);
-				}
+			for (const chapterData of rangeData.chapters()) {
+				const chapterTime = chapterData.time ? wubloaderTimeFromDateTime(chapterData.time) : null;
+				chapterMarkers.push([rangeDataIndex, chapterTime, chapterData.description]);
 			}
 
 			const transitionType = rangeData.transitionType();
