@@ -116,6 +116,12 @@ export interface ThumbnailTemplateDefinition {
 	location: [number, number, number, number];
 }
 
+export enum VideoHiddenReason {
+	NotHidden = 0,
+	AlreadySubmitted,
+	RangeLong,
+}
+
 export function videoPlayerTimeFromDateTime(
 	datetime: DateTime,
 	fragments: FragmentTimes[],

@@ -6,9 +6,11 @@ import {
 	createResource,
 	createSignal,
 	Index,
+	Match,
 	Setter,
 	Show,
 	Suspense,
+	Switch,
 	untrack,
 } from "solid-js";
 import { Fragment } from "hls.js";
@@ -26,6 +28,7 @@ import {
 	ThumbnailType,
 	TransitionDefinition,
 	VideoData,
+	VideoHiddenReason,
 } from "./common";
 import { CategoryNotes } from "./CategoryNotes";
 import { ChapterToggle } from "./ChapterToggle";
@@ -764,10 +767,20 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const editingCompletedVideo = () =>
 		!!props.data && (props.data.state === "DONE" || props.data.state === "MODIFIED");
 
-	const [showingVideo, setShowingVideo] = createSignal(!editingCompletedVideo());
+	let initialVideoHiddenReason = VideoHiddenReason.NotHidden;
+	if (editingCompletedVideo()) {
+		initialVideoHiddenReason = VideoHiddenReason.AlreadySubmitted;
+	} else if (streamStart && streamEnd) {
+		const streamDuration = streamEnd.diff(streamStart);
+		if (streamDuration.as("hours") >= 24) {
+			initialVideoHiddenReason = VideoHiddenReason.RangeLong;
+		}
+	}
+	const [videoHiddenReason, setVideoHiddenReason] = createSignal(initialVideoHiddenReason);
 	const showVideo = (event: MouseEvent) => {
-		setShowingVideo(true);
+		setVideoHiddenReason(VideoHiddenReason.NotHidden);
 	};
+	const showingVideo = () => videoHiddenReason() === VideoHiddenReason.NotHidden;
 
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
@@ -790,16 +803,31 @@ const EditorContent: Component<ContentProps> = (props) => {
 					)}
 				</Index>
 			</ul>
-			<Show when={!showingVideo()}>
-				<div class={styles.noVideoLoaded}>
-					<p>This video has been submitted and uploaded. You can edit some metadata here.</p>
-					<p>
-						To view the video, view or edit other settings, or access the download options, load the
-						video.
-					</p>
-					<button onClick={showVideo}>Load Video</button>
-				</div>
-			</Show>
+			<Switch>
+				<Match when={videoHiddenReason() === VideoHiddenReason.AlreadySubmitted}>
+					<div class={styles.noVideoLoaded}>
+						<p>This video has been submitted and uploaded. You can edit some metadata here.</p>
+						<p>
+							To view the video, view or edit other settings, or access the download options, load
+							the video.
+						</p>
+						<button onClick={showVideo}>Load Video</button>
+					</div>
+				</Match>
+				<Match when={videoHiddenReason() === VideoHiddenReason.RangeLong}>
+					<div class={styles.noVideoLoaded}>
+						<p>
+							The video range is very long and hasn't been loaded. If you're here to set overrides,
+							set those below.
+						</p>
+						<p>
+							If you're sure you wish to edit a video with this long of a time range, confirm you'd
+							like to load the video.
+						</p>
+						<button onClick={showVideo}>Load Video</button>
+					</div>
+				</Match>
+			</Switch>
 			<KeyboardShortcuts includeEditorShortcuts={true} />
 			<Show when={showingVideo()}>
 				<StreamTimeSettings
@@ -851,16 +879,18 @@ const EditorContent: Component<ContentProps> = (props) => {
 					enableChapterEntry={chaptersEnabled}
 				/>
 			</Show>
-			<VideoMetadata
-				titlePrefix={props.data.title_prefix}
-				titleMaxLength={props.data.title_max_length}
-				title={videoTitle}
-				setTitle={setVideoTitle}
-				description={videoDescription}
-				setDescription={setVideoDescription}
-				tags={videoTags}
-				setTags={setVideoTags}
-			/>
+			<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
+				<VideoMetadata
+					titlePrefix={props.data.title_prefix}
+					titleMaxLength={props.data.title_max_length}
+					title={videoTitle}
+					setTitle={setVideoTitle}
+					description={videoDescription}
+					setDescription={setVideoDescription}
+					tags={videoTags}
+					setTags={setVideoTags}
+				/>
+			</Show>
 			<Show when={showingVideo()}>
 				<ThumbnailSettings
 					allThumbnailTemplates={allThumbnailTemplates() ?? []}
@@ -871,24 +901,26 @@ const EditorContent: Component<ContentProps> = (props) => {
 					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 				/>
 			</Show>
-			<Submission
-				streamVideoInfo={streamVideoInfo}
-				videoData={videoData}
-				videoTitle={videoTitle}
-				videoDescription={videoDescription}
-				videoTags={videoTags}
-				chaptersEnabled={chaptersEnabled}
-				uploadLocations={props.data.upload_locations}
-				editorState={editorState}
-				setEditorState={setEditorState}
-				allowHoles={allowHoles}
-				setAllowHoles={setAllowHoles}
-				thumbnailData={thumbnail()}
-				originalVideoData={props.data}
-				videoFragmentTimes={videoFragmentTimes}
-				editingCompletedVideo={editingCompletedVideo}
-				accountToken={accountToken}
-			/>
+			<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
+				<Submission
+					streamVideoInfo={streamVideoInfo}
+					videoData={videoData}
+					videoTitle={videoTitle}
+					videoDescription={videoDescription}
+					videoTags={videoTags}
+					chaptersEnabled={chaptersEnabled}
+					uploadLocations={props.data.upload_locations}
+					editorState={editorState}
+					setEditorState={setEditorState}
+					allowHoles={allowHoles}
+					setAllowHoles={setAllowHoles}
+					thumbnailData={thumbnail()}
+					originalVideoData={props.data}
+					videoFragmentTimes={videoFragmentTimes}
+					editingCompletedVideo={editingCompletedVideo}
+					accountToken={accountToken}
+				/>
+			</Show>
 			<Show when={showingVideo()}>
 				<Download
 					streamVideoInfo={streamVideoInfo}
