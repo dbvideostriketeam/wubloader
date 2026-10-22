@@ -5,6 +5,7 @@ import { bindingDownloadTypeSelectOnChange } from "../common/binding";
 import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { DownloadType } from "../common/downloads";
 import { StreamVideoInfo } from "../common/streamInfo";
+
 import styles from "./Download.module.scss";
 
 interface DownloadProps {
