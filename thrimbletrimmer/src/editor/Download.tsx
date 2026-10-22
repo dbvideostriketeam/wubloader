@@ -67,7 +67,7 @@ export const Download: Component<DownloadProps> = (props) => {
 		return `/cut/${streamInfo.streamName}/${props.videoQuality}.ts?${query.toString()}`;
 	};
 
-	const downloadFrameLink = () => {
+	const currentPlayerWubloaderTime = () => {
 		const currentPlayerDateTime = dateTimeFromVideoPlayerTime(
 			props.videoPlayerTime(),
 			props.videoFragments(),
@@ -75,8 +75,11 @@ export const Download: Component<DownloadProps> = (props) => {
 		if (currentPlayerDateTime === null) {
 			return "";
 		}
-		const currentPlayerWubloaderTime = wubloaderTimeFromDateTime(currentPlayerDateTime);
-		return `/frame/${props.streamVideoInfo().streamName}/${props.videoQuality}.png?timestamp=${currentPlayerWubloaderTime}`;
+		return wubloaderTimeFromDateTime(currentPlayerDateTime);
+	};
+
+	const downloadFrameLink = () => {
+		return `/frame/${props.streamVideoInfo().streamName}/${props.videoQuality}.png?timestamp=${currentPlayerWubloaderTime()}`;
 	};
 
 	return (
@@ -97,7 +100,11 @@ export const Download: Component<DownloadProps> = (props) => {
 			<a href={downloadVideoLink()} class={styles.downloadLink}>
 				Download Video
 			</a>
-			<a href={downloadFrameLink()} class={styles.downloadLink}>
+			<a
+				href={downloadFrameLink()}
+				class={styles.downloadLink}
+				download={`${currentPlayerWubloaderTime()}.png`}
+			>
 				Download Current Frame as Image
 			</a>
 		</div>
