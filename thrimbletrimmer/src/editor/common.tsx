@@ -46,7 +46,8 @@ export interface VideoData {
 	bustime_start: string;
 	upload_locations: string[];
 	category_notes?: string;
-	chapter_markers?: [number, string | null, string][];
+	chapter_markers?: [number, string | null, string][] | null;
+	subtitle_data: string | null;
 }
 
 export class RangeData {
