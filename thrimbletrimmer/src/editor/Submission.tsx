@@ -21,6 +21,7 @@ interface SubmissionProps {
 	videoTitle: Accessor<string>;
 	videoDescription: Accessor<string>;
 	videoTags: Accessor<string[]>;
+	subtitles: Accessor<string>;
 	uploadLocations: string[];
 	editorState: Accessor<EditorState>;
 	setEditorState: Setter<EditorState>;
@@ -304,6 +305,8 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			return;
 		}
 
+		const subtitleData = props.subtitles();
+
 		let allowedUploaders: string[] | null = uploaderAllowlist()
 			.split(",")
 			.filter((name) => name !== "");
@@ -317,6 +320,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			video_title: videoTitle,
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
+			subtitle_data: subtitleData ? subtitleData : null,
 			chapter_markers: chapterMarkers.length === 0 ? null : chapterMarkers,
 			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),
@@ -414,12 +418,15 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			return;
 		}
 
+		const subtitleData = props.subtitles();
+
 		const editData = {
 			video_ranges: videoRanges.length === 0 ? null : videoRanges,
 			video_transitions: transitions,
 			video_title: props.videoTitle(),
 			video_description: videoDescription,
 			video_tags: props.videoTags(),
+			subtitle_data: subtitleData ? subtitleData : null,
 			chapter_markers: chapterMarkers.length === 0 ? null : chapterMarkers,
 			allow_holes: props.allowHoles(),
 			upload_location: uploadLocation(),

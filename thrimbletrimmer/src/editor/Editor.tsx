@@ -248,6 +248,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const [videoTitle, setVideoTitle] = createSignal(initialTitle ?? "");
 	const [videoDescription, setVideoDescription] = createSignal(description ?? "");
 	const [videoTags, setVideoTags] = createSignal(props.data.video_tags ?? props.data.tags ?? []);
+	const [subtitleData, setSubtitleData] = createSignal(props.data.subtitle_data ?? "");
 	const [allowHoles, setAllowHoles] = createSignal(false);
 
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
@@ -879,6 +880,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 					setDescription={setVideoDescription}
 					tags={videoTags}
 					setTags={setVideoTags}
+					setSubtitles={setSubtitleData}
 				/>
 			</Show>
 			<Show when={showingVideo()}>
@@ -898,6 +900,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 					videoTitle={videoTitle}
 					videoDescription={videoDescription}
 					videoTags={videoTags}
+					subtitles={subtitleData}
 					uploadLocations={props.data.upload_locations}
 					editorState={editorState}
 					setEditorState={setEditorState}
