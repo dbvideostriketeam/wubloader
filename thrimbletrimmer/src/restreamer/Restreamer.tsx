@@ -296,8 +296,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		return `/cut/${streamInfo.streamName}/source.ts?${params}`;
 	};
 
-	const downloadFrameURL = () => {
-		const streamInfo = streamVideoInfo();
+	const frameWubloaderTime = () => {
 		const fragments = videoFragmentTimes();
 		const videoTime = playerTime();
 		if (!fragments || fragments.length === 0) {
@@ -307,8 +306,12 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		if (currentTime === null) {
 			return "";
 		}
-		const wubloaderTime = wubloaderTimeFromDateTime(currentTime);
-		return `/frame/${streamInfo.streamName}/source.png?timestamp=${wubloaderTime}`;
+		return wubloaderTimeFromDateTime(currentTime);
+	};
+
+	const downloadFrameURL = () => {
+		const streamInfo = streamVideoInfo();
+		return `/frame/${streamInfo.streamName}/source.png?timestamp=${frameWubloaderTime()}`;
 	};
 
 	return (
@@ -330,7 +333,9 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 			/>
 			<div class={styles.videoLinks}>
 				<a href={downloadVideoURL()}>Download Video</a>
-				<a href={downloadFrameURL()}>Download Current Frame as Image</a>
+				<a href={downloadFrameURL()} download={`${frameWubloaderTime()}.png`}>
+					Download Current Frame as Image
+				</a>
 			</div>
 			<div
 				class={styles.chatContainer}
