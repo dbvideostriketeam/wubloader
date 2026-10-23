@@ -88,12 +88,14 @@ def save_state(path, last_event_time, honk_count):
         }) + "\n")
 
 
-def event_query(last_event_time):
-    if last_event_time is None:
-        where = ""
-    else:
+def event_query(last_event_time, honk_modulo):
+    conditions = []
+    if last_event_time is not None:
         timestamp = last_event_time.replace("'", "''")
-        where = f"WHERE time > TIMESTAMP '{timestamp}'"
+        conditions.append(f"time > TIMESTAMP '{timestamp}'")
+    if honk_modulo <= 0:
+        conditions.append("event != 'honk'")
+    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     return QUERY.format(where=where)
 
 
@@ -164,8 +166,9 @@ def main(
     if os.path.exists(config["state"]):
         last_event_time, honk_count = load_state(config["state"])
     else:
-        last_event_time, honk_count = None, 0
-    if honk_count is None:
+        last_event_time, honk_count = None, None
+    honk_modulo = config["honk_modulo"]
+    if honk_modulo > 0 and honk_count is None:
         honk_count = (
             count_honks(
                 config["influx_url"],
@@ -176,7 +179,8 @@ def main(
             if last_event_time is not None
             else 0
         )
-    honk_modulo = config["honk-modulo"]
+    elif honk_modulo <= 0:
+        honk_count = None
 
     zulip_client = None
     if not test:
@@ -193,11 +197,12 @@ def main(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
-            event_query(last_event_time),
+            event_query(last_event_time, honk_modulo),
         ):
             is_honk = event["event"] == "honk"
             if is_honk:
                 honk_count += 1
+            # only post every Nth honk
             should_post = (
                 not is_honk
                 or (honk_modulo > 0 and honk_count % honk_modulo == 0)
