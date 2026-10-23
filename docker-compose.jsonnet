@@ -417,11 +417,8 @@
     zulip_email: "gameevents-bot@chat.videostrike.team",
     zulip_api_key: "",
     influx_url: "",
-    influx_database: "",
+    influx_database: "telemetry",
     influx_token: "",
-    stream: "bot-spam",
-    topic: "Game Events",
-    interval: 1,
     state: "/data/gameeventsbot.json",
     state_path:: "./gameeventsbot",
   },
@@ -918,7 +915,7 @@
     [if $.enabled.gameeventsbot then "gameeventsbot"]:
       bot_service("gameeventsbot", $.gameeventsbot + {
         zulip_url: $.zulip_url,
-      }) + {
+      }, ["--interval", "1"]) + {
         volumes: ["%s:/data" % $.gameeventsbot.state_path],
       },
 
