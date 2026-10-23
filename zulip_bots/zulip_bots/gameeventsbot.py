@@ -7,7 +7,6 @@ For each  event, it:
 
 """
 
-import hashlib
 import json
 import logging
 import os
@@ -23,10 +22,9 @@ from .config import common_setup, get_config
 
 QUERY = """
 SELECT time, event, details FROM desertbus_events
+{where}
 ORDER BY time
 """
-# TODO(?): Query from a persisted timestamp watermark to avoid rescanning all events each interval.
-# Probably not a worry given the volume of events in a single run
 
 EVENT_NAMES = {
     "bus_stop": "Bus stop",
@@ -49,10 +47,7 @@ DETAIL_NAMES = {
     "x": "Position",
     "speed_mph": "Speed",
 }
-
-
-
-def query_events(url, database, token):
+def query_events(url, database, token, query):
     endpoint = f"{url.rstrip('/')}/api/v3/query_sql"
     headers = {}
     if token:
@@ -61,7 +56,7 @@ def query_events(url, database, token):
     with requests.post(
         endpoint,
         headers=headers,
-        json={"db": database, "q": QUERY, "format": "jsonl"},
+        json={"db": database, "q": query, "format": "jsonl"},
         stream=True,
         timeout=(10, 60),
     ) as response:
@@ -74,36 +69,25 @@ def query_events(url, database, token):
                 yield event
 
 
-def event_key(event):
-    identity = {
-        "time": event["time"],
-        "event": event["event"],
-        "details": parse_details(event.get("details")),
-    }
-    content = json.dumps(identity, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
 def load_state(path):
-    if not os.path.exists(path):
-        return {"initialized": False, "seen": set()}
-
     with open(path, encoding="utf-8") as state_file:
         data = json.load(state_file)
-    if not isinstance(data, dict) or not isinstance(data.get("seen"), list):
-        raise ValueError(f"Invalid GameEventsBot state file {path!r}")
-    if not isinstance(data.get("initialized"), bool):
-        raise ValueError(f"Invalid GameEventsBot initialization state in {path!r}")
-    if not all(isinstance(key, str) for key in data["seen"]):
-        raise ValueError(f"Invalid event keys in GameEventsBot state file {path!r}")
-    return {"initialized": data["initialized"], "seen": set(data["seen"])}
+    if data is None or (isinstance(data, str) and data):
+        return data
+    raise ValueError(f"Invalid GameEventsBot state file {path!r}")
 
 
-def save_state(path, state):
-    atomic_write(path, json.dumps({
-        "initialized": state["initialized"],
-        "seen": sorted(state["seen"]),
-    }) + "\n")
+def save_state(path, last_event_time):
+    atomic_write(path, json.dumps(last_event_time) + "\n")
+
+
+def event_query(last_event_time):
+    if last_event_time is None:
+        where = ""
+    else:
+        timestamp = last_event_time.replace("'", "''")
+        where = f"WHERE time > TIMESTAMP '{timestamp}'"
+    return QUERY.format(where=where)
 
 
 def parse_details(details):
@@ -115,7 +99,7 @@ def parse_details(details):
 
 
 def event_to_message(event):
-    if "time" not in event or "event" not in event:
+    if not isinstance(event.get("time"), str) or "event" not in event: 
         raise ValueError("Game event row must include time and event columns")
 
     event_type = event["event"]
@@ -160,7 +144,6 @@ def main(
     topic=None,
     test=False,
     once=False,
-    send_existing=False,
 ):
     common_setup(metrics_port)
     config = get_config(config_file)
@@ -172,8 +155,7 @@ def main(
 
     stream = stream or config["stream"]
     topic = topic or config["topic"]
-    send_existing = send_existing or config.get("send_existing", False)
-    state = load_state(config["state"])
+    last_event_time = load_state(config["state"]) if os.path.exists(config["state"]) else None
 
     zulip_client = None
     if not test:
@@ -186,35 +168,19 @@ def main(
     while True:
         started = time.time()
         logging.info("Querying InfluxDB for game data events")
-        state_changed = False
         for event in query_events(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
+            event_query(last_event_time),
         ):
-            key = event_key(event)
-            if key in state["seen"]:
-                continue
-
-            if not state["initialized"] and not send_existing and not test:
-                state["seen"].add(key)
-                state_changed = True
-                continue
-
             message = event_to_message(event)
             if test:
                 print(f"{stream}->{topic}: {message}")
             else:
                 zulip_client.send_to_stream(stream, topic, message)
-                state["seen"].add(key)
-                save_state(config["state"], state)
-            state_changed = True
-
-        if not state["initialized"]:
-            state["initialized"] = True
-            state_changed = True
-        if state_changed and not test:
-            save_state(config["state"], state)
+                last_event_time = event["time"]
+                save_state(config["state"], last_event_time)
 
         if once:
             break
