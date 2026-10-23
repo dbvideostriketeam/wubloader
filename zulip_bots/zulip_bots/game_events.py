@@ -159,11 +159,11 @@ def main(
             event_query(last_event_time),
         ):
             message = event_to_message(event)
+            last_event_time = event["time"]
             if test:
                 print(f"{stream}->{topic}: {message}")
             else:
                 zulip_client.send_to_stream(stream, topic, message)
-                last_event_time = event["time"]
                 save_state(config["state"], last_event_time)
 
         if once:
