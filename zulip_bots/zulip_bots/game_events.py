@@ -13,11 +13,13 @@ import os
 import time
 
 import argh
-import requests
 
+from common.requests import InstrumentedSession
 from common import zulip
 
 from .config import common_setup, get_config
+
+requests = InstrumentedSession()
 
 QUERY = """
 SELECT time, event, details FROM desertbus_event
@@ -58,6 +60,7 @@ def query_events(url, database, token, query):
         json={"db": database, "q": query, "format": "jsonl"},
         stream=True,
         timeout=(10, 60),
+        metric_name="influx_query",
     ) as response:
         response.raise_for_status()
         for line in response.iter_lines(decode_unicode=True):
@@ -66,12 +69,12 @@ def query_events(url, database, token, query):
 
 
 def load_state(path):
-    with open(path, encoding="utf-8") as state_file:
+    with open(path) as state_file:
         return json.load(state_file)
 
 
 def save_state(path, last_event_time):
-    with open(path, "w", encoding="utf-8") as state_file:
+    with open(path, "w") as state_file:
         state_file.write(json.dumps(last_event_time) + "\n")
 
 
