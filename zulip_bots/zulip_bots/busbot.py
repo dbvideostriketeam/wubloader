@@ -26,6 +26,10 @@ SELECT time, event, details FROM desertbus_event
 {where}
 ORDER BY time
 """
+HONK_COUNT_QUERY = """
+SELECT COUNT(*) AS count FROM desertbus_event
+WHERE event = 'honk' AND time <= TIMESTAMP '{timestamp}'
+"""
 
 EVENT_NAMES = {
     "bus_stop": "Bus stop",
@@ -70,12 +74,18 @@ def query_events(url, database, token, query):
 
 def load_state(path):
     with open(path) as state_file:
-        return json.load(state_file)
+        state = json.load(state_file)
+    if isinstance(state, dict):
+        return state["last_event_time"], state["honk_count"]
+    return state, None
 
 
-def save_state(path, last_event_time):
+def save_state(path, last_event_time, honk_count):
     with open(path, "w") as state_file:
-        state_file.write(json.dumps(last_event_time) + "\n")
+        state_file.write(json.dumps({
+            "last_event_time": last_event_time,
+            "honk_count": honk_count,
+        }) + "\n")
 
 
 def event_query(last_event_time):
@@ -87,14 +97,24 @@ def event_query(last_event_time):
     return QUERY.format(where=where)
 
 
+def count_honks(url, database, token, last_event_time):
+    timestamp = last_event_time.replace("'", "''")
+    query = HONK_COUNT_QUERY.format(timestamp=timestamp)
+    row = next(query_events(url, database, token, query))
+    return row["count"]
+
+
 def parse_details(details):
     return json.loads(details)
 
 
-def event_to_message(event):
+def event_to_message(event, honk_count=None):
     event_type = event["event"]
     details = parse_details(event["details"])
-    lines = [f"**{EVENT_NAMES.get(event_type, event_type.replace('_', ' ').title())}**"]
+    event_name = EVENT_NAMES.get(event_type, event_type.replace("_", " ").title())
+    if event_type == "honk":
+        event_name = f"{event_name} #{honk_count}"
+    lines = [f"**{event_name}**"]
     lines.append(f"Time: `{event['time']}`")
     for key, value in details.items():
         if key == "lateral_raw":
@@ -141,7 +161,22 @@ def main(
     if interval <= 0:
         raise ValueError("Polling interval must be greater than zero")
 
-    last_event_time = load_state(config["state"]) if os.path.exists(config["state"]) else None
+    if os.path.exists(config["state"]):
+        last_event_time, honk_count = load_state(config["state"])
+    else:
+        last_event_time, honk_count = None, 0
+    if honk_count is None:
+        honk_count = (
+            count_honks(
+                config["influx_url"],
+                config["influx_database"],
+                config.get("influx_token"),
+                last_event_time,
+            )
+            if last_event_time is not None
+            else 0
+        )
+    honk_modulo = config["honk-modulo"]
 
     zulip_client = None
     if not test:
@@ -160,13 +195,22 @@ def main(
             config.get("influx_token"),
             event_query(last_event_time),
         ):
-            message = event_to_message(event)
+            is_honk = event["event"] == "honk"
+            if is_honk:
+                honk_count += 1
+            should_post = (
+                not is_honk
+                or (honk_modulo > 0 and honk_count % honk_modulo == 0)
+            )
+            message = event_to_message(event, honk_count if is_honk else None)
             last_event_time = event["time"]
             if test:
-                print(f"{stream}->{topic}: {message}")
+                if should_post:
+                    print(f"{stream}->{topic}: {message}")
             else:
-                zulip_client.send_to_stream(stream, topic, message)
-                save_state(config["state"], last_event_time)
+                if should_post:
+                    zulip_client.send_to_stream(stream, topic, message)
+                save_state(config["state"], last_event_time, honk_count)
 
         if once:
             break
