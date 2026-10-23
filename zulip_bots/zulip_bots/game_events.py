@@ -1,5 +1,5 @@
 """
-GameEventsbot queries the InfluxDB that stores game events from the Desert Bus game.
+Game Events queries the InfluxDB that stores game events from the Desert Bus game.
 For each  event, it:
 - checks that the event hasn't already been processed
 - formats a message with the event details

@@ -413,14 +413,14 @@
     args: [],
   },
 
-  gameeventsbot:: {
+  game_events:: {
     zulip_email: "gameevents-bot@chat.videostrike.team",
     zulip_api_key: "",
     influx_url: "",
     influx_database: "telemetry",
     influx_token: "",
-    state: "/data/gameeventsbot.json",
-    state_path:: "./gameeventsbot",
+    state: "/data/game_events.json",
+    state_path:: "./game_events",
   },
 
   // Extra options to pass via environment variables,
