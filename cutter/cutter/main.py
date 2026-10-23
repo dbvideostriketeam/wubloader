@@ -875,6 +875,9 @@ class VideoUpdater(object):
 						# Update thumbnail if needed. This might fail if we don't have the right segments,
 						# but that should be very rare and can be dealt with out of band.
 						attribution = ""
+						if job.thumbnail_mode == 'TEMPLATE':
+							template = get_template(self.conn, job.thumbnail_template)
+							attribution = template.attribution
 						if job.thumbnail_mode != 'NONE':
 							thumbnail_image = job.thumbnail_image
 							if thumbnail_image is None:
@@ -886,10 +889,8 @@ class VideoUpdater(object):
 								if job.thumbnail_mode == 'BARE':
 									thumbnail_image = frame
 								elif job.thumbnail_mode == 'TEMPLATE':
-									template = get_template(self.conn, job.thumbnail_template)
 									self.logger.info('Generating thumbnail from the video frame at {} using {} as template'.format(job.thumbnail_time, job.thumbnail_template))
 									thumbnail_image = compose_thumbnail_template(template.image, frame, job.thumbnail_crop, job.thumbnail_location)
-									attribution = template.attribution
 								else:
 									assert False, "Bad thumbnail mode: {}".format(job.thumbnail_mode)
 								updates['thumbnail_image'] = thumbnail_image
