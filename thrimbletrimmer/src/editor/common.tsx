@@ -61,11 +61,13 @@ export class RangeData {
 	chapters: Accessor<ChapterData[]>;
 	setChapters: Setter<ChapterData[]>;
 
-	public constructor() {
+	public constructor(initialTransitionType = "", initialTransitionSeconds = 0) {
 		[this.startTime, this.setStartTime] = createSignal<DateTime | null>(null);
 		[this.endTime, this.setEndTime] = createSignal<DateTime | null>(null);
-		[this.transitionType, this.setTransitionType] = createSignal("");
-		[this.transitionSeconds, this.setTransitionSeconds] = createSignal(0);
+		[this.transitionType, this.setTransitionType] = createSignal(initialTransitionType);
+		[this.transitionSeconds, this.setTransitionSeconds] = createSignal(initialTransitionSeconds);
+		const transitionSeconds = this.transitionSeconds;
+		this.transitionSeconds = () => (this.transitionType() === "" ? 0 : transitionSeconds());
 		[this.chapters, this.setChapters] = createSignal<ChapterData[]>([]);
 	}
 }

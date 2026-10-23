@@ -218,11 +218,9 @@ const EditorContent: Component<ContentProps> = (props) => {
 			}
 		}
 
-		const rangeData = new RangeData();
+		const rangeData = new RangeData(transitionType, transitionSeconds);
 		[rangeData.startTime, rangeData.setStartTime] = createSignal<DateTime | null>(rangeStart);
 		[rangeData.endTime, rangeData.setEndTime] = createSignal<DateTime | null>(rangeEnd);
-		[rangeData.transitionType, rangeData.setTransitionType] = createSignal(transitionType);
-		[rangeData.transitionSeconds, rangeData.setTransitionSeconds] = createSignal(transitionSeconds);
 		[rangeData.chapters, rangeData.setChapters] = createSignal(chaptersByRange[index] ?? []);
 		initialVideoData.push(rangeData);
 	}
