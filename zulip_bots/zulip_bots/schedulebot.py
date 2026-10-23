@@ -258,7 +258,6 @@ def parse_reminders(reminder_strings: list[str]):
 
 def check_reminders(reminders: list[Reminder], hour, start_time, shifts, send_client):
 	if hour < 0: return # Don't send reminders before the run starts
-	shifts = parse_shifts(shifts)
 	moonbase_start = datetime.fromtimestamp(start_time, zoneinfo.ZoneInfo(shifts['timezone']))
 	moonbase_hour = (moonbase_start + timedelta(hours=hour)).replace(minute=0, second=0, microsecond=0).hour
 	for reminder in reminders:
