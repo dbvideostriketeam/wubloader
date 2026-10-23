@@ -20,7 +20,7 @@ from common import zulip
 from .config import common_setup, get_config
 
 QUERY = """
-SELECT time, event, details FROM desertbus_events
+SELECT time, event, details FROM desertbus_event
 {where}
 ORDER BY time
 """
@@ -85,13 +85,12 @@ def event_query(last_event_time):
 
 
 def parse_details(details):
-    if isinstance(details, str):
-        return json.loads(details)
+    return json.loads(details)
 
 
 def event_to_message(event):
     event_type = event["event"]
-    details = parse_details(event.get("details"))
+    details = parse_details(event["details"])
     lines = [f"**{EVENT_NAMES.get(event_type, event_type.replace('_', ' ').title())}**"]
     lines.append(f"Time: `{event['time']}`")
     for key, value in details.items():
