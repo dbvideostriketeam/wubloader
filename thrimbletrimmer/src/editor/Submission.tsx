@@ -199,6 +199,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		const transitions: ([string, number] | null)[] = [];
 		const chapterMarkers: [number, string | null, string][] = [];
 		let currentRangeStartSecs = 0;
+		let currentRangeEndSecs = 0;
 		let checkedFirstChapter = false;
 		let lastChapterTime: number | null = null;
 		for (const [rangeDataIndex, rangeData] of props.videoData().entries()) {
@@ -241,11 +242,24 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					return;
 				}
 
-				currentRangeStartSecs += rangePlayerEnd - rangePlayerStart - transitionSeconds;
+				// These are the timestamps in the edited video that this segment starts and ends at.
+				currentRangeStartSecs = currentRangeEndSecs - transitionSeconds;
+				currentRangeEndSecs = currentRangeStartSecs + rangePlayerEnd - rangePlayerStart;
 
-				if (currentRangeStartSecs < 0) {
+				// This check prevents negative currentRangeEndSecs, but is also stronger than that condition.
+				// This condition ensures that we don't try to transition with not enough video after the transition.
+				if (transitionSeconds > (rangePlayerEnd - rangePlayerStart)) {
 					setSubmissionError(
-						"Time ranges and transition data resulted in a negative video time at some point in the time calculations",
+						"A transition cannot be longer than the range that the transition fades into",
+					);
+					props.setEditorState(EditorState.Entry);
+					return;
+				}
+
+				// Do we also have to check that we have enough video before the transition?
+				if (transitionSeconds > currentRangeStartSecs) {
+					setSubmissionError(
+						"A transition cannot be longer than the total amount of edited video before that transition",
 					);
 					props.setEditorState(EditorState.Entry);
 					return;
