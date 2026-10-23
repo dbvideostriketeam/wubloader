@@ -15,7 +15,6 @@ import time
 import argh
 import requests
 
-from common import atomic_write
 from common import zulip
 
 from .config import common_setup, get_config
@@ -63,22 +62,17 @@ def query_events(url, database, token, query):
         response.raise_for_status()
         for line in response.iter_lines(decode_unicode=True):
             if line:
-                event = json.loads(line)
-                if not isinstance(event, dict):
-                    raise ValueError("InfluxDB query returned a non-object event row")
-                yield event
+                yield json.loads(line)
 
 
 def load_state(path):
     with open(path, encoding="utf-8") as state_file:
-        data = json.load(state_file)
-    if data is None or (isinstance(data, str) and data):
-        return data
-    raise ValueError(f"Invalid GameEventsBot state file {path!r}")
+        return json.load(state_file)
 
 
 def save_state(path, last_event_time):
-    atomic_write(path, json.dumps(last_event_time) + "\n")
+    with open(path, "w", encoding="utf-8") as state_file:
+        state_file.write(json.dumps(last_event_time) + "\n")
 
 
 def event_query(last_event_time):
@@ -92,16 +86,10 @@ def event_query(last_event_time):
 
 def parse_details(details):
     if isinstance(details, str):
-        details = json.loads(details)
-    if not isinstance(details, dict):
-        raise ValueError("Game event details must be a JSON object")
-    return details
+        return json.loads(details)
 
 
 def event_to_message(event):
-    if not isinstance(event.get("time"), str) or "event" not in event: 
-        raise ValueError("Game event row must include time and event columns")
-
     event_type = event["event"]
     details = parse_details(event.get("details"))
     lines = [f"**{EVENT_NAMES.get(event_type, event_type.replace('_', ' ').title())}**"]
@@ -119,8 +107,6 @@ def event_to_message(event):
 
 
 def validate_config(config):
-    if not isinstance(config, dict):
-        raise ValueError("GameEventsBot config must be a mapping")
     required = (
         "influx_url",
         "influx_database",
@@ -128,8 +114,6 @@ def validate_config(config):
         "zulip_url",
         "zulip_email",
         "zulip_api_key",
-        "stream",
-        "topic",
     )
     missing = [key for key in required if not config.get(key)]
     if missing:
@@ -138,10 +122,10 @@ def validate_config(config):
 
 def main(
     config_file,
-    interval=None,
+    interval=60,
     metrics_port=8021,
-    stream=None,
-    topic=None,
+    stream="bot-spam",
+    topic="Game Events",
     test=False,
     once=False,
 ):
@@ -149,12 +133,9 @@ def main(
     config = get_config(config_file)
     validate_config(config)
 
-    interval = config.get("interval", 60) if interval is None else interval
     if interval <= 0:
         raise ValueError("Polling interval must be greater than zero")
 
-    stream = stream or config["stream"]
-    topic = topic or config["topic"]
     last_event_time = load_state(config["state"]) if os.path.exists(config["state"]) else None
 
     zulip_client = None
