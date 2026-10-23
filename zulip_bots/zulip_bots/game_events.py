@@ -151,7 +151,7 @@ def main(
 
     while True:
         started = time.time()
-        logging.info("Querying InfluxDB for game data events")
+        logging.info(f"Querying InfluxDB for game data events after {last_event_time}")
         for event in query_events(
             config["influx_url"],
             config["influx_database"],
