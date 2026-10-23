@@ -251,6 +251,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						}
 						const newRanges = ranges.slice();
 						newRanges.splice(index, 1);
+						newRanges[0].setTransitionType("");
 						props.setRangeData(newRanges);
 						props.setActiveKeyboardIndex((activeIndex) =>
 							activeIndex >= index ? Math.max(0, activeIndex - 1) : activeIndex,
