@@ -41,7 +41,7 @@
     twitch_stats: false,
     challengebot: false,
     bus_analyzer: false,
-    game_events: false,
+    busbot: false,
   },
 
   // Twitch channels to capture. The first one will be used as the default channel in the editor.
@@ -413,14 +413,14 @@
     args: [],
   },
 
-  game_events:: {
-    zulip_email: "game_events@chat.videostrike.team",
+  busbot:: {
+    zulip_email: "busbot@chat.videostrike.team",
     zulip_api_key: "",
     influx_url: "",
     influx_database: "telemetry",
     influx_token: "",
-    state: "/data/game_events.json",
-    state_path:: "./game_events",
+    state: "/data/busbot.json",
+    state_path:: "./busbot",
   },
 
   // Extra options to pass via environment variables,
@@ -912,11 +912,11 @@
         volumes: ["%s:/state.json" % $.challengebot.state_path],
       },
 
-    [if $.enabled.game_events then "game_events"]:
-      bot_service("game_events", $.game_events + {
+    [if $.enabled.busbot then "busbot"]:
+      bot_service("busbot", $.busbot + {
         zulip_url: $.zulip_url,
       }, ["--interval", "1"]) + {
-        volumes: ["%s:/data" % $.game_events.state_path],
+        volumes: ["%s:/data" % $.busbot.state_path],
       },
 
   },

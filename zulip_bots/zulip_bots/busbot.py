@@ -1,5 +1,5 @@
 """
-Game Events queries the InfluxDB that stores game events from the Desert Bus game.
+This bot queries the InfluxDB that stores game events from the Desert Bus game.
 For each  event, it:
 - checks that the event hasn't already been processed
 - formats a message with the event details
@@ -122,7 +122,7 @@ def validate_config(config):
     )
     missing = [key for key in required if not config.get(key)]
     if missing:
-        raise ValueError(f"Missing required GameEventsBot config values: {', '.join(missing)}")
+        raise ValueError(f"Missing required BusBot config values: {', '.join(missing)}")
 
 
 def main(
@@ -130,7 +130,7 @@ def main(
     interval=1,
     metrics_port=8021,
     stream="bot-spam",
-    topic="Game Events",
+    topic="Bus Bot",
     test=False,
     once=False,
 ):
