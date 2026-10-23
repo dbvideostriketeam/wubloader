@@ -419,7 +419,7 @@
     influx_url: "",
     influx_database: "telemetry",
     influx_token: "",
-    "honk-modulo": 0,
+    honk_modulo: 0,
     state: "/data/busbot.json",
     state_path:: "./busbot",
   },
