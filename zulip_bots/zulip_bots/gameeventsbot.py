@@ -95,6 +95,9 @@ def event_to_message(event):
     lines = [f"**{EVENT_NAMES.get(event_type, event_type.replace('_', ' ').title())}**"]
     lines.append(f"Time: `{event['time']}`")
     for key, value in details.items():
+        if key == "lateral_raw":
+            # Normalize to (-1, 1) value
+            value = (value - 0x6C00) / 0x4800
         label = DETAIL_NAMES.get(key, key.replace("_", " ").title())
         if key.endswith("_miles"):
             value = f"{value} mi"
@@ -122,7 +125,7 @@ def validate_config(config):
 
 def main(
     config_file,
-    interval=60,
+    interval=1,
     metrics_port=8021,
     stream="bot-spam",
     topic="Game Events",
