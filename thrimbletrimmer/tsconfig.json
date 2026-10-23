@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"target": "ESNext",
 		"module": "ESNext",
-		"moduleResolution": "node",
+		"moduleResolution": "bundler",
 		"allowSyntheticDefaultImports": true,
 		"esModuleInterop": true,
 		"jsx": "preserve",
@@ -10,6 +10,7 @@
 		"types": ["vidstack/solid", "vite/client"],
 		"noEmit": true,
 		"isolatedModules": true,
-		"strictNullChecks": true
+		"skipLibCheck": true,
+		"strict": true
 	}
 }
