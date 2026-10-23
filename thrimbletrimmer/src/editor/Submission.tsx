@@ -256,7 +256,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					return;
 				}
 
-				// Do we also have to check that we have enough video before the transition?
+				// Handle cases when a long transition after some short segments can take us beyond the beginning of the video
 				if (currentRangeStartSecs < 0) {
 					setSubmissionError(
 						"A transition cannot be longer than the total amount of edited video before that transition",
