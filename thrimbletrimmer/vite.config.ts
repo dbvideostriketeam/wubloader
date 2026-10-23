@@ -2,10 +2,11 @@ import { fileURLToPath } from "url";
 import { defineConfig } from "vite";
 import solidPlugin from "vite-plugin-solid";
 import devtools from "solid-devtools/vite";
+import checker from "vite-plugin-checker";
 
 export default defineConfig({
 	base: "/thrimbletrimmer/",
-	plugins: [devtools(), solidPlugin()],
+	plugins: [devtools(), solidPlugin(), checker({ typescript: true })],
 	server: {
 		port: 3000,
 	},
