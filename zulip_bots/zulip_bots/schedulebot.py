@@ -294,6 +294,8 @@ def main(conf_file, hour=-1, no_groups=False, stream="General", no_mentions=Fals
 
 	if shifts is None:
 		shifts = {'repeating': [], 'one_off': [], 'timezone': 'UTC'}
+	else:
+		shifts = json.loads(shifts)
 
 	config = get_config(conf_file)
 	client = Client(config["url"], config["api_user"]["email"], config["api_user"]["api_key"])
