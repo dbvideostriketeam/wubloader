@@ -8,7 +8,6 @@ import {
 	Show,
 } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
-import "google.accounts";
 
 export interface GoogleSignInProps {
 	accountToken: Accessor<string | null>;
