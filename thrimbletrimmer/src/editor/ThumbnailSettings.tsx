@@ -26,6 +26,13 @@ import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../commo
 import "cropperjs"; // This is required for Cropper.js to work, even with the specific import below
 import { CropperSelection } from "cropperjs";
 
+interface CropperSelectionEvent {
+	bubbles: true;
+	cancelable: true;
+	composed: true;
+	detail: { x: number; y: number; width: number; height: number };
+}
+
 interface ThumbnailSettingsProps {
 	allThumbnailTemplates: ThumbnailTemplateDefinition[];
 	thumbnailData: ThumbnailData;
@@ -36,11 +43,11 @@ interface ThumbnailSettingsProps {
 }
 
 export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
-	const setThumbnailType = (event) => {
+	const setThumbnailType = (event: Event) => {
 		const value = (event.currentTarget as HTMLSelectElement).value as ThumbnailType;
 		props.thumbnailData.setType(value);
 	};
-	const setThumbnailTemplate = (event) => {
+	const setThumbnailTemplate = (event: Event) => {
 		const value = (event.currentTarget as HTMLSelectElement).value;
 		if (value === "") {
 			props.thumbnailData.setTemplate(null);
@@ -85,20 +92,20 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		props.thumbnailData.setTime(thumbnailTime);
 	});
 
-	const setThumbnailTime = (event) => {
+	const setThumbnailTime = (event: MouseEvent) => {
 		const playerTime = props.videoPlayerTime();
 		const entryTime = displayTimeForVideoPlayerTime(playerTime);
 		setThumbnailTimeEntry(entryTime);
 	};
 
-	const setPlayerTimeToThumbnailTime = (event) => {
+	const setPlayerTimeToThumbnailTime = (event: MouseEvent) => {
 		const enteredTime = thumbnailTimeEntry();
 		const playerTime = videoPlayerTimeForDisplayTime(enteredTime);
 		props.videoPlayer().currentTime = playerTime;
 	};
 
 	const [thumbnailUploadError, setThumbnailUploadError] = createSignal<string | null>(null);
-	const customThumbnailChange = async (event) => {
+	const customThumbnailChange = async (event: Event) => {
 		const fileElement = event.currentTarget as HTMLInputElement;
 		const imageData = await getUploadedImageAsBase64(fileElement);
 		setThumbnailUploadError(imageData.error);
@@ -158,7 +165,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	const LOCATION_SCALE_FACTOR = TEMPLATE_WIDTH / CROPPER_CANVAS_WIDTH;
 	let cropSelection: CropperSelection | undefined;
 	let locationSelection: CropperSelection | undefined;
-	const onCropSelectionChange = (event) => {
+	const onCropSelectionChange = (event: CropperSelectionEvent) => {
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
 		const minX = Math.round(newSelection.x * CROP_SCALE_FACTOR);
@@ -169,7 +176,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		props.thumbnailData.setCrop([minX, minY, maxX, maxY]);
 	};
 
-	const onLocSelectionChange = (event) => {
+	const onLocSelectionChange = (event: CropperSelectionEvent) => {
 		const newSelection: { x: number; y: number; width: number; height: number } = event.detail;
 
 		const minX = Math.round(newSelection.x * LOCATION_SCALE_FACTOR);
@@ -270,7 +277,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 	const [aspectRatioLocked, setAspectRatioLocked] = createSignal(true);
 
-	const matchCropAspectRatioToLocation = (event) => {
+	const matchCropAspectRatioToLocation = (event: MouseEvent) => {
 		const cropAspectRatio = cropWidth() / cropHeight();
 		const locationAspectRatio = locWidth() / locHeight();
 		if (aspectRatioLocked()) {
@@ -283,7 +290,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 		}
 	};
 
-	const matchLocationAspectRatioToCrop = (event) => {
+	const matchLocationAspectRatioToCrop = (event: MouseEvent) => {
 		const locationAspectRatio = locWidth() / locHeight();
 		const cropAspectRatio = cropWidth() / cropHeight();
 		if (aspectRatioLocked()) {
@@ -582,11 +589,18 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				</div>
 			</Show>
 			<div class={styles.croppers}>
+				{/* Unfortunately, I apparently can't get TypeScript to accept and properly validate these
+				custom elements, so we just have to ignore their errors. */}
 				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
+					{/* @ts-ignore */}
 					<cropper-canvas class={styles.cropper}>
+						{/* @ts-ignore */}
 						<cropper-image src={cropBaseImageURL()} />
+						{/* @ts-ignore */}
 						<cropper-shade />
+						{/* @ts-ignore */}
 						<cropper-handle action="select" plain />
+						{/* @ts-ignore */}
 						<cropper-selection
 							x={cropX() / CROP_SCALE_FACTOR}
 							y={cropY() / CROP_SCALE_FACTOR}
@@ -600,25 +614,43 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 							ref={cropSelection}
 							onChange={onCropSelectionChange}
 						>
+							{/* @ts-ignore */}
 							<cropper-grid covered />
+							{/* @ts-ignore */}
 							<cropper-crosshair centered />
+							{/* @ts-ignore */}
 							<cropper-handle action="move" />
+							{/* @ts-ignore */}
 							<cropper-handle action="n-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="e-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="s-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="w-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="nw-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="ne-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="se-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="sw-resize" />
+							{/* @ts-ignore */}
 						</cropper-selection>
+						{/* @ts-ignore */}
 					</cropper-canvas>
 				</Show>
 				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
+					{/* @ts-ignore */}
 					<cropper-canvas class={styles.cropper}>
+						{/* @ts-ignore */}
 						<cropper-image src={locBaseImageURL()} />
+						{/* @ts-ignore */}
 						<cropper-shade />
+						{/* @ts-ignore */}
 						<cropper-handle action="select" plain />
+						{/* @ts-ignore */}
 						<cropper-selection
 							x={locX() / LOCATION_SCALE_FACTOR}
 							y={locY() / LOCATION_SCALE_FACTOR}
@@ -632,18 +664,31 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 							ref={locationSelection}
 							onChange={onLocSelectionChange}
 						>
+							{/* @ts-ignore */}
 							<cropper-grid covered />
+							{/* @ts-ignore */}
 							<cropper-crosshair centered />
+							{/* @ts-ignore */}
 							<cropper-handle action="move" />
+							{/* @ts-ignore */}
 							<cropper-handle action="n-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="e-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="s-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="w-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="nw-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="ne-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="se-resize" />
+							{/* @ts-ignore */}
 							<cropper-handle action="sw-resize" />
+							{/* @ts-ignore */}
 						</cropper-selection>
+						{/* @ts-ignore */}
 					</cropper-canvas>
 				</Show>
 			</div>
@@ -656,7 +701,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	);
 };
 
-class UploadedImageData {
+interface UploadedImageData {
 	base64Contents: string | null;
 	error: string | null;
 }
