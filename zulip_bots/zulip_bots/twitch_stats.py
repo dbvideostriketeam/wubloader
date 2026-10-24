@@ -105,11 +105,11 @@ def main(output_file, *channel_ids, metrics_port=8019):
 			f.write(json.dumps(msg) + '\n')
 		labels = msg["channel_id"], msg["topic"], msg["message"].get("type", "UNKNOWN")
 		twitch_stats_messages.labels(*labels).inc()
-		twitch_stats_last_message_received(*labels).set(msg["received_at"])
+		twitch_stats_last_message_received.labels(*labels).set(msg["received_at"])
 		if msg["message"].get("type") == "viewcount":
 			try:
-				twitch_stats_message_lag(*labels).set(msg["received_at"] - msg["message"]["server_time"])
-				twitch_stats_viewers(msg["channel_id"]).set(msg["message"]["viewers"])
+				twitch_stats_message_lag.labels(*labels).set(msg["received_at"] - msg["message"]["server_time"])
+				twitch_stats_viewers.labels(msg["channel_id"]).set(msg["message"]["viewers"])
 			except Exception:
 				logging.warning(f"Could not process viewcount message {msg!r}", exc_info=True)
 
