@@ -56,7 +56,7 @@ def query_events(url, database, token, query):
     endpoint = f"{url.rstrip('/')}/api/v3/query_sql"
     headers = {}
     if token:
-        headers["Authorization"] = token
+        headers["Authorization"] = f"Bearer {token}"
 
     with requests.post(
         endpoint,
@@ -117,7 +117,7 @@ def event_to_message(event, honk_count=None):
     if event_type == "honk":
         event_name = f"{event_name} #{honk_count}"
     lines = [f"**{event_name}**"]
-    lines.append(f"Time: `{event['time']}`")
+    lines.append(f"Time: <time:{event['time']}Z>")
     for key, value in details.items():
         if key == "lateral_raw":
             # Normalize to (-1, 1) value
