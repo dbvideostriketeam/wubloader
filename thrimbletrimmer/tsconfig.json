@@ -12,5 +12,6 @@
 		"isolatedModules": true,
 		"skipLibCheck": true,
 		"strict": true
-	}
+	},
+	"exclude": ["vite.config.ts"]
 }
