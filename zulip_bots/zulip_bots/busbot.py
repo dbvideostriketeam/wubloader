@@ -30,6 +30,11 @@ HONK_COUNT_QUERY = """
 SELECT COUNT(*) AS count FROM desertbus_event
 WHERE event = 'honk' AND time <= TIMESTAMP '{timestamp}'
 """
+GAME_STATE_QUERY = """
+SELECT game_state, driver_name, time_of_day FROM desertbus
+ORDER BY time DESC
+LIMIT 1
+"""
 
 EVENT_NAMES = {
     "bus_stop": "Bus stop",
@@ -133,6 +138,16 @@ def event_to_message(event, honk_count=None):
     return "\n".join(lines)
 
 
+def driver_state_message(previous_game_state, game_state, driver_name):
+    if previous_game_state == 0 and game_state == 3:
+        return f"YOUR DRIVER IS: {driver_name}"
+
+
+def time_of_day_message(previous_time_of_day, time_of_day):
+    if previous_time_of_day is not None and previous_time_of_day != time_of_day:
+        return f"Game Time of Day: {time_of_day}"
+
+
 def validate_config(config):
     required = (
         "influx_url",
@@ -167,6 +182,8 @@ def main(
         last_event_time, honk_count = load_state(config["state"])
     else:
         last_event_time, honk_count = None, None
+    previous_game_state = None
+    previous_time_of_day = None
     honk_modulo = config["honk_modulo"]
     if honk_modulo > 0 and honk_count is None:
         honk_count = (
@@ -216,6 +233,35 @@ def main(
                 if should_post:
                     zulip_client.send_to_stream(stream, topic, message)
                 save_state(config["state"], last_event_time, honk_count)
+
+        game_state = next(query_events(
+            config["influx_url"],
+            config["influx_database"],
+            config.get("influx_token"),
+            GAME_STATE_QUERY,
+        ), None)
+        if game_state is not None:
+            message = driver_state_message(
+                previous_game_state,
+                game_state["game_state"],
+                game_state["driver_name"],
+            )
+            if message is not None:
+                if test:
+                    print(f"{stream}->{topic}: {message}")
+                else:
+                    zulip_client.send_to_stream(stream, topic, message)
+            previous_game_state = game_state["game_state"]
+            message = time_of_day_message(
+                previous_time_of_day,
+                game_state["time_of_day"],
+            )
+            if message is not None:
+                if test:
+                    print(f"{stream}->{topic}: {message}")
+                else:
+                    zulip_client.send_to_stream(stream, topic, message)
+            previous_time_of_day = game_state["time_of_day"]
 
         if once:
             break
