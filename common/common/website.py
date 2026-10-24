@@ -76,7 +76,11 @@ class Client:
 		return self._event_get("list_challenges", "challenges/vst")["challenges"]
 
 	def set_challenge_url(self, id, url):
-		self._request("POST", "set_challenge_url", self._full_url(f"challenges/{id}/vst"), data={"vst_url": url})
+		self._request("POST",
+			"set_challenge_url",
+			self._full_url("events", self.event_id, "challenges", id, "vst"),
+			data={"vst_url": url},
+		)
 
 	def event_stream(self):
 		url = urlparse(self.base_url)
