@@ -34,7 +34,7 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 	});
 
 	const [subtitleUploadError, setSubtitleUploadError] = createSignal("");
-	const setSubtitles = async (event) => {
+	const setSubtitles = async (event: Event) => {
 		const fileElement = event.currentTarget as HTMLInputElement;
 		const subtitleData = await getUploadedSubtitlesAsText(fileElement);
 		if (subtitleData.valueType === SubtitleDataType.Error) {
