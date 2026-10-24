@@ -36,6 +36,9 @@ def prize_name(event, prize):
 def sold_message(event, prize):
 	name = prize_name(event, prize)
 	winners = ", ".join(winner["display_name"] for winner in prize["winners"])
+	# art challenges etc don't have a raised amount
+	if prize["raised"] is None:
+		return f"{name} won by {winners}"
 	raised = f"${prize['raised']['amount']}"
 	if prize["type"] == "giveaway":
 		return f"{name} won by {winners}, raised {raised}\n@*editors* Remember to go back and edit the giveaway video"
