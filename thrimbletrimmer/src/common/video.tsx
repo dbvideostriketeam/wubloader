@@ -112,10 +112,7 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 			return;
 		}
 
-		const newInfo = new StreamVideoInfo();
-		newInfo.streamName = streamName;
-		newInfo.streamStartTime = startTime;
-		newInfo.streamEndTime = endTime;
+		const newInfo = new StreamVideoInfo(streamName, startTime, endTime);
 		props.setStreamVideoInfo(newInfo);
 	};
 
