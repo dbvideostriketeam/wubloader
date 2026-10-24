@@ -39,11 +39,13 @@ export function fragmentTimesFromFragments(fragments: Fragment[]): FragmentTimes
 		if (fragment.rawProgramDateTime === null) {
 			continue;
 		}
-		const timeDefinition = new FragmentTimes();
-		timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
-		timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
-		timeDefinition.playerStart = fragment.start;
-		timeDefinition.duration = fragment.duration;
+		const fragmentStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
+		const timeDefinition = new FragmentTimes(
+			fragmentStart,
+			fragmentStart.plus({ seconds: fragment.duration }),
+			fragment.start,
+			fragment.duration,
+		);
 		times.push(timeDefinition);
 	}
 	return times;
@@ -110,10 +112,7 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 			return;
 		}
 
-		const newInfo = new StreamVideoInfo();
-		newInfo.streamName = streamName;
-		newInfo.streamStartTime = startTime;
-		newInfo.streamEndTime = endTime;
+		const newInfo = new StreamVideoInfo(streamName, startTime, endTime);
 		props.setStreamVideoInfo(newInfo);
 	};
 
@@ -158,13 +157,13 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 		return `?${query}`;
 	};
 
-	const padStartHandler = (event) => {
+	const padStartHandler = (event: MouseEvent) => {
 		const videoInfo = props.streamVideoInfo().clone();
 		videoInfo.streamStartTime = videoInfo.streamStartTime.minus({ minutes: 1 });
 		props.setStreamVideoInfo(videoInfo);
 	};
 
-	const padEndHandler = (event) => {
+	const padEndHandler = (event: MouseEvent) => {
 		const videoInfo = props.streamVideoInfo().clone();
 		if (videoInfo.streamEndTime === null) {
 			return;

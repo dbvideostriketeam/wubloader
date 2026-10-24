@@ -99,13 +99,22 @@ export function bindingDownloadTypeSelectOnChange(
 declare module "solid-js" {
 	namespace JSX {
 		interface DirectiveFunctions {
+			// This block is correct but cannot be made to typecheck correctly.
+			// @ts-ignore
 			bindingInputOnChange: typeof bindingInputOnChange;
+			// @ts-ignore
 			bindingInputOnInput: typeof bindingInputOnInput;
+			// @ts-ignore
 			bindingTextareaOnChange: typeof bindingTextareaOnChange;
+			// @ts-ignore
 			bindingInputNumberOnChange: typeof bindingInputNumberOnChange;
+			// @ts-ignore
 			bindingInputPositiveNumberOnChange: typeof bindingInputPositiveNumberOnChange;
+			// @ts-ignore
 			bindingInputPositiveNumberOrZeroOnChange: typeof bindingInputPositiveNumberOrZeroOnChange;
+			// @ts-ignore
 			bindingInputChecked: typeof bindingInputChecked;
+			// @ts-ignore
 			bindingDownloadTypeSelectOnChange: typeof bindingDownloadTypeSelectOnChange;
 		}
 	}

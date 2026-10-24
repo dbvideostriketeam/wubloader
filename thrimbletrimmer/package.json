@@ -14,8 +14,8 @@
 		"sass": "1.105.0",
 		"solid-devtools": "0.34.5",
 		"typescript": "7.0.2",
-		"url": "0.11.4",
 		"vite": "7.3.7",
+		"vite-plugin-checker": "0.14.5",
 		"vite-plugin-solid": "2.11.14",
 		"@types/google.accounts": "0.0.18",
 		"@types/luxon": "3.7.6"

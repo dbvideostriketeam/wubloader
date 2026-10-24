@@ -27,7 +27,7 @@ export interface RawChatMessage {
 	user: string;
 }
 
-export class ChatMessageData {
+export interface ChatMessageData {
 	message: RawChatMessage;
 	messageID: string;
 	userID: string | null;
@@ -59,13 +59,11 @@ export class ChatLog {
 			messagesBySender[message.message.sender].push(message);
 		}
 
-		return {
-			messages: messages,
-			messagesByID: messagesByID,
-			messagesBySender: messagesBySender,
-			clearMessages: clearMessages,
-			clearUsers: clearUsers,
-		};
+		this.messages = messages;
+		this.messagesByID = messagesByID;
+		this.messagesBySender = messagesBySender;
+		this.clearMessages = clearMessages;
+		this.clearUsers = clearUsers;
 	}
 
 	static default = () => new ChatLog([], {}, {});

@@ -15,11 +15,11 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 	const [showForceResetConfirmation, setShowForceResetConfirmation] = createSignal(false);
 	const [actionMessage, setActionMessage] = createSignal("");
 
-	const toggleShowManualLinkForm = (event) => {
+	const toggleShowManualLinkForm = (event: MouseEvent) => {
 		setShowManualLinkForm(!showManualLinkForm());
 	};
 
-	const submitManualVideoLink = async (event) => {
+	const submitManualVideoLink = async (event: MouseEvent) => {
 		const uploadLocation = youtubeUpload() ? "youtube-manual" : "manual";
 		const link = manualLink();
 
@@ -55,7 +55,7 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 		}
 	};
 
-	const cancelUpload = async (event) => {
+	const cancelUpload = async (event: MouseEvent) => {
 		const request = {
 			token: undefined as string | undefined,
 		};
@@ -84,7 +84,7 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 		}
 	};
 
-	const resetRow = async (event) => {
+	const resetRow = async (event: MouseEvent) => {
 		const request = {
 			token: undefined as string | undefined,
 		};
@@ -114,11 +114,11 @@ export const DataCorrection: Component<DataCorrectionProps> = (props) => {
 		}
 	};
 
-	const showResetConfirmation = (event) => {
+	const showResetConfirmation = (event: MouseEvent) => {
 		setShowForceResetConfirmation(true);
 	};
 
-	const hideResetConfirmation = (event) => {
+	const hideResetConfirmation = (event: MouseEvent) => {
 		setShowForceResetConfirmation(false);
 	};
 

@@ -5,12 +5,14 @@ export class StreamVideoInfo {
 	streamStartTime: DateTime;
 	streamEndTime: DateTime | null;
 
+	public constructor(name: string, startTime: DateTime, endTime: DateTime | null) {
+		this.streamName = name;
+		this.streamStartTime = startTime;
+		this.streamEndTime = endTime;
+	}
+
 	public clone(): StreamVideoInfo {
-		const copy = new StreamVideoInfo();
-		copy.streamName = this.streamName;
-		copy.streamStartTime = this.streamStartTime;
-		copy.streamEndTime = this.streamEndTime;
-		return copy;
+		return new StreamVideoInfo(this.streamName, this.streamStartTime, this.streamEndTime);
 	}
 
 	public static defaultFromURL(): StreamVideoInfo | null {
@@ -37,10 +39,6 @@ export class StreamVideoInfo {
 			}
 		}
 
-		const info = new StreamVideoInfo();
-		info.streamName = stream;
-		info.streamStartTime = startTime;
-		info.streamEndTime = endTime;
-		return info;
+		return new StreamVideoInfo(stream, startTime, endTime);
 	}
 }
