@@ -151,7 +151,7 @@ export const DriveClock: Component = () => {
 				timeofday: pageQueryParams.get("timeofday") ?? "day",
 			} as BusData;
 		}
-		const response = await fetch("/thrimshim/bus/buscam");
+		const response = await fetch("/thrimshim/bus/influx");
 		const data: BusData = await response.json();
 		return data;
 	});

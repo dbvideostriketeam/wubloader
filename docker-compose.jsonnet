@@ -300,6 +300,10 @@
   // If you don't know what these are, leave them blank.
   challenge_api_key:: null,
 
+  // influxdb game event creds
+  influx_url:: null,
+  influx_token:: null,
+
   // The channel to run buscribe on. Future work: Have it run for more than one channel.
   buscribe_channel:: $.clean_channels[0],
   // Don't transcribe anything older than this time.
@@ -416,9 +420,9 @@
   busbot:: {
     zulip_email: "busbot@chat.videostrike.team",
     zulip_api_key: "",
-    influx_url: "",
+    influx_url: $.influx_url,
     influx_database: "telemetry",
-    influx_token: "",
+    influx_token: $.influx_token,
     honk_modulo: 0,
     state: "/data/busbot.json",
     state_path:: "./busbot",
@@ -575,7 +579,9 @@
       ] else [])
       + (if $.challenge_api_key != null then [
         "--challenge-api-key", $.challenge_api_key,
-      ] else []),
+      ] else [])
+      + (if $.influx_url != null then ["--influx-url", $.influx_url] else [])
+      + (if $.influx_token != null then ["--influx-token", $.influx_token] else []),
       // Mount the segments directory at /mnt
       volumes: ["%s:/mnt" % $.segments_path],
       // If the application crashes, restart it.

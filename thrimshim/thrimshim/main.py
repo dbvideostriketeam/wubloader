@@ -915,10 +915,50 @@ def get_odometer(channel):
 
 	raw = (flask.request.args.get("raw") != "false")
 	extrapolate = (flask.request.args.get("extrapolate") == "true")
-
-	conn = app.db_manager.get_conn()
 	start = time - range
 	end = time
+
+	# quick half-assed implementation
+	if channel == "influx":
+		if not all([app.influx_url, app.influx_db, app.influx_token]):
+			return "InfluxDB not configured", 501
+		# injection safety: start and end are always datetime.datetime,
+		# isoformat() will never contain a ' character.
+		query = f"""
+			SELECT 109.3 + points * 360 + leg_miles as odometer,
+				clock_hour * 60 + clock_minute as clock,
+				phase
+			FROM desertbus
+			WHERE game_state = 3 AND time > '{start}' AND time < '{end}'
+			ORDER BY time DESC
+			LIMIT 1
+		"""
+		logging.info(f"Influx query: {query}")
+		resp = app.requests.post(f"{app.influx_url}/api/v3/query_sql",
+			headers={"Authorization": f"Bearer {app.influx_token}"},
+			json={"db": app.influx_db, "format": "json", "q": query},
+			metric_name="influx_query",
+		)
+		resp.raise_for_status()
+		results = resp.json()
+		if not results:
+			return {
+				"odometer": None,
+				"clock_minutes": None,
+				"clock": None,
+				"timeofday": None,
+			}
+		result = results[0]
+		clock_face = "{}:{:02d}".format(result["clock"] // 60, int(result["clock"] % 60))
+		return {
+			"odometer": result["odometer"],
+			"clock_minutes": result["clock"], # TODO correctly handle 24h
+			"clock": clock_face,
+			"timeofday": "dawn" if result["phase"] == "twilight" else result["phase"],
+		}
+
+
+	conn = app.db_manager.get_conn()
 
 	# Get newest non-errored row within time range
 	# Exclude obviously wrong values, in particular 7000 which 1000 is mistaken for.
@@ -1044,7 +1084,7 @@ def time_is_pm(conn, timestamp, clock, timeofday):
 def main(
 	connection_string, default_channel, bustime_start, host='0.0.0.0', port=8004, backdoor_port=0,
 	no_authentication=False, title_header=None, upload_locations='', playlist_upload_locations='',
-	archive_sheet=None, archive_location=None, challenge_api_key=None,
+	archive_sheet=None, archive_location=None, challenge_api_key=None, influx_url=None, influx_db='telemetry', influx_token=None,
 ):
 	server = WSGIServer((host, port), cors(app))
 
@@ -1056,6 +1096,9 @@ def main(
 	app.playlist_upload_locations = playlist_upload_locations.split(',') if playlist_upload_locations else []
 	app.db_manager = database.DBManager(dsn=connection_string)
 	app.challenge_api = website.Client(auth_token=challenge_api_key)
+	app.influx_url = influx_url
+	app.influx_db = influx_db
+	app.influx_token = influx_token
 	app.requests = requests.InstrumentedSession()
 
 	if archive_sheet is not None and archive_location is None:
