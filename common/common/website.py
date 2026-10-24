@@ -24,11 +24,14 @@ class Client:
 		resp.raise_for_status()
 		return resp
 
+	def _full_url(self, *parts):
+		return "/".join([self.base_url] + list(parts))
+
 	def _get(self, name, url):
 		return self._request("GET", name, url).json()
 
 	def _event_get(self, name, path):
-		return self._get(name, "/".join([self.base_url, "events", self.event_id, path]))
+		return self._get(name, self._full_url("events", self.event_id, path))
 
 	def _event_paged(self, name, path, item_key):
 		data = self._event_get(name, path)
@@ -40,7 +43,7 @@ class Client:
 			data = self._get(name, url)
 
 	def events(self):
-		return self._get("list_events", "/".join([self.base_url, "events"]))["events"]
+		return self._get("list_events", self._full_url("events"))["events"]
 
 	def default_event_id(self):
 		return self.events()[0]["id"]
@@ -73,7 +76,7 @@ class Client:
 		return self._event_get("list_challenges", "challenges/vst")["challenges"]
 
 	def set_challenge_url(self, id, url):
-		self._request("POST", "set_challenge_url", f"challenges/{id}/vst", data={"vst_url": url})
+		self._request("POST", "set_challenge_url", self._full_url(f"challenges/{id}/vst"), data={"vst_url": url})
 
 	def event_stream(self):
 		url = urlparse(self.base_url)

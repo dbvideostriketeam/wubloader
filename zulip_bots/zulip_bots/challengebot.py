@@ -16,14 +16,6 @@ from common import website
 
 from .config import common_setup, get_config
 
-def get_challenges(url, api_key):
-	resp = requests.get(url, headers={
-		"Authorization": api_key,
-		"User-Agent": "challengebot",
-	})
-	resp.raise_for_status()
-	return resp.json()["challenges"]
-
 def main(config_file, interval=60, metrics_port=8020, test=False, once=False, first_run=False):
 	"""
 	Config:
