@@ -39,11 +39,13 @@ export function fragmentTimesFromFragments(fragments: Fragment[]): FragmentTimes
 		if (fragment.rawProgramDateTime === null) {
 			continue;
 		}
-		const timeDefinition = new FragmentTimes();
-		timeDefinition.rawStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
-		timeDefinition.rawEnd = timeDefinition.rawStart.plus({ seconds: fragment.duration });
-		timeDefinition.playerStart = fragment.start;
-		timeDefinition.duration = fragment.duration;
+		const fragmentStart = DateTime.fromISO(fragment.rawProgramDateTime, { zone: "UTC" });
+		const timeDefinition = new FragmentTimes(
+			fragmentStart,
+			fragmentStart.plus({ seconds: fragment.duration }),
+			fragment.start,
+			fragment.duration,
+		);
 		times.push(timeDefinition);
 	}
 	return times;

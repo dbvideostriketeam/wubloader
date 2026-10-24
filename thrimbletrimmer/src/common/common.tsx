@@ -6,7 +6,14 @@ export class FragmentTimes {
 	playerStart: number;
 	duration: number;
 
-	equals(other: FragmentTimes): boolean {
+	public constructor(rawStart: DateTime, rawEnd: DateTime, playerStart: number, duration: number) {
+		this.rawStart = rawStart;
+		this.rawEnd = rawEnd;
+		this.playerStart = playerStart;
+		this.duration = duration;
+	}
+
+	public equals(other: FragmentTimes): boolean {
 		if (this.rawStart.toMillis() !== other.rawStart.toMillis()) {
 			return false;
 		}
