@@ -157,13 +157,13 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 		return `?${query}`;
 	};
 
-	const padStartHandler = (event) => {
+	const padStartHandler = (event: MouseEvent) => {
 		const videoInfo = props.streamVideoInfo().clone();
 		videoInfo.streamStartTime = videoInfo.streamStartTime.minus({ minutes: 1 });
 		props.setStreamVideoInfo(videoInfo);
 	};
 
-	const padEndHandler = (event) => {
+	const padEndHandler = (event: MouseEvent) => {
 		const videoInfo = props.streamVideoInfo().clone();
 		if (videoInfo.streamEndTime === null) {
 			return;
