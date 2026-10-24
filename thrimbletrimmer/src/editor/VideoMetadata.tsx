@@ -82,7 +82,7 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 
 enum SubtitleDataType {
 	ValidData,
-	Error
+	Error,
 }
 
 interface UploadedSubtitleData {
@@ -90,17 +90,19 @@ interface UploadedSubtitleData {
 	data: string;
 }
 
-async function getUploadedSubtitlesAsText(fileElement: HTMLInputElement): Promise<UploadedSubtitleData> {
+async function getUploadedSubtitlesAsText(
+	fileElement: HTMLInputElement,
+): Promise<UploadedSubtitleData> {
 	if (!fileElement.files) {
 		return {
 			valueType: SubtitleDataType.Error,
-			data: "Not a file upload field"
+			data: "Not a file upload field",
 		};
 	}
 	if (fileElement.files.length === 0) {
 		return {
 			valueType: SubtitleDataType.ValidData,
-			data: ""
+			data: "",
 		};
 	}
 
@@ -108,7 +110,7 @@ async function getUploadedSubtitlesAsText(fileElement: HTMLInputElement): Promis
 	if (fileHandle.size > 50 * 1048576) {
 		return {
 			valueType: SubtitleDataType.Error,
-			data: "Uploaded file is too large (limit: 50MB)"
+			data: "Uploaded file is too large (limit: 50MB)",
 		};
 	}
 	const fileReader = new FileReader();
@@ -128,12 +130,12 @@ async function getUploadedSubtitlesAsText(fileElement: HTMLInputElement): Promis
 	if (textData.indexOf("\0") !== -1) {
 		return {
 			valueType: SubtitleDataType.Error,
-			data: "The file you're uploading is not valid text data."
+			data: "The file you're uploading is not valid text data.",
 		};
 	}
 
 	return {
 		valueType: SubtitleDataType.ValidData,
-		data: fileReader.result as string
+		data: fileReader.result as string,
 	};
 }
