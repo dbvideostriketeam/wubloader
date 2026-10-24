@@ -249,7 +249,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 				// This check prevents negative currentRangeEndSecs, but is also stronger than that condition.
 				// This condition ensures that we don't try to transition with not enough video after the transition.
-				if (transitionSeconds > (rangePlayerEnd - rangePlayerStart)) {
+				if (transitionSeconds > rangePlayerEnd - rangePlayerStart) {
 					setSubmissionError(
 						"A transition cannot be longer than the range that the transition fades into",
 					);
@@ -283,6 +283,16 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 					if (!chapterData.description) {
 						setSubmissionError("A chapter is missing a description");
+						props.setEditorState(EditorState.Entry);
+						return;
+					}
+
+					const chapterTimeMillis = chapterData.time!.toMillis();
+					if (
+						chapterTimeMillis < rangeStartDate.toMillis() ||
+						chapterTimeMillis > rangeEndDate.toMillis()
+					) {
+						setSubmissionError("A chapter marker is outside of its time range");
 						props.setEditorState(EditorState.Entry);
 						return;
 					}
