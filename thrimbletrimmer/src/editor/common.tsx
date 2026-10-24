@@ -83,7 +83,7 @@ export class ChapterData {
 	}
 }
 
-export class TransitionDefinition {
+export interface TransitionDefinition {
 	name: string;
 	description: string;
 }
@@ -96,7 +96,7 @@ export enum ThumbnailType {
 	CustomThumbnail = "CUSTOM",
 }
 
-export class ThumbnailData {
+export interface ThumbnailData {
 	type: Accessor<ThumbnailType>;
 	setType: Setter<ThumbnailType>;
 	time: Accessor<DateTime | null>;
