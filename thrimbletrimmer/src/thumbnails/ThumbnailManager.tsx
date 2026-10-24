@@ -3,12 +3,12 @@ import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 import { BASE64_PNG_PREFIX } from "../common/thumbnails";
 import styles from "./ThumbnailManager.module.scss";
 
-class Coordinate {
+interface Coordinate {
 	x: number;
 	y: number;
 }
 
-class Template {
+interface Template {
 	name: string;
 	description: string;
 	attribution: string;
