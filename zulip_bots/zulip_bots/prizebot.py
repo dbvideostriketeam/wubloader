@@ -149,6 +149,8 @@ def main(
 		for giveaway in active_giveaways(donation["processed_at"]):
 			id = giveaway["id"]
 			entry = Decimal(giveaway["giveaway_amount"]["amount"])
+			if entry == 0:
+				continue
 			entries, remainder = divmod(amount, entry)
 			if not remainder:
 				entries = int(entries)
