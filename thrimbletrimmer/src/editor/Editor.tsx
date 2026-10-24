@@ -265,25 +265,35 @@ const EditorContent: Component<ContentProps> = (props) => {
 		},
 	);
 
-	const initialThumbnailData = new ThumbnailData();
-	[initialThumbnailData.type, initialThumbnailData.setType] = createSignal(
-		props.data.thumbnail_mode,
-	);
-	[initialThumbnailData.time, initialThumbnailData.setTime] = createSignal(
+	const [initialThumbnailType, setInitialThumbnailType] = createSignal(props.data.thumbnail_mode);
+	const [initialThumbnailTime, setInitialThumbnailTime] = createSignal(
 		props.data.thumbnail_time ? dateTimeFromWubloaderTime(props.data.thumbnail_time) : null,
 	);
-	[initialThumbnailData.template, initialThumbnailData.setTemplate] = createSignal(
+	const [initialThumbnailTemplate, setInitialThumbnailTemplate] = createSignal(
 		props.data.thumbnail_template,
 	);
-	[initialThumbnailData.image, initialThumbnailData.setImage] = createSignal(
+	const [initialThumbnailImage, setInitialThumbnailImage] = createSignal(
 		props.data.thumbnail_image,
 	);
-	[initialThumbnailData.crop, initialThumbnailData.setCrop] = createSignal(
-		props.data.thumbnail_crop,
-	);
-	[initialThumbnailData.location, initialThumbnailData.setLocation] = createSignal(
+	const [initialThumbnailCrop, setInitialThumbnailCrop] = createSignal(props.data.thumbnail_crop);
+	const [initialThumbnailLocation, setInitialThumbnailLocation] = createSignal(
 		props.data.thumbnail_location,
 	);
+	const initialThumbnailData: ThumbnailData = {
+		type: initialThumbnailType,
+		setType: setInitialThumbnailType,
+		time: initialThumbnailTime,
+		setTime: setInitialThumbnailTime,
+		template: initialThumbnailTemplate,
+		setTemplate: setInitialThumbnailTemplate,
+		image: initialThumbnailImage,
+		setImage: setInitialThumbnailImage,
+		crop: initialThumbnailCrop,
+		setCrop: setInitialThumbnailCrop,
+		location: initialThumbnailLocation,
+		setLocation: setInitialThumbnailLocation,
+	};
+
 	const [thumbnail, setThumbnail] = createSignal(initialThumbnailData);
 
 	const [allThumbnailTemplates] = createResource<ThumbnailTemplateDefinition[]>(
