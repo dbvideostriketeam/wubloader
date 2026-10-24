@@ -32,6 +32,7 @@ WHERE event = 'honk' AND time <= TIMESTAMP '{timestamp}'
 """
 GAME_STATE_QUERY = """
 SELECT game_state, driver_name, phase FROM desertbus
+WHERE time >= now() - INTERVAL '5 minutes'
 ORDER BY time DESC
 LIMIT 1
 """
