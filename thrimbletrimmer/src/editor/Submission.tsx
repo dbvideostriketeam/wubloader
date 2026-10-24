@@ -54,7 +54,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 	const [submissionError, setSubmissionError] = createSignal("");
 	const [needsOverrideMessage, setNeedsOverrideMessage] = createSignal("");
 
-	const toggleAdvancedSubmissionOptions = (event) => {
+	const toggleAdvancedSubmissionOptions = (event: MouseEvent) => {
 		setShowAdvancedSubmissionOptions(!showAdvancedSubmissionOptions());
 	};
 
@@ -180,7 +180,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		};
 	};
 
-	const submitVideo = async (event) => {
+	const submitVideo = async (event: MouseEvent) => {
 		props.setEditorState(EditorState.Submitting);
 		setSubmissionSuccessMessage("");
 		setSubmissionError("");
@@ -405,7 +405,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 		}
 	};
 
-	const saveVideoDraft = async (event) => {
+	const saveVideoDraft = async (event: MouseEvent) => {
 		props.setEditorState(EditorState.Submitting);
 		setSubmissionSuccessMessage("");
 		setSubmissionError("");
