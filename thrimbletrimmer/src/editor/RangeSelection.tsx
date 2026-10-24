@@ -48,7 +48,7 @@ interface RangeSelectionProps {
 }
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
-	const addNewRange = (event) => {
+	const addNewRange = (event: MouseEvent) => {
 		props.setRangeData([...props.rangeData(), new RangeData()]);
 	};
 
@@ -56,12 +56,12 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 		<div class={styles.rangeRegion}>
 			<Index each={props.rangeData()}>
 				{(currentRangeData: Accessor<RangeData>, index: number) => {
-					const setTransitionType = (event) => {
-						const sourceSelection: HTMLSelectElement = event.currentTarget;
+					const setTransitionType = (event: Event) => {
+						const sourceSelection = event.currentTarget as HTMLSelectElement;
 						props.rangeData()[index].setTransitionType(sourceSelection.value);
 					};
-					const setTransitionSeconds = (event) => {
-						const sourceSelection: HTMLInputElement = event.currentTarget;
+					const setTransitionSeconds = (event: Event) => {
+						const sourceSelection = event.currentTarget as HTMLInputElement;
 						props.rangeData()[index].setTransitionSeconds(+sourceSelection.value);
 					};
 
@@ -258,7 +258,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						);
 					};
 
-					const addChapter = (event) => {
+					const addChapter = (event: MouseEvent) => {
 						currentRangeData().setChapters([...currentRangeData().chapters(), new ChapterData()]);
 					};
 
@@ -486,7 +486,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 											untrack(currentRangeData).setChapters(rangeChapters);
 										});
 
-										const removeChapter = (event) => {
+										const removeChapter = (event: MouseEvent) => {
 											const chapters = currentRangeData().chapters().slice();
 											chapters.splice(index, 1);
 											currentRangeData().setChapters(chapters);
