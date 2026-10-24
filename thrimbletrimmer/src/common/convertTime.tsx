@@ -1,4 +1,4 @@
-import { DateTime } from "luxon";
+import { DateTime, DurationLike } from "luxon";
 import { FragmentTimes } from "./common";
 
 export enum TimeType {
@@ -24,7 +24,7 @@ export function wubloaderTimeFromDateTime(dateTime: DateTime): string {
 	return dateTime.toFormat("yyyy-LL-dd'T'HH:mm:ss.SSS");
 }
 
-class DateTimeMathObject {
+interface DateTimeMathObject {
 	hours: number;
 	minutes: number;
 	seconds: number;
@@ -65,8 +65,8 @@ export function busTimeFromDateTime(busStartTime: DateTime, time: DateTime): str
 
 export function dateTimeFromTimeAgo(timeAgo: string): DateTime | null {
 	const parts = timeAgo.split(":");
-	const properties = ["hours", "minutes", "seconds"];
-	const mathObj = {};
+	const properties: ("hours" | "minutes" | "seconds")[] = ["hours", "minutes", "seconds"];
+	const mathObj: DurationLike = {};
 
 	while (parts.length > 0) {
 		const nextPart = parts.pop()!;
