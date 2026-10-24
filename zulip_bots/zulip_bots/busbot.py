@@ -31,7 +31,7 @@ SELECT COUNT(*) AS count FROM desertbus_event
 WHERE event = 'honk' AND time <= TIMESTAMP '{timestamp}'
 """
 GAME_STATE_QUERY = """
-SELECT game_state, driver_name, time_of_day FROM desertbus
+SELECT game_state, driver_name, phase FROM desertbus
 ORDER BY time DESC
 LIMIT 1
 """
@@ -143,9 +143,9 @@ def driver_state_message(previous_game_state, game_state, driver_name):
         return f"YOUR DRIVER IS: {driver_name}"
 
 
-def time_of_day_message(previous_time_of_day, time_of_day):
-    if previous_time_of_day is not None and previous_time_of_day != time_of_day:
-        return f"Game Time of Day: {time_of_day}"
+def time_of_day_message(previous_phase, phase):
+    if previous_phase is not None and previous_phase != phase:
+        return f"Game Time of Day: {phase}"
 
 
 def validate_config(config):
@@ -183,7 +183,7 @@ def main(
     else:
         last_event_time, honk_count = None, None
     previous_game_state = None
-    previous_time_of_day = None
+    previous_phase = None
     honk_modulo = config["honk_modulo"]
     if honk_modulo > 0 and honk_count is None:
         honk_count = (
@@ -253,15 +253,15 @@ def main(
                     zulip_client.send_to_stream(stream, topic, message)
             previous_game_state = game_state["game_state"]
             message = time_of_day_message(
-                previous_time_of_day,
-                game_state["time_of_day"],
+                previous_phase,
+                game_state["phase"],
             )
             if message is not None:
                 if test:
                     print(f"{stream}->{topic}: {message}")
                 else:
                     zulip_client.send_to_stream(stream, topic, message)
-            previous_time_of_day = game_state["time_of_day"]
+            previous_phase = game_state["phase"]
 
         if once:
             break
