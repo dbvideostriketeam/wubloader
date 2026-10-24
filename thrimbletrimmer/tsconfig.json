@@ -7,7 +7,7 @@
 		"esModuleInterop": true,
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
-		"types": ["vidstack/solid", "vite/client"],
+		"types": ["vidstack/solid", "vite/client", "google.accounts"],
 		"noEmit": true,
 		"isolatedModules": true,
 		"skipLibCheck": true,
