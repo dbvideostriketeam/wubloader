@@ -127,8 +127,6 @@ const EditorContent: Component<ContentProps> = (props) => {
 		}
 	}
 
-	const streamInfo = new StreamVideoInfo();
-	streamInfo.streamName = props.data.video_channel;
 	let streamStart = dateTimeFromWubloaderTime(props.data.event_start);
 	if (!streamStart) {
 		return (
@@ -156,8 +154,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 		streamEnd = streamEnd.plus({ minutes: 2 });
 	}
 
-	streamInfo.streamStartTime = streamStart;
-	streamInfo.streamEndTime = streamEnd;
+	const streamInfo = new StreamVideoInfo(props.data.video_channel, streamStart, streamEnd);
 
 	const [streamVideoInfo, setStreamVideoInfo] = createSignal(streamInfo);
 	const [busStartTime, setBusStartTime] = createSignal(
