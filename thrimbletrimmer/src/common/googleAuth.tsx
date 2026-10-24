@@ -5,10 +5,10 @@ import {
 	createEffect,
 	createSignal,
 	createResource,
-	onMount,
 	Show,
 } from "solid-js";
 import { createScriptLoader } from "@solid-primitives/script-loader";
+import "google.accounts";
 
 export interface GoogleSignInProps {
 	accountToken: Accessor<string | null>;
@@ -82,7 +82,11 @@ export const GoogleSignIn: Component<GoogleSignInProps> = (props) => {
 				client_id: config.google_client_id,
 				callback: handleSignIn,
 			});
-			google.accounts.id.renderButton(loginButtonParent, { theme: "outline_dark", width: "250" });
+			google.accounts.id.renderButton(loginButtonParent, {
+				type: "standard",
+				theme: "outline_dark" as any, // The types library we're using doesn't currently include "outline_dark" as a valid value
+				width: 250,
+			});
 		}
 	});
 
