@@ -8,6 +8,7 @@ It also tracks and saves donations.
 """
 
 from collections import namedtuple
+from decimal import Decimal
 import json
 import logging
 import os
@@ -23,8 +24,12 @@ from .config import common_setup, get_config
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
 
 
+def prize_url(event, prize_id):
+	return f"https://desertbus.org/{event['url']}/prize/{prize_id}"
+
+
 def prize_name(event, prize):
-	url = f"https://desertbus.org/{event['url']}/prize/{prize['id']}"
+	url = prize_url(event, prize["id"])
 	return f"[{prize["name"]}]({url})"
 
 
@@ -72,6 +77,8 @@ def main(
 		with open(config['state']) as f:
 			# state is {prizes: {id: last seen prize json}}
 			state = json.load(f)
+		if "total" in state:
+			state["total"] = Decimal(state["total"])
 	else:
 		state = {"prizes": {}}
 	if not test:
@@ -94,18 +101,31 @@ def main(
 			log_file.flush()
 
 	def save_state():
-		if not test:
-			with open(config['state'], 'w') as f:
-				f.write(json.dumps(state) + '\n')
+		with open(config['state'], 'w') as f:
+			f.write(json.dumps(state, default=str) + '\n')
+
+	def active_giveaways(timestamp):
+		return [
+			prize for prize in state["prizes"].values()
+			if prize["type"] == "giveaway"
+				and prize["giveaway_amount"] is not None
+				and prize["starts_at"] <= timestamp <= prize["ends_at"]
+		]
+
+	def sold_auctions():
+		return [
+			prize for prize in state["prizes"].values()
+			if prize["state"] == "sold" and prize["type"] != "giveaway"
+		]
 
 	def process_prize(prize):
 		log({"prize": prize})
 		id = prize["id"]
-		logging.info(f"Got prize (in state = {id in state}): {prize}")
+		logging.info(f"Got prize (in state = {id in state["prizes"]}): {prize}")
 		old = state["prizes"].get(id, {})
 
 		# prize sold
-		if prize["state"] == "sold" and (all or old.get("state") != "sold"):
+		if prize["state"] == "sold" and old.get("state") != "sold":
 			send(stream, "Prize Winners", sold_message(event, prize))
 
 		# prize giveaway amount set
@@ -119,21 +139,51 @@ def main(
 		state["prizes"][id] = prize
 		save_state()
 
-	def process_donation(donation):
+	def process_donation(donation, process_only=False):
 		log({"donation": donation})
+		amount = Decimal(donation["amount"]["amount"])
+		state["total"] = (state["total"] + amount).quantize(Decimal("1.00"))
 
-		message = f"{donation['display_name']} donated ${donation['amount']['amount']} at <time:{donation['processed_at']}>"
-		amount = float(donation["amount"]["amount"])
+		clauses = []
 
-		if amount >= 500:
-			send(stream, "Notable Donations", message)
-		send(firehose_stream, "Donations", message)
+		for giveaway in active_giveaways(donation["processed_at"]):
+			id = giveaway["id"]
+			entry = Decimal(giveaway["giveaway_amount"]["amount"])
+			entries, remainder = divmod(amount, entry)
+			if not remainder:
+				entries = int(entries)
+				total_entries = state["giveaway_entries"].get(id, 0) + entries
+				state["giveaway_entries"][id] = total_entries
+				total_raised = total_entries * entry
+				url = prize_url(event, id)
+				clauses.append(f" ({entries} entries of ${entry} - [${total_raised} raised so far]({url}))")
 
-		state["donation_token"] = donation["token"]
-		save_state()
+		for auction in sold_auctions():
+			sold_for = Decimal(auction["current_high_bid"]["amount"]["amount"])
+			sold_to = auction["current_high_bid"]["name"]
+			if amount == sold_for:
+				qualifier = "probably (same donor name)" if donation["display_name"] == sold_to else "possibly"
+				name = prize_name(event, auction)
+				clauses.append(f" ({qualifier} for {name})")
+
+		clauses = "".join(clauses)
+		message = f"{donation['display_name']} donated ${amount} at <time:{donation['processed_at']}>{clauses} - new total: ${state['total']}"
+
+		if not process_only:
+			if amount >= 500:
+				send(stream, "Notable Donations", message)
+			send(firehose_stream, "Donations", message)
+
+		# tokens only present in stream events
+		if "token" in donation:
+			state["donation_token"] = donation["token"]
+			save_state()
 
 	while True:
 		logging.info("Connecting to event stream")
+		if "total" not in state or "giveaway_entries" not in state:
+			all = True
+		first_run = "donation_token" not in state
 
 		events = website.event_stream()
 		events.subscribe_prizes()
@@ -141,6 +191,14 @@ def main(
 
 		for prize in website.prizes():
 			process_prize(prize)
+
+		if all or first_run:
+			logging.info(f"Processing donations from beginning, process_only={not first_run}")
+			state["total"] = Decimal("0.00")
+			state["giveaway_entries"] = {}
+			for donation in website.donations():
+				process_donation(donation, process_only=not first_run)
+			logging.info("Processed existing donations")
 
 		for message in events.recv():
 			if message.event == "prize":
