@@ -12,11 +12,37 @@ import time
 from datetime import datetime
 
 import argh
+import prometheus_client as prom
 from websockets.sync.client import connect
 
 from .config import common_setup
 
 logger = logging.getLogger(__name__)
+
+
+twitch_stats_messages = prom.Counter(
+	'twitch_stats_messages',
+	'Number of twitch_stats messages received',
+	['channel_id', 'topic', 'message_type'],
+)
+
+twitch_stats_last_message_received = prom.Gauge(
+	'twitch_stats_last_message_received',
+	'Timestamp of the last time a message was received',
+	['channel_id', 'topic', 'message_type'],
+)
+
+twitch_stats_message_lag = prom.Gauge(
+	'twitch_stats_message_lag',
+	'Time difference between server time and local server for latest message',
+	['channel_id', 'topic', 'message_type'],
+)
+
+twitch_stats_viewers = prom.Gauge(
+	'twitch_stats_viewers',
+	'How many stream viewers twitch reports on the stream',
+	['channel_id'],
+)
 
 
 def make_id():
@@ -77,6 +103,15 @@ def main(output_file, *channel_ids, metrics_port=8019):
 	for msg in stream(channel_ids):
 		with open(output_file, 'a') as f:
 			f.write(json.dumps(msg) + '\n')
+		labels = msg["channel_id"], msg["topic"], msg["message"].get("type", "UNKNOWN")
+		twitch_stats_messages.labels(*labels).inc()
+		twitch_stats_last_message_received(*labels).set(msg["received_at"])
+		if msg["message"].get("type") == "viewcount":
+			try:
+				twitch_stats_message_lag(*labels).set(msg["received_at"] - msg["message"]["server_time"])
+				twitch_stats_viewers(msg["channel_id"]).set(msg["message"]["viewers"])
+			except Exception:
+				logging.warning(f"Could not process viewcount message {msg!r}", exc_info=True)
 
 
 if __name__ == '__main__':
