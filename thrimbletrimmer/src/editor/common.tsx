@@ -1,4 +1,4 @@
-import { Accessor, createSignal, Setter } from "solid-js";
+import { Accessor, createEffect, createSignal, Setter, untrack } from "solid-js";
 import { DateTime } from "luxon";
 import { FragmentTimes } from "../common/common";
 
@@ -67,9 +67,15 @@ export class RangeData {
 		[this.endTime, this.setEndTime] = createSignal<DateTime | null>(null);
 		[this.transitionType, this.setTransitionType] = createSignal(initialTransitionType);
 		[this.transitionSeconds, this.setTransitionSeconds] = createSignal(initialTransitionSeconds);
-		const transitionSeconds = this.transitionSeconds;
-		this.transitionSeconds = () => (this.transitionType() === "" ? 0 : transitionSeconds());
 		[this.chapters, this.setChapters] = createSignal<ChapterData[]>([]);
+
+		createEffect(() => {
+			if (this.transitionType() === "") {
+				this.setTransitionSeconds(0);
+			} else if (untrack(this.transitionSeconds) === 0) {
+				this.setTransitionSeconds(1);
+			}
+		});
 	}
 }
 
