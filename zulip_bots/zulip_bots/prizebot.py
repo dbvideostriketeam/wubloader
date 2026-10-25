@@ -24,6 +24,11 @@ from .config import common_setup, get_config
 Prize = namedtuple("Prize", ["id", "link", "type", "title", "state", "result"])
 
 
+def quantize(d):
+	"""Set precision to cents"""
+	return d.quantize(Decimal("1.00"))
+
+
 def prize_url(event, prize_id):
 	return f"https://desertbus.org/{event['url']}/prize/{prize_id}"
 
@@ -145,7 +150,7 @@ def main(
 	def process_donation(donation, process_only=False):
 		log({"donation": donation})
 		amount = Decimal(donation["amount"]["amount"])
-		state["total"] = (state["total"] + amount).quantize(Decimal("1.00"))
+		state["total"] = quantize(state["total"] + amount)
 
 		clauses = []
 
@@ -159,7 +164,7 @@ def main(
 				entries = int(entries)
 				total_entries = state["giveaway_entries"].get(id, 0) + entries
 				state["giveaway_entries"][id] = total_entries
-				total_raised = total_entries * entry
+				total_raised = quantize(total_entries * entry)
 				url = prize_url(event, id)
 				clauses.append(f" ({entries} entries of ${entry} - [${total_raised} raised so far]({url}))")
 
