@@ -18,7 +18,7 @@ from psycopg2 import sql
 
 import common
 from common.database import DBManager, query, get_column_placeholder
-from common.segments import get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles, get_best_segments_for_frame
+from common.segments import BadCut, get_best_segments, archive_cut_segments, fast_cut_segments, full_cut_segments, smart_cut_segments, extract_frame, ContainsHoles, get_best_segments_for_frame
 from common.images import compose_thumbnail_template, get_template
 from common.stats import timed
 from common import zulip
@@ -516,6 +516,9 @@ class Cutter(object):
 
 				for chunk in cut:
 					yield chunk
+			except BadCut as ex:
+				self.logger.warning("Cut failed with BadCut error", exc_info=True)
+				raise UploadError(f"Cut failed due to unallowable data: {ex}", retryable=False) from ex
 			except Exception as ex:
 				self.logger.exception("Error occurred while trying to cut job {}".format(format_job(job)))
 				# Assumed error is not retryable. Exception chaining preserves original error message.

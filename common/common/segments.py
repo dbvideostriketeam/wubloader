@@ -128,6 +128,10 @@ CUSTOM_XFADE_TRANSITIONS = {
 }
 
 
+class BadCut(ValueError):
+	"""A problem with the cut settings or video data. Not retryable and should be surfaced to editor."""
+
+
 def unpadded_b64_decode(s):
 	"""Decode base64-encoded string that has had its padding removed.
 	Note it takes a unicode and returns a bytes."""
@@ -529,7 +533,7 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 	elif video_type in KNOWN_XFADE_TRANSITIONS:
 		xfade_kwargs["transition"] = video_type
 	else:
-		raise ValueError(f"Unknown video transition type: {video_type}")
+		raise BadCut(f"Unknown video transition type: {video_type}")
 	xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
 
 	filters = [
@@ -767,7 +771,7 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 				start_segments = segments
 				segments = []
 			if len(start_segments) == 0:
-				raise ValueError(f"Could not find any video data for {duration}s transition into range ({start}, {end})")
+				raise BadCut(f"Could not find any video data for {duration}s transition into range ({start}, {end})")
 
 			prev_segments, offset, prev_cut_end = prev_end
 			ffmpeg = ffmpeg_cut_transition(prev_segments, start_segments, video_type, duration, offset, prev_cut_end, cut_start, start_cut_end)
@@ -799,17 +803,20 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 					segments = segments[:i]
 					break
 			else:
-				raise ValueError(f"Could not find any video data for {duration}s transition out of range ({start}, {end}) that is not already part of another transition, try a full cut?")
+				raise BadCut(f"Could not find any video data for {duration}s transition out of range ({start}, {end}) that is not already part of another transition, try a full cut?")
 			# offset is how many seconds into end_segments the transition should start.
 			# We know that end_segments is not empty as otherwise we would have hit the for/else condition.
 			# We also know that end_segments[0] is not None as it is one of our conditions for picking it.
-			# It is however possible for end_segments[0] to start AFTER the transition should have started
-			# due to a hole immediately before. In this case the offset will be negative, which would be fine
+			# It is however possible for end_segments[0] to start AFTER the transition should have started due to:
+			# - A hole immediately before
+			# - The transition uses the same segment as the in transition (even if they don't actually overlap)
+			# - The transition uses the first segment of the range, which was already cut to trim the start
+			# In this case the offset will be negative, which would be fine
 			# except it causes the audio to go out of sync because audio is joined with a crossfade that doesn't
 			# take an offset. We would rather error early in this case instead of proceeding with bad data.
 			offset = (transition_start - end_segments[0].start).total_seconds()
 			if offset < 0:
-				raise ValueError(f"Video data not available at the start of a {duration}s transition out of range ({start}, {end}), it was probably already part of an earlier cut or transition. Try a full cut?")
+				raise BadCut(f"Video data not available at the start of a {duration}s transition out of range ({start}, {end}), it was probably already part of an earlier trimming cut or transition. Try a full cut?")
 			# Re-define cut_end to be relative to the start of end_segments
 			cut_end = (end - end_segments[0].start).total_seconds()
 			prev_end = end_segments, offset, cut_end
@@ -998,7 +1005,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 			elif video_type in KNOWN_XFADE_TRANSITIONS:
 				kwargs["transition"] = video_type
 			else:
-				raise ValueError(f"Unknown video transition type: {video_type}")
+				raise BadCut(f"Unknown video transition type: {video_type}")
 			add_filter("xfade", [prev_video_stream, next_video_stream], [output_video_stream], **kwargs)
 
 			# audio cross-fade across the same period
