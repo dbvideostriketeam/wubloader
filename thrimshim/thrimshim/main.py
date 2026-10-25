@@ -429,6 +429,12 @@ def update_row(ident, editor=None):
 					if start > end:
 						return f"Range {idx} start must be less than end", 400
 
+			for idx, transition in enumerate(new_row['video_transitions']):
+				if transition is not None:
+					type, duration = transition
+					if duration <= 0:
+						return f"Transition {idx} must have positive non-zero duration", 400
+
 			# We need these to be tuples not lists for psycopg2 to do the right thing,
 			# but since they come in as JSON they are currently lists.
 			new_row['video_ranges'] = [tuple(range) for range in new_row['video_ranges']]
