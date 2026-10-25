@@ -55,6 +55,12 @@ editable_holes_gauge = prom.Gauge(
 		['channel', 'quality', 'hour'],
 )
 
+editable_hole_duration_gauge = prom.Gauge(
+		'editable_hole_duration',
+		'Missing editable seconds per hour, excluding the unfinished tail of the latest hour',
+		['channel', 'quality', 'hour'],
+)
+
 overlap_count_gauge = prom.Gauge(
 		'overlap_count',
 		'Number of overlap segments for the hour',
@@ -318,6 +324,7 @@ class CoverageChecker(object):
 					previous_editable = None
 					coverage = datetime.timedelta()
 					editable_coverage = datetime.timedelta()
+					editable_hole_duration = datetime.timedelta()
 					only_partials = []
 
 					# loop over all start times
@@ -462,6 +469,9 @@ class CoverageChecker(object):
 					editable_holes_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour
 							).set(len(editable_holes))
+					editable_hole_duration_gauge.labels(
+							channel=self.channel, quality=quality, hour=hour
+							).set(max(0, editable_hole_duration.total_seconds()))
 					overlap_count_gauge.labels(
 							channel=self.channel, quality=quality, hour=hour, type='full'
 							).set(full_overlaps)
