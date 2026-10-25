@@ -465,7 +465,7 @@ def cut(channel, quality):
 		return Response(full_cut_segments(segment_ranges, ranges, transitions, encoding_args, stream=stream), mimetype=mimetype)
 	elif type == 'webm':
 		# Basic webm settings to work in Firefox and Chrome.
-		encoding_args = ['-c:v', 'libvpx-vp9', '-c:a', 'libopus', '-f', 'webm']
+		encoding_args = ['-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '6', '-c:a', 'libopus', '-f', 'webm']
 		return Response(full_cut_segments(segment_ranges, ranges, transitions, encoding_args, stream=True), mimetype='video/webm')
 	else:
 		return "Unknown type {!r}".format(type), 400
