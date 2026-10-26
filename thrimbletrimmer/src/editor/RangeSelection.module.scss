@@ -2,6 +2,26 @@
 	cursor: pointer;
 }
 
+.rangeDropTarget {
+	width: 100%;
+	min-height: 10px;
+	border: 1px dashed #666;
+
+	&.dropTargetHover {
+		background: #666;
+	}
+}
+
+.chapterDropTarget {
+	width: 100%;
+	min-height: 10px;
+	border: 1px dashed #555;
+
+	&.dropTargetHover {
+		background: #555;
+	}
+}
+
 .transitionLabel {
 	margin-right: 5px;
 }
