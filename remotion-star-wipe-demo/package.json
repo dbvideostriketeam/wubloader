@@ -3,7 +3,7 @@
   "name": "wubloader-remotion-star-wipe-demo",
   "version": "0.0.0",
   "scripts": {
-    "preview": "remotion studio src/index.tsx",
+    "preview": "remotion studio src/index.tsx --public-dir resources",
     "render:assets": "tsc --noEmit false --outDir out/tools && node out/tools/render-assets.mjs",
     "typecheck": "tsc --noEmit"
   },

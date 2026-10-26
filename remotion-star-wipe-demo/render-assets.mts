@@ -27,6 +27,7 @@ async function main(): Promise<void> {
     const browserExecutable = process.env.REMOTION_BROWSER_EXECUTABLE;
     const serveUrl = await bundle({
       entryPoint: path.join(rendererRoot, 'src/index.tsx'),
+      publicDir: path.join(rendererRoot, 'resources'),
     });
     const composition = await selectComposition({serveUrl, id: 'TransitionAsset', inputProps, browserExecutable});
     await renderFrames({

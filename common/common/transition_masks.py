@@ -7,6 +7,7 @@ from fractions import Fraction
 MASK_TRANSITIONS: dict[str, str] = {
     'starwipe': 'An expanding outlined star.',
     'clockwipe': 'A clockwise sweep with a black progression line.',
+    'desertbuswipe': 'The Desert Bus logo wipes from right to left.',
 }
 ASSET_INTERVALS = 300
 
