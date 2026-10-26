@@ -923,9 +923,9 @@ class VideoUpdater(object):
 						# Attempt to fetch the subtitle track if not set or previously fetched
 						if job.subtitle_data is None:
 							subtitle_data = self.backend.get_subtitle_track(job.video_id)
-							hash = hashlib.sha256(subtitle_data.encode()).digest()
 							if subtitle_data is not None:
 								self.logger.info(f"Downloaded subtitle track for {job.id}")
+								hash = hashlib.sha256(subtitle_data.encode()).digest()
 								updates["subtitle_data"] = subtitle_data
 								updates["subtitle_last_written"] = hash
 							else:
