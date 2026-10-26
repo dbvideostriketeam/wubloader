@@ -1,6 +1,6 @@
 {
   "private": true,
-  "name": "wubloader-remotion-star-wipe-demo",
+  "name": "wubloader-transition-renderer",
   "version": "0.0.0",
   "scripts": {
     "preview": "remotion studio src/index.tsx --public-dir resources",
