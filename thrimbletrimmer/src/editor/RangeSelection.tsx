@@ -27,6 +27,7 @@ import { MediaPlayerElement } from "vidstack/elements";
 import { DateTime } from "luxon";
 import {
 	DragDropProvider,
+	DragOverlay,
 	DragDropEventHandlers,
 	useDraggable,
 	useDroppable,
@@ -517,7 +518,6 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 										<For each={currentRangeData().chapters()}>
 											{(chapter: ChapterData, chapterIndex: Accessor<number>) => {
 												const currentChapter = () => chapter;
-												const chapterId = createUniqueId();
 												const [enteredChapterTime, setEnteredChapterTime] = createSignal("");
 												const [enteredDescription, setEnteredDescription] = createSignal("");
 
@@ -618,13 +618,13 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												};
 
 												const chapterDraggable = useDraggable({
-													id: chapterId,
+													id: chapter.id,
 													type: "chapter",
 												});
 												const chapterDraggableRef = chapterDraggable.ref;
 
 												const chapterDroppable = useDroppable({
-													id: chapterId,
+													id: chapter.id,
 													accept: "chapter",
 												});
 												const chapterDroppableRef = chapterDroppable.ref;
@@ -640,6 +640,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														<div
 															class={`${styles.timeRangeEntryRow} ${styles.chapterDropTarget}`}
 															ref={chapterDraggableRef}
+															style={{ visibility: chapterDraggable.isDragSource() ? "hidden" : undefined }}
 															data-rangeindex={rangeIndex()}
 															data-chapterindex={chapterIndex()}
 														>
@@ -738,6 +739,15 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					);
 				})()}
 			</div>
+			<DragOverlay
+				disabled={(source) => source?.type !== "chapter"}
+			>
+				{(source) => {
+					const preview = source.element!.cloneNode(true) as HTMLElement;
+					preview.style.visibility = "visible";
+					return preview;
+				}}
+			</DragOverlay>
 		</DragDropProvider>
 	);
 };

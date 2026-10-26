@@ -1,4 +1,4 @@
-import { Accessor, createEffect, createSignal, Setter, untrack } from "solid-js";
+import { Accessor, createEffect, createSignal, createUniqueId, Setter, untrack } from "solid-js";
 import { DateTime } from "luxon";
 import { FragmentTimes } from "../common/common";
 
@@ -80,6 +80,7 @@ export class RangeData {
 }
 
 export class ChapterData {
+	readonly id = `chapter-${createUniqueId()}`;
 	time: DateTime | null;
 	description: string;
 
