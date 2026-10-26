@@ -169,10 +169,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 			const rangeIndex = chapterMarker[0];
 			const time = dateTimeFromWubloaderTime(chapterMarker[1]);
 
-			const chapterDefinition = {
+			const chapterDefinition = Object.assign(new ChapterData(), {
 				time: time,
 				description: chapterMarker[2],
-			};
+			});
 
 			while (chaptersByRange.length <= rangeIndex) {
 				chaptersByRange.push([]);
