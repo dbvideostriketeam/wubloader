@@ -920,8 +920,18 @@ class VideoUpdater(object):
 						description = generate_full_description(job, self.description_footer, playlists, attribution)
 						self.backend.update_video(job.video_id, job.video_title, description, tags, job.public)
 
-						# Update the subtitle track if needed.
-						if job.subtitle_data is not None:
+						# Attempt to fetch the subtitle track if not set or previously fetched
+						if job.subtitle_data is None:
+							subtitle_data = self.backend.get_subtitle_track(job.video_id)
+							hash = hashlib.sha256(subtitle_data.encode()).digest()
+							if subtitle_data is not None:
+								self.logger.info(f"Downloaded subtitle track for {job.id}")
+								updates["subtitle_data"] = subtitle_data
+								updates["subtitle_last_written"] = hash
+							else:
+								self.logger.info(f"No subtitles available for {job.id}")
+						else:
+							# Update the subtitle track if needed
 							new_hash = hashlib.sha256(job.subtitle_data.encode()).digest()
 							if job.subtitle_last_written is None or bytes(job.subtitle_last_written) != new_hash:
 								self.logger.info(f"Setting subtitle track for {job.id}")
