@@ -640,7 +640,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														<div
 															class={`${styles.timeRangeEntryRow} ${styles.chapterDropTarget}`}
 															ref={chapterDraggableRef}
-															style={{ visibility: chapterDraggable.isDragSource() ? "hidden" : undefined }}
+															style={{
+																visibility: chapterDraggable.isDragSource() ? "hidden" : undefined,
+															}}
 															data-rangeindex={rangeIndex()}
 															data-chapterindex={chapterIndex()}
 														>
@@ -739,9 +741,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 					);
 				})()}
 			</div>
-			<DragOverlay
-				disabled={(source) => source?.type !== "chapter"}
-			>
+			<DragOverlay disabled={(source) => source?.type !== "chapter"}>
 				{(source) => {
 					const preview = source.element!.cloneNode(true) as HTMLElement;
 					preview.style.visibility = "visible";
