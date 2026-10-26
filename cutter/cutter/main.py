@@ -733,18 +733,20 @@ class TranscodeChecker(object):
 	FOUND_VIDEOS_RETRY_INTERVAL = 20
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, location, backend, dbmanager, stop, zulip_client):
+	def __init__(self, name, location, backend, dbmanager, stop, zulip_client, uploader_explicit_only):
 		"""
 		backend is an upload backend that supports transcoding
 		and defines check_status().
 		Conn is a database connection.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
+		self.name = name
 		self.location = location
 		self.backend = backend
 		self.dbmanager = dbmanager
 		self.stop = stop
 		self.zulip_client = zulip_client
+		self.uploader_explicit_only = uploader_explicit_only
 		self.logger = logging.getLogger(type(self).__name__)
 
 	def wait(self, interval):
@@ -779,11 +781,16 @@ class TranscodeChecker(object):
 				self.wait(self.ERROR_RETRY_INTERVAL)
 
 	def get_ids_to_check(self):
-		result = query(self.conn, """
+		uploader_condition = "(uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))"
+		if self.uploader_explicit_only:
+			uploader_condition = "%(name)s = ANY (uploader_whitelist)"
+		built_query = sql.SQL("""
 			SELECT id, video_id, video_title
 			FROM events
 			WHERE state = 'TRANSCODING' AND upload_location = %(location)s
-		""", location=self.location)
+				AND {}
+		""").format(sql.SQL(uploader_condition))
+		result = query(self.conn, built_query, location=self.location, name=self.name)
 		return {id: (video_id, title) for id, video_id, title in result.fetchall()}
 
 	def check_ids(self, ids):
@@ -839,11 +846,12 @@ class VideoUpdater(object):
 	CHECK_INTERVAL = 10 # this is slow to reduce the chance of multiple cutters updating the same row
 	ERROR_RETRY_INTERVAL = 20
 
-	def __init__(self, location, segments_path, backend, dbmanager, tags, description_footer, stop):
+	def __init__(self, name, location, segments_path, backend, dbmanager, tags, description_footer, stop, uploader_explicit_only):
 		"""
 		backend is an upload backend that supports video updates.
 		Stop is an Event triggering graceful shutdown when set.
 		"""
+		self.name = name
 		self.location = location
 		self.segments_path = segments_path
 		self.backend = backend
@@ -851,6 +859,7 @@ class VideoUpdater(object):
 		self.tags = tags
 		self.description_footer = description_footer
 		self.stop = stop
+		self.uploader_explicit_only = uploader_explicit_only
 		self.logger = logging.getLogger(type(self).__name__)
 
 	def wait(self, interval):
@@ -955,14 +964,19 @@ class VideoUpdater(object):
 	def get_videos(self):
 		# To avoid exhausting API quota, errors aren't retryable.
 		# We ignore any rows where error is not null.
+		uploader_condition = "(uploader_whitelist IS NULL OR %(name)s = ANY (uploader_whitelist))"
+		if self.uploader_explicit_only:
+			uploader_condition = "%(name)s = ANY (uploader_whitelist)"
 		built_query = sql.SQL("""
 			SELECT id, {}
 			FROM events
 			WHERE state = 'MODIFIED' AND error IS NULL AND upload_location = %(location)s
+				AND {}
 		""").format(
-			sql.SQL(", ").join(sql.Identifier(key) for key in UPDATE_JOB_PARAMS)
+			sql.SQL(", ").join(sql.Identifier(key) for key in UPDATE_JOB_PARAMS),
+			sql.SQL(uploader_condition),
 		)
-		return list(query(self.conn, built_query, location=self.location))
+		return list(query(self.conn, built_query, location=self.location, name=self.name))
 
 	def mark_done(self, job, updates):
 		"""We don't want to set to DONE if the video has been modified *again* since
@@ -1104,11 +1118,11 @@ def main(
 
 	cutter = Cutter(upload_locations, dbmanager, stop, name, base_dir, tags, description_footer, uploader_explicit_only)
 	transcode_checkers = [
-		TranscodeChecker(location, backend, dbmanager, stop, zulip_client)
+		TranscodeChecker(name, location, backend, dbmanager, stop, zulip_client, uploader_explicit_only)
 		for location, (backend, zulip_client) in needs_transcode_check.items()
 	]
 	updaters = [
-		VideoUpdater(location, base_dir, backend, dbmanager, tags, description_footer, stop)
+		VideoUpdater(name, location, base_dir, backend, dbmanager, tags, description_footer, stop, uploader_explicit_only)
 		for location, backend in needs_updater.items()
 	]
 	jobs = [gevent.spawn(cutter.run)] + [
