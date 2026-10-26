@@ -15,6 +15,7 @@ interface VideoMetadataProps {
 	setDescription: Setter<string>;
 	tags: Accessor<string[]>;
 	setTags: Setter<string[]>;
+	subtitles: Accessor<string>;
 	setSubtitles: Setter<string>;
 }
 
@@ -45,6 +46,14 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 		}
 	};
 
+	const subtitleSubmitHandler = (event: SubmitEvent) => {
+		event.preventDefault();
+		const formData = new FormData(event.currentTarget as HTMLFormElement);
+		const subtitles = formData.get("subtitles")!.toString();
+		props.setSubtitles(subtitles);
+		(document.getElementById("subtitle-dialog") as HTMLDialogElement).close();
+	};
+
 	return (
 		<div class={styles.info}>
 			<label>
@@ -72,8 +81,26 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 			<label>
 				<div>Subtitles:</div>
 				<div>
+					<button command="show-modal" commandfor="subtitle-dialog">
+						View/Edit Subtitle Data
+					</button>
 					<input type="file" onChange={setSubtitles} />
 					<div class={styles.subtitleError}>{subtitleUploadError()}</div>
+					<dialog id="subtitle-dialog">
+						<form method="dialog" onSubmit={subtitleSubmitHandler}>
+							<div>
+								<textarea class={styles.subtitleEntry} name="subtitles" autofocus>
+									{props.subtitles()}
+								</textarea>
+							</div>
+							<div class={styles.subtitleUpdateButtons}>
+								<button type="submit">Update Subtitles</button>
+								<button type="button" command="close" commandfor="subtitle-dialog">
+									Cancel/Close
+								</button>
+							</div>
+						</form>
+					</dialog>
 				</div>
 			</label>
 		</div>

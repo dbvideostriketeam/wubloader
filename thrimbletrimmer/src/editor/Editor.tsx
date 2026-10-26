@@ -881,6 +881,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 					setDescription={setVideoDescription}
 					tags={videoTags}
 					setTags={setVideoTags}
+					subtitles={subtitleData}
 					setSubtitles={setSubtitleData}
 				/>
 			</Show>
