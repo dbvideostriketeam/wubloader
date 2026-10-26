@@ -98,20 +98,6 @@ KNOWN_XFADE_TRANSITIONS = {
 #  W and H are screen width and height
 #  P is a "progress" number from 0 to 1 that increases over the course of the wipe
 CUSTOM_XFADE_TRANSITIONS = {
-	"clockwipe": (
-		"A 360 degree clockwise sweep around the center of the screen, starting at the top.\n"
-		"Intended to mimic an analog clock and insinuate a passing of time.",
-		# Implemented by calculating the angle of the point off a center line (using atan2()),
-		# with a rectangular hand around the leading edge of the wipe.
-		"if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2)),10)+between((X-W/2)*sin(((1-P))*2*PI)-(Y-H/2)*cos(((1-P))*2*PI),0,sqrt(pow(W/2,2)+pow(H/2,2)))*lt(abs((X-W/2)*cos(((1-P))*2*PI)+(Y-H/2)*sin(((1-P))*2*PI)),10),if(eq(PLANE,0),0,128),if(lt((atan2(W/2-X,Y-H/2)/PI/2+0.5),(1-P)),B,A))",
-	),
-	"starwipe": (
-		"Wipe using an expanding 5-pointed star from the center. Mostly a meme.",
-		# Implemented by replicating a polygon edge into each point of the star,
-		# then comparing the point's signed distance to that edge.
-		# Made by SenseAmidstMadness.
-		"if(lt(abs(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))))/(sqrt(pow((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)),2)+pow((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0),2))+0.000001),0.028),if(eq(PLANE,0),0,128),if(gt(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))),0),B,A))",
-	),
 	"batman": (
 		"Wipe using an expanding Batman logo from the center.",
 		# By SenseAmidstMadness based on equations from https://www.pacifict.com/Examples/Batman/
@@ -536,11 +522,17 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 	prev_segments = [segment for segment in prev_segments if segment is not None]
 	next_segments = [segment for segment in next_segments if segment is not None]
 
+	file_inputs = []
+	filters = []
 	xfade_kwargs = {
 		"duration": duration,
 		"offset": offset,
 	}
-	if video_type in CUSTOM_XFADE_TRANSITIONS:
+	if video_type in MASK_TRANSITIONS:
+		path, fps = prepare_mask_transition(prev_segments[0], video_type)
+		file_inputs.append(path)
+		filters = mask_filters('0:v', '1:v', '2:v', 'outv', offset, duration, fps, 'mask')
+	elif video_type in CUSTOM_XFADE_TRANSITIONS:
 		xfade_kwargs["transition"] = "custom"
 		description, expr = CUSTOM_XFADE_TRANSITIONS[video_type]
 		xfade_kwargs["expr"] = f"'{expr}'" # wrap in '' for quoting
@@ -548,12 +540,11 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 		xfade_kwargs["transition"] = video_type
 	else:
 		raise BadCut(f"Unknown video transition type: {video_type}")
-	xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
 
-	filters = [
-		f"[0:v][1:v]xfade={xfade_kwargs}[outv]",
-		f"[0:a][1:a]acrossfade=duration={duration}[outa]",
-	]
+	if video_type not in MASK_TRANSITIONS:
+		xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
+		filters.append(f"[0:v][1:v]xfade={xfade_kwargs}[outv]")
+	filters.append(f"[0:a][1:a]acrossfade=duration={duration}[outa]")
 
 	# Assume desired encode args are the same for all segments, so pick one arbitarily
 	args = get_segment_encode_args(prev_segments[0], "[outv]", "[outa]")
@@ -577,7 +568,7 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 		(next_segments, next_args),
 	]
 
-	return ffmpeg_cut_many(inputs, args)
+	return ffmpeg_cut_many(inputs, args, file_inputs=file_inputs)
 
 
 def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
