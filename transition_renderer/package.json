@@ -5,7 +5,8 @@
   "scripts": {
     "preview": "remotion studio src/index.tsx --public-dir resources",
     "render:assets": "tsc --noEmit false --outDir out/tools && node out/tools/render-assets.mjs",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit false --outDir out/tools"
   },
   "dependencies": {
     "@remotion/cli": "4.0.488",
