@@ -1,4 +1,5 @@
 """Alternate transitions using mask MKV videos, typically pre-rendered with Remotion."""
+import json
 import math
 import os
 from fractions import Fraction
@@ -12,9 +13,11 @@ MASK_TRANSITIONS: dict[str, str] = {
 ASSET_INTERVALS = 300
 
 
-def asset_path(effect: str, width: int, height: int) -> str:
-    """Assemble the filename for the transition master assets."""
-    return os.path.join(os.environ['WUBLOADER_TRANSITION_ASSETS'], f'{effect}-{width}-{height}.mkv')
+def asset_path(effect: str, width: int, height: int, segment_store: str) -> str:
+    """Read the current master set published by the one-shot generator."""
+    with open(os.path.join(segment_store, 'transition-assets', 'current.json')) as manifest:
+        relative = json.load(manifest)['assets'][f'{effect}-{width}-{height}']
+    return os.path.join(segment_store, relative)
 
 
 def mask_filters(

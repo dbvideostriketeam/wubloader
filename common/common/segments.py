@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 from collections import namedtuple
+from pathlib import Path
 from contextlib import contextmanager
 from tempfile import TemporaryFile
 from uuid import uuid4
@@ -504,7 +505,9 @@ def prepare_mask_transition(segment: SegmentInfo, video_type: str) -> tuple[str,
 	fps = video.get('avg_frame_rate')
 	if not fps or fps == '0/0':
 		fps = video['r_frame_rate']
-	return asset_path(video_type, width, height), fps
+	# Segment paths are STORE/channel/quality/hour/file.
+	segment_store = str(Path(segment.path).absolute().parents[3])
+	return asset_path(video_type, width, height, segment_store), fps
 
 
 def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, offset, prev_cut_end, cut_start, cut_end):
