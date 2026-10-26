@@ -108,6 +108,9 @@ class UploadBackend(object):
 	def set_subtitle_track(self, video_id, subtitle_data):
 		raise NotImplementedError
 
+	def get_subtitle_track(self, video_id):
+		return None
+
 
 class Youtube(UploadBackend):
 	"""Represents a youtube channel to upload to, and settings for doing so.
@@ -314,6 +317,19 @@ class Youtube(UploadBackend):
 			metric_name='upload_subtitles',
 		)
 		resp.raise_for_status()
+
+	def get_subtitle_track(self, video_id):
+		id = self._find_caption_id(video_id)
+		if id is None:
+			# no existing track
+			return None
+		resp = self.client.request(
+			'GET',
+			f"https://www.googleapis.com/youtube/v3/captions/{id}",
+			metric_name='download_caption',
+		)
+		resp.raise_for_status()
+		return resp.text
 
 	def _find_caption_id(self, video_id):
 		resp = self.client.request(
