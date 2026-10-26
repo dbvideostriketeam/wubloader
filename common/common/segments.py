@@ -22,6 +22,7 @@ from gevent.fileobject import FileObject
 from .cached_iterator import CachedIterator
 from .stats import timed
 from .fixts import FixTS
+from .transition_masks import MASK_TRANSITIONS, asset_path, mask_filters
 
 
 # These are the set of transition names from the ffmpeg xfade filter that we allow.
@@ -507,6 +508,19 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return ffmpeg_cut_one([segment], args)
 
 
+def prepare_mask_transition(segment: SegmentInfo, video_type: str) -> tuple[str, str]:
+	"""
+	Get the path for an transition master to be applied to a given stream, using the
+	resolution and framerate of an example video segment.
+	"""
+	video = next(stream for stream in streams_info(segment) if stream['codec_type'] == 'video')
+	width, height = video['width'], video['height']
+	fps = video.get('avg_frame_rate')
+	if not fps or fps == '0/0':
+		fps = video['r_frame_rate']
+	return asset_path(video_type, width, height), fps
+
+
 def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, offset, prev_cut_end, cut_start, cut_end):
 	"""
 	Wrapper for ffmpeg_cut_many which cuts a transition between two lists of segments.
@@ -572,12 +586,13 @@ def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_arg
 
 
 @contextmanager
-def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
+def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE, file_inputs=()):
 	"""
 	Context manager that produces a Popen object which is ffmpeg cutting the given inputs.
 
 	INPUTS is a list of (segments, input_args). The list of segments will be fed as input data,
 	preceeded by the given input args.
+	FILE_INPUTS contains local media paths needed for transitions, numbered after the segment inputs.
 	OUTPUT_FILE may be a writable file object (with fileno) or subprocess.PIPE.
 	If subprocess.PIPE, then output can be read from the Popen object's stdout.
 	Using a stdout pipe is preferred but a file can be useful if the output needs to be seekable.
@@ -623,6 +638,9 @@ def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
 			input_feeders.append(input_feeder)
 			# add input file to ffmpeg args
 			all_input_args += input_args + ["-i", "/proc/self/fd/{}".format(read_fd)]
+
+		for path in file_inputs:
+			all_input_args += ["-i", path]
 
 		# Prepare final arg list and spawn the process
 		args = BASE_ARGS + all_input_args + encode_args + output_args
@@ -745,7 +763,7 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 		if segments[0] is not None:
 			cut_start = (start - segments[0].start).total_seconds()
 			start_cut_end = (end - segments[0].start).total_seconds()
-			if cut_start < 0: 
+			if cut_start < 0:
 				raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
 		if segments[-1] is not None:
 			cut_end = (end - segments[-1].start).total_seconds()
@@ -951,6 +969,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 		inputs.append((segments, args))
 
 	filters = []
+	file_inputs = []
 	# We need to keep track of the full video length so transitions start at the correct time.
 	# This variable tracks the start of prev_range relative to the start of the output video.
 	prev_video_start_offset = 0
@@ -999,14 +1018,27 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 				"duration": duration,
 				"offset": offset,
 			}
-			if video_type in CUSTOM_XFADE_TRANSITIONS:
+			if video_type in MASK_TRANSITIONS:
+				path, fps = prepare_mask_transition(segment_ranges[0][0], video_type)
+				asset_stream = f"{len(inputs) + len(file_inputs)}:v"
+				file_inputs.append(path)
+				filters.extend(mask_filters(prev_video_stream, next_video_stream, asset_stream,
+					output_video_stream, offset, duration, fps, f"mask{i}"))
+			elif video_type in CUSTOM_XFADE_TRANSITIONS:
 				kwargs["transition"] = "custom"
 				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type][1]}'" # wrap in '' for quoting
 			elif video_type in KNOWN_XFADE_TRANSITIONS:
 				kwargs["transition"] = video_type
 			else:
 				raise BadCut(f"Unknown video transition type: {video_type}")
-			add_filter("xfade", [prev_video_stream, next_video_stream], [output_video_stream], **kwargs)
+
+			if video_type not in MASK_TRANSITIONS:
+				# Match timestamp units at the xfade boundary; do not resample source frames.
+				prev_xfade = f"xfade{i}prev"
+				next_xfade = f"xfade{i}next"
+				add_filter("settb", [prev_video_stream], [prev_xfade], expr="AVTB")
+				add_filter("settb", [next_video_stream], [next_xfade], expr="AVTB")
+				add_filter("xfade", [prev_xfade, next_xfade], [output_video_stream], **kwargs)
 
 			# audio cross-fade across the same period
 			add_filter("acrossfade", [prev_audio_stream, next_audio_stream], [output_audio_stream], duration=duration)
@@ -1031,7 +1063,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 		]
 	args += encode_args
 
-	with ffmpeg_cut_many(inputs, args, output_file) as ffmpeg:
+	with ffmpeg_cut_many(inputs, args, output_file, file_inputs=file_inputs) as ffmpeg:
 		# When streaming, we can return data as it is available.
 		# Otherwise, just exit the context manager so tempfile is fully written.
 		if stream:
