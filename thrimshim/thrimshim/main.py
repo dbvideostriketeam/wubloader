@@ -891,9 +891,9 @@ def get_video_playlists():
 		""").fetchall()
 
 	result = {
-		[video.video_id]: [
+		video.video_id: [
 			playlist.playlist_id for playlist in playlists
-			if all(tag in [t.lower() for t in video.tags] for tag in playlist.tags)
+			if all(tag.lower() in [t.lower() for t in video.tags] for tag in playlist.tags)
 		]
 		for video in videos
 	}
