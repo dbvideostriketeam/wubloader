@@ -786,7 +786,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
-	const allFieldsDisabled = () => editorState() === EditorState.Submitting;
+	const allFieldsDisabled = () => editorState() !== EditorState.Entry;
 	makeEventListener(window, "beforeunload", (event) => {
 		if (editorState() === EditorState.Entry && dataChanged()) {
 			event.preventDefault();
@@ -859,66 +859,70 @@ const EditorContent: Component<ContentProps> = (props) => {
 					videoDuration={videoDuration}
 				/>
 			</Show>
-			<NotesToEditor notes={props.data.notes} />
-			<CategoryNotes notes={props.data.category_notes} />
-			<Show when={showingVideo()}>
-				<RangeSelection
-					rangeData={videoData}
-					setRangeData={setVideoData}
-					allTransitions={allTransitions.latest ?? []}
-					activeKeyboardIndex={activeKeyboardIndex}
-					setActiveKeyboardIndex={setActiveKeyboardIndex}
-					streamInfo={streamVideoInfo}
-					allowHoles={allowHoles}
-					videoPlayerTime={videoPlayerTime}
-					videoFragments={videoFragmentTimes}
-					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-				/>
-			</Show>
-			<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
-				<VideoMetadata
-					titlePrefix={props.data.title_prefix}
-					titleMaxLength={props.data.title_max_length}
-					title={videoTitle}
-					setTitle={setVideoTitle}
-					description={videoDescription}
-					setDescription={setVideoDescription}
-					tags={videoTags}
-					setTags={setVideoTags}
-					subtitles={subtitleData}
-					setSubtitles={setSubtitleData}
-				/>
-			</Show>
-			<Show when={showingVideo()}>
-				<ThumbnailSettings
-					allThumbnailTemplates={allThumbnailTemplates() ?? []}
-					thumbnailData={thumbnail()}
-					streamInfo={streamVideoInfo}
-					videoFragments={videoFragmentTimes}
-					videoPlayerTime={videoPlayerTime}
-					videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-				/>
-			</Show>
-			<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
-				<Submission
-					streamVideoInfo={streamVideoInfo}
-					videoData={videoData}
-					videoTitle={videoTitle}
-					videoDescription={videoDescription}
-					videoTags={videoTags}
-					subtitles={subtitleData}
-					uploadLocations={props.data.upload_locations}
-					editorState={editorState}
-					setEditorState={setEditorState}
-					allowHoles={allowHoles}
-					setAllowHoles={setAllowHoles}
-					thumbnailData={thumbnail()}
-					originalVideoData={props.data}
-					videoFragmentTimes={videoFragmentTimes}
-					editingCompletedVideo={editingCompletedVideo}
-					accountToken={accountToken}
-				/>
-			</Show>
+			<fieldset disabled={allFieldsDisabled()}>
+				<NotesToEditor notes={props.data.notes} />
+				<CategoryNotes notes={props.data.category_notes} />
+				<Show when={showingVideo()}>
+					<RangeSelection
+						rangeData={videoData}
+						setRangeData={setVideoData}
+						allTransitions={allTransitions.latest ?? []}
+						activeKeyboardIndex={activeKeyboardIndex}
+						setActiveKeyboardIndex={setActiveKeyboardIndex}
+						streamInfo={streamVideoInfo}
+						allowHoles={allowHoles}
+						videoPlayerTime={videoPlayerTime}
+						videoFragments={videoFragmentTimes}
+						videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+						fieldsDisabled={allFieldsDisabled}
+					/>
+				</Show>
+				<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
+					<VideoMetadata
+						titlePrefix={props.data.title_prefix}
+						titleMaxLength={props.data.title_max_length}
+						title={videoTitle}
+						setTitle={setVideoTitle}
+						description={videoDescription}
+						setDescription={setVideoDescription}
+						tags={videoTags}
+						setTags={setVideoTags}
+						subtitles={subtitleData}
+						setSubtitles={setSubtitleData}
+					/>
+				</Show>
+				<Show when={showingVideo()}>
+					<ThumbnailSettings
+						allThumbnailTemplates={allThumbnailTemplates() ?? []}
+						thumbnailData={thumbnail()}
+						streamInfo={streamVideoInfo}
+						videoFragments={videoFragmentTimes}
+						videoPlayerTime={videoPlayerTime}
+						videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+						fieldsDisabled={allFieldsDisabled}
+					/>
+				</Show>
+				<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
+					<Submission
+						streamVideoInfo={streamVideoInfo}
+						videoData={videoData}
+						videoTitle={videoTitle}
+						videoDescription={videoDescription}
+						videoTags={videoTags}
+						subtitles={subtitleData}
+						uploadLocations={props.data.upload_locations}
+						editorState={editorState}
+						setEditorState={setEditorState}
+						allowHoles={allowHoles}
+						setAllowHoles={setAllowHoles}
+						thumbnailData={thumbnail()}
+						originalVideoData={props.data}
+						videoFragmentTimes={videoFragmentTimes}
+						editingCompletedVideo={editingCompletedVideo}
+						accountToken={accountToken}
+					/>
+				</Show>
+			</fieldset>
 			<Show when={showingVideo()}>
 				<Download
 					streamVideoInfo={streamVideoInfo}
