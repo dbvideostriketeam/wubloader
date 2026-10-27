@@ -556,6 +556,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 			}
 		}
 
+		if (subtitleData() !== (props.data?.subtitle_data ?? "")) {
+			return true;
+		}
+
 		return false;
 	};
 
