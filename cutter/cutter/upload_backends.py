@@ -334,8 +334,6 @@ class Youtube(UploadBackend):
 				],
 				subtype="related",
 			)
-			logging.critical(f"Content-Type: {content_type}")
-			logging.critical(body)
 			resp = self.client.request('POST',
 				"https://youtube.googleapis.com/upload/youtube/v3/captions",
 				params={"part": "id,snippet", "uploadType": "multipart"},
