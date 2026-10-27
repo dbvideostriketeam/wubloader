@@ -228,6 +228,10 @@ export const Submission: Component<SubmissionProps> = (props) => {
 				transitions.push([transitionType, transitionSeconds]);
 			}
 
+			const sortedChapters = rangeData
+				.chapters()
+				.filter((data) => data.time !== null)
+				.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
 			if (!editingCompletedVideoWithoutVideo) {
 				const rangePlayerStart = videoPlayerTimeFromDateTime(
 					rangeStartDate,
@@ -266,10 +270,6 @@ export const Submission: Component<SubmissionProps> = (props) => {
 					return;
 				}
 
-				const sortedChapters = rangeData
-					.chapters()
-					.filter((data) => data.time !== null)
-					.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
 				for (const chapterData of sortedChapters) {
 					const chapterTime = videoPlayerTimeFromDateTime(
 						chapterData.time!,
@@ -312,13 +312,14 @@ export const Submission: Component<SubmissionProps> = (props) => {
 						return;
 					}
 					lastChapterTime = outputVideoTimeSeconds;
-
-					chapterMarkers.push([
-						rangeDataIndex,
-						wubloaderTimeFromDateTime(chapterData.time!),
-						chapterData.description,
-					]);
 				}
+			}
+			for (const chapterData of sortedChapters) {
+				chapterMarkers.push([
+					rangeDataIndex,
+					wubloaderTimeFromDateTime(chapterData.time!),
+					chapterData.description,
+				]);
 			}
 		}
 		transitions.shift();
