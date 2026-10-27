@@ -135,7 +135,7 @@ def markers_to_video_times(chapter_markers, video_ranges, video_transitions):
 
 def get_description_playlists(conn, tags):
 	playlists = query(conn, """
-		SELECT playlist_id, name, tags
+		SELECT playlist_id, tags
 		FROM playlists
 		WHERE show_in_description AND tags IS NOT NULL AND playlist_id IS NOT NULL
 	""")
@@ -159,7 +159,7 @@ def generate_full_description(job, description_footer, playlists, attribution):
 			"\n".join(
 				["This video is part of the following playlists:"]
 				+ [
-					f"- [{playlist.name}](https://youtube.com/playlist?list={playlist.playlist_id})"
+					f"- https://youtube.com/playlist?list={playlist.playlist_id}"
 					for playlist in playlists
 				]
 			)
