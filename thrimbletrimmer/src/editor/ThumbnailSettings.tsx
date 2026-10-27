@@ -40,6 +40,7 @@ interface ThumbnailSettingsProps {
 	videoFragments: Accessor<FragmentTimes[]>;
 	videoPlayerTime: Accessor<number>;
 	videoPlayer: Accessor<MediaPlayerElement>;
+	fieldsDisabled: Accessor<boolean>;
 }
 
 export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
@@ -93,6 +94,9 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 	});
 
 	const setThumbnailTime = (event: MouseEvent) => {
+		if (props.fieldsDisabled()) {
+			return;
+		}
 		const playerTime = props.videoPlayerTime();
 		const entryTime = displayTimeForVideoPlayerTime(playerTime);
 		setThumbnailTimeEntry(entryTime);
@@ -593,7 +597,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 				custom elements, so we just have to ignore their errors. */}
 				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
 					{/* @ts-ignore */}
-					<cropper-canvas class={styles.cropper}>
+					<cropper-canvas class={styles.cropper} disabled={props.fieldsDisabled()}>
 						{/* @ts-ignore */}
 						<cropper-image src={cropBaseImageURL()} />
 						{/* @ts-ignore */}
@@ -640,10 +644,8 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 						</cropper-selection>
 						{/* @ts-ignore */}
 					</cropper-canvas>
-				</Show>
-				<Show when={canShowCropTools() && showAdvancedThumbnailControls()}>
 					{/* @ts-ignore */}
-					<cropper-canvas class={styles.cropper}>
+					<cropper-canvas class={styles.cropper} disabled={props.fieldsDisabled()}>
 						{/* @ts-ignore */}
 						<cropper-image src={locBaseImageURL()} />
 						{/* @ts-ignore */}

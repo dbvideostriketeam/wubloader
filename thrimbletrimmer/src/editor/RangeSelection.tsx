@@ -53,18 +53,27 @@ interface RangeSelectionProps {
 	videoPlayerTime: Accessor<number>;
 	videoFragments: Accessor<FragmentTimes[]>;
 	videoPlayer: Accessor<MediaPlayerElement>;
+	fieldsDisabled: Accessor<boolean>;
 }
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 	const stopPropagation = (event: Event) => event.stopPropagation();
 
 	const addNewRange = (event: MouseEvent) => {
+		if (props.fieldsDisabled()) {
+			return;
+		}
+
 		props.setRangeData([...props.rangeData(), new RangeData()]);
 	};
 
 	const onDragEnd: DragDropEventHandlers["onDragEnd"] = (event) => {
 		for (const element of document.getElementsByClassName(styles.dropTargetHover)) {
 			element.classList.remove(styles.dropTargetHover);
+		}
+
+		if (props.fieldsDisabled()) {
+			return;
 		}
 
 		const dragSource = event.operation.source;
@@ -308,6 +317,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						});
 
 						const setStartPoint = () => {
+							if (props.fieldsDisabled()) {
+								return;
+							}
 							const currentTime = props.videoPlayerTime();
 							const fragments = props.videoFragments();
 							const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
@@ -331,6 +343,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const setEndPoint = () => {
+							if (props.fieldsDisabled()) {
+								return;
+							}
 							const currentTime = props.videoPlayerTime();
 							const fragments = props.videoFragments();
 							const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
@@ -354,6 +369,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const removeHandler = () => {
+							if (props.fieldsDisabled()) {
+								return;
+							}
 							const ranges = props.rangeData();
 							if (ranges.length <= 1) {
 								return;
@@ -368,6 +386,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const addChapter = (event: MouseEvent) => {
+							if (props.fieldsDisabled()) {
+								return;
+							}
+
 							currentRangeData().setChapters([...currentRangeData().chapters(), new ChapterData()]);
 						};
 
@@ -580,6 +602,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												});
 
 												const setChapterTime = () => {
+													if (props.fieldsDisabled()) {
+														return;
+													}
 													const currentTime = props.videoPlayerTime();
 													const fragments = props.videoFragments();
 													const time = dateTimeFromVideoPlayerTime(currentTime, fragments);
@@ -624,6 +649,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												});
 
 												const removeChapter = (event: MouseEvent) => {
+													if (props.fieldsDisabled()) {
+														return;
+													}
+
 													const chapters = currentRangeData().chapters().slice();
 													chapters.splice(chapterIndex(), 1);
 													currentRangeData().setChapters(chapters);
