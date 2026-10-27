@@ -29,6 +29,7 @@ import {
 	DragDropProvider,
 	DragOverlay,
 	DragDropEventHandlers,
+	PointerSensor,
 	useDraggable,
 	useDroppable,
 } from "@dnd-kit/solid";
@@ -55,6 +56,8 @@ interface RangeSelectionProps {
 }
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
+	const stopPropagation = (event: Event) => event.stopPropagation();
+
 	const addNewRange = (event: MouseEvent) => {
 		props.setRangeData([...props.rangeData(), new RangeData()]);
 	};
@@ -150,7 +153,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 	};
 
 	return (
-		<DragDropProvider onDragEnd={onDragEnd} onDragOver={onDragOver}>
+		<DragDropProvider
+			sensors={[PointerSensor]}
+			onDragEnd={onDragEnd}
+			onDragOver={onDragOver}
+		>
 			<div class={styles.rangeRegion}>
 				<For each={props.rangeData()}>
 					{(range: RangeData, rangeIndex: Accessor<number>) => {
@@ -431,9 +438,14 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												</button>
 											</Show>
 											<Show when={showPreview()}>
-												<div class={styles.previewVideoPlayer}>
+												<div
+													class={styles.previewVideoPlayer}
+													on:pointerdown={stopPropagation}
+													on:keydown={stopPropagation}
+												>
 													<VideoPlayer
 														src={previewVideoURL}
+														keyboardShortcuts
 														setPlayerTime={setPreviewPlayerTime}
 														mediaPlayer={previewMediaPlayerElement as Accessor<MediaPlayerElement>}
 														setMediaPlayer={
