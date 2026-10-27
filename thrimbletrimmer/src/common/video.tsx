@@ -241,6 +241,7 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 };
 
 export interface VideoPlayerProps {
+	keyboardShortcuts?: boolean;
 	src: Accessor<string>;
 	setPlayerTime: Setter<number>;
 	mediaPlayer: Accessor<MediaPlayerElement>;
@@ -263,7 +264,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 
 	onMount(() => {
 		const player = props.mediaPlayer();
-		player.keyDisabled = true;
+		player.keyDisabled = !props.keyboardShortcuts;
 		player.subscribe(({ currentTime, duration, playbackRate }) => {
 			setPlayerTime(currentTime);
 			props.setPlayerTime(currentTime);
