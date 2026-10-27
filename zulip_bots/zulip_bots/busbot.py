@@ -139,8 +139,19 @@ def event_to_message(event, honk_count=None):
     return "\n".join(lines)
 
 
-def driver_state_message(previous_game_state, game_state, driver_name):
-    if previous_game_state == 0 and game_state == 3:
+def driver_state_message(
+    previous_game_state,
+    game_state,
+    previous_driver_name,
+    driver_name,
+):
+    # Getting a point is the same state change as new game (0 to 3), so don't re-announce the same driver
+    if (
+        previous_game_state == 0
+        and game_state == 3
+        and previous_driver_name is not None
+        and previous_driver_name != driver_name
+    ):
         return f"YOUR DRIVER IS: {driver_name}"
 
 
@@ -184,6 +195,7 @@ def main(
     else:
         last_event_time, honk_count = None, None
     previous_game_state = None
+    previous_driver_name = None
     previous_phase = None
     honk_modulo = config["honk_modulo"]
     if honk_modulo > 0 and honk_count is None:
@@ -245,6 +257,7 @@ def main(
             message = driver_state_message(
                 previous_game_state,
                 game_state["game_state"],
+                previous_driver_name,
                 game_state["driver_name"],
             )
             if message is not None:
@@ -253,11 +266,13 @@ def main(
                 else:
                     zulip_client.send_to_stream(stream, topic, message)
             previous_game_state = game_state["game_state"]
+            previous_driver_name = game_state["driver_name"]
             message = time_of_day_message(
                 previous_phase,
                 game_state["phase"],
             )
-            # Game says "day" after a point (even if it is actually night), so skip this unless we are driving
+            # Phase reports as "day" immediately after a point (even if it is actually night),
+            # so skip this unless we are driving (state 3)
             if message is not None and game_state["game_state"] == 3:
                 if test:
                     print(f"{stream}->{topic}: {message}")
