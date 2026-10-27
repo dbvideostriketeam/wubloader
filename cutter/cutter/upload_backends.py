@@ -9,6 +9,7 @@ import uuid
 
 import common
 from common.googleapis import GoogleAPIClient
+from common.multipart import multipart
 
 
 class UploadError(Exception):
@@ -302,21 +303,49 @@ class Youtube(UploadBackend):
 				},
 				metric_name='insert_caption',
 			)
+			resp.raise_for_status()
+			try:
+				upload_url = resp.headers['Location']
+			except KeyError as ex:
+				raise UploadError(f"Inserting subtitles for {video_id} failed: Got {resp.status_code} with no redirect") from ex
+			resp = self.client.request(
+				'POST', upload_url,
+				data=subtitle_data,
+				metric_name='upload_subtitles',
+			)
+			resp.raise_for_status()
 		else:
-			resp = self.client.request('PUT',
-				"https://www.googleapis.com/youtube/v3/captions",
-				params={"part": "id"},
-				json={"id": id},
+			# PUT requests can't use streaming uploads - use the alternate multipart/related format
+			# Requests doesn't support this natively, and the built-in python MIME libraries are
+			# completely useless if you're not writing an email.
+			# We have to roll our own.
+			metadata = {
+				"id": id,
+				"snippet": {
+					"videoId": video_id,
+					'language': self.CAPTION_LANGUAGE,
+					'name': self.CAPTION_NAME,
+				},
+			}
+			content_type, body = multipart(
+				[
+					("application/json", json.dumps(metadata).encode()),
+					("application/octet-stream", subtitle_data.encode()),
+				],
+				subtype="related",
+			)
+			logging.critical(f"Content-Type: {content_type}")
+			logging.critical(body)
+			resp = self.client.request('POST',
+				"https://youtube.googleapis.com/upload/youtube/v3/captions",
+				params={"part": "id,snippet", "uploadType": "multipart"},
+				headers={
+					"Content-Type": content_type,
+				},
+				data=body,
 				metric_name='update_caption',
 			)
-		resp.raise_for_status()
-		upload_url = resp.headers['Location']
-		resp = self.client.request(
-			'POST', upload_url,
-			data=subtitle_data,
-			metric_name='upload_subtitles',
-		)
-		resp.raise_for_status()
+			resp.raise_for_status()
 
 	def get_subtitle_track(self, video_id):
 		id = self._find_caption_id(video_id)
