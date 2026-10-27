@@ -257,7 +257,8 @@ def main(
                 previous_phase,
                 game_state["phase"],
             )
-            if message is not None:
+            # Game says "day" after a point (even if it is actually night), so skip this unless we are driving
+            if message is not None and game_state["game_state"] == 3:
                 if test:
                     print(f"{stream}->{topic}: {message}")
                 else:
