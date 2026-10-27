@@ -1,4 +1,4 @@
-import { Accessor, Component, createEffect, createSignal, Setter } from "solid-js";
+import { Accessor, Component, createEffect, createSignal, Setter, Show } from "solid-js";
 import styles from "./VideoMetadata.module.scss";
 import {
 	bindingInputOnChange,
@@ -54,6 +54,10 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 		(document.getElementById("subtitle-dialog") as HTMLDialogElement).close();
 	};
 
+	const subtitlesDataURI = () => {
+		return `data:text/plain;charset=utf-8,${props.subtitles()}`;
+	};
+
 	return (
 		<div class={styles.info}>
 			<label>
@@ -85,6 +89,11 @@ export const VideoMetadata: Component<VideoMetadataProps> = (props) => {
 						View/Edit Subtitle Data
 					</button>
 					<input type="file" onChange={setSubtitles} />
+					<Show when={props.subtitles() !== ""}>
+						<a href={subtitlesDataURI()} download="subtitles.txt">
+							Download Subtitles
+						</a>
+					</Show>
 					<div class={styles.subtitleError}>{subtitleUploadError()}</div>
 					<dialog id="subtitle-dialog">
 						<form method="dialog" onSubmit={subtitleSubmitHandler}>
