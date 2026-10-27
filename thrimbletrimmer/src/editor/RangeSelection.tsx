@@ -37,6 +37,7 @@ import {
 import "vidstack/icons";
 
 import AddIcon from "../assets/plus.png";
+import AddMultIcon from "../assets/plus_mult.png";
 import ArrowIcon from "../assets/arrow.png";
 import PencilIcon from "../assets/pencil.png";
 import PlayToIcon from "../assets/play_to.png";
@@ -391,6 +392,42 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							}
 
 							range.setChapters([...range.chapters(), new ChapterData()]);
+						};
+
+						const multipleChapterDialogId = `${rangeId}-batch-chapters`;
+						const addMultipleChapters = (event: MouseEvent) => {
+							const dialogElement = document.getElementById(
+								multipleChapterDialogId,
+							) as HTMLDialogElement;
+							dialogElement.showModal();
+						};
+
+						const handleMultiChapterSubmit = (event: SubmitEvent) => {
+							const formData = new FormData(event.currentTarget as HTMLFormElement);
+							const chapters = formData.get("chapters")!.toString();
+							const updatedChapters = range.chapters().slice();
+							let updated = false;
+							for (let chapter of chapters.split("\n")) {
+								while (chapter.startsWith("^")) {
+									chapter = chapter.substring(1);
+								}
+								chapter = chapter.trimStart();
+								if (chapter === "") {
+									continue;
+								}
+								const newChapter = new ChapterData();
+								newChapter.description = chapter;
+								updatedChapters.push(newChapter);
+								updated = true;
+							}
+							if (updated) {
+								range.setChapters(updatedChapters);
+							}
+						};
+
+						const handleMultiChapterCancel = (event: MouseEvent) => {
+							const dialogElement = document.getElementById(multipleChapterDialogId) as HTMLDialogElement;
+							dialogElement.close();
 						};
 
 						const rangeDraggable = useDraggable({ id: rangeId, type: "range" });
@@ -752,7 +789,25 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												title="Add chapter"
 												onClick={addChapter}
 											/>
+											<img
+												class={`${styles.clickable} ${styles.addChapter}`}
+												src={AddMultIcon}
+												alt="Add multiple chapters"
+												title="Add multiple chapters"
+												onClick={addMultipleChapters}
+											/>
 										</div>
+										<dialog id={multipleChapterDialogId}>
+											<form method="dialog" onSubmit={handleMultiChapterSubmit}>
+												<div>
+													<textarea class={styles.multiChapterEntry} name="chapters"></textarea>
+												</div>
+												<div>
+													<button type="submit">Add Chapters</button>
+													<button type="button" onClick={handleMultiChapterCancel}>Cancel/Close</button>
+												</div>
+											</form>
+										</dialog>
 									</div>
 								</div>
 							</>
