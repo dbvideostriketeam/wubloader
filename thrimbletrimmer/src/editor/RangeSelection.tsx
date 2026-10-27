@@ -170,8 +170,8 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 			<div class={styles.rangeRegion}>
 				<For each={props.rangeData()}>
 					{(range: RangeData, rangeIndex: Accessor<number>) => {
-						const currentRangeData = () => range;
 						const rangeId = createUniqueId();
+
 						const setTransitionType = (event: Event) => {
 							const sourceSelection = event.currentTarget as HTMLSelectElement;
 							props.rangeData()[rangeIndex()].setTransitionType(sourceSelection.value);
@@ -196,9 +196,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							}
 
 							const previousRange = props.rangeData()[rangeIndex() - 1];
-							const durationAndPadding = currentRangeData().transitionSeconds() + 5;
-							const currentStart = currentRangeData().startTime();
-							const currentEnd = currentRangeData().endTime();
+							const durationAndPadding = range.transitionSeconds() + 5;
+							const currentStart = range.startTime();
+							const currentEnd = range.endTime();
 							const previousStart = previousRange.startTime();
 							const previousEnd = previousRange.endTime();
 							if (
@@ -221,9 +221,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							const previousRangeString = `${wubloaderTimeFromDateTime(previousRangeStart)},${wubloaderTimeFromDateTime(previousEnd)}`;
 							const currentRangeString = `${wubloaderTimeFromDateTime(currentStart)},${wubloaderTimeFromDateTime(currentRangeEnd)}`;
 							const transitionString =
-								currentRangeData().transitionType() === ""
+								range.transitionType() === ""
 									? ""
-									: `${currentRangeData().transitionType()},${currentRangeData().transitionSeconds()}`;
+									: `${range.transitionType()},${range.transitionSeconds()}`;
 
 							const urlParams = new URLSearchParams({
 								type: "webm",
@@ -241,7 +241,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 
 						// Synchronize the field values with store values
 						createEffect(() => {
-							const rangeStartTime = currentRangeData().startTime();
+							const rangeStartTime = range.startTime();
 							const fragments = props.videoFragments();
 							if (fragments.length === 0) {
 								return;
@@ -279,7 +279,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						});
 
 						createEffect(() => {
-							const rangeEndTime = currentRangeData().endTime();
+							const rangeEndTime = range.endTime();
 							const fragments = props.videoFragments();
 							if (fragments.length === 0) {
 								return;
@@ -330,7 +330,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const playFromStartTime = () => {
-							const currentTime = currentRangeData().startTime();
+							const currentTime = range.startTime();
 							const fragments = props.videoFragments();
 							if (currentTime === null) {
 								return;
@@ -356,7 +356,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const playFromEndTime = () => {
-							const currentTime = currentRangeData().endTime();
+							const currentTime = range.endTime();
 							const fragments = props.videoFragments();
 							if (currentTime === null) {
 								return;
@@ -390,7 +390,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 								return;
 							}
 
-							currentRangeData().setChapters([...currentRangeData().chapters(), new ChapterData()]);
+							range.setChapters([...range.chapters(), new ChapterData()]);
 						};
 
 						const rangeDraggable = useDraggable({ id: rangeId, type: "range" });
@@ -420,7 +420,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												<option
 													value=""
 													title="Hard cut between the time ranges"
-													selected={currentRangeData().transitionType() === ""}
+													selected={range.transitionType() === ""}
 												>
 													cut
 												</option>
@@ -430,7 +430,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 															<option
 																value={item.name}
 																title={item.description}
-																selected={currentRangeData().transitionType() === item.name}
+																selected={range.transitionType() === item.name}
 															>
 																{item.name}
 															</option>
@@ -438,14 +438,14 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													}}
 												</For>
 											</select>
-											<Show when={currentRangeData().transitionType() !== ""}>
+											<Show when={range.transitionType() !== ""}>
 												<span class={styles.transitionText}>over</span>
 												<input
 													class={styles.transitionDuration}
 													type="number"
 													min={0}
 													step={1}
-													value={currentRangeData().transitionSeconds()}
+													value={range.transitionSeconds()}
 													onChange={setTransitionSeconds}
 												/>
 												<span class={styles.transitionText}>seconds</span>
@@ -549,7 +549,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 										</div>
 									</div>
 									<div>
-										<For each={currentRangeData().chapters()}>
+										<For each={range.chapters()}>
 											{(chapter: ChapterData, chapterIndex: Accessor<number>) => {
 												const currentChapter = () => chapter;
 												const [enteredChapterTime, setEnteredChapterTime] = createSignal("");
@@ -582,11 +582,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														const chapterData = untrack(currentChapter);
 														chapterData.time = null;
 
-														const rangeChapters = untrack(
-															untrack(currentRangeData).chapters,
-														).slice();
+														const rangeChapters = untrack(range.chapters).slice();
 														rangeChapters[chapterIndex()] = chapterData;
-														untrack(currentRangeData).setChapters(rangeChapters);
+														range.setChapters(rangeChapters);
 														return;
 													}
 
@@ -596,9 +594,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													const chapterData = untrack(currentChapter);
 													chapterData.time = chapterTime;
 
-													const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
+													const rangeChapters = untrack(range.chapters).slice();
 													rangeChapters[chapterIndex()] = chapterData;
-													untrack(currentRangeData).setChapters(rangeChapters);
+													range.setChapters(rangeChapters);
 												});
 
 												const setChapterTime = () => {
@@ -615,9 +613,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													const chapterData = structuredClone(currentChapter());
 													chapterData.time = time;
 
-													const rangeChapters = currentRangeData().chapters().slice();
+													const rangeChapters = range.chapters().slice();
 													rangeChapters[chapterIndex()] = chapterData;
-													currentRangeData().setChapters(rangeChapters);
+													range.setChapters(rangeChapters);
 												};
 
 												const playFromChapterTime = () => {
@@ -643,9 +641,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													const chapterData = currentChapter();
 													chapterData.description = chapterDescription;
 
-													const rangeChapters = untrack(untrack(currentRangeData).chapters).slice();
+													const rangeChapters = untrack(range.chapters).slice();
 													rangeChapters[chapterIndex()] = chapterData;
-													untrack(currentRangeData).setChapters(rangeChapters);
+													range.setChapters(rangeChapters);
 												});
 
 												const removeChapter = (event: MouseEvent) => {
@@ -653,9 +651,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														return;
 													}
 
-													const chapters = currentRangeData().chapters().slice();
+													const chapters = range.chapters().slice();
 													chapters.splice(chapterIndex(), 1);
-													currentRangeData().setChapters(chapters);
+													range.setChapters(chapters);
 												};
 
 												const chapterDraggable = useDraggable({
@@ -745,7 +743,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 											ref={chapterDroppableEndRef}
 											class={styles.chapterDropTarget}
 											data-rangeindex={rangeIndex()}
-											data-chapterindex={currentRangeData().chapters().length}
+											data-chapterindex={range.chapters().length}
 										>
 											<img
 												class={`${styles.clickable} ${styles.addChapter}`}
