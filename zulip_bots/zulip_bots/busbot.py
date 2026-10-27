@@ -7,6 +7,7 @@ For each  event, it:
 
 """
 
+import datetime
 import json
 import logging
 import os
@@ -21,11 +22,6 @@ from .config import common_setup, get_config
 
 requests = InstrumentedSession()
 
-QUERY = """
-SELECT time, event, details FROM desertbus_event
-{where}
-ORDER BY time
-"""
 HONK_COUNT_QUERY = """
 SELECT COUNT(*) AS count FROM desertbus_event
 WHERE event = 'honk' AND time <= TIMESTAMP '{timestamp}'
@@ -36,6 +32,17 @@ WHERE time >= now() - INTERVAL '5 minutes'
 ORDER BY time DESC
 LIMIT 1
 """
+BUS_QUERY = """
+SELECT * FROM desertbus
+WHERE time > {start} AND time <= {end}
+ORDER BY time
+"""
+EVENT_QUERY = """
+SELECT * FROM desertbus_event
+{where}
+ORDER BY time
+"""
+
 
 EVENT_NAMES = {
     "bus_stop": "Bus stop",
@@ -58,7 +65,9 @@ DETAIL_NAMES = {
     "x": "Position",
     "speed_mph": "Speed",
 }
-def query_events(url, database, token, query):
+
+
+def query_database(url, database, token, query):
     endpoint = f"{url.rstrip('/')}/api/v3/query_sql"
     headers = {}
     if token:
@@ -76,6 +85,16 @@ def query_events(url, database, token, query):
         for line in response.iter_lines(decode_unicode=True):
             if line:
                 yield json.loads(line)
+
+def append_json(path, data):
+    with open(path, 'a') as archive_file:
+        for datum in data:
+            archive_file.write(json.dumps(data) + '\n')
+
+
+def latest_entry(path):
+    with open(path) as archive_file:
+        return json.loads(archive_file.readlines()[-1])['time']
 
 
 def load_state(path):
@@ -102,13 +121,17 @@ def event_query(last_event_time, honk_modulo):
     if honk_modulo <= 0:
         conditions.append("event != 'honk'")
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
-    return QUERY.format(where=where)
+    return EVENT_QUERY.format(where=where)
+
+def bus_query(last_bus_time):
+    now = datetime.datetime.utcnow().isoformat()
+    return BUS_QUERY.format(start=last_bus_time, end=now)
 
 
 def count_honks(url, database, token, last_event_time):
     timestamp = last_event_time.replace("'", "''")
     query = HONK_COUNT_QUERY.format(timestamp=timestamp)
-    row = next(query_events(url, database, token, query))
+    row = next(query_database(url, database, token, query))
     return row["count"]
 
 
@@ -176,6 +199,8 @@ def validate_config(config):
 
 def main(
     config_file,
+    bus_archive_file,
+    events_archive_file,
     interval=1,
     metrics_port=8021,
     stream="bot-spam",
@@ -194,6 +219,16 @@ def main(
         last_event_time, honk_count = load_state(config["state"])
     else:
         last_event_time, honk_count = None, None
+
+    if os.path.exists(bus_archive_file):
+        last_bus_time = latest_entry(bus_archive_file)
+    else:
+        last_bus_time = None
+    if os.path.exists(events_archive_file):
+        last_event_time = latest_entry(events_archive_file)
+    else:
+        last_event_time = None
+
     previous_game_state = None
     previous_driver_name = None
     previous_phase = None
@@ -222,13 +257,27 @@ def main(
 
     while True:
         started = time.time()
-        logging.info(f"Querying InfluxDB for game data events after {last_event_time}")
-        for event in query_events(
+        logging.info(f"Querying InfluxDB for game data after {last_bus_time}")
+        results = query_database(
+            config["influx_url"],
+            config["influx_database"],
+            config.get("influx_token"),
+            bus_query(last_bus_time)
+        )
+        append_json(bus_archive_file, results)
+        last_bus_time = results[-1]['time']
+
+
+        logging.info(f"Querying InfluxDB for game events after {last_event_time}")
+        events =  query_database(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
             event_query(last_event_time, honk_modulo),
-        ):
+        )
+        append_json(events_archive_file, events)
+        last_event_time = events[-1]["time"]
+        for event in events:
             is_honk = event["event"] == "honk"
             if is_honk:
                 honk_count += 1
@@ -238,7 +287,6 @@ def main(
                 or (honk_modulo > 0 and honk_count % honk_modulo == 0)
             )
             message = event_to_message(event, honk_count if is_honk else None)
-            last_event_time = event["time"]
             if test:
                 if should_post:
                     print(f"{stream}->{topic}: {message}")
@@ -247,7 +295,7 @@ def main(
                     zulip_client.send_to_stream(stream, topic, message)
                 save_state(config["state"], last_event_time, honk_count)
 
-        game_state = next(query_events(
+        game_state = next(query_database(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
