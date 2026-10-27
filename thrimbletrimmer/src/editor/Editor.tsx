@@ -786,7 +786,12 @@ const EditorContent: Component<ContentProps> = (props) => {
 
 	const [editorState, setEditorState] = createSignal(EditorState.Entry);
 
-	const allFieldsDisabled = () => editorState() !== EditorState.Entry;
+	const allFieldsDisabled = () =>
+		editorState() !== EditorState.Entry ||
+		props.data!.state === "EDITED" ||
+		props.data!.state === "CLAIMED" ||
+		props.data!.state === "FINALIZED" ||
+		props.data!.state === "TRANSCODING";
 	makeEventListener(window, "beforeunload", (event) => {
 		if (editorState() === EditorState.Entry && dataChanged()) {
 			event.preventDefault();
