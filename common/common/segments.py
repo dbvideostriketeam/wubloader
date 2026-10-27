@@ -1013,7 +1013,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 				"offset": offset,
 			}
 			if video_type in MASK_TRANSITIONS:
-				path, fps = prepare_mask_transition(segment_ranges[0][0], video_type)
+				path, fps = prepare_mask_transition(inputs[0][0][0], video_type)
 				asset_stream = f"{len(inputs) + len(file_inputs)}:v"
 				file_inputs.append(path)
 				filters.extend(mask_filters(prev_video_stream, next_video_stream, asset_stream,
