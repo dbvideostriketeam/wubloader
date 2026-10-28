@@ -23,6 +23,7 @@ import "vidstack/player/styles/default/layouts/video.css";
 import "vidstack/player";
 import "vidstack/player/layouts/default";
 import "vidstack/player/ui";
+import { MediaSeekRequestEvent } from "vidstack";
 
 export const VIDEO_FRAMES_PER_SECOND = 30;
 
@@ -306,12 +307,21 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 		return videoDateTime.setZone("America/Vancouver").toLocaleString(DateTime.TIME_SIMPLE);
 	};
 
+	// This makes it so the video time updating works even after the video has "ended".
+	const mediaSeekRequest = (seekTime: number, event: MediaSeekRequestEvent) => {
+		const player = props.mediaPlayer();
+		if (player.state.ended) {
+			player.$state.ended.set(false);
+		}
+	};
+
 	return (
 		<media-player
 			src={props.src()}
 			ref={props.setMediaPlayer}
 			preload="auto"
 			storage="thrimbletrimmer"
+			on:media-seek-request={mediaSeekRequest as any}
 		>
 			<media-provider />
 			<media-gesture event="pointerup" action="toggle:paused" />

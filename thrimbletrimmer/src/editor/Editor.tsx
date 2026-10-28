@@ -578,66 +578,72 @@ const EditorContent: Component<ContentProps> = (props) => {
 			return;
 		}
 
+		const setPlayerTime = (player: MediaPlayerElement, time: number) => {
+			player.$state.ended.set(false);
+			player.currentTime = time;
+		};
+
 		const player = untrack(mediaPlayer);
+
 		switch (event.key) {
 			case "0":
 				if (player) {
-					player.currentTime = 0;
+					setPlayerTime(player, 0);
 				}
 				break;
 			case "1":
 				if (player) {
-					player.currentTime = player.duration * 0.1;
+					setPlayerTime(player, player.duration * 0.1);
 				}
 				break;
 			case "2":
 				if (player) {
-					player.currentTime = player.duration * 0.2;
+					setPlayerTime(player, player.duration * 0.2);
 				}
 				break;
 			case "3":
 				if (player) {
-					player.currentTime = player.duration * 0.3;
+					setPlayerTime(player, player.duration * 0.3);
 				}
 				break;
 			case "4":
 				if (player) {
-					player.currentTime = player.duration * 0.4;
+					setPlayerTime(player, player.duration * 0.4);
 				}
 				break;
 			case "5":
 				if (player) {
-					player.currentTime = player.duration * 0.5;
+					setPlayerTime(player, player.duration * 0.5);
 				}
 				break;
 			case "6":
 				if (player) {
-					player.currentTime = player.duration * 0.6;
+					setPlayerTime(player, player.duration * 0.6);
 				}
 				break;
 			case "7":
 				if (player) {
-					player.currentTime = player.duration * 0.7;
+					setPlayerTime(player, player.duration * 0.7);
 				}
 				break;
 			case "8":
 				if (player) {
-					player.currentTime = player.duration * 0.8;
+					setPlayerTime(player, player.duration * 0.8);
 				}
 				break;
 			case "9":
 				if (player) {
-					player.currentTime = player.duration * 0.9;
+					setPlayerTime(player, player.duration * 0.9);
 				}
 				break;
 			case "j":
 				if (player) {
-					player.currentTime -= 10;
+					setPlayerTime(player, player.currentTime - 10);
 				}
 				break;
 			case "J":
 				if (player) {
-					player.currentTime -= 1;
+					setPlayerTime(player, player.currentTime - 1);
 				}
 				break;
 			case "k":
@@ -654,12 +660,12 @@ const EditorContent: Component<ContentProps> = (props) => {
 				break;
 			case "l":
 				if (player) {
-					player.currentTime += 10;
+					setPlayerTime(player, player.currentTime + 10);
 				}
 				break;
 			case "L":
 				if (player) {
-					player.currentTime += 1;
+					setPlayerTime(player, player.currentTime + 1);
 				}
 				break;
 			case "m":
@@ -686,13 +692,13 @@ const EditorContent: Component<ContentProps> = (props) => {
 			case ",":
 			case "<":
 				if (player) {
-					player.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
+					setPlayerTime(player, player.currentTime - (1 / VIDEO_FRAMES_PER_SECOND));
 				}
 				break;
 			case ".":
 			case ">":
 				if (player) {
-					player.currentTime += 1 / VIDEO_FRAMES_PER_SECOND;
+					setPlayerTime(player, player.currentTime + (1 / VIDEO_FRAMES_PER_SECOND));
 				}
 				break;
 			case "=":
@@ -742,18 +748,18 @@ const EditorContent: Component<ContentProps> = (props) => {
 			case "ArrowLeft":
 				if (player) {
 					if (event.shiftKey) {
-						player.currentTime -= 60;
+						setPlayerTime(player, player.currentTime - 60);
 					} else {
-						player.currentTime -= 5;
+						setPlayerTime(player, player.currentTime - 5);
 					}
 				}
 				break;
 			case "ArrowRight":
 				if (player) {
 					if (event.shiftKey) {
-						player.currentTime += 60;
+						setPlayerTime(player, player.currentTime + 60);
 					} else {
-						player.currentTime += 5;
+						setPlayerTime(player, player.currentTime + 5);
 					}
 				}
 				break;

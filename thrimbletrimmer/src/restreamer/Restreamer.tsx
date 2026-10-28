@@ -165,42 +165,48 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 		if (!player) {
 			return;
 		}
+
+		const setPlayerTime = (time: number) => {
+			player.$state.ended.set(false);
+			player.currentTime = time;
+		};
+
 		switch (event.key) {
 			case "0":
-				player.currentTime = 0;
+				setPlayerTime(0);
 				break;
 			case "1":
-				player.currentTime = player.duration * 0.1;
+				setPlayerTime(player.duration * 0.1);
 				break;
 			case "2":
-				player.currentTime = player.duration * 0.2;
+				setPlayerTime(player.duration * 0.2);
 				break;
 			case "3":
-				player.currentTime = player.duration * 0.3;
+				setPlayerTime(player.duration * 0.3);
 				break;
 			case "4":
-				player.currentTime = player.duration * 0.4;
+				setPlayerTime(player.duration * 0.4);
 				break;
 			case "5":
-				player.currentTime = player.duration * 0.5;
+				setPlayerTime(player.duration * 0.5);
 				break;
 			case "6":
-				player.currentTime = player.duration * 0.6;
+				setPlayerTime(player.duration * 0.6);
 				break;
 			case "7":
-				player.currentTime = player.duration * 0.7;
+				setPlayerTime(player.duration * 0.7);
 				break;
 			case "8":
-				player.currentTime = player.duration * 0.8;
+				setPlayerTime(player.duration * 0.8);
 				break;
 			case "9":
-				player.currentTime = player.duration * 0.9;
+				setPlayerTime(player.duration * 0.9);
 				break;
 			case "j":
-				player.currentTime -= 10;
+				setPlayerTime(player.currentTime - 10);
 				break;
 			case "J":
-				player.currentTime -= 1;
+				setPlayerTime(player.currentTime - 1);
 				break;
 			case "k":
 			case "K":
@@ -213,21 +219,21 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				event.preventDefault();
 				break;
 			case "l":
-				player.currentTime += 10;
+				setPlayerTime(player.currentTime + 10);
 				break;
 			case "L":
-				player.currentTime += 1;
+				setPlayerTime(player.currentTime + 1);
 				break;
 			case "m":
 				player.muted = !player.muted;
 				break;
 			case ",":
 			case "<":
-				player.currentTime -= 1 / VIDEO_FRAMES_PER_SECOND;
+				setPlayerTime(player.currentTime - (1 / VIDEO_FRAMES_PER_SECOND));
 				break;
 			case ".":
 			case ">":
-				player.currentTime += 1 / VIDEO_FRAMES_PER_SECOND;
+				setPlayerTime(player.currentTime + (1 / VIDEO_FRAMES_PER_SECOND));
 				break;
 			case "=":
 				if (player.playbackRate < 8) {
@@ -251,16 +257,16 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				break;
 			case "ArrowLeft":
 				if (event.shiftKey) {
-					player.currentTime -= 60;
+					setPlayerTime(player.currentTime - 60);
 				} else {
-					player.currentTime -= 5;
+					setPlayerTime(player.currentTime - 5);
 				}
 				break;
 			case "ArrowRight":
 				if (event.shiftKey) {
-					player.currentTime += 60;
+					setPlayerTime(player.currentTime + 60);
 				} else {
-					player.currentTime += 5;
+					setPlayerTime(player.currentTime + 5);
 				}
 				break;
 			case "Backspace":
