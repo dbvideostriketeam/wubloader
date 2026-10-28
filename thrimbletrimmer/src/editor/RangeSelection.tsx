@@ -423,6 +423,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							if (updated) {
 								range.setChapters(updatedChapters);
 							}
+							(event.currentTarget as HTMLFormElement).reset();
 						};
 
 						const handleMultiChapterCancel = (event: MouseEvent) => {
