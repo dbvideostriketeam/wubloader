@@ -163,11 +163,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 	};
 
 	return (
-		<DragDropProvider
-			sensors={[PointerSensor]}
-			onDragEnd={onDragEnd}
-			onDragOver={onDragOver}
-		>
+		<DragDropProvider sensors={[PointerSensor]} onDragEnd={onDragEnd} onDragOver={onDragOver}>
 			<div class={styles.rangeRegion}>
 				<For each={props.rangeData()}>
 					{(range: RangeData, rangeIndex: Accessor<number>) => {
@@ -427,7 +423,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 						};
 
 						const handleMultiChapterCancel = (event: MouseEvent) => {
-							const dialogElement = document.getElementById(multipleChapterDialogId) as HTMLDialogElement;
+							const dialogElement = document.getElementById(
+								multipleChapterDialogId,
+							) as HTMLDialogElement;
 							dialogElement.close();
 						};
 
@@ -805,7 +803,9 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												</div>
 												<div>
 													<button type="submit">Add Chapters</button>
-													<button type="button" onClick={handleMultiChapterCancel}>Cancel/Close</button>
+													<button type="button" onClick={handleMultiChapterCancel}>
+														Cancel/Close
+													</button>
 												</div>
 											</form>
 										</dialog>
