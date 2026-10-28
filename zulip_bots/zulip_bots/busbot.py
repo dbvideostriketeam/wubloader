@@ -16,11 +16,14 @@ import time
 import argh
 
 from common.requests import InstrumentedSession
+from common.dateutil import parse_utc_only
 from common import zulip
 
 from .config import common_setup, get_config
 
 requests = InstrumentedSession()
+
+MAX_TIME_HOURS = 24
 
 HONK_COUNT_QUERY = """
 SELECT COUNT(*) AS count FROM desertbus_event
@@ -34,7 +37,7 @@ LIMIT 1
 """
 BUS_QUERY = """
 SELECT * FROM desertbus
-WHERE time > {start} AND time <= {end}
+WHERE time > '{start}' AND time <= '{end}'
 ORDER BY time
 """
 EVENT_QUERY = """
@@ -73,6 +76,7 @@ def query_database(url, database, token, query):
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
+    logging.info(f"Making query: {query}")
     with requests.post(
         endpoint,
         headers=headers,
@@ -87,14 +91,19 @@ def query_database(url, database, token, query):
                 yield json.loads(line)
 
 def append_json(path, data):
+    if path is None:
+        return
     with open(path, 'a') as archive_file:
         for datum in data:
-            archive_file.write(json.dumps(data) + '\n')
+            archive_file.write(json.dumps(datum) + '\n')
 
 
 def latest_entry(path):
     with open(path) as archive_file:
-        return json.loads(archive_file.readlines()[-1])['time']
+        lines = archive_file.readlines()
+    if not lines:
+        return None
+    return json.loads(lines[-1])['time']
 
 
 def load_state(path):
@@ -116,16 +125,19 @@ def save_state(path, last_event_time, honk_count):
 def event_query(last_event_time, honk_modulo):
     conditions = []
     if last_event_time is not None:
+        end_time = (parse_utc_only(last_event_time) + datetime.timedelta(hours=MAX_TIME_HOURS)).isoformat()
         timestamp = last_event_time.replace("'", "''")
+        end_time = end_time.replace("'", "''")
         conditions.append(f"time > TIMESTAMP '{timestamp}'")
+        conditions.append(f"time <= TIMESTAMP '{end_time}'")
     if honk_modulo <= 0:
         conditions.append("event != 'honk'")
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     return EVENT_QUERY.format(where=where)
 
 def bus_query(last_bus_time):
-    now = datetime.datetime.utcnow().isoformat()
-    return BUS_QUERY.format(start=last_bus_time, end=now)
+    end = (parse_utc_only(last_bus_time) + datetime.timedelta(hours=MAX_TIME_HOURS)).isoformat()
+    return BUS_QUERY.format(start=last_bus_time, end=end)
 
 
 def count_honks(url, database, token, last_event_time):
@@ -192,21 +204,20 @@ def validate_config(config):
         "zulip_email",
         "zulip_api_key",
     )
-    missing = [key for key in required if not config.get(key)]
+    missing = [key for key in required if key not in config]
     if missing:
         raise ValueError(f"Missing required BusBot config values: {', '.join(missing)}")
 
 
 def main(
     config_file,
-    bus_archive_file,
-    events_archive_file,
     interval=1,
     metrics_port=8021,
     stream="bot-spam",
     topic="Bus Bot",
     test=False,
     once=False,
+    archive_start=None
 ):
     common_setup(metrics_port)
     config = get_config(config_file)
@@ -220,14 +231,20 @@ def main(
     else:
         last_event_time, honk_count = None, None
 
-    if os.path.exists(bus_archive_file):
+    bus_archive_file = config.get("bus_archive")
+    last_bus_time = None
+    if bus_archive_file and os.path.exists(bus_archive_file):
         last_bus_time = latest_entry(bus_archive_file)
+    if last_bus_time is None:
+        last_bus_time = archive_start
+    if last_bus_time is None:
+        last_bus_time = datetime.datetime.utcnow().isoformat()
+
+    events_archive_file = config.get("events_archive")
+    if events_archive_file and os.path.exists(events_archive_file):
+        last_archive_event_time = latest_entry(events_archive_file)
     else:
-        last_bus_time = None
-    if os.path.exists(events_archive_file):
-        last_event_time = latest_entry(events_archive_file)
-    else:
-        last_event_time = None
+        last_archive_event_time = None
 
     previous_game_state = None
     previous_driver_name = None
@@ -258,31 +275,37 @@ def main(
     while True:
         started = time.time()
         logging.info(f"Querying InfluxDB for game data after {last_bus_time}")
-        results = query_database(
+        results = list(query_database(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
             bus_query(last_bus_time)
-        )
+        ))
         append_json(bus_archive_file, results)
-        last_bus_time = results[-1]['time']
+        if results:
+            last_bus_time = results[-1]['time']
 
 
         logging.info(f"Querying InfluxDB for game events after {last_event_time}")
-        events =  query_database(
+        events = list(query_database(
             config["influx_url"],
             config["influx_database"],
             config.get("influx_token"),
-            event_query(last_event_time, honk_modulo),
-        )
+            event_query(last_archive_event_time, honk_modulo),
+        ))
         append_json(events_archive_file, events)
-        last_event_time = events[-1]["time"]
+        if events:
+            last_archive_event_time = events[-1]["time"]
+        # remove any archive-only events based on time range
+        events = [event for event in events if event["time"] > last_event_time]
+        if events:
+            last_event_time = events[-1]["time"]
         for event in events:
             is_honk = event["event"] == "honk"
             if is_honk:
                 honk_count += 1
             # only post every Nth honk
-            should_post = (
+            should_post = event["time"] > last_event_time and (
                 not is_honk
                 or (honk_modulo > 0 and honk_count % honk_modulo == 0)
             )
@@ -330,6 +353,7 @@ def main(
 
         if once:
             break
+
         remaining = started + interval - time.time()
         if remaining > 0:
             time.sleep(remaining)
