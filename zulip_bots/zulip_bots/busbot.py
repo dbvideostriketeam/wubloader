@@ -76,7 +76,7 @@ def query_database(url, database, token, query):
     if token:
         headers["Authorization"] = f"Bearer {token}"
 
-    logging.info(f"Making query: {query}")
+    logging.debug("Making query: %s", " ".join(query.splitlines()).strip())
     with requests.post(
         endpoint,
         headers=headers,
@@ -274,7 +274,7 @@ def main(
 
     while True:
         started = time.time()
-        logging.info(f"Querying InfluxDB for game data after {last_bus_time}")
+        logging.debug("Querying InfluxDB for game data after %s", last_bus_time)
         results = list(query_database(
             config["influx_url"],
             config["influx_database"],
@@ -286,7 +286,7 @@ def main(
             last_bus_time = results[-1]['time']
 
 
-        logging.info(f"Querying InfluxDB for game events after {last_event_time}")
+        logging.debug("Querying InfluxDB for game events after %s", last_event_time)
         events = list(query_database(
             config["influx_url"],
             config["influx_database"],
@@ -298,8 +298,6 @@ def main(
             last_archive_event_time = events[-1]["time"]
         # remove any archive-only events based on time range
         events = [event for event in events if event["time"] > last_event_time]
-        if events:
-            last_event_time = events[-1]["time"]
         for event in events:
             is_honk = event["event"] == "honk"
             if is_honk:
@@ -309,6 +307,7 @@ def main(
                 not is_honk
                 or (honk_modulo > 0 and honk_count % honk_modulo == 0)
             )
+            last_event_time = event["time"]
             message = event_to_message(event, honk_count if is_honk else None)
             if test:
                 if should_post:
