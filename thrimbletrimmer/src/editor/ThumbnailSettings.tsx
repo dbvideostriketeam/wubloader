@@ -80,7 +80,7 @@ export const ThumbnailSettings: Component<ThumbnailSettingsProps> = (props) => {
 
 	createEffect(() => {
 		const enteredTime = thumbnailTimeEntry();
-		const fragments = props.videoFragments();
+		const fragments = untrack(props.videoFragments);
 		if (fragments.length === 0) {
 			return;
 		}
