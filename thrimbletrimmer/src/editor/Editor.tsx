@@ -16,6 +16,7 @@ import {
 import { DateTime } from "luxon";
 import { makeEventListener } from "@solid-primitives/event-listener";
 import { useKeyDownEvent } from "@solid-primitives/keyboard";
+import { makeTimer } from "@solid-primitives/timer";
 import { MediaPlayerElement } from "vidstack/elements";
 import { FragmentTimes } from "../common/common";
 import styles from "./Editor.module.scss";
@@ -679,6 +680,15 @@ const EditorContent: Component<ContentProps> = (props) => {
 					activeIndexToDecrease--;
 				}
 				setActiveKeyboardIndex(activeIndexToDecrease);
+				// The browser info TypeScript has seems to be out of date.
+				makeTimer(
+					() =>
+						document
+							.getElementsByClassName("range-definition")
+							[activeIndexToDecrease]?.scrollIntoView({ container: "nearest" } as any),
+					0,
+					setTimeout,
+				);
 				break;
 			case "p":
 				const videoRangeData = untrack(videoData);
@@ -688,17 +698,26 @@ const EditorContent: Component<ContentProps> = (props) => {
 					setVideoData([...videoRangeData, new RangeData()]);
 				}
 				setActiveKeyboardIndex(activeIndexIncreased);
+				// The browser info TypeScript has seems to be out of date.
+				makeTimer(
+					() =>
+						document
+							.getElementsByClassName("range-definition")
+							[activeIndexIncreased]?.scrollIntoView({ container: "nearest" } as any),
+					0,
+					setTimeout,
+				);
 				break;
 			case ",":
 			case "<":
 				if (player) {
-					setPlayerTime(player, player.currentTime - (1 / VIDEO_FRAMES_PER_SECOND));
+					setPlayerTime(player, player.currentTime - 1 / VIDEO_FRAMES_PER_SECOND);
 				}
 				break;
 			case ".":
 			case ">":
 				if (player) {
-					setPlayerTime(player, player.currentTime + (1 / VIDEO_FRAMES_PER_SECOND));
+					setPlayerTime(player, player.currentTime + 1 / VIDEO_FRAMES_PER_SECOND);
 				}
 				break;
 			case "=":

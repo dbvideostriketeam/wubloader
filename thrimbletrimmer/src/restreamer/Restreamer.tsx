@@ -229,11 +229,11 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 				break;
 			case ",":
 			case "<":
-				setPlayerTime(player.currentTime - (1 / VIDEO_FRAMES_PER_SECOND));
+				setPlayerTime(player.currentTime - 1 / VIDEO_FRAMES_PER_SECOND);
 				break;
 			case ".":
 			case ">":
-				setPlayerTime(player.currentTime + (1 / VIDEO_FRAMES_PER_SECOND));
+				setPlayerTime(player.currentTime + 1 / VIDEO_FRAMES_PER_SECOND);
 				break;
 			case "=":
 				if (player.playbackRate < 8) {

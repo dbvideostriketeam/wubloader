@@ -448,7 +448,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 									class={styles.rangeDropTarget}
 									data-rangeindex={rangeIndex()}
 								></div>
-								<div ref={rangeDraggableRef} data-rangeindex={rangeIndex()}>
+								<div
+									ref={rangeDraggableRef}
+									data-rangeindex={rangeIndex()}
+									class="range-definition"
+								>
 									<Show when={rangeIndex() > 0}>
 										<div>
 											<span class={styles.transitionLabel}>Transition:</span>

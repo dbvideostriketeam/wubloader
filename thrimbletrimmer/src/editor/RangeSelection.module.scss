@@ -44,6 +44,10 @@
 
 .rangeRegion {
 	margin-top: 4px;
+	max-height: 30vh;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding-right: 20px;
 }
 
 .timeRangeEntryRow {
