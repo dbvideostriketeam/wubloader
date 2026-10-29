@@ -364,6 +364,7 @@ SELECT audit.audit_table('templates');
 -- Jobs may be claimed by writing a worker name to claimed_by.
 -- Timestamp fields are indicative only.
 CREATE TABLE encodes (
+	priority INTEGER NOT NULL DEFAULT 0,
 	src_url TEXT NOT NULL,
 	src_hash TEXT NOT NULL,
 	encode_args TEXT[] NOT NULL,

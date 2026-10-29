@@ -111,6 +111,7 @@ while [ "$((LIMIT--))" -ne 0 ] ; do
 			WHERE dest_url = (
 				SELECT dest_url FROM encodes
 				WHERE claimed_by IS NULL AND dest_hash IS NULL
+				ORDER BY priority DESC, random()
 				LIMIT 1
 			)
 			RETURNING src_url, src_hash, dest_url
