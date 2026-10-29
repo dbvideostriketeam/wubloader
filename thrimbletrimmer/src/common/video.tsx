@@ -264,6 +264,13 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	const [qualityNames, setQualityNames] = createSignal<string[]>([]);
 	const [selectedQuality, setSelectedQuality] = createSignal(-1);
 
+	const selectQuality = (index: Accessor<number>) => {
+		const quality = props.mediaPlayer().qualities[index()];
+		if (quality !== undefined) {
+			quality.selected = true;
+		}
+	};
+
 	onMount(() => {
 		const player = props.mediaPlayer();
 		player.keyDisabled = !props.keyboardShortcuts;
@@ -273,11 +280,9 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 		const onQualityChange = () => setSelectedQuality(player.qualities.auto ? -1 : player.qualities.selectedIndex);
 		player.addEventListener("hls-manifest-parsed", onManifest);
 		player.qualities.addEventListener("change", onQualityChange);
-		player.qualities.addEventListener("auto-change", onQualityChange);
 		onCleanup(() => {
 			player.removeEventListener("hls-manifest-parsed", onManifest);
 			player.qualities.removeEventListener("change", onQualityChange);
-			player.qualities.removeEventListener("auto-change", onQualityChange);
 		});
 		player.subscribe(({ currentTime, duration, playbackRate }) => {
 			setPlayerTime(currentTime);
@@ -426,7 +431,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 										<For each={qualityNames()}>{(name, index) => (
 											<button type="button" class={styles.qualityOption}
 												aria-pressed={selectedQuality() === index()}
-												onClick={() => { const quality = props.mediaPlayer().qualities[index()]; if (quality) quality.selected = true; }}>
+												onClick={[selectQuality, index]}>
 												{name}
 											</button>
 										)}</For>
