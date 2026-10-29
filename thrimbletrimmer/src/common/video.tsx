@@ -278,7 +278,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 		const onManifest = (event: Event) => {
 			setQualityNames((event as CustomEvent<ManifestParsedData>).detail.levels.map((level) => level.name));
 		};
-		const onQualityChange = () => setSelectedQuality(player.qualities.auto ? -1 : player.qualities.selectedIndex);
+		const onQualityChange = () => setSelectedQuality(player.qualities.selectedIndex);
 		player.addEventListener("hls-manifest-parsed", onManifest);
 		player.qualities.addEventListener("change", onQualityChange);
 		onCleanup(() => {
