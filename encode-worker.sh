@@ -88,20 +88,33 @@ url_to_filename() {
 	echo "$WORKDIR/$name"
 }
 
-download_file() {
+copy_file() {
 	local user pass host port path file
 	parts=$(url_to_parts "$1")
 	read -r user pass host port path <<<"$parts"
 	file=$(url_to_filename "$1")
-	retry 5 logcmd sshpass -p "$pass" scp -P "$port" "$user@$host:$path" "$file" </dev/null
+	passfile=$(mktemp)
+	# shellcheck disable=SC2064
+	trap "rm -f $passfile" RETURN
+	echo "$pass" > "$passfile"
+	if [ "$2" == "up" ]; then
+		RSYNC_ARGS=("$file" "$user@$host:$path")
+	else
+		RSYNC_ARGS=("$user@$host:$path" "$file")
+	fi
+	retry 5 \
+		logcmd \
+		sshpass -f "$passfile" \
+		rsync -avzP -e "ssh -p $port -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no" \
+			"${RSYNC_ARGS[@]}" </dev/null
+}
+
+download_file() {
+	copy_file "$1" down
 }
 
 upload_file() {
-	local user pass host port path file
-	parts=$(url_to_parts "$1")
-	read -r user pass host port path <<<"$parts"
-	file=$(url_to_filename "$1")
-	retry 5 logcmd sshpass -p "$pass" scp -P "$port" "$file" "$user@$host:$path" </dev/null
+	copy_file "$1" up
 }
 
 encode() {
@@ -234,14 +247,14 @@ while [ "$((LIMIT--))" -ne 0 ] ; do
 		fi
 	fi
 	if ! [ -f "$src_file" ]; then
-		echo "Downloading source file (no progress bar sorry, blame scp)"
+		echo "Downloading source file"
 		download_file "$src_url"
 		echo "Checking source file checksum"
 		sha256sum --status -c - <<<"$src_hash  $src_file"
 	fi
 	echo "Starting encode"
 	encode "$src_file" "$dest_file" "${encode_args[@]}"
-	echo "Encode complete, uploading output file (still no progress bar)"
+	echo "Encode complete, uploading output file"
 	upload_file "$dest_url"
 	echo "Calculating output hash and marking complete"
 	dest_hash=$(sha256sum "$dest_file" | cut -d' ' -f1)
