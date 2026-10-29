@@ -2,18 +2,43 @@
 
 set -eu
 
-if [ "$#" -lt 2 ]; then
-	echo "USAGE: $0 NAME CONNINFO [LIMIT]"
+usage() {
+	echo "USAGE: $0 [OPTIONS] NAME CONNINFO"
 	echo "NAME should be a unique name for your node"
 	echo "CONNINFO should be a postgres connection url like postgresql://USER:PASS@HOSTNAME/DATABASE"
-	echo "Exits after doing LIMIT jobs, default unlimited. Use limit 0 if you just want to clean up after a crash without doing any jobs."
+	echo "Options:"
+	echo "  --limit LIMIT"
+	echo "      Exits after doing LIMIT jobs, default unlimited."
+	echo "      Use limit 0 if you just want to clean up after a crash without doing any jobs."
 	exit 1
+}
+
+WORKDIR=${WORKDIR:-.}
+LIMIT=-1
+
+ARGS=()
+while [ "$#" -gt 0 ]; do
+	arg=$1
+	shift
+	case "$arg" in
+		--limit)
+			LIMIT=${1?--limit argument required}
+			shift
+			;;
+		--*)
+			echo "Unknown option: $arg"
+			;;
+		*)
+			ARGS+=("$arg")
+	esac
+done
+
+if [ "${#ARGS[@]}" -ne 2 ]; then
+	usage
 fi
 
-NAME="$1"
-CONNINFO="$2"
-LIMIT="${3:--1}"
-WORKDIR=${WORKDIR:-.}
+NAME="${ARGS[0]}"
+CONNINFO="${ARGS[1]}"
 
 logcmd() {
 	echo "Running: $*" >&2
