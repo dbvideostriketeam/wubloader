@@ -275,7 +275,9 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 		const player = props.mediaPlayer();
 		player.keyDisabled = !props.keyboardShortcuts;
 		const onManifest = (event: Event) => {
-			setQualityNames((event as CustomEvent<ManifestParsedData>).detail.levels.map((level) => level.name));
+			setQualityNames(
+				(event as CustomEvent<ManifestParsedData>).detail.levels.map((level) => level.name),
+			);
 		};
 		const onQualityChange = () => setSelectedQuality(player.qualities.selectedIndex);
 		player.addEventListener("hls-manifest-parsed", onManifest);
@@ -400,7 +402,10 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 								Settings
 							</media-tooltip-content>
 						</media-tooltip>
-						<media-menu-items class={`vds-menu-items vds-settings-menu-items ${styles.settingsMenu}`} placement="top">
+						<media-menu-items
+							class={`vds-menu-items vds-settings-menu-items ${styles.settingsMenu}`}
+							placement="top"
+						>
 							<section class="vds-menu-section" role="group">
 								<div class="vds-menu-section-title">
 									<header>Speed</header>
@@ -428,13 +433,18 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 								</div>
 								<div class="vds-menu-section-body">
 									<div class={styles.qualityOptions}>
-										<For each={qualityNames()}>{(name, index) => (
-											<button type="button" class={styles.qualityOption}
-												aria-pressed={selectedQuality() === index()}
-												onClick={[selectQuality, index]}>
-												{name}
-											</button>
-										)}</For>
+										<For each={qualityNames()}>
+											{(name, index) => (
+												<button
+													type="button"
+													class={styles.qualityOption}
+													aria-pressed={selectedQuality() === index()}
+													onClick={[selectQuality, index]}
+												>
+													{name}
+												</button>
+											)}
+										</For>
 									</div>
 								</div>
 							</section>
