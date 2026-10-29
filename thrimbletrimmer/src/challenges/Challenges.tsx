@@ -10,7 +10,11 @@ import {
 } from "solid-js";
 import { DateTime } from "luxon";
 import { bindingInputOnChange } from "../common/binding";
-import { dateTimeFromWubloaderTime } from "../common/convertTime";
+import {
+	busTimeFromDateTime,
+	dateTimeFromWubloaderTime,
+	wubloaderTimeFromDateTime,
+} from "../common/convertTime";
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
 import styles from "./Challenges.module.scss";
@@ -63,6 +67,13 @@ export const Challenges: Component = () => {
 		},
 		{ initialValue: [] },
 	);
+	const [defaultData, defaultDataActions] = createResource(async () => {
+		const defaultsResponse = await fetch("/thrimshim/defaults");
+		if (!defaultsResponse.ok) {
+			return null;
+		}
+		return await defaultsResponse.json();
+	});
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 
 	const [filterHasVideo, setFilterHasVideo] = createSignal(VideoFilter.All);
@@ -157,20 +168,38 @@ export const Challenges: Component = () => {
 							);
 						};
 
-						const completed_at_timestamp = () => {
+						const completedAtBustime = () => {
+							const completedTimeStr = challenge().completed_at;
+							const defaults = defaultData();
+							if (!defaults) {
+								return "";
+							}
+							const busTime = dateTimeFromWubloaderTime(defaults.bustime_start);
+							if (!busTime) {
+								return "";
+							}
+							const completedTime = dateTimeFromWubloaderTime(completedTimeStr);
+							if (!completedTime) {
+								return;
+							}
+							return busTimeFromDateTime(busTime, completedTime);
+						};
+
+						const completedAtTimestamp = () => {
 							const completed_time = dateTimeFromWubloaderTime(challenge().completed_at);
 							if (completed_time === null) {
 								return "";
 							}
 							const completed_time_local = completed_time.setZone("America/Vancouver");
-							return completed_time_local.toLocaleString(DateTime.DATETIME_FULL);
+							return completed_time_local.toLocaleString(DateTime.DATETIME_SHORT_WITH_SECONDS);
 						};
 
 						return (
 							<Show when={showChallenge()}>
 								<tr>
 									<td>{challenge().description_text}</td>
-									<td style="text-wrap: nowrap">{completed_at_timestamp()}</td>
+									<td>{completedAtBustime()}</td>
+									<td style="text-wrap: nowrap">{completedAtTimestamp()}</td>
 									<td>
 										<form on:submit={submitHandler}>
 											<div
