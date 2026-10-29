@@ -86,10 +86,10 @@ export class ChapterData {
 	description: Accessor<string>;
 	setDescription: Setter<string>;
 
-	constructor() {
+	constructor(time?: DateTime | null, description?: string) {
 		this.id = createUniqueId();
-		[this.time, this.setTime] = createSignal<DateTime | null>(null);
-		[this.description, this.setDescription] = createSignal("");
+		[this.time, this.setTime] = createSignal(time ?? null);
+		[this.description, this.setDescription] = createSignal(description ?? "");
 	}
 }
 
