@@ -10,11 +10,14 @@ usage() {
 	echo "  --limit LIMIT"
 	echo "      Exits after doing LIMIT jobs, default unlimited."
 	echo "      Use limit 0 if you just want to clean up after a crash without doing any jobs."
+	echo "  --claim URL"
+	echo "      Explicitly pick the first job to claim (by dest URL). Will error if already claimed by someone else."
 	exit 1
 }
 
 WORKDIR=${WORKDIR:-.}
 LIMIT=-1
+FIRST_CLAIM=
 
 ARGS=()
 while [ "$#" -gt 0 ]; do
@@ -23,6 +26,10 @@ while [ "$#" -gt 0 ]; do
 	case "$arg" in
 		--limit)
 			LIMIT=${1?--limit argument required}
+			shift
+			;;
+		--claim)
+			FIRST_CLAIM=${1?--claim argument required}
 			shift
 			;;
 		--*)
@@ -127,28 +134,57 @@ if [ -n "$existing" ]; then
 fi
 
 while [ "$((LIMIT--))" -ne 0 ] ; do
-	echo "Checking for jobs"
-	claimed=$(
-		db -F ' ' -v name="$NAME" <<-SQL
-			UPDATE encodes SET
-				claimed_by = :'name',
-				claimed_at = now()
-			WHERE dest_url = (
-				SELECT dest_url FROM encodes
-				WHERE claimed_by IS NULL AND dest_hash IS NULL
-				ORDER BY priority DESC, random()
-				LIMIT 1
-			)
-			RETURNING src_url, src_hash, dest_url
-		SQL
-	)
-	if [ -z "$claimed" ]; then
-		echo "No available jobs, will check again in 1min"
-		sleep 60
-		continue
+	if [ -n "$FIRST_CLAIM" ]; then
+		echo "Claiming $FIRST_CLAIM"
+		claimed=$(
+			db -F ' ' -v "url=$FIRST_CLAIM" <<-SQL
+				SELECT src_url, src_hash, claimed_by, COALESCE(dest_hash, 'unset')
+				FROM encodes
+				WHERE dest_url = :'url'
+			SQL
+		)
+		if ! [ -n "$claimed" ]; then
+			echo "Explicitly claimed job not found: $FIRST_CLAIM"
+			exit 1
+		fi
+
+		read -r src_url src_hash claimed_by dest_hash <<<"$claimed"
+		if [ "$dest_hash" != "unset" ]; then
+			echo "Explicitly claimed job is already complete: $FIRST_CLAIM"
+			exit 1
+		fi
+		if [ "$claimed_by" != "$NAME" ]; then
+			echo "Explicitly claimed job already claimed by $claimed_by: $FIRST_CLAIM"
+			exit 1
+		fi
+		dest_url="$FIRST_CLAIM"
+		FIRST_CLAIM=
+	else
+		echo "Checking for jobs"
+		claimed=$(
+			db -F ' ' -v name="$NAME" <<-SQL
+				UPDATE encodes SET
+					claimed_by = :'name',
+					claimed_at = now()
+				WHERE dest_url = (
+					SELECT dest_url FROM encodes
+					WHERE claimed_by IS NULL AND dest_hash IS NULL
+					ORDER BY priority DESC, random()
+					LIMIT 1
+					FOR UPDATE
+				)
+				RETURNING src_url, src_hash, dest_url
+			SQL
+		)
+		if [ -z "$claimed" ]; then
+			echo "No available jobs, will check again in 1min"
+			sleep 60
+			continue
+		fi
+
+		read -r src_url src_hash dest_url <<<"$claimed"
 	fi
 
-	read -r src_url src_hash dest_url <<<"$claimed"
 	src_file=$(url_to_filename "$src_url")
 	dest_file=$(url_to_filename "$dest_url")
 	echo "Got task to encode $dest_file"
