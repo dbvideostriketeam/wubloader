@@ -1,6 +1,7 @@
 import { Accessor, Component, createEffect, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
-import { Fragment, ManifestParsedData } from "hls.js";
+import { CuesParsedData, Fragment, ManifestParsedData } from "hls.js";
+import { TextTrack } from "vidstack";
 import { arrayEquals, FragmentTimes } from "./common";
 import {
 	TimeType,
@@ -275,15 +276,50 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	onMount(() => {
 		const player = props.mediaPlayer();
 		player.keyDisabled = !props.keyboardShortcuts;
+		let captionTrack: TextTrack | undefined;
+		const onCaptionCues = (event: Event) => {
+			const data = (event as CustomEvent<CuesParsedData>).detail;
+			if (data.type !== "captions" || data.track !== "textTrack1" || captionTrack === undefined) {
+				return;
+			}
+			// For some reason, Vidstack is placing the rows of captions out of order. This
+			// assembles them into a single newline-delimited string in the correct order.
+			const cues = (data.cues as VTTCue[]).toSorted((a, b) => Number(a.line) - Number(b.line));
+			if (cues.length > 0) {
+				const cue = new VTTCue(
+					cues[0].startTime,
+					cues[0].endTime,
+					cues.map((row) => row.text).join("\n"),
+				);
+				cue.id = `cc1-${cue.startTime}-${cue.endTime}-${cue.text}`;
+				captionTrack.addCue(cue);
+			}
+		};
 		const onManifest = (event: Event) => {
+			// Find the Twitch caption track whenever we load a new HLS manifest
+			if (captionTrack !== undefined) {
+				player.textTracks.remove(captionTrack);
+			}
+			captionTrack = new TextTrack({
+				id: "embedded-cc1",
+				kind: "captions",
+				label: "English",
+				language: "en",
+			});
+			player.textTracks.add(captionTrack);
 			setQualityNames(
 				(event as CustomEvent<ManifestParsedData>).detail.levels.map((level) => level.name),
 			);
 		};
 		const onQualityChange = () => setSelectedQuality(player.qualities.selectedIndex);
+		player.addEventListener("hls-cues-parsed", onCaptionCues);
 		player.addEventListener("hls-manifest-parsed", onManifest);
 		player.qualities.addEventListener("change", onQualityChange);
 		onCleanup(() => {
+			player.removeEventListener("hls-cues-parsed", onCaptionCues);
+			if (captionTrack !== undefined) {
+				player.textTracks.remove(captionTrack);
+			}
 			player.removeEventListener("hls-manifest-parsed", onManifest);
 			player.qualities.removeEventListener("change", onQualityChange);
 		});
