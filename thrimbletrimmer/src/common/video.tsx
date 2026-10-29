@@ -1,6 +1,6 @@
-import { Accessor, Component, createEffect, createSignal, onMount, Setter, Show } from "solid-js";
+import { Accessor, Component, createEffect, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
 import { DateTime } from "luxon";
-import { Fragment } from "hls.js";
+import { Fragment, ManifestParsedData } from "hls.js";
 import { arrayEquals, FragmentTimes } from "./common";
 import {
 	TimeType,
@@ -262,10 +262,24 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	let [playerTime, setPlayerTime] = createSignal(0);
 	let [duration, setDuration] = createSignal(0);
 	let [playbackSpeed, setPlaybackSpeed] = createSignal(1);
+	const [qualityNames, setQualityNames] = createSignal<string[]>([]);
+	const [selectedQuality, setSelectedQuality] = createSignal(-1);
 
 	onMount(() => {
 		const player = props.mediaPlayer();
 		player.keyDisabled = !props.keyboardShortcuts;
+		const onManifest = (event: Event) => {
+			setQualityNames((event as CustomEvent<ManifestParsedData>).detail.levels.map((level) => level.name));
+		};
+		const onQualityChange = () => setSelectedQuality(player.qualities.auto ? -1 : player.qualities.selectedIndex);
+		player.addEventListener("hls-manifest-parsed", onManifest);
+		player.qualities.addEventListener("change", onQualityChange);
+		player.qualities.addEventListener("auto-change", onQualityChange);
+		onCleanup(() => {
+			player.removeEventListener("hls-manifest-parsed", onManifest);
+			player.qualities.removeEventListener("change", onQualityChange);
+			player.qualities.removeEventListener("auto-change", onQualityChange);
+		});
 		player.subscribe(({ currentTime, duration, playbackRate }) => {
 			setPlayerTime(currentTime);
 			props.setPlayerTime(currentTime);
@@ -391,7 +405,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 								Settings
 							</media-tooltip-content>
 						</media-tooltip>
-						<media-menu-items class="vds-menu-items vds-settings-menu-items" placement="top">
+						<media-menu-items class={`vds-menu-items vds-settings-menu-items ${styles.settingsMenu}`} placement="top">
 							<section class="vds-menu-section" role="group">
 								<div class="vds-menu-section-title">
 									<header>Speed</header>
@@ -418,18 +432,14 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 									<div class="vds-menu-section-value"></div>
 								</div>
 								<div class="vds-menu-section-body">
-									<div class="vds-menu-item vds-menu-slider-item">
-										<media-quality-slider class="vds-slider vds-quality-slider">
-											<div class="vds-slider-track"></div>
-											<div class="vds-slider-track vds-slider-track-fill"></div>
-											<div class="vds-slider-track vds-slider-track-progress"></div>
-											<div class="vds-slider-thumb"></div>
-											<media-slider-steps class="vds-slider-steps">
-												<template>
-													<div class="vds-slider-step"></div>
-												</template>
-											</media-slider-steps>
-										</media-quality-slider>
+									<div class={styles.qualityOptions}>
+										<For each={qualityNames()}>{(name, index) => (
+											<button type="button" class={styles.qualityOption}
+												aria-pressed={selectedQuality() === index()}
+												onClick={() => { const quality = props.mediaPlayer().qualities[index()]; if (quality) quality.selected = true; }}>
+												{name}
+											</button>
+										)}</For>
 									</div>
 								</div>
 							</section>

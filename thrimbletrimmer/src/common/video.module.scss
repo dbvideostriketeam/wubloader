@@ -31,3 +31,31 @@
 .playbackRateLabel {
 	flex-basis: 60px;
 }
+
+.qualityOptions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+}
+
+.qualityOption {
+	flex: 1 1 70px;
+	cursor: pointer;
+	padding: 0.35rem 0.6rem;
+	border: 1px solid #888;
+	border-radius: 4px;
+}
+
+.qualityOption:focus-visible {
+	outline: 2px solid white;
+	outline-offset: 2px;
+}
+
+.qualityOption[aria-pressed="true"] {
+	background: #eee;
+	color: #222;
+}
+
+.settingsMenu {
+	box-shadow: inset 0 0 0 1px #fff;
+}
