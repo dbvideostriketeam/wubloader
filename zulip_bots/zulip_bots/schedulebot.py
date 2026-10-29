@@ -138,8 +138,8 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	current_time, shift, shift_hour = hour_to_shift(hour, start_time, shift_definitions)
 
 	if hour == last:
-		shift = "💥"
-		shift_hour = "∞"
+		shift = ":desertbus:"
+		shift_hour = "20"
 
 	def render_name(user_id, mention=True):
 		if no_mentions:
@@ -203,9 +203,11 @@ def post_schedule(client, send_client, start_time, schedule, stream, hour, no_me
 	]
 	if hour == last:
 		lines += [
-			"# Thank you everyone for making this crazy thing possible, year after year"
-			"# 💥",
-			"# In memory of ScheduleBot 1970 - 2038",
+			"# You are a normal VST member. You have sheeted the event.",
+			"# You are a normal VST member. You have edited the videos.",
+			"# You are a normal VST member. You have talked in chat.",
+			"# You are a normal VST member. You have posted the GIFs.",
+			"# You are a normal VST member. YOU HAVE MADE THIS HAPPEN.",
 		]
 
 	if stream == "DEBUG":
