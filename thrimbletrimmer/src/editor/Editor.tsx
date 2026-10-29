@@ -981,49 +981,53 @@ const EditorContent: Component<ContentProps> = (props) => {
 					errorList={pageErrors}
 					setErrorList={setPageErrors}
 				/>
-				<VideoPlayer
-					src={videoURL}
-					setPlayerTime={setPlayerTime}
-					mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-					setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
-					fragmentTimes={videoFragmentTimes}
-				/>
-				<ClipBar
-					rangeData={videoData}
-					videoFragments={videoFragmentTimes}
-					videoDuration={videoDuration}
-				/>
-				<Waveform
-					videoInfo={streamVideoInfo}
-					videoQuality={props.data.video_quality}
-					videoTime={videoPlayerTime}
-					videoDuration={videoDuration}
-				/>
+				<div class={styles.editLayout}>
+					<div>
+						<VideoPlayer
+							src={videoURL}
+							setPlayerTime={setPlayerTime}
+							mediaPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+							setMediaPlayer={setMediaPlayer as Setter<MediaPlayerElement>}
+							fragmentTimes={videoFragmentTimes}
+						/>
+						<ClipBar
+							rangeData={videoData}
+							videoFragments={videoFragmentTimes}
+							videoDuration={videoDuration}
+						/>
+						<Waveform
+							videoInfo={streamVideoInfo}
+							videoQuality={props.data.video_quality}
+							videoTime={videoPlayerTime}
+							videoDuration={videoDuration}
+						/>
+					</div>
+					<fieldset class={styles.rangeColumn} disabled={allFieldsDisabled()}>
+						<RangeSelection
+							rangeData={videoData}
+							setRangeData={setVideoData}
+							allTransitions={allTransitions.latest ?? []}
+							previewingTransitionRangeIndex={previewingTransitionRangeIndex}
+							setPreviewingTransitionRangeIndex={setPreviewingTransitionRangeIndex}
+							activeKeyboardRangeIndex={activeKeyboardIndex}
+							setActiveKeyboardRangeIndex={setActiveKeyboardIndex}
+							activeKeyboardChapterIndex={activeChapterMarkerIndex}
+							setActiveKeyboardChapterIndex={setActiveChapterMarkerIndex}
+							streamInfo={streamVideoInfo}
+							videoPlayerTime={videoPlayerTime}
+							videoFragments={videoFragmentTimes}
+							videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
+							fieldsDisabled={allFieldsDisabled}
+						/>
+						<Show when={previewTransitionURL() !== ""}>
+							<video width={640} controls muted src={previewTransitionURL()} />
+						</Show>
+					</fieldset>
+				</div>
 			</Show>
 			<fieldset disabled={allFieldsDisabled()}>
 				<NotesToEditor notes={props.data.notes} />
 				<CategoryNotes notes={props.data.category_notes} />
-				<Show when={showingVideo()}>
-					<RangeSelection
-						rangeData={videoData}
-						setRangeData={setVideoData}
-						allTransitions={allTransitions.latest ?? []}
-						previewingTransitionRangeIndex={previewingTransitionRangeIndex}
-						setPreviewingTransitionRangeIndex={setPreviewingTransitionRangeIndex}
-						activeKeyboardRangeIndex={activeKeyboardIndex}
-						setActiveKeyboardRangeIndex={setActiveKeyboardIndex}
-						activeKeyboardChapterIndex={activeChapterMarkerIndex}
-						setActiveKeyboardChapterIndex={setActiveChapterMarkerIndex}
-						streamInfo={streamVideoInfo}
-						videoPlayerTime={videoPlayerTime}
-						videoFragments={videoFragmentTimes}
-						videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
-						fieldsDisabled={allFieldsDisabled}
-					/>
-					<Show when={previewTransitionURL() !== ""}>
-						<video width={640} controls muted src={previewTransitionURL()} />
-					</Show>
-				</Show>
 				<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
 					<VideoMetadata
 						titlePrefix={props.data.title_prefix}
