@@ -1,4 +1,13 @@
-import { Component, createResource, createSignal, Index, Show } from "solid-js";
+import {
+	Accessor,
+	Component,
+	createEffect,
+	createResource,
+	createSignal,
+	Index,
+	Setter,
+	Show,
+} from "solid-js";
 import { bindingInputOnChange } from "../common/binding";
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
@@ -7,7 +16,34 @@ import styles from "./Challenges.module.scss";
 interface ChallengeData {
 	id: string;
 	description_text: string;
-	vst_url: string;
+	vst_url: string | null;
+}
+
+enum VideoFilter {
+	All = "all",
+	HasVideo = "has-video",
+	NoVideo = "no-video",
+}
+
+export function bindingVideoFilterSelectOnChange(
+	element: HTMLSelectElement,
+	accessor: () => [Accessor<VideoFilter>, Setter<VideoFilter>],
+) {
+	const [s, set] = accessor();
+	element.addEventListener("change", (event) =>
+		set((event.currentTarget as HTMLSelectElement).value as VideoFilter),
+	);
+	createEffect(() => (element.value = s().toString()));
+}
+
+declare module "solid-js" {
+	namespace JSX {
+		interface DirectiveFunctions {
+			// This block is correct but cannot be made to typecheck correctly.
+			// @ts-ignore
+			bindingVideoFilterSelectOnChange: typeof bindingVideoFilterSelectOnChange;
+		}
+	}
 }
 
 export const Challenges: Component = () => {
@@ -26,8 +62,23 @@ export const Challenges: Component = () => {
 	);
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 
+	const [filterHasVideo, setFilterHasVideo] = createSignal(VideoFilter.All);
+
 	return (
 		<>
+			<div>
+				<label>
+					Has video filter:
+					<select use:bindingVideoFilterSelectOnChange={[filterHasVideo, setFilterHasVideo]}>
+						<option selected value={VideoFilter.All}>
+							All
+						</option>
+						<option value={VideoFilter.HasVideo}>Has Video</option>
+						<option value={VideoFilter.NoVideo}>No Video</option>
+					</select>
+				</label>
+			</div>
+			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 			<Show when={challenges() === null}>
 				<div class={styles.loadError}>
 					<p>Failed to get challenges data.</p>
@@ -37,7 +88,7 @@ export const Challenges: Component = () => {
 			<table class={styles.challenges}>
 				<Index each={challenges() ?? []}>
 					{(challenge, index) => {
-						const [enteredURL, setEnteredURL] = createSignal(challenge().vst_url);
+						const [enteredURL, setEnteredURL] = createSignal(challenge().vst_url ?? "");
 						const [submitResult, setSubmitResult] = createSignal({ isError: false, message: "" });
 
 						const submitHandler = async (event: SubmitEvent) => {
@@ -91,28 +142,43 @@ export const Challenges: Component = () => {
 							}
 						};
 
+						const showChallenge = () => {
+							const url = challenge().vst_url;
+							const filter = filterHasVideo();
+							if (filter === VideoFilter.All) {
+								return true;
+							}
+							return (
+								(filter === VideoFilter.HasVideo && url !== null) ||
+								(filter === VideoFilter.NoVideo && url === null)
+							);
+						};
+
 						return (
-							<tr>
-								<td>{challenge().description_text}</td>
-								<td>
-									<form on:submit={submitHandler}>
-										<div class={submitResult().isError ? styles.submitError : styles.submitSuccess}>
-											{submitResult().message}
-										</div>
-										<input
-											type="text"
-											name="url"
-											use:bindingInputOnChange={[enteredURL, setEnteredURL]}
-										/>
-										<button type="submit">Submit</button>
-									</form>
-								</td>
-							</tr>
+							<Show when={showChallenge()}>
+								<tr>
+									<td>{challenge().description_text}</td>
+									<td>
+										<form on:submit={submitHandler}>
+											<div
+												class={submitResult().isError ? styles.submitError : styles.submitSuccess}
+											>
+												{submitResult().message}
+											</div>
+											<input
+												type="text"
+												name="url"
+												use:bindingInputOnChange={[enteredURL, setEnteredURL]}
+											/>
+											<button type="submit">Submit</button>
+										</form>
+									</td>
+								</tr>
+							</Show>
 						);
 					}}
 				</Index>
 			</table>
-			<GoogleSignIn accountToken={accountToken} setAccountToken={setAccountToken} />
 		</>
 	);
 };
