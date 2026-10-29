@@ -230,8 +230,8 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 			const sortedChapters = rangeData
 				.chapters()
-				.filter((data) => data.time !== null)
-				.toSorted((a, b) => a.time!.toMillis() - b.time!.toMillis());
+				.filter((data) => data.time() !== null)
+				.toSorted((a, b) => a.time()!.toMillis() - b.time()!.toMillis());
 			if (!editingCompletedVideoWithoutVideo) {
 				const rangePlayerStart = videoPlayerTimeFromDateTime(
 					rangeStartDate,
@@ -272,7 +272,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 
 				for (const chapterData of sortedChapters) {
 					const chapterTime = videoPlayerTimeFromDateTime(
-						chapterData.time!,
+						chapterData.time()!,
 						props.videoFragmentTimes(),
 					);
 					if (chapterTime === null) {
@@ -287,7 +287,7 @@ export const Submission: Component<SubmissionProps> = (props) => {
 						return;
 					}
 
-					const chapterTimeMillis = chapterData.time!.toMillis();
+					const chapterTimeMillis = chapterData.time()!.toMillis();
 					if (
 						chapterTimeMillis < rangeStartDate.toMillis() ||
 						chapterTimeMillis > rangeEndDate.toMillis()
@@ -317,8 +317,8 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			for (const chapterData of sortedChapters) {
 				chapterMarkers.push([
 					rangeDataIndex,
-					wubloaderTimeFromDateTime(chapterData.time!),
-					chapterData.description,
+					wubloaderTimeFromDateTime(chapterData.time()!),
+					chapterData.description(),
 				]);
 			}
 		}
@@ -424,8 +424,9 @@ export const Submission: Component<SubmissionProps> = (props) => {
 			videoRanges.push([rangeStart, rangeEnd]);
 
 			for (const chapterData of rangeData.chapters()) {
-				const chapterTime = chapterData.time ? wubloaderTimeFromDateTime(chapterData.time) : null;
-				chapterMarkers.push([rangeDataIndex, chapterTime, chapterData.description]);
+				const rawChapterTime = chapterData.time();
+				const chapterTime = rawChapterTime ? wubloaderTimeFromDateTime(rawChapterTime) : null;
+				chapterMarkers.push([rangeDataIndex, chapterTime, chapterData.description()]);
 			}
 
 			const transitionType = rangeData.transitionType();

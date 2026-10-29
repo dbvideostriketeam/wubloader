@@ -183,17 +183,19 @@ const EditorContent: Component<ContentProps> = (props) => {
 	}
 	for (const rangeChapters of chaptersByRange) {
 		rangeChapters.sort((a, b) => {
-			if (a.time === null && b.time === null) {
+			const aTime = a.time();
+			const bTime = b.time();
+			if (aTime === null && bTime === null) {
 				return 0;
 			}
 			// Sort null last so blank values appear at the end in the UI
-			if (a.time === null) {
+			if (aTime === null) {
 				return 1;
 			}
-			if (b.time === null) {
+			if (bTime === null) {
 				return -1;
 			}
-			return a.time.toMillis() - b.time.toMillis();
+			return aTime.toMillis() - bTime.toMillis();
 		});
 	}
 
@@ -355,6 +357,12 @@ const EditorContent: Component<ContentProps> = (props) => {
 	});
 
 	const [activeKeyboardIndex, setActiveKeyboardIndex] = createSignal(0);
+	const [activeChapterMarkerIndex, setActiveChapterMarkerIndex] = createSignal(0);
+
+	createEffect(() => {
+		activeKeyboardIndex();
+		setActiveChapterMarkerIndex(0);
+	});
 
 	createEffect(() => {
 		const player = mediaPlayer();
@@ -436,8 +444,8 @@ const EditorContent: Component<ContentProps> = (props) => {
 				const currentVideoChapterTime = dateTimeFromWubloaderTime(currentVideoChapter[1]);
 				if (
 					currentVideoChapter[0] !== rangeIndex ||
-					currentVideoChapterTime?.toMillis() !== chapterData.time?.toMillis() ||
-					currentVideoChapter[2] !== chapterData.description
+					currentVideoChapterTime?.toMillis() !== chapterData.time()?.toMillis() ||
+					currentVideoChapter[2] !== chapterData.description()
 				) {
 					return true;
 				}
@@ -708,6 +716,34 @@ const EditorContent: Component<ContentProps> = (props) => {
 					setTimeout,
 				);
 				break;
+			case "O":
+				let chapterIndexToDecrease = untrack(activeChapterMarkerIndex);
+				if (chapterIndexToDecrease > 0) {
+					chapterIndexToDecrease--;
+				}
+				setActiveChapterMarkerIndex(chapterIndexToDecrease);
+				break;
+			case "P":
+				const videoRangeDataForChapters = untrack(videoData);
+				const activeRangeIndexForChapter = untrack(activeKeyboardIndex);
+				let activeChapterIndex = untrack(activeChapterMarkerIndex);
+				if (activeRangeIndexForChapter >= videoRangeDataForChapters.length) {
+					return;
+				}
+				const chapterMarkerList = untrack(
+					videoRangeDataForChapters[activeRangeIndexForChapter].chapters,
+				);
+				if (chapterMarkerList.length === 0) {
+					videoRangeDataForChapters[activeRangeIndexForChapter].setChapters([new ChapterData()]);
+					return;
+				}
+				activeChapterIndex++;
+				if (activeChapterIndex >= chapterMarkerList.length) {
+					const newChapterMarkerList = [...chapterMarkerList, new ChapterData()];
+					videoRangeDataForChapters[activeRangeIndexForChapter].setChapters(newChapterMarkerList);
+				}
+				setActiveChapterMarkerIndex(activeChapterIndex);
+				break;
 			case ",":
 			case "<":
 				if (player) {
@@ -763,6 +799,30 @@ const EditorContent: Component<ContentProps> = (props) => {
 				const endPlayerTime = player.currentTime;
 				const endTime = dateTimeFromVideoPlayerTime(endPlayerTime, untrack(videoFragmentTimes));
 				setEndRangeData[setEndRangeIndex].setEndTime(endTime);
+				break;
+			case "{":
+				if (!player) {
+					break;
+				}
+				const setChapterMarkerRangeIndex = untrack(activeKeyboardIndex);
+				const setChapterMarkerChapterIndex = untrack(activeChapterMarkerIndex);
+				const setChapterMarkerData = untrack(videoData);
+				if (setChapterMarkerRangeIndex >= setChapterMarkerData.length) {
+					return;
+				}
+
+				const chapterTime = dateTimeFromVideoPlayerTime(
+					player.currentTime,
+					untrack(videoFragmentTimes),
+				);
+
+				const currentRangeChapterData = untrack(
+					setChapterMarkerData[setChapterMarkerRangeIndex].chapters,
+				).slice();
+				if (setChapterMarkerChapterIndex >= currentRangeChapterData.length) {
+					return;
+				}
+				currentRangeChapterData[setChapterMarkerChapterIndex].setTime(chapterTime);
 				break;
 			case "ArrowLeft":
 				if (player) {
@@ -897,8 +957,10 @@ const EditorContent: Component<ContentProps> = (props) => {
 						rangeData={videoData}
 						setRangeData={setVideoData}
 						allTransitions={allTransitions.latest ?? []}
-						activeKeyboardIndex={activeKeyboardIndex}
-						setActiveKeyboardIndex={setActiveKeyboardIndex}
+						activeKeyboardRangeIndex={activeKeyboardIndex}
+						setActiveKeyboardRangeIndex={setActiveKeyboardIndex}
+						activeKeyboardChapterIndex={activeChapterMarkerIndex}
+						setActiveKeyboardChapterIndex={setActiveChapterMarkerIndex}
 						streamInfo={streamVideoInfo}
 						allowHoles={allowHoles}
 						videoPlayerTime={videoPlayerTime}

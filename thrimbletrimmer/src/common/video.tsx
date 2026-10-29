@@ -520,6 +520,15 @@ export const KeyboardShortcuts: Component<KeyboardShortcutProps> = (
 						P: Set active range one below current active range, adding a new range if the current
 						range is the last one
 					</li>
+					<li>
+						Shift + Left Bracket (Shift+[): Set start point for active chapter marker (indicated by
+						arrow) to current video time
+					</li>
+					<li>Shift+O: Set active chapter marker one above current active chapter marker</li>
+					<li>
+						Shift+P: Set active chapter marker one below current active chapter marker, adding a new
+						chapter marker if the current chapter marker is the last one
+					</li>
 				</Show>
 			</ul>
 		</details>

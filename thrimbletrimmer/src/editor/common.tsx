@@ -80,13 +80,16 @@ export class RangeData {
 }
 
 export class ChapterData {
-	readonly id = `chapter-${createUniqueId()}`;
-	time: DateTime | null;
-	description: string;
+	readonly id: string;
+	time: Accessor<DateTime | null>;
+	setTime: Setter<DateTime | null>;
+	description: Accessor<string>;
+	setDescription: Setter<string>;
 
 	constructor() {
-		this.time = null;
-		this.description = "";
+		this.id = createUniqueId();
+		[this.time, this.setTime] = createSignal<DateTime | null>(null);
+		[this.description, this.setDescription] = createSignal("");
 	}
 }
 

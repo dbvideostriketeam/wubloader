@@ -47,8 +47,10 @@ interface RangeSelectionProps {
 	rangeData: Accessor<RangeData[]>;
 	setRangeData: Setter<RangeData[]>;
 	allTransitions: TransitionDefinition[];
-	activeKeyboardIndex: Accessor<number>;
-	setActiveKeyboardIndex: Setter<number>;
+	activeKeyboardRangeIndex: Accessor<number>;
+	setActiveKeyboardRangeIndex: Setter<number>;
+	activeKeyboardChapterIndex: Accessor<number>;
+	setActiveKeyboardChapterIndex: Setter<number>;
 	streamInfo: Accessor<StreamVideoInfo>;
 	allowHoles: Accessor<boolean>;
 	videoPlayerTime: Accessor<number>;
@@ -377,7 +379,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							newRanges.splice(rangeIndex(), 1);
 							newRanges[0].setTransitionType("");
 							props.setRangeData(newRanges);
-							props.setActiveKeyboardIndex((activeIndex) =>
+							props.setActiveKeyboardRangeIndex((activeIndex) =>
 								activeIndex >= rangeIndex() ? Math.max(0, activeIndex - 1) : activeIndex,
 							);
 						};
@@ -412,7 +414,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 									continue;
 								}
 								const newChapter = new ChapterData();
-								newChapter.description = chapter;
+								newChapter.setDescription(chapter);
 								updatedChapters.push(newChapter);
 								updated = true;
 							}
@@ -579,7 +581,7 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 											</Show>
 										</div>
 										<div class={styles.timeRangeIcon}>
-											<Show when={props.activeKeyboardIndex() === rangeIndex()}>
+											<Show when={props.activeKeyboardRangeIndex() === rangeIndex()}>
 												<img
 													src={ArrowIcon}
 													alt="This is the active range for keyboard shortcuts."
@@ -591,12 +593,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 									<div>
 										<For each={range.chapters()}>
 											{(chapter: ChapterData, chapterIndex: Accessor<number>) => {
-												const currentChapter = () => chapter;
 												const [enteredChapterTime, setEnteredChapterTime] = createSignal("");
 												const [enteredDescription, setEnteredDescription] = createSignal("");
 
 												createEffect(() => {
-													const chapterTime = currentChapter().time;
+													const chapterTime = chapter.time();
 													const fragments = props.videoFragments();
 													if (chapterTime === null) {
 														return;
@@ -619,24 +620,14 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														return;
 													}
 													if (chapterTimeString === "") {
-														const chapterData = untrack(currentChapter);
-														chapterData.time = null;
-
-														const rangeChapters = untrack(range.chapters).slice();
-														rangeChapters[chapterIndex()] = chapterData;
-														range.setChapters(rangeChapters);
+														chapter.setTime(null);
 														return;
 													}
 
 													const playerTime = videoPlayerTimeForDisplayTime(chapterTimeString);
 													const chapterTime = dateTimeFromVideoPlayerTime(playerTime, fragments);
 
-													const chapterData = untrack(currentChapter);
-													chapterData.time = chapterTime;
-
-													const rangeChapters = untrack(range.chapters).slice();
-													rangeChapters[chapterIndex()] = chapterData;
-													range.setChapters(rangeChapters);
+													chapter.setTime(chapterTime);
 												});
 
 												const setChapterTime = () => {
@@ -650,16 +641,11 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 														return;
 													}
 
-													const chapterData = structuredClone(currentChapter());
-													chapterData.time = time;
-
-													const rangeChapters = range.chapters().slice();
-													rangeChapters[chapterIndex()] = chapterData;
-													range.setChapters(rangeChapters);
+													chapter.setTime(time);
 												};
 
 												const playFromChapterTime = () => {
-													const currentTime = currentChapter().time;
+													const currentTime = chapter.time();
 													const fragments = props.videoFragments();
 													if (currentTime === null) {
 														return;
@@ -672,23 +658,27 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 												};
 
 												createEffect(() => {
-													const chapterDescription = currentChapter().description;
+													const chapterDescription = chapter.description();
 													setEnteredDescription(chapterDescription);
 												});
 
 												createEffect(() => {
 													const chapterDescription = enteredDescription();
-													const chapterData = currentChapter();
-													chapterData.description = chapterDescription;
-
-													const rangeChapters = untrack(range.chapters).slice();
-													rangeChapters[chapterIndex()] = chapterData;
-													range.setChapters(rangeChapters);
+													chapter.setDescription(chapterDescription);
 												});
 
 												const removeChapter = (event: MouseEvent) => {
 													if (props.fieldsDisabled()) {
 														return;
+													}
+
+													if (
+														rangeIndex() === props.activeKeyboardRangeIndex() &&
+														chapterIndex() === props.activeKeyboardChapterIndex()
+													) {
+														props.setActiveKeyboardChapterIndex((index) =>
+															index > 0 ? index - 1 : index,
+														);
 													}
 
 													const chapters = range.chapters().slice();
@@ -774,6 +764,20 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 																	onClick={removeChapter}
 																/>
 															</div>
+															<Show
+																when={
+																	rangeIndex() === props.activeKeyboardRangeIndex() &&
+																	chapterIndex() === props.activeKeyboardChapterIndex()
+																}
+															>
+																<div class={styles.timeRangeIcon}>
+																	<img
+																		src={ArrowIcon}
+																		alt="This is the active chapter marker for keyboard shortcuts."
+																		title="This is the active chapter marker for keyboard shortcuts."
+																	/>
+																</div>
+															</Show>
 														</div>
 													</>
 												);
