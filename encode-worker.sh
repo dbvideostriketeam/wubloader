@@ -112,8 +112,8 @@ quit_after_current() {
 trap quit_after_current TERM
 
 existing=$(
-	db -v name="$NAME" <<-SQL
-		SELECT claimed_at, dest_url FROM encodes
+	db -F ' ' -v name="$NAME" <<-SQL
+		SELECT dest_url FROM encodes
 		WHERE claimed_by = :'name' AND dest_hash IS NULL
 	SQL
 )
@@ -121,16 +121,31 @@ if [ -n "$existing" ]; then
 	echo "WARNING: The following files are already claimed by this node:"
 	echo "$existing"
 	echo
-	echo -n "This is likely due to a crash. Unclaim these files? [Y/n] > "
+	echo -n "This is likely due to a crash. (U)nclaim, (r)esume or (i)gnore? [U/r/i] > "
 	read -r resp
-	if [ "$resp" != "n" ]; then
-		db -v name="$NAME" <<-SQL
-			UPDATE encodes SET
-				claimed_by = NULL,
-				claimed_at = NULL
-			WHERE claimed_by = :'name' AND dest_hash IS NULL
-		SQL
-	fi
+	case "$resp" in
+		"u" | "")
+			db -v name="$NAME" <<-SQL
+				UPDATE encodes SET
+					claimed_by = NULL,
+					claimed_at = NULL
+				WHERE claimed_by = :'name' AND dest_hash IS NULL
+			SQL
+			;;
+		"r")
+			if [ "$(wc -l <<<"$existing")" -ne 1 ]; then
+				echo "Cannot resume: multiple claimed rows. This shouldn't happen!"
+				exit 1
+			fi
+			FIRST_CLAIM="$existing"
+			;;
+		"i")
+			echo "Continuing without unclaiming rows."
+			;;
+		*)
+			echo "Unknown option: $resp"
+			exit 1
+	esac
 fi
 
 while [ "$((LIMIT--))" -ne 0 ] ; do
