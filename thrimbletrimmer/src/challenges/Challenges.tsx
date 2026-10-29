@@ -8,7 +8,9 @@ import {
 	Setter,
 	Show,
 } from "solid-js";
+import { DateTime } from "luxon";
 import { bindingInputOnChange } from "../common/binding";
+import { dateTimeFromWubloaderTime } from "../common/convertTime";
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
 import styles from "./Challenges.module.scss";
@@ -16,6 +18,7 @@ import styles from "./Challenges.module.scss";
 interface ChallengeData {
 	id: string;
 	description_text: string;
+	completed_at: string;
 	vst_url: string | null;
 }
 
@@ -154,10 +157,20 @@ export const Challenges: Component = () => {
 							);
 						};
 
+						const completed_at_timestamp = () => {
+							const completed_time = dateTimeFromWubloaderTime(challenge().completed_at);
+							if (completed_time === null) {
+								return "";
+							}
+							const completed_time_local = completed_time.setZone("America/Vancouver");
+							return completed_time_local.toLocaleString(DateTime.DATETIME_FULL);
+						};
+
 						return (
 							<Show when={showChallenge()}>
 								<tr>
 									<td>{challenge().description_text}</td>
+									<td style="text-wrap: nowrap">{completed_at_timestamp()}</td>
 									<td>
 										<form on:submit={submitHandler}>
 											<div
