@@ -52,8 +52,21 @@ logcmd() {
 	"$@"
 }
 
+retry() {
+	stdin=$(cat)
+	TRIES=$1
+	shift
+	for try in $(seq "$((TRIES - 1))"); do
+		if "$@" <<<"$stdin"; then
+			return
+		fi
+		echo "$1 exited $?, retrying in $try seconds" >&2
+	done
+	"$@" <<<"$stdin"
+}
+
 db() {
-	psql -Atqbv ON_ERROR_STOP=on "$CONNINFO" "$@"
+	retry 5 psql -Atqbv ON_ERROR_STOP=on "$CONNINFO" "$@"
 }
 
 # Expects a url matching "scp://USER:PASS@HOST:PORT/PATH"
@@ -80,7 +93,7 @@ download_file() {
 	parts=$(url_to_parts "$1")
 	read -r user pass host port path <<<"$parts"
 	file=$(url_to_filename "$1")
-	logcmd sshpass -p "$pass" scp -P "$port" "$user@$host:$path" "$file"
+	retry 5 logcmd sshpass -p "$pass" scp -P "$port" "$user@$host:$path" "$file" </dev/null
 }
 
 upload_file() {
@@ -88,7 +101,7 @@ upload_file() {
 	parts=$(url_to_parts "$1")
 	read -r user pass host port path <<<"$parts"
 	file=$(url_to_filename "$1")
-	logcmd sshpass -p "$pass" scp -P "$port" "$file" "$user@$host:$path"
+	retry 5 logcmd sshpass -p "$pass" scp -P "$port" "$file" "$user@$host:$path" </dev/null
 }
 
 encode() {
