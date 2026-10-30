@@ -24,6 +24,9 @@ while [ "$#" -gt 0 ]; do
 	arg=$1
 	shift
 	case "$arg" in
+		-h | --help)
+			usage
+			;;
 		--limit)
 			LIMIT=${1?--limit argument required}
 			shift
