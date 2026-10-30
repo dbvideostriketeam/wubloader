@@ -27,6 +27,10 @@
 	overflow-y: auto;
 }
 
+:global(#root) .streamSettings + media-player:not([data-fullscreen]) > media-provider {
+	max-height: calc(100dvh - 12rem);
+}
+
 .streamSettings {
 	grid-column: 1 / -1;
 	display: flex;
@@ -47,7 +51,7 @@
 @media (min-width: 1200px) {
 	.watchLayout {
 		display: grid;
-		grid-template-columns: minmax(0, 3fr) minmax(280px, 1fr);
+		grid-template-columns: minmax(0, calc((100dvh - 12rem) * 16 / 9)) minmax(280px, 1fr);
 		gap: 8px;
 
 		.chatContainer {
