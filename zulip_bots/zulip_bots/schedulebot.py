@@ -18,6 +18,7 @@ import zoneinfo
 from calendar import timegm
 from datetime import datetime, timedelta
 from collections import namedtuple
+from itertools import zip_longest
 
 import gevent.pool
 import argh
@@ -240,7 +241,7 @@ def parse_schedule(sheets_client, user_ids, schedule_sheet_id, schedule_sheet_na
 			_, old_hours = schedule[user_id]
 			merged = [
 				old | new
-				for old, new in zip(old_hours, hours)
+				for old, new in zip_longest(old_hours, hours, fillvalue=set())
 			]
 			schedule[user_id] = name, merged
 		else:
