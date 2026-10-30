@@ -626,7 +626,7 @@ const EditorContent: Component<ContentProps> = (props) => {
 	const keyDownEvent = useKeyDownEvent();
 	createEffect(() => {
 		const event = keyDownEvent();
-		if (!event) {
+		if (!event || event.ctrlKey || event.altKey || event.metaKey) {
 			return;
 		}
 
