@@ -139,6 +139,8 @@
   db_buscribe_dbname:: "buscribe",
   db_buscribe_user:: "buscribe", // if empty, buscribe database is not created and buscribe cannot be used.
   db_buscribe_password:: "transcription", // don't use default in production. Must not contain ' or \ as these are not escaped.
+  db_encode_user:: "encoder",
+  db_encode_password:: "ffmpeg", // don't use default in production. Must not contain ' or \ as these are not escaped.
   db_standby:: false, // set to true to have this database replicate another server
 
   // Path to a file containing a twitch OAuth token to use when downloading streams.
@@ -783,6 +785,8 @@
         BUSCRIBE_DB: $.db_buscribe_dbname,
         BUSCRIBE_USER: $.db_buscribe_user,
         BUSCRIBE_PASSWORD: $.db_buscribe_password,
+        ENCODER_USER: $.db_encode_user,
+        ENCODER_PASSWORD: $.db_encode_password,
         MASTER_NODE: $.db_args.host,
       },
       volumes: ["%s:/mnt/database" % $.database_path, "%s:/mnt/wubloader" % $.segments_path],
