@@ -361,6 +361,60 @@ const EditorContent: Component<ContentProps> = (props) => {
 		setActiveChapterMarkerIndex(0);
 	});
 
+	const [previewingTransitionRangeIndex, setPreviewingTransitionRangeIndex] = createSignal(0);
+
+	const previewTransitionURL = () => {
+		const previewingIndex = previewingTransitionRangeIndex();
+		const rangeData = videoData();
+		if (previewingIndex === 0 || previewingIndex >= rangeData.length) {
+			return "";
+		}
+
+		const thisRange = rangeData[previewingIndex];
+		const previousRange = rangeData[previewingIndex - 1];
+
+		const transitionSeconds = thisRange.transitionSeconds();
+		const durationAndPadding = transitionSeconds + 5;
+		const currentStart = thisRange.startTime();
+		const currentEnd = thisRange.endTime();
+		const previousStart = previousRange.startTime();
+		const previousEnd = previousRange.endTime();
+
+		if (
+			currentStart === null ||
+			currentEnd === null ||
+			previousStart === null ||
+			previousEnd === null
+		) {
+			return "";
+		}
+
+		const previousRangeStart = DateTime.max(
+			previousStart,
+			previousEnd.minus({ seconds: durationAndPadding }),
+		);
+		const currentRangeEnd = DateTime.min(
+			currentEnd,
+			currentStart.plus({ seconds: durationAndPadding }),
+		);
+
+		const previousRangeString = `${wubloaderTimeFromDateTime(previousRangeStart)},${wubloaderTimeFromDateTime(previousEnd)}`;
+		const currentRangeString = `${wubloaderTimeFromDateTime(currentStart)},${wubloaderTimeFromDateTime(currentRangeEnd)}`;
+
+		const transitionType = thisRange.transitionType();
+		const transitionString = transitionType === "" ? "" : `${transitionType},${transitionSeconds}`;
+
+		const urlParams = new URLSearchParams({
+			type: "webm",
+			allow_holes: allowHoles().toString(),
+			transition: transitionString,
+		});
+		urlParams.append("range", previousRangeString);
+		urlParams.append("range", currentRangeString);
+
+		return `/cut/${streamVideoInfo().streamName}/480p.ts?${urlParams.toString()}`;
+	};
+
 	createEffect(() => {
 		const player = mediaPlayer();
 		if (player) {
@@ -954,17 +1008,21 @@ const EditorContent: Component<ContentProps> = (props) => {
 						rangeData={videoData}
 						setRangeData={setVideoData}
 						allTransitions={allTransitions.latest ?? []}
+						previewingTransitionRangeIndex={previewingTransitionRangeIndex}
+						setPreviewingTransitionRangeIndex={setPreviewingTransitionRangeIndex}
 						activeKeyboardRangeIndex={activeKeyboardIndex}
 						setActiveKeyboardRangeIndex={setActiveKeyboardIndex}
 						activeKeyboardChapterIndex={activeChapterMarkerIndex}
 						setActiveKeyboardChapterIndex={setActiveChapterMarkerIndex}
 						streamInfo={streamVideoInfo}
-						allowHoles={allowHoles}
 						videoPlayerTime={videoPlayerTime}
 						videoFragments={videoFragmentTimes}
 						videoPlayer={mediaPlayer as Accessor<MediaPlayerElement>}
 						fieldsDisabled={allFieldsDisabled}
 					/>
+					<Show when={previewTransitionURL() !== ""}>
+						<video width={640} controls muted src={previewTransitionURL()} />
+					</Show>
 				</Show>
 				<Show when={videoHiddenReason() !== VideoHiddenReason.RangeLong}>
 					<VideoMetadata
