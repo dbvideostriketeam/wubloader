@@ -243,14 +243,11 @@ export const StreamTimeSettings: Component<StreamTimeSettingsProps> = (props) =>
 };
 
 export interface VideoPlayerProps {
-	keyboardShortcuts?: boolean;
 	src: Accessor<string>;
 	setPlayerTime: Setter<number>;
 	mediaPlayer: Accessor<MediaPlayerElement>;
 	setMediaPlayer: Setter<MediaPlayerElement>;
-	// Fragments are included in the main video stream, but not in rendered
-	// transition previews, which are served as a single webm stream.
-	fragmentTimes?: Accessor<FragmentTimes[]>;
+	fragmentTimes: Accessor<FragmentTimes[]>;
 }
 
 export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
@@ -275,7 +272,6 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 
 	onMount(() => {
 		const player = props.mediaPlayer();
-		player.keyDisabled = !props.keyboardShortcuts;
 		let captionTrack: TextTrack | undefined;
 		const onCaptionCues = (event: Event) => {
 			const data = (event as CustomEvent<CuesParsedData>).detail;
@@ -351,11 +347,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 	};
 
 	const localTimeDisplay = () => {
-		const fragmentTimes = props.fragmentTimes?.();
-		if (!fragmentTimes) {
-			// There will not be fragments when playing a transition preview
-			return "";
-		}
+		const fragmentTimes = props.fragmentTimes();
 		const videoTime = playerTime();
 		const videoDateTime = dateTimeFromVideoPlayerTime(videoTime, fragmentTimes);
 		if (!videoDateTime) {
