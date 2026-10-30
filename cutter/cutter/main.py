@@ -612,10 +612,10 @@ class Cutter(object):
 					raise UploadError("Unhandled error in upload: {}".format(ex), retryable=True)
 
 				elif upload_finished == 'finished':
-					# error after finalizing, ie. during thumbnail upload.
+					# error after finalizing, ie. during thumbnail or caption upload.
 					# put the video in MODIFIED to indicate it's out of sync, but set error
 					# so an operator will check what happened before correcting it.
-					self.logger.exception("Error setting thumbnail in job {}".format(format_job(job)))
+					self.logger.exception("Error setting thumbnail/caption in job {}".format(format_job(job)))
 					upload_errors.labels(
 						video_channel=job.video_channel,
 						video_quality=job.video_quality,
