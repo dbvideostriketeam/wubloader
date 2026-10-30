@@ -1,11 +1,24 @@
 media-player {
 	flex-direction: column;
 	max-width: 100%;
-	max-height: 50vh;
+}
+
+media-player:not([data-fullscreen]) {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	aspect-ratio: auto;
+
+	> media-provider,
+	> media-captions,
+	> media-gesture {
+		grid-area: 1 / 1 / 2 / 2;
+	}
 }
 
 // This level of specificity is required to override player CSS
-#root > media-player > media-provider {
+#root media-player:not([data-fullscreen]) > media-provider {
+	height: auto;
+	aspect-ratio: 16 / 9;
 	align-items: normal;
 }
 
@@ -41,6 +54,7 @@ media-controls.vds-controls {
 
 media-controls-group {
 	display: flex;
+	flex-wrap: wrap;
 	align-items: center;
 	width: 100%;
 }
