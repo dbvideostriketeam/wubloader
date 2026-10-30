@@ -22,7 +22,6 @@ import {
 import { bindingInputOnChange } from "../common/binding";
 import { dateTimeFromVideoPlayerTime, wubloaderTimeFromDateTime } from "../common/convertTime";
 import { StreamVideoInfo } from "../common/streamInfo";
-import { VideoPlayer } from "../common/video";
 import { MediaPlayerElement } from "vidstack/elements";
 import { DateTime } from "luxon";
 import {
@@ -47,12 +46,13 @@ interface RangeSelectionProps {
 	rangeData: Accessor<RangeData[]>;
 	setRangeData: Setter<RangeData[]>;
 	allTransitions: TransitionDefinition[];
+	previewingTransitionRangeIndex: Accessor<number>;
+	setPreviewingTransitionRangeIndex: Setter<number>;
 	activeKeyboardRangeIndex: Accessor<number>;
 	setActiveKeyboardRangeIndex: Setter<number>;
 	activeKeyboardChapterIndex: Accessor<number>;
 	setActiveKeyboardChapterIndex: Setter<number>;
 	streamInfo: Accessor<StreamVideoInfo>;
-	allowHoles: Accessor<boolean>;
 	videoPlayerTime: Accessor<number>;
 	videoFragments: Accessor<FragmentTimes[]>;
 	videoPlayer: Accessor<MediaPlayerElement>;
@@ -60,8 +60,6 @@ interface RangeSelectionProps {
 }
 
 export const RangeSelection: Component<RangeSelectionProps> = (props) => {
-	const stopPropagation = (event: Event) => event.stopPropagation();
-
 	const addNewRange = (event: MouseEvent) => {
 		if (props.fieldsDisabled()) {
 			return;
@@ -180,59 +178,13 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 							props.rangeData()[rangeIndex()].setTransitionSeconds(+sourceSelection.value);
 						};
 
-						const [previewPlayerTime, setPreviewPlayerTime] = createSignal(0);
-						const [previewMediaPlayerElement, setPreviewMediaPlayerElement] =
-							createSignal<MediaPlayerElement>();
-						const [showPreview, setShowPreview] = createSignal(false);
-
+						const showingPreview = () => props.previewingTransitionRangeIndex() === rangeIndex();
 						const togglePreview = () => {
-							setShowPreview(!showPreview());
-						};
-
-						const previewVideoURL = () => {
-							if (rangeIndex() === 0) {
-								return "";
+							if (showingPreview()) {
+								props.setPreviewingTransitionRangeIndex(0);
+							} else {
+								props.setPreviewingTransitionRangeIndex(rangeIndex());
 							}
-
-							const previousRange = props.rangeData()[rangeIndex() - 1];
-							const durationAndPadding = range.transitionSeconds() + 5;
-							const currentStart = range.startTime();
-							const currentEnd = range.endTime();
-							const previousStart = previousRange.startTime();
-							const previousEnd = previousRange.endTime();
-							if (
-								previousStart === null ||
-								previousEnd === null ||
-								currentStart === null ||
-								currentEnd === null
-							) {
-								return "";
-							}
-
-							const previousRangeStart = DateTime.max(
-								previousStart,
-								previousEnd.minus({ seconds: durationAndPadding }),
-							);
-							const currentRangeEnd = DateTime.min(
-								currentEnd,
-								currentStart.plus({ seconds: durationAndPadding }),
-							);
-							const previousRangeString = `${wubloaderTimeFromDateTime(previousRangeStart)},${wubloaderTimeFromDateTime(previousEnd)}`;
-							const currentRangeString = `${wubloaderTimeFromDateTime(currentStart)},${wubloaderTimeFromDateTime(currentRangeEnd)}`;
-							const transitionString =
-								range.transitionType() === ""
-									? ""
-									: `${range.transitionType()},${range.transitionSeconds()}`;
-
-							const urlParams = new URLSearchParams({
-								type: "webm",
-								allow_holes: props.allowHoles().toString(),
-								transition: transitionString,
-							});
-							urlParams.append("range", previousRangeString);
-							urlParams.append("range", currentRangeString);
-
-							return `/cut/${props.streamInfo().streamName}/480p.ts?${urlParams.toString()}`;
 						};
 
 						const [startTimeFieldValue, setStartTimeFieldValue] = createSignal("");
@@ -496,27 +448,10 @@ export const RangeSelection: Component<RangeSelectionProps> = (props) => {
 													class={styles.transitionPreviewToggle}
 													onClick={togglePreview}
 												>
-													<Show when={showPreview()} fallback="Show Preview">
+													<Show when={showingPreview()} fallback="Show Preview">
 														Hide Preview
 													</Show>
 												</button>
-											</Show>
-											<Show when={showPreview()}>
-												<div
-													class={styles.previewVideoPlayer}
-													on:pointerdown={stopPropagation}
-													on:keydown={stopPropagation}
-												>
-													<VideoPlayer
-														src={previewVideoURL}
-														keyboardShortcuts
-														setPlayerTime={setPreviewPlayerTime}
-														mediaPlayer={previewMediaPlayerElement as Accessor<MediaPlayerElement>}
-														setMediaPlayer={
-															setPreviewMediaPlayerElement as Setter<MediaPlayerElement>
-														}
-													/>
-												</div>
 											</Show>
 										</div>
 									</Show>
