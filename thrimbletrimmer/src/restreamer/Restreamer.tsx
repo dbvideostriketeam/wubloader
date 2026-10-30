@@ -114,7 +114,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	});
 
 	const videoFragmentTimes = () => {
-		return allFragmentTimes()[currentQualityLevel()];
+		return allFragmentTimes()[currentQualityLevel()] ?? [];
 	};
 
 	onMount(() => {
