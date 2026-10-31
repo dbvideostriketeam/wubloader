@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 from collections import namedtuple
+from pathlib import Path
 from contextlib import contextmanager
 from tempfile import TemporaryFile
 from uuid import uuid4
@@ -22,6 +23,7 @@ from gevent.fileobject import FileObject
 from .cached_iterator import CachedIterator
 from .stats import timed
 from .fixts import FixTS
+from .transition_masks import MASK_TRANSITIONS, asset_path, mask_filters
 
 
 # These are the set of transition names from the ffmpeg xfade filter that we allow.
@@ -97,20 +99,6 @@ KNOWN_XFADE_TRANSITIONS = {
 #  W and H are screen width and height
 #  P is a "progress" number from 0 to 1 that increases over the course of the wipe
 CUSTOM_XFADE_TRANSITIONS = {
-	"clockwipe": (
-		"A 360 degree clockwise sweep around the center of the screen, starting at the top.\n"
-		"Intended to mimic an analog clock and insinuate a passing of time.",
-		# Implemented by calculating the angle of the point off a center line (using atan2()),
-		# with a rectangular hand around the leading edge of the wipe.
-		"if(lt(sqrt(pow(X-W/2,2)+pow(Y-H/2,2)),10)+between((X-W/2)*sin(((1-P))*2*PI)-(Y-H/2)*cos(((1-P))*2*PI),0,sqrt(pow(W/2,2)+pow(H/2,2)))*lt(abs((X-W/2)*cos(((1-P))*2*PI)+(Y-H/2)*sin(((1-P))*2*PI)),10),if(eq(PLANE,0),0,128),if(lt((atan2(W/2-X,Y-H/2)/PI/2+0.5),(1-P)),B,A))",
-	),
-	"starwipe": (
-		"Wipe using an expanding 5-pointed star from the center. Mostly a meme.",
-		# Implemented by replicating a polygon edge into each point of the star,
-		# then comparing the point's signed distance to that edge.
-		# Made by SenseAmidstMadness.
-		"if(lt(abs(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))))/(sqrt(pow((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)),2)+pow((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0),2))+0.000001),0.028),if(eq(PLANE,0),0,128),if(gt(((((pow((1-P),2)*2.8)*0.38196601125)*cos((PI/5)))-((pow((1-P),2)*2.8)))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*sin(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-(0))-((((pow((1-P),2)*2.8)*0.38196601125)*sin((PI/5)))-(0))*(((sqrt(pow(X-W/2,2)+pow(Y-H/2,2))/sqrt(pow(W/2,2)+pow(H/2,2)))*cos(if(gt((((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(PI/5)),(2*PI/5)-(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)),(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)-floor(((atan2(Y-H/2,X-W/2)+PI/2)+4*PI)/(2*PI/5))*(2*PI/5)))))-((pow((1-P),2)*2.8))),0),B,A))",
-	),
 	"batman": (
 		"Wipe using an expanding Batman logo from the center.",
 		# By SenseAmidstMadness based on equations from https://www.pacifict.com/Examples/Batman/
@@ -119,11 +107,6 @@ CUSTOM_XFADE_TRANSITIONS = {
 		# and shifts upward slightly to cover the entire source image at close to the same
 		# time.
 		"if(gt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,0),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),3),if(lt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),sqrt((1-pow((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3/3,2))*49)),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),1),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,6*sqrt(10)/7+1.5-0.5*abs((X-W/2)*14/W/pow(1-P,4)*0.3)-3*sqrt(10)/7*sqrt(4-pow(abs((X-W/2)*14/W/pow(1-P,4)*0.3)-1,2))),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),0.75),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,9-8*abs((X-W/2)*14/W/pow(1-P,4)*0.3)),B,A),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),0.50),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,3*abs((X-W/2)*14/W/pow(1-P,4)*0.3)+0.75),B,A),if(lt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,2.25),B,A))))),if(gt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),4),if(lt(abs((X-W/2)*14/W/pow(1-P,4)*0.3),sqrt((1-pow((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3/3,2))*49)),B,A),if(gt((H*(1/2-if(lt(P,0.5),pow(0.5-P,2)*0.4,0))-Y)*6/H/pow(1-P,4)*0.3,abs((X-W/2)*14/W/pow(1-P,4)*0.3/2)-(3*sqrt(33)-7)/112*pow((X-W/2)*14/W/pow(1-P,4)*0.3,2)-3+sqrt(1-pow(abs(abs((X-W/2)*14/W/pow(1-P,4)*0.3)-2)-1,2))),B,A)))"
-	),
-	"diamondwipe": (
-		"Wipe using an expanding diamond from the center. Engineering has been using it, and now we can too.",
-		# By SenseAmidstMadness
-		"if(lt(abs(X-W/2)/W+abs(Y-H/2)/H,pow(1-P,3)),B,A)",
 	),
 }
 
@@ -507,6 +490,21 @@ def ffmpeg_cut_segment(segment, cut_start=None, cut_end=None):
 	return ffmpeg_cut_one([segment], args)
 
 
+def prepare_mask_transition(segment: SegmentInfo, video_type: str) -> tuple[str, str]:
+	"""
+	Get the path for an transition master to be applied to a given stream, using the
+	resolution and framerate of an example video segment.
+	"""
+	video = next(stream for stream in streams_info(segment) if stream['codec_type'] == 'video')
+	width, height = video['width'], video['height']
+	fps = video.get('avg_frame_rate')
+	if not fps or fps == '0/0':
+		fps = video['r_frame_rate']
+	# Segment paths are STORE/channel/quality/hour/file.
+	segment_store = str(Path(segment.path).absolute().parents[3])
+	return asset_path(video_type, width, height, segment_store), fps
+
+
 def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, offset, prev_cut_end, cut_start, cut_end):
 	"""
 	Wrapper for ffmpeg_cut_many which cuts a transition between two lists of segments.
@@ -522,11 +520,17 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 	prev_segments = [segment for segment in prev_segments if segment is not None]
 	next_segments = [segment for segment in next_segments if segment is not None]
 
+	file_inputs = []
+	filters = []
 	xfade_kwargs = {
 		"duration": duration,
 		"offset": offset,
 	}
-	if video_type in CUSTOM_XFADE_TRANSITIONS:
+	if video_type in MASK_TRANSITIONS:
+		path, fps = prepare_mask_transition(prev_segments[0], video_type)
+		file_inputs.append(path)
+		filters = mask_filters('0:v', '1:v', '2:v', 'outv', offset, duration, fps, 'mask')
+	elif video_type in CUSTOM_XFADE_TRANSITIONS:
 		xfade_kwargs["transition"] = "custom"
 		description, expr = CUSTOM_XFADE_TRANSITIONS[video_type]
 		xfade_kwargs["expr"] = f"'{expr}'" # wrap in '' for quoting
@@ -534,12 +538,11 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 		xfade_kwargs["transition"] = video_type
 	else:
 		raise BadCut(f"Unknown video transition type: {video_type}")
-	xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
 
-	filters = [
-		f"[0:v][1:v]xfade={xfade_kwargs}[outv]",
-		f"[0:a][1:a]acrossfade=duration={duration}[outa]",
-	]
+	if video_type not in MASK_TRANSITIONS:
+		xfade_kwargs = ":".join(f"{k}={v}" for k, v in xfade_kwargs.items())
+		filters.append(f"[0:v][1:v]xfade={xfade_kwargs}[outv]")
+	filters.append(f"[0:a][1:a]acrossfade=duration={duration}[outa]")
 
 	# Assume desired encode args are the same for all segments, so pick one arbitarily
 	args = get_segment_encode_args(prev_segments[0], "[outv]", "[outa]")
@@ -563,7 +566,7 @@ def ffmpeg_cut_transition(prev_segments, next_segments, video_type, duration, of
 		(next_segments, next_args),
 	]
 
-	return ffmpeg_cut_many(inputs, args)
+	return ffmpeg_cut_many(inputs, args, file_inputs=file_inputs)
 
 
 def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_args=[]):
@@ -572,12 +575,13 @@ def ffmpeg_cut_one(segments, encode_args, output_file=subprocess.PIPE, input_arg
 
 
 @contextmanager
-def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
+def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE, file_inputs=()):
 	"""
 	Context manager that produces a Popen object which is ffmpeg cutting the given inputs.
 
 	INPUTS is a list of (segments, input_args). The list of segments will be fed as input data,
 	preceeded by the given input args.
+	FILE_INPUTS contains local media paths needed for transitions, numbered after the segment inputs.
 	OUTPUT_FILE may be a writable file object (with fileno) or subprocess.PIPE.
 	If subprocess.PIPE, then output can be read from the Popen object's stdout.
 	Using a stdout pipe is preferred but a file can be useful if the output needs to be seekable.
@@ -623,6 +627,9 @@ def ffmpeg_cut_many(inputs, encode_args, output_file=subprocess.PIPE):
 			input_feeders.append(input_feeder)
 			# add input file to ffmpeg args
 			all_input_args += input_args + ["-i", "/proc/self/fd/{}".format(read_fd)]
+
+		for path in file_inputs:
+			all_input_args += ["-i", path]
 
 		# Prepare final arg list and spawn the process
 		args = BASE_ARGS + all_input_args + encode_args + output_args
@@ -745,7 +752,7 @@ def fast_cut_segments(segment_ranges, ranges, transitions, smart=False):
 		if segments[0] is not None:
 			cut_start = (start - segments[0].start).total_seconds()
 			start_cut_end = (end - segments[0].start).total_seconds()
-			if cut_start < 0: 
+			if cut_start < 0:
 				raise ValueError("First segment doesn't begin until after cut start, but no leading hole indicated")
 		if segments[-1] is not None:
 			cut_end = (end - segments[-1].start).total_seconds()
@@ -951,6 +958,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 		inputs.append((segments, args))
 
 	filters = []
+	file_inputs = []
 	# We need to keep track of the full video length so transitions start at the correct time.
 	# This variable tracks the start of prev_range relative to the start of the output video.
 	prev_video_start_offset = 0
@@ -999,14 +1007,27 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 				"duration": duration,
 				"offset": offset,
 			}
-			if video_type in CUSTOM_XFADE_TRANSITIONS:
+			if video_type in MASK_TRANSITIONS:
+				path, fps = prepare_mask_transition(inputs[0][0][0], video_type)
+				asset_stream = f"{len(inputs) + len(file_inputs)}:v"
+				file_inputs.append(path)
+				filters.extend(mask_filters(prev_video_stream, next_video_stream, asset_stream,
+					output_video_stream, offset, duration, fps, f"mask{i}"))
+			elif video_type in CUSTOM_XFADE_TRANSITIONS:
 				kwargs["transition"] = "custom"
 				kwargs["expr"] = f"'{CUSTOM_XFADE_TRANSITIONS[video_type][1]}'" # wrap in '' for quoting
 			elif video_type in KNOWN_XFADE_TRANSITIONS:
 				kwargs["transition"] = video_type
 			else:
 				raise BadCut(f"Unknown video transition type: {video_type}")
-			add_filter("xfade", [prev_video_stream, next_video_stream], [output_video_stream], **kwargs)
+
+			if video_type not in MASK_TRANSITIONS:
+				# Match timestamp units at the xfade boundary; do not resample source frames.
+				prev_xfade = f"xfade{i}prev"
+				next_xfade = f"xfade{i}next"
+				add_filter("settb", [prev_video_stream], [prev_xfade], expr="AVTB")
+				add_filter("settb", [next_video_stream], [next_xfade], expr="AVTB")
+				add_filter("xfade", [prev_xfade, next_xfade], [output_video_stream], **kwargs)
 
 			# audio cross-fade across the same period
 			add_filter("acrossfade", [prev_audio_stream, next_audio_stream], [output_audio_stream], duration=duration)
@@ -1031,7 +1052,7 @@ def full_cut_segments(segment_ranges, ranges, transitions, encode_args, stream=F
 		]
 	args += encode_args
 
-	with ffmpeg_cut_many(inputs, args, output_file) as ffmpeg:
+	with ffmpeg_cut_many(inputs, args, output_file, file_inputs=file_inputs) as ffmpeg:
 		# When streaming, we can return data as it is available.
 		# Otherwise, just exit the context manager so tempfile is fully written.
 		if stream:

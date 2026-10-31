@@ -26,6 +26,7 @@ COMPONENTS=(
 	segment_coverage
 	sheetsync
 	thrimshim
+	transition_renderer
 )
 
 # Define push if not already defined
