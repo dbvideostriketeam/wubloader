@@ -272,6 +272,7 @@ export const VideoPlayer: Component<VideoPlayerProps> = (props) => {
 
 	onMount(() => {
 		const player = props.mediaPlayer();
+		player.keyDisabled = true;
 		let captionTrack: TextTrack | undefined;
 		const onCaptionCues = (event: Event) => {
 			const data = (event as CustomEvent<CuesParsedData>).detail;
