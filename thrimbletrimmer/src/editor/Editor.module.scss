@@ -30,3 +30,44 @@
 	margin-top: 0;
 	margin-bottom: 10px;
 }
+
+.editLayout {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	gap: 12px;
+}
+
+.rangeColumn {
+	min-width: 0;
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+	gap: 8px;
+}
+
+.rangeColumn > video {
+	width: min(100%, 640px, calc(30vh * 16 / 9));
+	align-self: start;
+}
+
+@media (width < 1200px) {
+	.editLayout > div {
+		max-width: calc(min(480px, 60vh) * 16 / 9);
+	}
+}
+
+@media (min-width: 1200px) {
+	.editLayout {
+		grid-template-columns: minmax(0, calc(60vh * 16 / 9)) minmax(480px, 1fr);
+	}
+
+	.rangeColumn {
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: minmax(0, 1fr) auto;
+		height: 100%;
+		contain: size;
+	}
+
+	.rangeColumn > div {
+		max-height: none;
+	}
+}
