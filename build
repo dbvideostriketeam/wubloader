@@ -19,6 +19,7 @@ COMPONENTS=(
 	chat_archiver
 	cutter
 	downloader
+	encode-worker
 	nginx
 	playlist_manager
 	postgres
