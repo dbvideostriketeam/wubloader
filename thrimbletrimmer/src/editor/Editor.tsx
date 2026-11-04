@@ -74,7 +74,8 @@ export const Editor: Component = () => {
 		videoID === "defaults" ||
 		videoID === "transitions" ||
 		videoID === "templates" ||
-		videoID === "challenges"
+		videoID === "challenges" ||
+		videoID === "encodes"
 	) {
 		return (
 			<div class={styles.fullPageError}>
