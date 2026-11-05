@@ -810,7 +810,7 @@ def get_encodes(editor=None):
 		results = database.query(conn, """
 			SELECT src_url, src_hash, encode_args, dest_url, claimed_by, dest_hash
 			FROM encodes
-			ORDER BY dest_url
+			ORDER BY priority DESC, dest_url
 		""")
 		rows = [row._asdict() for row in results.fetchall()]
 		return json_response(rows)
