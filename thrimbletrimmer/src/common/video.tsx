@@ -1,4 +1,14 @@
-import { Accessor, Component, createEffect, createSignal, For, onCleanup, onMount, Setter, Show } from "solid-js";
+import {
+	Accessor,
+	Component,
+	createEffect,
+	createSignal,
+	For,
+	onCleanup,
+	onMount,
+	Setter,
+	Show,
+} from "solid-js";
 import { DateTime } from "luxon";
 import { CuesParsedData, Fragment, ManifestParsedData } from "hls.js";
 import { TextTrack } from "vidstack";
