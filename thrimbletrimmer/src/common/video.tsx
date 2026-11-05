@@ -26,7 +26,7 @@ import "vidstack/player/layouts/default";
 import "vidstack/player/ui";
 import { MediaSeekRequestEvent } from "vidstack";
 
-export const VIDEO_FRAMES_PER_SECOND = 30;
+export const VIDEO_FRAMES_PER_SECOND = 60;
 
 export function fragmentTimesListsAreEqual(
 	lhs: FragmentTimes[][],
