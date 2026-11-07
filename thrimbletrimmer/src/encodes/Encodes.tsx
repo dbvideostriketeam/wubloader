@@ -204,8 +204,8 @@ export const Encodes: Component = () => {
 											<Match when={item().claimed_by !== null}>{item().claimed_by}</Match>
 										</Switch>
 									</td>
-									<td>{item().claimed_at === null ? "" : DateTime.fromISO(item().claimed_at!, { zone: "utc" }).toUTC().toISO()}</td>
-									<td>{item().finished_at === null ? "" : DateTime.fromISO(item().finished_at!, { zone: "utc" }).toUTC().toISO()}</td>
+									<td>{item().claimed_at === null ? "" : DateTime.fromISO(item().claimed_at!, { zone: "utc" }).toUTC().set({ millisecond: 0 }).toISO({ suppressMilliseconds: true })}</td>
+									<td>{item().finished_at === null ? "" : DateTime.fromISO(item().finished_at!, { zone: "utc" }).toUTC().set({ millisecond: 0 }).toISO({ suppressMilliseconds: true })}</td>
 									<td>{item().claimed_at === null ? "" : elapsedTime(item().claimed_at!, item().finished_at, now())}</td>
 									<td>
 										<Switch>
