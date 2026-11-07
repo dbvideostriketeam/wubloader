@@ -66,18 +66,11 @@ const EncodeHash: Component<{ hash: string }> = (props) => {
 const elapsedTime = (claimedAt: string, finishedAt: string | null, now: DateTime) => {
 	const start = DateTime.fromISO(claimedAt, { zone: "utc" });
 	const end = finishedAt === null ? now : DateTime.fromISO(finishedAt, { zone: "utc" });
-	const seconds = Math.max(0, Math.floor(end.diff(start, "seconds").seconds));
-	const units: [string, number][] = [["day", 86400], ["hour", 3600], ["minute", 60], ["second", 1]];
-	let remaining = seconds;
-	const parts: string[] = [];
-	for (const [name, size] of units) {
-		const count = Math.floor(remaining / size);
-		remaining %= size;
-		if (count > 0) {
-			parts.push(`${count} ${name}${count === 1 ? "" : "s"}`);
-		}
-	}
-	return parts.length > 0 ? parts.slice(0, 2).join(" ") : "0 seconds";
+	const minutes = Math.max(0, Math.floor(end.diff(start, "minutes").minutes));
+	const days = Math.floor(minutes / 1440);
+	const hours = Math.floor((minutes % 1440) / 60);
+	const remainingMinutes = minutes % 60;
+	return `${days > 0 ? `${days}d` : ""}${hours}h${remainingMinutes}m`;
 };
 
 export const Encodes: Component = () => {
