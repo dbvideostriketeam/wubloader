@@ -6,6 +6,7 @@ import {
 	createSignal,
 	Index,
 	Match,
+	onCleanup,
 	Switch,
 	untrack,
 } from "solid-js";
@@ -59,12 +60,32 @@ const EncodeHash: Component<{ hash: string }> = (props) => {
 	);
 };
 
+const elapsedTime = (claimedAt: string, finishedAt: string | null, now: DateTime) => {
+	const start = DateTime.fromISO(claimedAt, { zone: "utc" });
+	const end = finishedAt === null ? now : DateTime.fromISO(finishedAt, { zone: "utc" });
+	const seconds = Math.max(0, Math.floor(end.diff(start, "seconds").seconds));
+	const units: [string, number][] = [["day", 86400], ["hour", 3600], ["minute", 60], ["second", 1]];
+	let remaining = seconds;
+	const parts: string[] = [];
+	for (const [name, size] of units) {
+		const count = Math.floor(remaining / size);
+		remaining %= size;
+		if (count > 0) {
+			parts.push(`${count} ${name}${count === 1 ? "" : "s"}`);
+		}
+	}
+	return parts.length > 0 ? parts.slice(0, 2).join(" ") : "0 seconds";
+};
+
 export const Encodes: Component = () => {
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 	const isSignedIn = createMemo(() => accountToken() !== null);
 
 	const [encodesList, setEncodesList] = createSignal<EncodeItem[]>([]);
 	const [loadError, setLoadError] = createSignal("");
+	const [now, setNow] = createSignal(DateTime.utc());
+	const timer = setInterval(() => setNow(DateTime.utc()), 1000);
+	onCleanup(() => clearInterval(timer));
 
 	const loadEncodeData = async () => {
 		setLoadError("");
@@ -113,6 +134,7 @@ export const Encodes: Component = () => {
 						<th>Claimed By</th>
 						<th>Claimed At</th>
 						<th>Finished At</th>
+						<th>Elapsed</th>
 						<th>Dest Hash</th>
 					</tr>
 				</thead>
@@ -181,6 +203,7 @@ export const Encodes: Component = () => {
 									</td>
 									<td>{item().claimed_at === null ? "" : DateTime.fromISO(item().claimed_at!, { zone: "utc" }).toUTC().toISO()}</td>
 									<td>{item().finished_at === null ? "" : DateTime.fromISO(item().finished_at!, { zone: "utc" }).toUTC().toISO()}</td>
+									<td>{item().claimed_at === null ? "" : elapsedTime(item().claimed_at!, item().finished_at, now())}</td>
 									<td>
 										<Switch>
 											<Match when={item().dest_hash === null}>
