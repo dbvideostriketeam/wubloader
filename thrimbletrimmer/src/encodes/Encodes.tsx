@@ -9,6 +9,7 @@ import {
 	Switch,
 	untrack,
 } from "solid-js";
+import { DateTime } from "luxon";
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
 import styles from "./Encodes.module.scss";
@@ -20,6 +21,8 @@ interface EncodeItem {
 	dest_url: string;
 	claimed_by: string | null;
 	dest_hash: string | null;
+	claimed_at: string | null;
+	finished_at: string | null;
 }
 
 const EncodeUrl: Component<{ url: string }> = (props) => {
@@ -108,6 +111,8 @@ export const Encodes: Component = () => {
 						<th>Encode Args</th>
 						<th>Dest</th>
 						<th>Claimed By</th>
+						<th>Claimed At</th>
+						<th>Finished At</th>
 						<th>Dest Hash</th>
 					</tr>
 				</thead>
@@ -174,6 +179,8 @@ export const Encodes: Component = () => {
 											<Match when={item().claimed_by !== null}>{item().claimed_by}</Match>
 										</Switch>
 									</td>
+									<td>{item().claimed_at === null ? "" : DateTime.fromISO(item().claimed_at!, { zone: "utc" }).toUTC().toISO()}</td>
+									<td>{item().finished_at === null ? "" : DateTime.fromISO(item().finished_at!, { zone: "utc" }).toUTC().toISO()}</td>
 									<td>
 										<Switch>
 											<Match when={item().dest_hash === null}>
