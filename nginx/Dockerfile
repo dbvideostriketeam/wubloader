@@ -5,9 +5,10 @@ WORKDIR /assets
 RUN lessc style.less > style.css
 
 FROM node:25.2-alpine AS thrim
-ADD thrimbletrimmer /assets
 WORKDIR /assets
+COPY thrimbletrimmer/package.json ./
 RUN npm install
+ADD thrimbletrimmer /assets
 RUN npm run build
 
 # nginx container contains config that exposes all the various services metrics
