@@ -35,12 +35,18 @@ const EncodeUrl: Component<{ url: string }> = (props) => {
 
 	return (
 		<>
-			{expanded() ? props.url : name()}{" "}
+			{expanded() ? props.url : name()}<br />
 			<a href="#" onClick={(event) => {
 				event.preventDefault();
 				setExpanded(!expanded());
 			}}>
 				[{expanded() ? "compact" : "expand"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(props.url);
+			}}>
+				[copy]
 			</a>
 		</>
 	);
@@ -52,12 +58,18 @@ const EncodeHash: Component<{ hash: string }> = (props) => {
 
 	return (
 		<>
-			{expanded() ? props.hash : shortened()}{" "}
+			{expanded() ? props.hash : shortened()}<br />
 			<a href="#" onClick={(event) => {
 				event.preventDefault();
 				setExpanded(!expanded());
 			}}>
 				[{expanded() ? "compact" : "expand"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(props.hash);
+			}}>
+				[copy]
 			</a>
 		</>
 	);
