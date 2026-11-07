@@ -38,6 +38,7 @@ jobs:
           - segment_coverage
           - sheetsync
           - thrimshim
+          - transition_renderer
           - zulip_bots
     steps:
       - name: Check out repo

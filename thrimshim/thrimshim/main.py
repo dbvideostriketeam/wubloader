@@ -19,6 +19,7 @@ import common
 from common import database, dateutil, requests, website
 from common.flask_stats import request_stats, after_request
 from common.segments import KNOWN_XFADE_TRANSITIONS, CUSTOM_XFADE_TRANSITIONS
+from common.transition_masks import MASK_TRANSITIONS
 
 import jwt
 
@@ -212,7 +213,7 @@ def get_transitions():
 		(name, description) for name, description in KNOWN_XFADE_TRANSITIONS.items()
 	] + [
 		(name, description) for name, (description, expr) in CUSTOM_XFADE_TRANSITIONS.items()
-	]
+	] + list(MASK_TRANSITIONS.items())
 	return [
 		{"name": name, "description": description}
 		for name, description in items

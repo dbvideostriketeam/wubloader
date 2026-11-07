@@ -930,6 +930,15 @@
         volumes: ["%s:/data" % $.busbot.state_path],
       },
 
+    transition_renderer: {
+      image: $.get_image("transition_renderer"),
+      profiles: ["transition_renderer"],
+      volumes: ["%s:/mnt" % $.segments_path],
+      init: true,
+      environment: $.env,
+    },
+
+
   },
 
 }
