@@ -22,6 +22,23 @@ interface EncodeItem {
 	dest_hash: string | null;
 }
 
+const EncodeUrl: Component<{ url: string }> = (props) => {
+	const [expanded, setExpanded] = createSignal(false);
+	const name = () => props.url.match(/DB\d{4}_(.*)\.mkv$/)?.[1] ?? props.url;
+
+	return (
+		<>
+			{expanded() ? props.url : name()}{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setExpanded(!expanded());
+			}}>
+				[{expanded() ? "compact" : "expand"}]
+			</a>
+		</>
+	);
+};
+
 export const Encodes: Component = () => {
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 	const isSignedIn = createMemo(() => accountToken() !== null);
@@ -126,10 +143,10 @@ export const Encodes: Component = () => {
 
 							return (
 								<tr>
-									<td>{item().src_url}</td>
+									<td><EncodeUrl url={item().src_url} /></td>
 									<td>{item().src_hash}</td>
 									<td>{item().encode_args.join(" ")}</td>
-									<td>{item().dest_url}</td>
+									<td><EncodeUrl url={item().dest_url} /></td>
 									<td>
 										<Switch>
 											<Match when={item().claimed_by === null}>
