@@ -39,6 +39,23 @@ const EncodeUrl: Component<{ url: string }> = (props) => {
 	);
 };
 
+const EncodeHash: Component<{ hash: string }> = (props) => {
+	const [expanded, setExpanded] = createSignal(false);
+	const shortened = () => props.hash.length > 8 ? `${props.hash.slice(0, 4)}...${props.hash.slice(-4)}` : props.hash;
+
+	return (
+		<>
+			{expanded() ? props.hash : shortened()}{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setExpanded(!expanded());
+			}}>
+				[{expanded() ? "compact" : "expand"}]
+			</a>
+		</>
+	);
+};
+
 export const Encodes: Component = () => {
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
 	const isSignedIn = createMemo(() => accountToken() !== null);
@@ -144,7 +161,7 @@ export const Encodes: Component = () => {
 							return (
 								<tr>
 									<td><EncodeUrl url={item().src_url} /></td>
-									<td>{item().src_hash}</td>
+									<td><EncodeHash hash={item().src_hash} /></td>
 									<td>{item().encode_args.join(" ")}</td>
 									<td><EncodeUrl url={item().dest_url} /></td>
 									<td>
@@ -167,7 +184,7 @@ export const Encodes: Component = () => {
 													</button>
 												</form>
 											</Match>
-											<Match when={item().dest_hash !== null}>{item().dest_hash}</Match>
+											<Match when={item().dest_hash !== null}><EncodeHash hash={item().dest_hash!} /></Match>
 										</Switch>
 									</td>
 								</tr>
