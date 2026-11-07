@@ -808,7 +808,7 @@ def get_thumbnail(ident):
 def get_encodes(editor=None):
 	with app.db_manager.get_conn() as conn:
 		results = database.query(conn, """
-			SELECT src_url, src_hash, encode_args, dest_url, claimed_by, dest_hash
+			SELECT src_url, src_hash, encode_args, dest_url, claimed_by, dest_hash, claimed_at, finished_at
 			FROM encodes
 			ORDER BY priority DESC, dest_url
 		""")

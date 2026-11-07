@@ -6,9 +6,11 @@ import {
 	createSignal,
 	Index,
 	Match,
+	onCleanup,
 	Switch,
 	untrack,
 } from "solid-js";
+import { DateTime } from "luxon";
 import { GoogleSignIn, defaultAccountToken } from "../common/googleAuth";
 
 import styles from "./Encodes.module.scss";
@@ -20,7 +22,91 @@ interface EncodeItem {
 	dest_url: string;
 	claimed_by: string | null;
 	dest_hash: string | null;
+	claimed_at: string | null;
+	finished_at: string | null;
 }
+
+const EncodeUrl: Component<{ url: string }> = (props) => {
+	const [expanded, setExpanded] = createSignal(false);
+	const name = () => (props.url.match(/DB\d{4}_(.*)\.mkv$/)?.[1] ?? props.url)
+		.split(/(?<=\d_)(?=[A-Z])/).map((part, index) => (
+			<>{index > 0 && <wbr />}{part}</>
+		));
+
+	return (
+		<>
+			{expanded() ? props.url : name()}<br />
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setExpanded(!expanded());
+			}}>
+				[{expanded() ? "compact" : "expand"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(props.url);
+			}}>
+				[copy]
+			</a>
+		</>
+	);
+};
+
+const EncodeHash: Component<{ hash: string }> = (props) => {
+	const [expanded, setExpanded] = createSignal(false);
+	const shortened = () => props.hash.length > 8 ? `${props.hash.slice(0, 4)}...${props.hash.slice(-4)}` : props.hash;
+
+	return (
+		<>
+			{expanded() ? props.hash : shortened()}<br />
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setExpanded(!expanded());
+			}}>
+				[{expanded() ? "compact" : "expand"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(props.hash);
+			}}>
+				[copy]
+			</a>
+		</>
+	);
+};
+
+const EncodeArgs: Component<{ args: string[] }> = (props) => {
+	const [visible, setVisible] = createSignal(false);
+	const args = () => props.args.join(" ");
+
+	return (
+		<>
+			{visible() ? args() : ""}{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setVisible(!visible());
+			}}>
+				[{visible() ? "hide" : "show"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(args());
+			}}>
+				[copy]
+			</a>
+		</>
+	);
+};
+
+const elapsedTime = (claimedAt: string, finishedAt: string | null, now: DateTime) => {
+	const start = DateTime.fromISO(claimedAt, { zone: "utc" });
+	const end = finishedAt === null ? now : DateTime.fromISO(finishedAt, { zone: "utc" });
+	const minutes = Math.max(0, Math.floor(end.diff(start, "minutes").minutes));
+	const days = Math.floor(minutes / 1440);
+	const hours = Math.floor((minutes % 1440) / 60);
+	const remainingMinutes = minutes % 60;
+	return `${days > 0 ? `${days}d` : ""}${hours}h${remainingMinutes}m`;
+};
 
 export const Encodes: Component = () => {
 	const [accountToken, setAccountToken] = createSignal<string | null>(defaultAccountToken());
@@ -28,6 +114,9 @@ export const Encodes: Component = () => {
 
 	const [encodesList, setEncodesList] = createSignal<EncodeItem[]>([]);
 	const [loadError, setLoadError] = createSignal("");
+	const [now, setNow] = createSignal(DateTime.utc());
+	const timer = setInterval(() => setNow(DateTime.utc()), 1000);
+	onCleanup(() => clearInterval(timer));
 
 	const loadEncodeData = async () => {
 		setLoadError("");
@@ -74,6 +163,9 @@ export const Encodes: Component = () => {
 						<th>Encode Args</th>
 						<th>Dest</th>
 						<th>Claimed By</th>
+						<th>Claimed At</th>
+						<th>Finished At</th>
+						<th>Elapsed</th>
 						<th>Dest Hash</th>
 					</tr>
 				</thead>
@@ -126,10 +218,10 @@ export const Encodes: Component = () => {
 
 							return (
 								<tr>
-									<td>{item().src_url}</td>
-									<td>{item().src_hash}</td>
-									<td>{item().encode_args.join(" ")}</td>
-									<td>{item().dest_url}</td>
+									<td><EncodeUrl url={item().src_url} /></td>
+									<td><EncodeHash hash={item().src_hash} /></td>
+									<td><EncodeArgs args={item().encode_args} /></td>
+									<td><EncodeUrl url={item().dest_url} /></td>
 									<td>
 										<Switch>
 											<Match when={item().claimed_by === null}>
@@ -140,6 +232,9 @@ export const Encodes: Component = () => {
 											<Match when={item().claimed_by !== null}>{item().claimed_by}</Match>
 										</Switch>
 									</td>
+									<td>{item().claimed_at === null ? "" : DateTime.fromISO(item().claimed_at!, { zone: "utc" }).toUTC().set({ millisecond: 0 }).toISO({ suppressMilliseconds: true })}</td>
+									<td>{item().finished_at === null ? "" : DateTime.fromISO(item().finished_at!, { zone: "utc" }).toUTC().set({ millisecond: 0 }).toISO({ suppressMilliseconds: true })}</td>
+									<td>{item().claimed_at === null ? "" : elapsedTime(item().claimed_at!, item().finished_at, now())}</td>
 									<td>
 										<Switch>
 											<Match when={item().dest_hash === null}>
@@ -150,7 +245,7 @@ export const Encodes: Component = () => {
 													</button>
 												</form>
 											</Match>
-											<Match when={item().dest_hash !== null}>{item().dest_hash}</Match>
+											<Match when={item().dest_hash !== null}><EncodeHash hash={item().dest_hash!} /></Match>
 										</Switch>
 									</td>
 								</tr>
