@@ -28,7 +28,10 @@ interface EncodeItem {
 
 const EncodeUrl: Component<{ url: string }> = (props) => {
 	const [expanded, setExpanded] = createSignal(false);
-	const name = () => props.url.match(/DB\d{4}_(.*)\.mkv$/)?.[1] ?? props.url;
+	const name = () => (props.url.match(/DB\d{4}_(.*)\.mkv$/)?.[1] ?? props.url)
+		.split(/(?<=\d_)(?=[A-Z])/).map((part, index) => (
+			<>{index > 0 && <wbr />}{part}</>
+		));
 
 	return (
 		<>
