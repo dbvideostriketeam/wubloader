@@ -63,6 +63,29 @@ const EncodeHash: Component<{ hash: string }> = (props) => {
 	);
 };
 
+const EncodeArgs: Component<{ args: string[] }> = (props) => {
+	const [visible, setVisible] = createSignal(false);
+	const args = () => props.args.join(" ");
+
+	return (
+		<>
+			{visible() ? args() : ""}{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				setVisible(!visible());
+			}}>
+				[{visible() ? "hide" : "show"}]
+			</a>{" "}
+			<a href="#" onClick={(event) => {
+				event.preventDefault();
+				navigator.clipboard.writeText(args());
+			}}>
+				[copy]
+			</a>
+		</>
+	);
+};
+
 const elapsedTime = (claimedAt: string, finishedAt: string | null, now: DateTime) => {
 	const start = DateTime.fromISO(claimedAt, { zone: "utc" });
 	const end = finishedAt === null ? now : DateTime.fromISO(finishedAt, { zone: "utc" });
@@ -185,7 +208,7 @@ export const Encodes: Component = () => {
 								<tr>
 									<td><EncodeUrl url={item().src_url} /></td>
 									<td><EncodeHash hash={item().src_hash} /></td>
-									<td>{item().encode_args.join(" ")}</td>
+									<td><EncodeArgs args={item().encode_args} /></td>
 									<td><EncodeUrl url={item().dest_url} /></td>
 									<td>
 										<Switch>
