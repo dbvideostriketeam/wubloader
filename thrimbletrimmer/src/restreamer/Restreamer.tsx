@@ -150,7 +150,7 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	const keyDownEvent = useKeyDownEvent();
 	createEffect(() => {
 		const event = keyDownEvent();
-		if (!event) {
+		if (!event || event.ctrlKey || event.altKey || event.metaKey) {
 			return;
 		}
 
