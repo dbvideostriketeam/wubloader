@@ -66,7 +66,6 @@ export const Restreamer: Component = () => {
 					)}
 				</For>
 			</ul>
-			<KeyboardShortcuts includeEditorShortcuts={false} />
 			<Suspense>
 				<Show when={defaultsData()}>
 					<RestreamerWithDefaults
@@ -322,15 +321,18 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 	};
 
 	return (
-		<>
-			<StreamTimeSettings
-				busStartTime={busStartTime}
-				streamVideoInfo={streamVideoInfo}
-				setStreamVideoInfo={setStreamVideoInfo}
-				showTimeRangeLink={true}
-				errorList={props.errorList}
-				setErrorList={props.setErrorList}
-			/>
+		<div classList={{ [styles.watchLayout]: streamVideoInfo().streamEndTime !== null }}>
+			<div class={styles.streamSettings}>
+				<StreamTimeSettings
+					busStartTime={busStartTime}
+					streamVideoInfo={streamVideoInfo}
+					setStreamVideoInfo={setStreamVideoInfo}
+					showTimeRangeLink={true}
+					errorList={props.errorList}
+					setErrorList={props.setErrorList}
+				/>
+				<KeyboardShortcuts includeEditorShortcuts={false} />
+			</div>
 			<VideoPlayer
 				src={videoURL}
 				setPlayerTime={setPlayerTime}
@@ -361,6 +363,6 @@ const RestreamerWithDefaults: Component<RestreamerDefaultProps> = (props) => {
 					videoTime={playerTime}
 				/>
 			</div>
-		</>
+		</div>
 	);
 };
